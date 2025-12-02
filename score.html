@@ -200,6 +200,194 @@
         }
         .cancel-btn:hover { background: #eee; }
         
+        /* Welcome Screen */
+        .welcome-screen {
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .welcome-screen h2 {
+            color: #333;
+            font-size: 22px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        .welcome-desc {
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .option-card {
+            display: flex;
+            align-items: center;
+            padding: 18px;
+            background: #f9f9f9;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .option-card:hover {
+            border-color: #37b24a;
+            background: #f0fff0;
+        }
+        .option-card.secondary {
+            background: #fff;
+            border-style: dashed;
+        }
+        .option-icon {
+            width: 45px;
+            height: 45px;
+            background: #37b24a;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 18px;
+            margin-right: 15px;
+        }
+        .option-card.secondary .option-icon {
+            background: #e0e0e0;
+            color: #666;
+        }
+        .option-text { flex: 1; }
+        .option-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        .option-desc {
+            font-size: 13px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .option-card > i.fa-chevron-right {
+            color: #ccc;
+            font-size: 14px;
+        }
+        
+        /* PIN Entry & Confirmation */
+        .error-msg {
+            color: #e74c3c;
+            font-size: 13px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #fdeaea;
+            border-radius: 6px;
+        }
+        .pin-confirmation {
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            text-align: center;
+        }
+        .pin-confirmation .success-icon {
+            font-size: 60px;
+            color: #37b24a;
+            margin-bottom: 15px;
+        }
+        .pin-confirmation h2 {
+            color: #333;
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        .pin-confirmation p {
+            color: #666;
+            font-size: 14px;
+        }
+        .pin-display {
+            background: #f5f5f5;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+        .pin-label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .pin-number {
+            font-size: 48px;
+            font-weight: 800;
+            color: #37b24a;
+            letter-spacing: 8px;
+        }
+        .pin-hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 15px;
+        }
+        .pin-hint i { margin-right: 5px; }
+        
+        /* Browse Players */
+        .browse-players {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .browse-players h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .browse-players h2 i { color: #37b24a; margin-right: 8px; }
+        .players-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .team-group {
+            margin-bottom: 15px;
+        }
+        .team-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #37b24a;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .team-name i { margin-right: 6px; }
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 10px;
+            border-bottom: 1px solid #f5f5f5;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .player-item:hover {
+            background: #f0fff0;
+        }
+        .player-item span:first-child {
+            font-size: 15px;
+            color: #333;
+        }
+        .player-item .hcp {
+            font-size: 12px;
+            color: #888;
+            background: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        .empty-state i {
+            font-size: 40px;
+            margin-bottom: 15px;
+            color: #ddd;
+        }
+        
         .scores-card {
             background: #fff;
             border-radius: 12px;
@@ -547,7 +735,7 @@
             // Show profile header if player is selected
             let profileHeader = '';
             if (currentPlayer) {
-                const team = league.teams.find(t => t.id === currentPlayer.teamId);
+                const team = (league.teams || []).find(t => t.id === currentPlayer.teamId);
                 profileHeader = `
                     <div class="profile-card">
                         <div class="profile-info">
@@ -869,7 +1057,7 @@
                             <label>Team</label>
                             <select id="regTeam" onchange="toggleNewTeam(this.value)">
                                 <option value="">-- No Team --</option>
-                                ${league.teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                                ${(league.teams || []).map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
                                 <option value="__new__">➕ Create New Team</option>
                             </select>
                         </div>
@@ -877,6 +1065,7 @@
                             <label>New Team Name</label>
                             <input type="text" id="newTeamName" placeholder="The Eagles">
                         </div>
+                        <div id="regError" class="error-msg" style="display:none"></div>
                         <button type="submit" class="submit-btn"><i class="fas fa-check"></i> Create Profile</button>
                         <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
                     </form>
@@ -893,7 +1082,15 @@
         }
         
         function generatePin() {
-            return Math.floor(1000 + Math.random() * 9000).toString();
+            // Generate unique 4-digit PIN
+            const existingPins = new Set(league.players.map(p => p.pin));
+            let pin;
+            let attempts = 0;
+            do {
+                pin = Math.floor(1000 + Math.random() * 9000).toString();
+                attempts++;
+            } while (existingPins.has(pin) && attempts < 100);
+            return pin;
         }
         
         function registerPlayer(e) {
@@ -901,14 +1098,31 @@
             const name = document.getElementById('regName').value.trim();
             const handicap = parseInt(document.getElementById('regHandicap').value) || 0;
             let teamId = document.getElementById('regTeam').value || null;
+            const errorEl = document.getElementById('regError');
             
             if (!name) return;
+            
+            // Check for duplicate name
+            const existingPlayer = league.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+            if (existingPlayer) {
+                errorEl.innerHTML = `A player named "${existingPlayer.name}" already exists. If that's you, use "I have a PIN" to reconnect.`;
+                errorEl.style.display = 'block';
+                return;
+            }
             
             // Create new team if requested
             if (teamId === '__new__') {
                 const newTeamName = document.getElementById('newTeamName').value.trim();
                 if (!newTeamName) {
-                    alert('Please enter a team name');
+                    errorEl.textContent = 'Please enter a team name';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+                // Check for duplicate team name
+                const existingTeam = (league.teams || []).find(t => t.name.toLowerCase() === newTeamName.toLowerCase());
+                if (existingTeam) {
+                    errorEl.textContent = `Team "${existingTeam.name}" already exists. Select it from the dropdown.`;
+                    errorEl.style.display = 'block';
                     return;
                 }
                 const newTeam = {
@@ -938,7 +1152,7 @@
         
         function showPinConfirmation(player) {
             const container = document.getElementById('content');
-            const team = league.teams.find(t => t.id === player.teamId);
+            const team = (league.teams || []).find(t => t.id === player.teamId);
             container.innerHTML = `
                 <div class="pin-confirmation">
                     <div class="success-icon"><i class="fas fa-check-circle"></i></div>

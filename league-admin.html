@@ -1057,7 +1057,7 @@
             }
             
             const round = league.rounds[league.rounds.length - 1];
-            const scored = league.players.filter(p => league.scores[round.id]?.[p.id]?.submitted).length;
+            const scored = league.players.filter(p => (league.scores || {})[round.id]?.[p.id]?.submitted).length;
             const total = league.players.length;
             
             container.innerHTML = `
@@ -1139,7 +1139,7 @@
             }
             
             container.innerHTML = league.rounds.slice().reverse().map(r => {
-                const scored = league.players.filter(p => league.scores[r.id]?.[p.id]?.submitted).length;
+                const scored = league.players.filter(p => (league.scores || {})[r.id]?.[p.id]?.submitted).length;
                 return `
                     <div class="round-item">
                         <div>
@@ -1272,7 +1272,7 @@
         function deleteRound(id) {
             if (!confirm('Delete this round and all scores?')) return;
             league.rounds = league.rounds.filter(r => r.id !== id);
-            delete league.scores[id];
+            if (league.scores) delete league.scores[id];
             save();
             renderAll();
         }
@@ -1285,7 +1285,7 @@
             
             const holes = league.course?.holes || 18;
             const scores = league.players.map(p => {
-                const ps = league.scores[roundId]?.[p.id];
+                const ps = (league.scores || {})[roundId]?.[p.id];
                 if (!ps || !ps.submitted) return { name: p.name, handicap: p.handicap, gross: null };
                 let gross = 0;
                 for (let h = 1; h <= holes; h++) gross += ps[h] || 0;

@@ -911,14 +911,41 @@
                 `;
             }
 
+            // Calculate positions with tie handling
+            const getPosition = (sorted, index, view) => {
+                if (sorted[index].roundsPlayed === 0) return null;
+                
+                const scoreKey = view === 'cumulative-gross' ? 'totalGross' : 'totalNet';
+                const currentScore = sorted[index][scoreKey];
+                
+                // Find first player with this score
+                for (let i = 0; i < index; i++) {
+                    if (sorted[i].roundsPlayed > 0 && sorted[i][scoreKey] === currentScore) {
+                        // Same position as earlier player with same score
+                        return getPosition(sorted, i, view);
+                    }
+                }
+                
+                // Count how many players with scores are before this one
+                let pos = 1;
+                for (let i = 0; i < index; i++) {
+                    if (sorted[i].roundsPlayed > 0) pos++;
+                }
+                return pos;
+            };
+
             return `
                 <table class="standings-table">
                     <thead><tr>${headers}</tr></thead>
                     <tbody>
                         ${sorted.map((s, i) => {
-                            const pos = s.roundsPlayed > 0 ? i + 1 : null;
+                            const pos = getPosition(sorted, i, view);
+                            const isTied = pos !== null && sorted.filter((x, j) => j !== i && x.roundsPlayed > 0 && 
+                                (view === 'cumulative-gross' ? x.totalGross : x.totalNet) === (view === 'cumulative-gross' ? s.totalGross : s.totalNet)
+                            ).length > 0;
+                            const posDisplay = pos ? (isTied ? `T${pos}` : pos) : null;
                             return `
-                                <tr onclick="toggleDetails('${s.id}')">${renderRow(s, pos)}</tr>
+                                <tr onclick="toggleDetails('${s.id}')">${renderRow(s, posDisplay)}</tr>
                                 <tr class="expand-row" id="details-${s.id}">
                                     <td colspan="10">
                                         <div class="round-breakdown">
