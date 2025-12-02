@@ -4,9 +4,10 @@
 User-agent: *
 Allow: /
 
+# Block admin and scoring pages
+Disallow: /league-admin.html
+Disallow: /score.html
+Disallow: /league-standings.html
+
 # Sitemap location
 Sitemap: https://www.golfcovect.com/sitemap.xml
-
-# Disallow admin or private areas (if any)
-# Disallow: /admin/
-# Disallow: /private/
