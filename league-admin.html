@@ -925,7 +925,15 @@
         const ADMIN_PASSWORD = 'EJ';
         
         function generatePin() {
-            return String(Math.floor(1000 + Math.random() * 9000));
+            // Generate unique 4-digit PIN
+            const existingPins = new Set((league?.players || []).map(p => p.pin).filter(Boolean));
+            let pin;
+            let attempts = 0;
+            do {
+                pin = String(Math.floor(1000 + Math.random() * 9000));
+                attempts++;
+            } while (existingPins.has(pin) && attempts < 100);
+            return pin;
         }
         
         function checkPassword(e) {

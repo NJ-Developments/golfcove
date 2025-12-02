@@ -18,28 +18,733 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             min-height: 100vh;
         }
+        
+        /* Header */
         .header {
-            background: #37b24a;
+            background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
             color: #fff;
-            padding: 20px;
+            padding: 25px 20px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
         }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+            animation: shimmer 3s infinite;
+        }
+        @keyframes shimmer {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(180deg); }
+        }
+        .header a { position: relative; z-index: 1; }
         .header h1 {
-            font-size: 20px;
+            font-size: 22px;
             margin-bottom: 4px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
         }
         .header p {
             font-size: 14px;
             opacity: 0.9;
+            position: relative;
+            z-index: 1;
         }
+        
         .container {
-            max-width: 400px;
+            max-width: 420px;
             margin: 0 auto;
             padding: 20px;
+            padding-bottom: 40px;
         }
+        
+        /* Welcome Screen */
+        .welcome-screen {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 35px 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .welcome-screen h2 {
+            color: #1a1a2e;
+            font-size: 24px;
+            margin-bottom: 8px;
+            text-align: center;
+            font-weight: 700;
+        }
+        .welcome-desc {
+            color: #666;
+            font-size: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .option-card {
+            display: flex;
+            align-items: center;
+            padding: 18px 20px;
+            background: #fff;
+            border: 2px solid #e8e8e8;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .option-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(55,178,74,0.1), transparent);
+            transition: left 0.5s;
+        }
+        .option-card:hover::before {
+            left: 100%;
+        }
+        .option-card:hover {
+            border-color: #37b24a;
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(55,178,74,0.15);
+        }
+        .option-card.secondary {
+            background: linear-gradient(145deg, #f8f9fa 0%, #fff 100%);
+            border-style: dashed;
+        }
+        .option-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 20px;
+            margin-right: 16px;
+            box-shadow: 0 4px 12px rgba(55,178,74,0.3);
+        }
+        .option-card.secondary .option-icon {
+            background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
+            color: #666;
+            box-shadow: none;
+        }
+        .option-text { flex: 1; }
+        .option-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+        .option-desc {
+            font-size: 13px;
+            color: #888;
+            margin-top: 3px;
+        }
+        .option-card > i.fa-chevron-right {
+            color: #37b24a;
+            font-size: 14px;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s;
+        }
+        .option-card:hover > i.fa-chevron-right {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        /* Profile card */
+        .profile-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .profile-avatar {
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(55,178,74,0.3);
+        }
+        .profile-avatar i {
+            font-size: 24px;
+            color: #fff;
+        }
+        .profile-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+        .profile-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .profile-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .profile-meta i { color: #37b24a; }
+        .switch-btn {
+            background: linear-gradient(145deg, #f5f5f5 0%, #e8e8e8 100%);
+            border: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .switch-btn:hover { 
+            background: linear-gradient(145deg, #e8e8e8 0%, #ddd 100%);
+            transform: scale(1.05);
+        }
+        
+        /* Scores Card */
+        .scores-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .section-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            padding: 16px 20px;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 0.5px;
+        }
+        .section-header .subtotal {
+            background: rgba(55,178,74,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #37b24a;
+        }
+        .hole-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+        .hole-row:hover {
+            background: #fafffe;
+        }
+        .hole-row:last-of-type {
+            border-bottom: none;
+        }
+        .hole-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .hole-number {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: #555;
+        }
+        .hole-details {
+            display: flex;
+            flex-direction: column;
+        }
+        .hole-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+        }
+        .hole-par {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .score-input {
+            width: 65px;
+            height: 50px;
+            padding: 0;
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+            border: 3px solid #e0e0e0;
+            border-radius: 12px;
+            background: #fff;
+            transition: all 0.2s;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+        .score-input::-webkit-inner-spin-button,
+        .score-input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .score-input:focus {
+            border-color: #37b24a;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(55,178,74,0.15);
+            transform: scale(1.05);
+        }
+        .score-input.under-par {
+            border-color: #37b24a;
+            background: linear-gradient(145deg, #e8f5e9 0%, #c8e6c9 100%);
+            color: #2e7d32;
+        }
+        .score-input.over-par {
+            border-color: #ff9800;
+            background: linear-gradient(145deg, #fff3e0 0%, #ffe0b2 100%);
+            color: #e65100;
+        }
+        .score-input.double-over {
+            border-color: #f44336;
+            background: linear-gradient(145deg, #ffebee 0%, #ffcdd2 100%);
+            color: #c62828;
+        }
+        
+        /* Score Summary */
+        .score-summary {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+        .score-summary.nine-holes {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .score-summary .item {
+            padding: 18px 8px;
+            text-align: center;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+        .score-summary .item:last-child {
+            border-right: none;
+        }
+        .score-summary .item .label {
+            font-size: 10px;
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .score-summary .item .value {
+            font-size: 26px;
+            font-weight: 800;
+            color: #fff;
+        }
+        .score-summary .item .value.net {
+            color: #37b24a;
+            text-shadow: 0 0 20px rgba(55,178,74,0.5);
+        }
+        
+        /* Submit Button */
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            margin-top: 25px;
+            background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 25px rgba(55,178,74,0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .submit-btn:hover::before {
+            left: 100%;
+        }
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(55,178,74,0.5);
+        }
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        .submit-btn:disabled {
+            background: linear-gradient(135deg, #ccc 0%, #aaa 100%);
+            box-shadow: none;
+            transform: none;
+        }
+        .submit-btn i { margin-right: 8px; }
+        
+        .back-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        .back-link:hover {
+            color: #37b24a;
+        }
+        
+        /* Submitted State */
+        .submitted {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 50px 25px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: fadeInUp 0.5s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .submitted .checkmark {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            animation: scaleIn 0.4s ease, pulse 2s infinite 0.5s;
+            box-shadow: 0 8px 30px rgba(55,178,74,0.4);
+        }
+        @keyframes scaleIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 8px 30px rgba(55,178,74,0.4); }
+            50% { box-shadow: 0 8px 50px rgba(55,178,74,0.6); }
+        }
+        .submitted .checkmark i {
+            color: #fff;
+            font-size: 36px;
+        }
+        .submitted h2 {
+            color: #1a1a2e;
+            margin-bottom: 10px;
+            font-size: 26px;
+            font-weight: 700;
+        }
+        .submitted p {
+            color: #666;
+            font-size: 15px;
+        }
+        .submitted .score-summary {
+            margin: 25px -25px;
+            border-radius: 0;
+        }
+        
+        /* Registration Form */
+        .registration-form {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 30px 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .registration-form h2 {
+            color: #1a1a2e;
+            font-size: 22px;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+        .registration-form h2 i { color: #37b24a; margin-right: 10px; }
+        .form-desc {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: #fff;
+            transition: all 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: #37b24a;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(55,178,74,0.1);
+        }
+        .cancel-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(145deg, #f5f5f5 0%, #e8e8e8 100%);
+            border: none;
+            border-radius: 12px;
+            color: #666;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: all 0.2s;
+        }
+        .cancel-btn:hover { 
+            background: linear-gradient(145deg, #e8e8e8 0%, #ddd 100%);
+        }
+        
+        /* Error Message */
+        .error-msg {
+            color: #c62828;
+            font-size: 13px;
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            background: linear-gradient(145deg, #ffebee 0%, #ffcdd2 100%);
+            border-radius: 10px;
+            border-left: 4px solid #f44336;
+        }
+        
+        /* PIN Confirmation */
+        .pin-confirmation {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 40px 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .pin-confirmation .success-icon {
+            font-size: 70px;
+            color: #37b24a;
+            margin-bottom: 20px;
+            animation: scaleIn 0.5s ease;
+        }
+        .pin-confirmation h2 {
+            color: #1a1a2e;
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        .pin-confirmation p {
+            color: #666;
+            font-size: 15px;
+        }
+        .pin-display {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+        .pin-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+        }
+        .pin-number {
+            font-size: 52px;
+            font-weight: 800;
+            color: #37b24a;
+            letter-spacing: 12px;
+            text-shadow: 0 0 30px rgba(55,178,74,0.5);
+        }
+        .pin-hint {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 15px;
+        }
+        .pin-hint i { margin-right: 5px; color: #37b24a; }
+        
+        /* PIN Input */
+        .pin-input {
+            width: 100%;
+            padding: 18px;
+            font-size: 32px;
+            font-weight: 800;
+            text-align: center;
+            letter-spacing: 12px;
+            border: 3px solid #e0e0e0;
+            border-radius: 14px;
+            background: #fff;
+            transition: all 0.2s;
+        }
+        .pin-input:focus {
+            border-color: #37b24a;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(55,178,74,0.15);
+        }
+        
+        /* Browse Players */
+        .browse-players {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .browse-players h2 {
+            color: #1a1a2e;
+            font-size: 20px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        .browse-players h2 i { color: #37b24a; margin-right: 10px; }
+        .players-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .team-group {
+            margin-bottom: 15px;
+        }
+        .team-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #37b24a;
+            padding: 10px 0;
+            border-bottom: 2px solid #e8f5e9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .team-name i { margin-right: 8px; }
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 12px;
+            border-bottom: 1px solid #f5f5f5;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 8px;
+            margin: 2px 0;
+        }
+        .player-item:hover {
+            background: linear-gradient(145deg, #e8f5e9 0%, #c8e6c9 100%);
+            transform: translateX(5px);
+        }
+        .player-item span:first-child {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+        }
+        .player-item .hcp {
+            font-size: 12px;
+            color: #fff;
+            background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #999;
+        }
+        .empty-state i {
+            font-size: 50px;
+            margin-bottom: 15px;
+            color: #ddd;
+        }
+        
+        /* Message */
+        .message {
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(255,255,255,0.7);
+        }
+        .message i {
+            font-size: 50px;
+            color: #37b24a;
+            margin-bottom: 15px;
+        }
+        
+        /* Divider - keeping for compatibility */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: #999;
+            font-size: 13px;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e0e0e0;
+        }
+        .divider span { padding: 0 15px; }
+        
+        /* Register button - keeping for compatibility */
+        .register-btn {
+            width: 100%;
+            padding: 14px;
+            background: #fff;
+            border: 2px dashed #37b24a;
+            border-radius: 8px;
+            color: #37b24a;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .register-btn:hover {
+            background: #37b24a;
+            color: #fff;
+            border-style: solid;
+        }
+        
+        /* Player select - keeping for compatibility */
         .player-select {
             background: #fff;
             padding: 20px;
@@ -67,87 +772,44 @@
             outline: none;
         }
         
-        /* Divider */
-        .divider {
+        /* Totals - keeping for compatibility */
+        .totals {
             display: flex;
-            align-items: center;
-            margin: 20px 0;
-            color: #999;
-            font-size: 13px;
-        }
-        .divider::before, .divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #e0e0e0;
-        }
-        .divider span { padding: 0 15px; }
-        
-        /* Register button */
-        .register-btn {
-            width: 100%;
-            padding: 14px;
-            background: #fff;
-            border: 2px dashed #37b24a;
-            border-radius: 8px;
-            color: #37b24a;
-            font-size: 15px;
+            justify-content: space-between;
+            padding: 18px 20px;
+            background: #f8f9fa;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+            font-size: 16px;
         }
-        .register-btn:hover {
-            background: #37b24a;
-            color: #fff;
-            border-style: solid;
+        .totals .value {
+            color: #37b24a;
+            font-size: 20px;
         }
         
-        /* Profile card */
-        .profile-card {
+        /* Scores header - keeping for compatibility */
+        .scores-header {
+            background: #333;
+            color: #fff;
+            padding: 15px 20px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        /* Pin section - keeping for compatibility */
+        .pin-section {
             background: #fff;
             border-radius: 12px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
+            padding: 20px;
+            margin-top: 20px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
         }
-        .profile-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .profile-avatar {
-            font-size: 40px;
-            color: #37b24a;
-        }
-        .profile-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-        }
-        .profile-meta {
-            display: flex;
-            gap: 15px;
-            font-size: 13px;
+        .pin-section label {
+            display: block;
+            font-size: 14px;
             color: #666;
-            margin-top: 3px;
+            margin-bottom: 8px;
         }
-        .profile-meta i { color: #37b24a; margin-right: 4px; }
-        .switch-btn {
-            background: none;
-            border: 1px solid #ddd;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            color: #666;
-            cursor: pointer;
-        }
-        .switch-btn:hover { background: #f5f5f5; }
-        
-        /* Registration form */
-        .registration-form {
+    </style>
             background: #fff;
             border-radius: 12px;
             padding: 25px;
@@ -871,8 +1533,11 @@
                 html += `
                     <div class="hole-row">
                         <div class="hole-info">
-                            <span class="hole-label">Hole ${h}</span>
-                            <span class="hole-par">Par ${par}</span>
+                            <div class="hole-number">${h}</div>
+                            <div class="hole-details">
+                                <span class="hole-label">Hole ${h}</span>
+                                <span class="hole-par">Par ${par}</span>
+                            </div>
                         </div>
                         <input type="number" class="score-input ${inputClass}" id="h${h}" 
                                value="${val}" min="1" max="15" inputmode="numeric"
@@ -905,8 +1570,11 @@
                     html += `
                         <div class="hole-row">
                             <div class="hole-info">
-                                <span class="hole-label">Hole ${h}</span>
-                                <span class="hole-par">Par ${par}</span>
+                                <div class="hole-number">${h}</div>
+                                <div class="hole-details">
+                                    <span class="hole-label">Hole ${h}</span>
+                                    <span class="hole-par">Par ${par}</span>
+                                </div>
                             </div>
                             <input type="number" class="score-input ${inputClass}" id="h${h}" 
                                    value="${val}" min="1" max="15" inputmode="numeric"
@@ -1083,7 +1751,7 @@
         
         function generatePin() {
             // Generate unique 4-digit PIN
-            const existingPins = new Set(league.players.map(p => p.pin));
+            const existingPins = new Set((league.players || []).map(p => p.pin).filter(Boolean));
             let pin;
             let attempts = 0;
             do {
@@ -1103,7 +1771,7 @@
             if (!name) return;
             
             // Check for duplicate name
-            const existingPlayer = league.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+            const existingPlayer = (league.players || []).find(p => p.name.toLowerCase() === name.toLowerCase());
             if (existingPlayer) {
                 errorEl.innerHTML = `A player named "${existingPlayer.name}" already exists. If that's you, use "I have a PIN" to reconnect.`;
                 errorEl.style.display = 'block';
@@ -1243,6 +1911,11 @@
             let filled = 0;
             for (let h = 1; h <= league.course.holes; h++) {
                 if (scores[h]) filled++;
+            }
+
+            if (filled === 0) {
+                alert('Please enter at least one score before submitting.');
+                return;
             }
 
             if (filled < league.course.holes) {
