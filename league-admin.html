@@ -677,18 +677,6 @@
             
             <div id="currentRoundStatus"></div>
             
-            <div class="card" id="qrCard" style="display: none;">
-                <h3><i class="fas fa-qrcode"></i> Scoring QR Code</h3>
-                <div class="qr-display">
-                    <div id="qrcode"></div>
-                    <div class="url" id="scoringUrl"></div>
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button class="btn btn-sm" onclick="copyUrl()"><i class="fas fa-copy"></i> Copy Link</button>
-                        <button class="btn btn-sm btn-secondary" onclick="printQR()"><i class="fas fa-print"></i> Print QR</button>
-                    </div>
-                </div>
-            </div>
-            
             <div class="card">
                 <h3><i class="fas fa-chart-bar"></i> Quick Stats</h3>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
@@ -747,18 +735,28 @@
             
             <div class="card">
                 <h3><i class="fas fa-id-card"></i> Print Scorecards</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print blank scorecards for players to fill out by hand.</p>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print scorecards for a team with their unique QR code for digital score entry.</p>
                 <div class="print-grid">
-                    <select id="printTeamSelect">
-                        <option value="">Blank Cards</option>
-                    </select>
-                    <select id="printCount">
-                        <option value="2">2 Cards</option>
-                        <option value="4">4 Cards</option>
-                        <option value="1">1 Card</option>
+                    <select id="printTeamSelect" onchange="updatePrintPreview()">
+                        <option value="">Select a Team</option>
                     </select>
                 </div>
-                <button class="btn" onclick="printScorecards()"><i class="fas fa-print"></i> Print Scorecards</button>
+                <div id="printPreview" style="display:none; margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; text-align: center;">
+                    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Team QR Code (included on scorecards):</p>
+                    <div id="teamQRPreview" style="display: inline-block; padding: 10px; background: #fff; border-radius: 8px;"></div>
+                    <p style="font-size: 11px; color: #888; margin-top: 10px;" id="teamQRUrl"></p>
+                </div>
+                <button class="btn" onclick="printScorecards()" id="printBtn" disabled><i class="fas fa-print"></i> Print Team Scorecards</button>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-qrcode"></i> General Scoring Link</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">A general link for anyone to enter scores (useful for posting online).</p>
+                <div id="generalQRCode" style="text-align: center; margin: 15px 0;"></div>
+                <p style="text-align: center; font-size: 12px; color: #888; word-break: break-all;" id="generalQRUrl"></p>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                    <button class="btn btn-sm" onclick="copyGeneralUrl()"><i class="fas fa-copy"></i> Copy Link</button>
+                </div>
             </div>
             
             <div class="card">
@@ -1081,21 +1079,70 @@
                 </div>
             `;
             
-            // Show QR
-            const url = window.location.origin + window.location.pathname.replace('league-admin.html', '') + 'score.html?r=' + round.id;
-            document.getElementById('scoringUrl').textContent = url;
-            document.getElementById('qrCard').style.display = 'block';
+            // Update general QR code
+            updateGeneralQR();
+        }
+        
+        function updateGeneralQR() {
+            const round = league.rounds[league.rounds.length - 1];
+            if (!round) return;
             
-            const qrContainer = document.getElementById('qrcode');
+            const url = window.location.origin + window.location.pathname.replace('league-admin.html', '') + 'score.html?r=' + round.id;
+            document.getElementById('generalQRUrl').textContent = url;
+            
+            const qrContainer = document.getElementById('generalQRCode');
             qrContainer.innerHTML = '';
             new QRCode(qrContainer, {
                 text: url,
-                width: 180,
-                height: 180,
+                width: 120,
+                height: 120,
                 colorDark: '#333333',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
             });
+        }
+        
+        function updatePrintPreview() {
+            const teamId = document.getElementById('printTeamSelect').value;
+            const preview = document.getElementById('printPreview');
+            const btn = document.getElementById('printBtn');
+            
+            if (!teamId) {
+                preview.style.display = 'none';
+                btn.disabled = true;
+                return;
+            }
+            
+            const round = league.rounds[league.rounds.length - 1];
+            if (!round) {
+                alert('Create a round first');
+                return;
+            }
+            
+            const team = league.teams.find(t => t.id === teamId);
+            const url = window.location.origin + window.location.pathname.replace('league-admin.html', '') + 'score.html?r=' + round.id + '&t=' + teamId;
+            
+            document.getElementById('teamQRUrl').textContent = url;
+            
+            const qrContainer = document.getElementById('teamQRPreview');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: url,
+                width: 100,
+                height: 100,
+                colorDark: '#333333',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            preview.style.display = 'block';
+            btn.disabled = false;
+        }
+        
+        function copyGeneralUrl() {
+            const url = document.getElementById('generalQRUrl').textContent;
+            navigator.clipboard.writeText(url);
+            alert('Link copied!');
         }
         
         function renderTeams() {
@@ -1165,7 +1212,7 @@
         
         function renderPrintOptions() {
             const select = document.getElementById('printTeamSelect');
-            select.innerHTML = '<option value="">Blank Cards</option>' + 
+            select.innerHTML = '<option value="">Select a Team</option>' + 
                 league.teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
         }
         
@@ -1393,36 +1440,33 @@
         
         function printScorecards() {
             const teamId = document.getElementById('printTeamSelect').value;
-            const count = parseInt(document.getElementById('printCount').value);
             
+            if (!teamId) { alert('Select a team first'); return; }
             if (league.rounds.length === 0) { alert('Create a round first'); return; }
             
             const round = league.rounds[league.rounds.length - 1];
+            const team = league.teams.find(t => t.id === teamId);
             const holes = league.course?.holes || 18;
             const pars = league.course?.pars || Array(holes).fill(4);
             const frontNine = Math.min(9, holes);
             const has18 = holes >= 18;
-            const qrImg = document.querySelector('#qrcode img')?.src || '';
             
-            let players = [];
-            if (teamId) {
-                players = league.players.filter(p => p.teamId === teamId);
-            } else {
-                for (let i = 0; i < count; i++) players.push({ name: '', teamId: null, handicap: '' });
-            }
+            // Get the team-specific QR code
+            const qrImg = document.querySelector('#teamQRPreview img')?.src || '';
             
-            if (players.length === 0) { alert('No players for this team'); return; }
+            const players = league.players.filter(p => p.teamId === teamId);
+            
+            if (players.length === 0) { alert('No players on this team'); return; }
             
             const buildCard = (player) => {
-                const team = player.teamId ? league.teams.find(t => t.id === player.teamId) : null;
                 let frontPars = '', backPars = '', frontTotal = 0, backTotal = 0;
                 for (let h = 0; h < frontNine; h++) { frontPars += `<td>${pars[h]}</td>`; frontTotal += pars[h]; }
                 if (has18) for (let h = 9; h < holes; h++) { backPars += `<td>${pars[h]}</td>`; backTotal += pars[h]; }
                 
                 return `
                     <div class="scorecard">
-                        <div class="header"><div class="left"><h1>⛳ ${league.course?.name || 'Golf Cove'}</h1><h2>${league.name}</h2><p>${round.name} • ${new Date(round.date).toLocaleDateString()}</p></div><div class="qr"><img src="${qrImg}"><span>Scan to enter score</span></div></div>
-                        <div class="info"><div class="field"><b>Player:</b> ${player.name || '_____________'}</div><div class="field"><b>Team:</b> ${team?.name || '_____________'}</div><div class="field"><b>HCP:</b> ${player.handicap !== '' ? player.handicap : '___'}</div></div>
+                        <div class="header"><div class="left"><h1>⛳ ${league.course?.name || 'Golf Cove'}</h1><h2>${league.name} - ${team.name}</h2><p>${round.name} • ${new Date(round.date).toLocaleDateString()}</p></div><div class="qr">${qrImg ? `<img src="${qrImg}">` : ''}<span>Scan to enter score</span></div></div>
+                        <div class="info"><div class="field"><b>Player:</b> ${player.name}</div><div class="field"><b>HCP:</b> ${player.handicap}</div><div class="field"><b>PIN:</b> ${player.pin || '____'}</div></div>
                         <table><thead><tr><th class="label">HOLE</th>${Array.from({length:frontNine},(_,i)=>`<th>${i+1}</th>`).join('')}<th class="sub">OUT</th>${has18?Array.from({length:holes-9},(_,i)=>`<th>${i+10}</th>`).join(''):''}${has18?'<th class="sub">IN</th>':''}<th class="tot">TOT</th><th class="tot">HCP</th><th class="net">NET</th></tr></thead>
                         <tbody><tr class="par"><td class="label">PAR</td>${frontPars}<td class="sub">${frontTotal}</td>${has18?backPars:''}${has18?`<td class="sub">${backTotal}</td>`:''}<td class="tot">${frontTotal+backTotal}</td><td class="tot"></td><td class="net"></td></tr>
                         <tr class="score"><td class="label">SCORE</td>${Array.from({length:frontNine},()=>'<td></td>').join('')}<td class="sub"></td>${has18?Array.from({length:holes-9},()=>'<td></td>').join(''):''}${has18?'<td class="sub"></td>':''}<td class="tot"></td><td class="tot"></td><td class="net"></td></tr></tbody></table>
@@ -1433,7 +1477,7 @@
             
             const w = window.open('', '_blank');
             w.document.write(`
-                <!DOCTYPE html><html><head><title>Scorecards</title>
+                <!DOCTYPE html><html><head><title>Scorecards - ${team.name}</title>
                 <style>
                     *{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial;padding:15px;}
                     .scorecard{border:3px solid #333;padding:20px;margin-bottom:20px;page-break-inside:avoid;}

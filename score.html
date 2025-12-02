@@ -880,6 +880,12 @@
                 const params = new URLSearchParams(window.location.search);
                 roundId = params.get('r');
                 const urlPlayerId = params.get('p');
+                const urlTeamId = params.get('t');  // Team-specific QR code
+                
+                // Store team filter if provided in URL
+                if (urlTeamId) {
+                    window.teamFilter = urlTeamId;
+                }
                 
                 // Priority: URL param > saved profile
                 if (urlPlayerId) {
