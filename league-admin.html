@@ -4,174 +4,364 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>League Admin - Golf Cove</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         .admin-container {
-            max-width: 700px;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 40px 20px;
+            padding: 20px;
         }
         .admin-header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
         .admin-header h1 {
+            color: #37b24a;
             font-size: 28px;
-            color: #333;
+            margin-bottom: 5px;
         }
+        .admin-header .season {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        /* Grid Layout */
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        /* Cards */
         .card {
             background: #fff;
             border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-            padding: 25px;
-            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 20px;
         }
         .card h2 {
-            font-size: 18px;
+            font-size: 16px;
             color: #333;
-            margin: 0 0 20px 0;
+            margin: 0 0 15px 0;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         .card h2 i {
             color: #37b24a;
         }
+        
+        /* Team Cards */
+        .team-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #37b24a;
+        }
+        .team-card .team-name {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .team-card .team-name button {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .team-card .team-name button:hover {
+            color: #dc3545;
+        }
+        .team-card .players {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .team-card .player {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #555;
+        }
+        .team-card .player .hcp {
+            color: #888;
+            font-size: 12px;
+        }
+        .team-card .player .pin {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #666;
+        }
+        
+        /* Add Team Form */
+        .add-team-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .add-team-form input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .add-team-form input:focus {
+            outline: none;
+            border-color: #37b24a;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            background: #37b24a;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #2d9440;
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #37b24a;
+            color: #37b24a;
+        }
+        .btn-outline:hover {
+            background: #37b24a;
+            color: #fff;
+        }
+        
+        /* QR Section */
+        .qr-section {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .qr-section #qrcode {
+            display: inline-block;
+            padding: 10px;
+            background: #fff;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .qr-section #qrcode img {
+            display: block;
+        }
+        .qr-section .url {
+            font-family: monospace;
+            font-size: 11px;
+            color: #666;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        .qr-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        
+        /* Round Status */
+        .round-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .round-status .info h3 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+        }
+        .round-status .info p {
+            margin: 0;
+            color: #666;
+            font-size: 13px;
+        }
+        .round-status .score-count {
+            text-align: right;
+        }
+        .round-status .score-count .big {
+            font-size: 24px;
+            font-weight: 700;
+            color: #37b24a;
+        }
+        .round-status .score-count .label {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        /* Print Options */
+        .print-options {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .print-options select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            min-width: 150px;
+        }
+        
+        /* Rounds List */
+        .round-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .round-item h4 {
+            margin: 0 0 2px 0;
+            font-size: 14px;
+        }
+        .round-item p {
+            margin: 0;
+            color: #888;
+            font-size: 12px;
+        }
+        .round-item .actions {
+            display: flex;
+            gap: 6px;
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .quick-action {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .quick-action:hover {
+            border-color: #37b24a;
+            background: #fff;
+        }
+        .quick-action i {
+            font-size: 24px;
+            color: #37b24a;
+        }
+        .quick-action span {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        /* Empty State */
+        .empty {
+            text-align: center;
+            color: #888;
+            padding: 30px;
+            font-size: 14px;
+        }
+        
+        /* Form Groups */
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 15px;
         }
         .form-group label {
             display: block;
+            font-size: 13px;
             font-weight: 600;
-            color: #333;
+            color: #555;
             margin-bottom: 6px;
-            font-size: 14px;
         }
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 12px;
+            padding: 10px 12px;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 15px;
+            border-radius: 6px;
+            font-size: 14px;
         }
         .form-group input:focus,
+        .form-group select:focus,
         .form-group textarea:focus {
-            border-color: #37b24a;
             outline: none;
+            border-color: #37b24a;
         }
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
         }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            background: #37b24a;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            text-decoration: none;
+        
+        /* Danger Zone */
+        .danger-zone {
+            border: 2px solid #dc3545;
+            background: #fff5f5;
         }
-        .btn:hover {
-            background: #2d9440;
-        }
-        .btn-secondary {
-            background: #666;
-        }
-        .btn-danger {
-            background: #dc3545;
-        }
-        .btn-block {
-            width: 100%;
-            justify-content: center;
-        }
-        .round-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        .round-item h4 {
-            margin: 0 0 4px 0;
-            font-size: 15px;
-        }
-        .round-item p {
-            margin: 0;
-            color: #666;
-            font-size: 13px;
-        }
-        .round-item .btn {
-            padding: 8px 16px;
-            font-size: 13px;
-        }
-        .player-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-        .player-item .name {
-            font-weight: 600;
-        }
-        .player-item .hcp {
-            color: #666;
-            font-size: 13px;
-            margin-left: 8px;
-        }
-        .player-item button {
-            background: none;
-            border: none;
+        .danger-zone h2 {
             color: #dc3545;
-            cursor: pointer;
-            font-size: 14px;
         }
-        .qr-box {
-            text-align: center;
-            padding: 25px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin-top: 20px;
+        .danger-zone h2 i {
+            color: #dc3545;
         }
-        .qr-box #qrcode {
-            display: inline-block;
-            padding: 15px;
-            background: #fff;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        .qr-box #qrcode img {
-            display: block;
-        }
-        .qr-box .url {
-            background: #fff;
-            padding: 12px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 13px;
-            word-break: break-all;
-            margin: 15px 0;
-        }
-        .empty {
-            text-align: center;
-            color: #888;
-            padding: 30px;
-        }
+        
+        /* Back Link */
         .back-link {
             display: inline-flex;
             align-items: center;
@@ -179,21 +369,19 @@
             color: #37b24a;
             text-decoration: none;
             font-weight: 600;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
+            font-size: 14px;
         }
+        
+        /* Setup Form */
         .setup-form, .dashboard {
             display: none;
         }
         .setup-form.active, .dashboard.active {
             display: block;
         }
-        .danger-zone {
-            border: 2px solid #dc3545;
-            margin-top: 40px;
-        }
-        .danger-zone h2 {
-            color: #dc3545;
-        }
+        
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -214,7 +402,7 @@
             border-radius: 12px;
             padding: 25px;
             width: 90%;
-            max-width: 600px;
+            max-width: 500px;
             max-height: 80vh;
             overflow-y: auto;
         }
@@ -231,36 +419,19 @@
             cursor: pointer;
             color: #999;
         }
-        .score-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-        .score-row .player {
-            font-weight: 600;
-        }
-        .score-row .gross {
-            font-size: 18px;
-            font-weight: 700;
-            color: #37b24a;
-        }
-        .score-row .net {
-            font-size: 13px;
-            color: #666;
-        }
+        
+        /* Par Inputs */
         .par-inputs {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
+            gap: 8px;
+        }
+        .par-inputs > div {
+            text-align: center;
         }
         .par-inputs label {
-            font-size: 12px;
+            font-size: 11px;
             color: #666;
-            text-align: center;
         }
         .par-inputs input {
             width: 100%;
@@ -268,7 +439,7 @@
             text-align: center;
             border: 2px solid #e0e0e0;
             border-radius: 6px;
-            font-size: 16px;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -294,7 +465,7 @@
     </header>
 
     <div class="admin-container">
-        <a href="tournaments.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to League</a>
+        <a href="tournaments.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Leaderboard</a>
 
         <!-- Setup Form (shown if no league) -->
         <div class="setup-form" id="setupForm">
@@ -329,14 +500,7 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Players (one per line: Name, Handicap)</label>
-                        <textarea id="players" rows="8" placeholder="John Smith, 12
-Mike Johnson, 8
-Bob Wilson, 15"></textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-block">
+                    <button type="submit" class="btn" style="width: 100%; justify-content: center; margin-top: 10px;">
                         <i class="fas fa-check"></i> Create League
                     </button>
                 </form>
@@ -347,13 +511,62 @@ Bob Wilson, 15"></textarea>
         <div class="dashboard" id="dashboard">
             <div class="admin-header">
                 <h1 id="leagueTitle">League Admin</h1>
+                <p class="season" id="leagueSeason"></p>
             </div>
 
-            <!-- Add Round -->
-            <div class="card">
-                <h2><i class="fas fa-plus-circle"></i> Add New Round</h2>
-                <form onsubmit="addRound(event)">
-                    <div class="form-row">
+            <div class="admin-grid">
+                
+                <!-- Teams Section -->
+                <div class="card full-width">
+                    <h2><i class="fas fa-users"></i> Teams</h2>
+                    <div id="teamsList"></div>
+                    <form class="add-team-form" onsubmit="addTeam(event)">
+                        <input type="text" id="newTeamName" placeholder="New team name..." required>
+                        <button type="submit" class="btn"><i class="fas fa-plus"></i> Add Team</button>
+                    </form>
+                </div>
+
+                <!-- Current Round -->
+                <div class="card">
+                    <h2><i class="fas fa-flag"></i> Current Round</h2>
+                    <div id="currentRound">
+                        <div class="empty">No rounds yet</div>
+                    </div>
+                </div>
+
+                <!-- QR Code -->
+                <div class="card" id="qrCard" style="display: none;">
+                    <h2><i class="fas fa-qrcode"></i> Scoring Link</h2>
+                    <div class="qr-section">
+                        <div id="qrcode"></div>
+                        <div class="url" id="scoringUrl"></div>
+                        <div class="qr-actions">
+                            <button class="btn btn-sm" onclick="copyUrl()"><i class="fas fa-copy"></i> Copy</button>
+                            <button class="btn btn-sm btn-secondary" onclick="printQR()"><i class="fas fa-print"></i> Print</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Print Scorecards -->
+                <div class="card">
+                    <h2><i class="fas fa-print"></i> Print Scorecards</h2>
+                    <div class="print-options">
+                        <select id="printTeamSelect">
+                            <option value="">Blank Cards</option>
+                        </select>
+                        <select id="printCount">
+                            <option value="2">2 Cards</option>
+                            <option value="4">4 Cards</option>
+                            <option value="1">1 Card</option>
+                        </select>
+                        <button class="btn" onclick="printScorecards()"><i class="fas fa-print"></i> Print</button>
+                    </div>
+                </div>
+
+                <!-- Add Round -->
+                <div class="card">
+                    <h2><i class="fas fa-plus-circle"></i> New Round</h2>
+                    <form onsubmit="addRound(event)">
                         <div class="form-group">
                             <label>Round Name</label>
                             <input type="text" id="roundName" required placeholder="Week 1">
@@ -362,111 +575,73 @@ Bob Wilson, 15"></textarea>
                             <label>Date</label>
                             <input type="date" id="roundDate" required>
                         </div>
+                        <button type="submit" class="btn"><i class="fas fa-plus"></i> Add Round</button>
+                    </form>
+                </div>
+
+                <!-- All Rounds -->
+                <div class="card">
+                    <h2><i class="fas fa-list"></i> All Rounds</h2>
+                    <div id="roundsList"></div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
+                    <div class="quick-actions">
+                        <div class="quick-action" onclick="openParModal()">
+                            <i class="fas fa-golf-ball"></i>
+                            <span>Edit Pars</span>
+                        </div>
+                        <div class="quick-action" onclick="printPinSheet()">
+                            <i class="fas fa-key"></i>
+                            <span>Print PINs</span>
+                        </div>
+                        <div class="quick-action" onclick="viewAllScores()">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Leaderboard</span>
+                        </div>
+                        <div class="quick-action" onclick="exportData()">
+                            <i class="fas fa-download"></i>
+                            <span>Export</span>
+                        </div>
                     </div>
-                    <button type="submit" class="btn">
-                        <i class="fas fa-plus"></i> Add Round
-                    </button>
-                </form>
-            </div>
+                </div>
 
-            <!-- Current Round QR -->
-            <div class="card" id="qrCard" style="display: none;">
-                <h2><i class="fas fa-qrcode"></i> Scoring Link</h2>
-                <p style="color: #666; margin-bottom: 15px;">Players scan this QR code to enter their scores:</p>
-                <div class="qr-box">
-                    <div id="qrcode"></div>
-                    <div class="url" id="scoringUrl"></div>
-                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
-                        <button class="btn" onclick="copyUrl()">
-                            <i class="fas fa-copy"></i> Copy Link
-                        </button>
-                        <button class="btn btn-secondary" onclick="printQR()">
-                            <i class="fas fa-print"></i> Print
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Print Scorecards -->
-            <div class="card">
-                <h2><i class="fas fa-print"></i> Print Scorecards</h2>
-                <p style="color: #666; margin-bottom: 15px;">Print blank scorecards for players to fill out by hand.</p>
-                <div class="form-group">
-                    <label>Select Round</label>
-                    <select id="printRoundSelect" style="padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; width: 100%;">
-                        <option value="">-- Select Round --</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Number of Cards</label>
-                    <select id="printCount" style="padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; width: 100%;">
-                        <option value="1">1 Scorecard</option>
-                        <option value="2" selected>2 Scorecards (1 page)</option>
-                        <option value="4">4 Scorecards (2 pages)</option>
-                        <option value="all">All Players</option>
-                    </select>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn" onclick="printScorecards()">
-                        <i class="fas fa-print"></i> Print Blank Cards
-                    </button>
-                    <button class="btn btn-secondary" onclick="printScorecards(true)">
-                        <i class="fas fa-users"></i> Print with Names
+                <!-- Danger Zone -->
+                <div class="card danger-zone">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Danger Zone</h2>
+                    <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Delete all league data and start fresh.</p>
+                    <button class="btn btn-danger" onclick="resetLeague()">
+                        <i class="fas fa-trash"></i> Reset League
                     </button>
                 </div>
-            </div>
 
-            <!-- Course Settings -->
-            <div class="card">
-                <h2><i class="fas fa-golf-ball"></i> Course Settings</h2>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <strong id="courseInfo">Golf Cove</strong>
-                        <p style="color: #666; margin: 5px 0 0;">Par: <span id="totalPar">72</span></p>
-                    </div>
-                    <button class="btn btn-secondary" onclick="openParModal()">
-                        <i class="fas fa-edit"></i> Edit Pars
-                    </button>
-                </div>
-            </div>
-
-            <!-- Rounds List -->
-            <div class="card">
-                <h2><i class="fas fa-list"></i> Rounds</h2>
-                <div id="roundsList"></div>
-            </div>
-
-            <!-- Players List -->
-            <div class="card">
-                <h2><i class="fas fa-users"></i> Players</h2>
-                <div id="playersList"></div>
-                <form onsubmit="addPlayer(event)" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <input type="text" id="newPlayerName" placeholder="Name" style="flex: 2; min-width: 120px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px;">
-                    <input type="text" id="newPlayerTeam" placeholder="Team (optional)" style="flex: 1; min-width: 100px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px;">
-                    <input type="number" id="newPlayerHcp" placeholder="HCP" value="0" style="width: 70px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px;">
-                    <button type="submit" class="btn"><i class="fas fa-plus"></i></button>
-                </form>
-            </div>
-
-            <!-- Danger Zone -->
-            <div class="card danger-zone">
-                <h2><i class="fas fa-exclamation-triangle"></i> Reset League</h2>
-                <p style="color: #666; margin-bottom: 15px;">Delete all data and start over.</p>
-                <button class="btn btn-danger" onclick="resetLeague()">
-                    <i class="fas fa-trash"></i> Delete Everything
-                </button>
             </div>
         </div>
     </div>
 
-    <!-- Score Modal -->
-    <div class="modal" id="scoreModal">
+    <!-- Add Player Modal -->
+    <div class="modal" id="addPlayerModal">
         <div class="modal-content">
             <h3>
-                <span id="modalTitle">Round Scores</span>
-                <button class="close" onclick="closeModal()">&times;</button>
+                <span>Add Player to <span id="modalTeamName"></span></span>
+                <button class="close" onclick="closeAddPlayerModal()">&times;</button>
             </h3>
-            <div id="modalScores"></div>
+            <form onsubmit="addPlayerToTeam(event)">
+                <input type="hidden" id="addPlayerTeamId">
+                <div class="form-group">
+                    <label>Player Name</label>
+                    <input type="text" id="addPlayerName" required placeholder="John Smith">
+                </div>
+                <div class="form-group">
+                    <label>Handicap</label>
+                    <input type="number" id="addPlayerHcp" value="0" min="0" max="54">
+                </div>
+                <button type="submit" class="btn" style="width: 100%; justify-content: center;">
+                    <i class="fas fa-plus"></i> Add Player
+                </button>
+            </form>
         </div>
     </div>
 
@@ -477,11 +652,22 @@ Bob Wilson, 15"></textarea>
                 <span>Set Course Pars</span>
                 <button class="close" onclick="closeParModal()">&times;</button>
             </h3>
-            <p style="color: #666; margin-bottom: 20px;">Enter the par for each hole:</p>
+            <p style="color: #666; margin-bottom: 15px; font-size: 13px;">Enter the par for each hole:</p>
             <div class="par-inputs" id="parInputs"></div>
-            <button class="btn btn-block" style="margin-top: 20px;" onclick="savePars()">
+            <button class="btn" style="width: 100%; justify-content: center; margin-top: 20px;" onclick="savePars()">
                 <i class="fas fa-check"></i> Save Pars
             </button>
+        </div>
+    </div>
+
+    <!-- View Scores Modal -->
+    <div class="modal" id="scoresModal">
+        <div class="modal-content">
+            <h3>
+                <span id="scoresModalTitle">Round Scores</span>
+                <button class="close" onclick="closeScoresModal()">&times;</button>
+            </h3>
+            <div id="scoresModalContent"></div>
         </div>
     </div>
 
@@ -489,8 +675,32 @@ Bob Wilson, 15"></textarea>
     <script>
         let league = null;
 
+        // Generate a random 4-digit PIN
+        function generatePin() {
+            return String(Math.floor(1000 + Math.random() * 9000));
+        }
+
         function init() {
             league = JSON.parse(localStorage.getItem('golfcove_league') || 'null');
+            
+            // Migration: ensure teams array exists
+            if (league && !league.teams) {
+                league.teams = [];
+                // Migrate existing players' team field to new structure
+                const teamNames = [...new Set(league.players.filter(p => p.team).map(p => p.team))];
+                teamNames.forEach(name => {
+                    const teamId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
+                    league.teams.push({ id: teamId, name });
+                    league.players.forEach(p => {
+                        if (p.team === name) p.teamId = teamId;
+                    });
+                });
+                // Add PINs to players without them
+                league.players.forEach(p => {
+                    if (!p.pin) p.pin = generatePin();
+                });
+                save();
+            }
 
             if (league) {
                 document.getElementById('setupForm').classList.remove('active');
@@ -509,26 +719,14 @@ Bob Wilson, 15"></textarea>
             const season = document.getElementById('season').value.trim();
             const courseName = document.getElementById('courseName').value.trim();
             const holes = parseInt(document.getElementById('holes').value);
-            const playersText = document.getElementById('players').value;
-
-            const players = playersText.split('\n')
-                .map(line => line.trim())
-                .filter(line => line)
-                .map((line, i) => {
-                    const parts = line.split(',').map(p => p.trim());
-                    return {
-                        id: 'p' + Date.now() + i,
-                        name: parts[0] || 'Player ' + (i + 1),
-                        handicap: parseInt(parts[1]) || 0
-                    };
-                });
 
             league = {
                 id: 'league_' + Date.now(),
                 name,
                 season,
                 course: { name: courseName, holes, pars: Array(holes).fill(4) },
-                players,
+                teams: [],
+                players: [],
                 rounds: [],
                 scores: {},
                 createdAt: new Date().toISOString()
@@ -540,97 +738,203 @@ Bob Wilson, 15"></textarea>
 
         function renderDashboard() {
             document.getElementById('leagueTitle').textContent = league.name;
+            document.getElementById('leagueSeason').textContent = league.season;
             
-            // Show course info
-            document.getElementById('courseInfo').textContent = `${league.course?.name || 'Golf Cove'} - ${league.course?.holes || 18} Holes`;
-            const totalPar = (league.course?.pars || []).reduce((a, b) => a + b, 0) || (league.course?.holes || 18) * 4;
-            document.getElementById('totalPar').textContent = totalPar;
-            
-            // Set default round name
+            // Set default round name and date
             document.getElementById('roundName').value = 'Week ' + (league.rounds.length + 1);
             document.getElementById('roundDate').valueAsDate = new Date();
 
-            // Show QR if there's a round
-            if (league.rounds.length > 0) {
-                const lastRound = league.rounds[league.rounds.length - 1];
-                const url = window.location.origin + window.location.pathname.replace('league-admin.html', '') + 'score.html?r=' + lastRound.id;
-                document.getElementById('scoringUrl').textContent = url;
-                document.getElementById('qrCard').style.display = 'block';
-                
-                // Generate QR code
-                const qrContainer = document.getElementById('qrcode');
-                qrContainer.innerHTML = '';
-                new QRCode(qrContainer, {
-                    text: url,
-                    width: 180,
-                    height: 180,
-                    colorDark: '#333333',
-                    colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.H
-                });
+            renderTeams();
+            renderCurrentRound();
+            renderRounds();
+            updatePrintOptions();
+        }
+
+        function renderTeams() {
+            const container = document.getElementById('teamsList');
+            
+            if (league.teams.length === 0) {
+                container.innerHTML = '<div class="empty">No teams yet. Add your first team below.</div>';
+                return;
             }
 
-            renderRounds();
-            renderPlayers();
+            container.innerHTML = league.teams.map(team => {
+                const teamPlayers = league.players.filter(p => p.teamId === team.id);
+                return `
+                    <div class="team-card">
+                        <div class="team-name">
+                            <span>${team.name}</span>
+                            <button onclick="deleteTeam('${team.id}')" title="Delete team"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="players">
+                            ${teamPlayers.length === 0 ? '<span style="color: #999; font-size: 13px;">No players</span>' : 
+                                teamPlayers.map(p => `
+                                    <div class="player">
+                                        <span>${p.name} <span class="hcp">HCP ${p.handicap}</span></span>
+                                        <span>
+                                            <span class="pin">${p.pin}</span>
+                                            <button onclick="deletePlayer('${p.id}')" style="background: none; border: none; color: #dc3545; cursor: pointer; margin-left: 8px;"><i class="fas fa-times"></i></button>
+                                        </span>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                        <button class="btn btn-sm btn-outline" style="margin-top: 10px;" onclick="openAddPlayerModal('${team.id}', '${team.name}')">
+                            <i class="fas fa-plus"></i> Add Player
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderCurrentRound() {
+            const container = document.getElementById('currentRound');
             
-            // Populate print round dropdown
-            const printSelect = document.getElementById('printRoundSelect');
-            printSelect.innerHTML = '<option value="">-- Select Round --</option>' + 
-                league.rounds.map(r => `<option value="${r.id}">${r.name} - ${new Date(r.date).toLocaleDateString()}</option>`).join('');
-            if (league.rounds.length > 0) {
-                printSelect.value = league.rounds[league.rounds.length - 1].id;
+            if (league.rounds.length === 0) {
+                container.innerHTML = '<div class="empty">No rounds yet. Create one to get started.</div>';
+                document.getElementById('qrCard').style.display = 'none';
+                return;
             }
+
+            const round = league.rounds[league.rounds.length - 1];
+            const scored = league.players.filter(p => league.scores[round.id]?.[p.id]?.submitted).length;
+            const total = league.players.length;
+
+            container.innerHTML = `
+                <div class="round-status">
+                    <div class="info">
+                        <h3>${round.name}</h3>
+                        <p>${new Date(round.date).toLocaleDateString()}</p>
+                    </div>
+                    <div class="score-count">
+                        <div class="big">${scored}/${total}</div>
+                        <div class="label">scores in</div>
+                    </div>
+                </div>
+            `;
+
+            // Show QR code
+            const url = window.location.origin + window.location.pathname.replace('league-admin.html', '') + 'score.html?r=' + round.id;
+            document.getElementById('scoringUrl').textContent = url;
+            document.getElementById('qrCard').style.display = 'block';
+            
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: url,
+                width: 150,
+                height: 150,
+                colorDark: '#333333',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
         }
 
         function renderRounds() {
             const container = document.getElementById('roundsList');
             
             if (league.rounds.length === 0) {
-                container.innerHTML = '<div class="empty">No rounds yet. Add one above.</div>';
+                container.innerHTML = '<div class="empty">No rounds</div>';
                 return;
             }
 
-            container.innerHTML = league.rounds.map(r => {
+            container.innerHTML = league.rounds.slice().reverse().map(r => {
                 const scored = league.players.filter(p => league.scores[r.id]?.[p.id]?.submitted).length;
                 return `
                     <div class="round-item">
                         <div>
                             <h4>${r.name}</h4>
-                            <p>${new Date(r.date).toLocaleDateString()} • ${scored}/${league.players.length} scored</p>
+                            <p>${new Date(r.date).toLocaleDateString()} • ${scored}/${league.players.length}</p>
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn" onclick="viewScores('${r.id}')" style="padding: 8px 14px;">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-secondary" onclick="deleteRound('${r.id}')" style="padding: 8px 14px;">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                        <div class="actions">
+                            <button class="btn btn-sm btn-secondary" onclick="viewRoundScores('${r.id}')"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteRound('${r.id}')"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        function renderPlayers() {
-            const container = document.getElementById('playersList');
-            
-            if (league.players.length === 0) {
-                container.innerHTML = '<div class="empty">No players.</div>';
-                return;
-            }
-
-            container.innerHTML = league.players.map(p => `
-                <div class="player-item">
-                    <div>
-                        <span class="name">${p.name}</span>
-                        ${p.team ? `<span style="color: #37b24a; font-size: 12px; margin-left: 6px;">[${p.team}]</span>` : ''}
-                        <span class="hcp">HCP: ${p.handicap}</span>
-                    </div>
-                    <button onclick="deletePlayer('${p.id}')"><i class="fas fa-times"></i></button>
-                </div>
-            `).join('');
+        function updatePrintOptions() {
+            const select = document.getElementById('printTeamSelect');
+            select.innerHTML = '<option value="">Blank Cards</option>' + 
+                league.teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
         }
 
+        // Team functions
+        function addTeam(e) {
+            e.preventDefault();
+            const name = document.getElementById('newTeamName').value.trim();
+            if (!name) return;
+
+            league.teams.push({
+                id: 't' + Date.now(),
+                name
+            });
+
+            document.getElementById('newTeamName').value = '';
+            save();
+            renderTeams();
+            updatePrintOptions();
+        }
+
+        function deleteTeam(id) {
+            if (!confirm('Delete this team and unassign its players?')) return;
+            
+            // Unassign players from this team
+            league.players.forEach(p => {
+                if (p.teamId === id) p.teamId = null;
+            });
+            
+            league.teams = league.teams.filter(t => t.id !== id);
+            save();
+            renderTeams();
+            updatePrintOptions();
+        }
+
+        // Player functions
+        function openAddPlayerModal(teamId, teamName) {
+            document.getElementById('addPlayerTeamId').value = teamId;
+            document.getElementById('modalTeamName').textContent = teamName;
+            document.getElementById('addPlayerName').value = '';
+            document.getElementById('addPlayerHcp').value = '0';
+            document.getElementById('addPlayerModal').classList.add('open');
+        }
+
+        function closeAddPlayerModal() {
+            document.getElementById('addPlayerModal').classList.remove('open');
+        }
+
+        function addPlayerToTeam(e) {
+            e.preventDefault();
+            
+            const teamId = document.getElementById('addPlayerTeamId').value;
+            const name = document.getElementById('addPlayerName').value.trim();
+            const handicap = parseInt(document.getElementById('addPlayerHcp').value) || 0;
+
+            if (!name) return;
+
+            league.players.push({
+                id: 'p' + Date.now(),
+                name,
+                teamId,
+                handicap,
+                pin: generatePin()
+            });
+
+            save();
+            closeAddPlayerModal();
+            renderTeams();
+        }
+
+        function deletePlayer(id) {
+            if (!confirm('Remove this player?')) return;
+            league.players = league.players.filter(p => p.id !== id);
+            save();
+            renderTeams();
+        }
+
+        // Round functions
         function addRound(e) {
             e.preventDefault();
             
@@ -649,44 +953,61 @@ Bob Wilson, 15"></textarea>
         }
 
         function deleteRound(id) {
-            if (!confirm('Delete this round and its scores?')) return;
+            if (!confirm('Delete this round and all its scores?')) return;
             league.rounds = league.rounds.filter(r => r.id !== id);
             delete league.scores[id];
             save();
             renderDashboard();
         }
 
-        function addPlayer(e) {
-            e.preventDefault();
+        function viewRoundScores(roundId) {
+            const round = league.rounds.find(r => r.id === roundId);
+            if (!round) return;
+
+            document.getElementById('scoresModalTitle').textContent = round.name + ' Scores';
             
-            const name = document.getElementById('newPlayerName').value.trim();
-            const team = document.getElementById('newPlayerTeam').value.trim();
-            const handicap = parseInt(document.getElementById('newPlayerHcp').value) || 0;
+            const holes = league.course?.holes || 18;
+            const pars = league.course?.pars || Array(holes).fill(4);
+            const totalPar = pars.reduce((a, b) => a + b, 0);
 
-            if (!name) return;
-
-            league.players.push({
-                id: 'p' + Date.now(),
-                name,
-                team: team || null,
-                handicap
+            const scores = league.players.map(p => {
+                const ps = league.scores[roundId]?.[p.id];
+                if (!ps || !ps.submitted) return { name: p.name, team: league.teams.find(t => t.id === p.teamId)?.name, handicap: p.handicap, gross: null };
+                
+                let gross = 0;
+                for (let h = 1; h <= holes; h++) {
+                    gross += ps[h] || 0;
+                }
+                return { name: p.name, team: league.teams.find(t => t.id === p.teamId)?.name, handicap: p.handicap, gross, net: gross - p.handicap };
+            }).sort((a, b) => {
+                if (a.gross === null) return 1;
+                if (b.gross === null) return -1;
+                return a.net - b.net;
             });
 
-            document.getElementById('newPlayerName').value = '';
-            document.getElementById('newPlayerTeam').value = '';
-            document.getElementById('newPlayerHcp').value = '0';
+            document.getElementById('scoresModalContent').innerHTML = scores.map(s => `
+                <div class="round-item">
+                    <div>
+                        <h4>${s.name}</h4>
+                        <p>${s.team || 'No team'} • HCP ${s.handicap}</p>
+                    </div>
+                    ${s.gross !== null ? `
+                        <div style="text-align: right;">
+                            <div style="font-size: 18px; font-weight: 700; color: #37b24a;">${s.gross}</div>
+                            <div style="font-size: 12px; color: #666;">Net: ${s.net}</div>
+                        </div>
+                    ` : '<span style="color: #999;">No score</span>'}
+                </div>
+            `).join('');
 
-            save();
-            renderPlayers();
+            document.getElementById('scoresModal').classList.add('open');
         }
 
-        function deletePlayer(id) {
-            if (!confirm('Remove this player?')) return;
-            league.players = league.players.filter(p => p.id !== id);
-            save();
-            renderPlayers();
+        function closeScoresModal() {
+            document.getElementById('scoresModal').classList.remove('open');
         }
 
+        // QR functions
         function copyUrl() {
             const url = document.getElementById('scoringUrl').textContent;
             navigator.clipboard.writeText(url);
@@ -703,7 +1024,7 @@ Bob Wilson, 15"></textarea>
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>Golf Cove League - Scoring QR</title>
+                    <title>Scoring QR - ${league.name}</title>
                     <style>
                         body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
                         h1 { color: #37b24a; margin-bottom: 10px; }
@@ -726,59 +1047,7 @@ Bob Wilson, 15"></textarea>
             setTimeout(() => printWindow.print(), 250);
         }
 
-        function resetLeague() {
-            if (!confirm('Delete the entire league? This cannot be undone!')) return;
-            if (!confirm('Are you absolutely sure?')) return;
-            
-            localStorage.removeItem('golfcove_league');
-            league = null;
-            init();
-        }
-
-        function save() {
-            localStorage.setItem('golfcove_league', JSON.stringify(league));
-        }
-
-        function viewScores(roundId) {
-            const round = league.rounds.find(r => r.id === roundId);
-            if (!round) return;
-
-            document.getElementById('modalTitle').textContent = round.name + ' Scores';
-            
-            const scores = league.players.map(p => {
-                const ps = league.scores[roundId]?.[p.id];
-                if (!ps || !ps.submitted) return { name: p.name, handicap: p.handicap, gross: null };
-                
-                let gross = 0;
-                for (let h = 1; h <= (league.course?.holes || 18); h++) {
-                    gross += ps[h] || 0;
-                }
-                return { name: p.name, handicap: p.handicap, gross, net: gross - p.handicap };
-            }).sort((a, b) => {
-                if (a.gross === null) return 1;
-                if (b.gross === null) return -1;
-                return a.net - b.net;
-            });
-
-            document.getElementById('modalScores').innerHTML = scores.map(s => `
-                <div class="score-row">
-                    <span class="player">${s.name}</span>
-                    ${s.gross !== null ? `
-                        <div style="text-align: right;">
-                            <div class="gross">${s.gross}</div>
-                            <div class="net">Net: ${s.net}</div>
-                        </div>
-                    ` : '<span style="color: #999;">No score</span>'}
-                </div>
-            `).join('');
-
-            document.getElementById('scoreModal').classList.add('open');
-        }
-
-        function closeModal() {
-            document.getElementById('scoreModal').classList.remove('open');
-        }
-
+        // Par functions
         function openParModal() {
             const holes = league.course?.holes || 18;
             const pars = league.course?.pars || Array(holes).fill(4);
@@ -787,7 +1056,7 @@ Bob Wilson, 15"></textarea>
             for (let i = 0; i < holes; i++) {
                 html += `
                     <div>
-                        <label>Hole ${i + 1}</label>
+                        <label>H${i + 1}</label>
                         <input type="number" min="3" max="6" value="${pars[i]}" id="par${i}">
                     </div>
                 `;
@@ -815,53 +1084,102 @@ Bob Wilson, 15"></textarea>
             alert('Pars saved!');
         }
 
-        function printScorecards(withNames = false) {
-            const roundId = document.getElementById('printRoundSelect').value;
-            const round = league.rounds.find(r => r.id === roundId);
-            const count = document.getElementById('printCount').value;
-            
-            if (!round) {
-                alert('Please select a round');
+        // Print PIN sheet
+        function printPinSheet() {
+            if (league.players.length === 0) {
+                alert('No players to print PINs for');
                 return;
             }
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Player PINs - ${league.name}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 30px; }
+                        h1 { color: #37b24a; margin-bottom: 5px; }
+                        h2 { color: #666; font-weight: normal; margin-bottom: 30px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+                        th { background: #f5f5f5; font-weight: 600; }
+                        .pin { font-family: monospace; font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+                        .team { color: #37b24a; font-size: 12px; }
+                        .note { margin-top: 30px; color: #888; font-size: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>⛳ ${league.name}</h1>
+                    <h2>Player PINs - Keep Confidential</h2>
+                    <table>
+                        <tr>
+                            <th>Player</th>
+                            <th>Team</th>
+                            <th>PIN</th>
+                        </tr>
+                        ${league.players.map(p => {
+                            const team = league.teams.find(t => t.id === p.teamId);
+                            return `
+                                <tr>
+                                    <td>${p.name}</td>
+                                    <td class="team">${team?.name || '-'}</td>
+                                    <td class="pin">${p.pin}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </table>
+                    <p class="note">Each player uses their PIN to submit scores. Do not share PINs between players.</p>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 250);
+        }
+
+        // Print scorecards
+        function printScorecards() {
+            const teamId = document.getElementById('printTeamSelect').value;
+            const count = parseInt(document.getElementById('printCount').value);
             
+            if (league.rounds.length === 0) {
+                alert('Please create a round first');
+                return;
+            }
+
+            const round = league.rounds[league.rounds.length - 1];
             const holes = league.course?.holes || 18;
             const pars = league.course?.pars || Array(holes).fill(4);
             const frontNine = Math.min(9, holes);
             const has18 = holes >= 18;
             
-            // Get QR code image
             const qrImg = document.querySelector('#qrcode img')?.src || '';
-            const scoringUrl = document.getElementById('scoringUrl')?.textContent || '';
             
-            // Determine how many cards to print
             let players = [];
-            if (withNames) {
-                if (count === 'all') {
-                    players = league.players;
-                } else {
-                    players = league.players.slice(0, parseInt(count));
-                }
+            if (teamId) {
+                // Print for specific team
+                players = league.players.filter(p => p.teamId === teamId);
             } else {
-                const numCards = count === 'all' ? league.players.length : parseInt(count);
-                for (let i = 0; i < numCards; i++) {
-                    players.push({ name: '', team: '', handicap: '' });
+                // Blank cards
+                for (let i = 0; i < count; i++) {
+                    players.push({ name: '', teamId: null, handicap: '' });
                 }
             }
-            
-            // Build scorecard HTML with QR code + Excel grid
-            const buildCard = (player, index) => {
-                // Front 9 pars
-                let frontPars = '';
-                let frontParTotal = 0;
+
+            if (players.length === 0) {
+                alert('No players found for this team');
+                return;
+            }
+
+            const buildCard = (player) => {
+                const team = player.teamId ? league.teams.find(t => t.id === player.teamId) : null;
+                let frontPars = '', backPars = '';
+                let frontParTotal = 0, backParTotal = 0;
+                
                 for (let h = 0; h < frontNine; h++) {
                     frontPars += `<td>${pars[h]}</td>`;
                     frontParTotal += pars[h];
                 }
-                
-                // Back 9 pars (if 18 holes)
-                let backPars = '';
-                let backParTotal = 0;
                 if (has18) {
                     for (let h = 9; h < holes; h++) {
                         backPars += `<td>${pars[h]}</td>`;
@@ -873,7 +1191,6 @@ Bob Wilson, 15"></textarea>
                 
                 return `
                     <div class="scorecard">
-                        <!-- Header with QR Code -->
                         <div class="card-header">
                             <div class="header-left">
                                 <h1>⛳ ${league.course?.name || 'Golf Cove'}</h1>
@@ -881,31 +1198,17 @@ Bob Wilson, 15"></textarea>
                                 <p class="round-info">${round.name} • ${new Date(round.date).toLocaleDateString()}</p>
                             </div>
                             <div class="qr-section">
-                                <img src="${qrImg}" class="qr-code" alt="QR Code">
-                                <p class="qr-label">Scan to enter score online</p>
+                                <img src="${qrImg}" class="qr-code" alt="QR">
+                                <p class="qr-label">Scan to enter score</p>
                             </div>
                         </div>
                         
-                        <!-- Player Info Row -->
                         <div class="player-row">
-                            <div class="field">
-                                <span class="label">Player:</span>
-                                <span class="value">${player.name || ''}</span>
-                                <span class="underline"></span>
-                            </div>
-                            <div class="field">
-                                <span class="label">Team:</span>
-                                <span class="value">${player.team || ''}</span>
-                                <span class="underline"></span>
-                            </div>
-                            <div class="field small">
-                                <span class="label">HCP:</span>
-                                <span class="value">${player.handicap !== '' ? player.handicap : ''}</span>
-                                <span class="underline short"></span>
-                            </div>
+                            <div class="field"><span class="label">Player:</span><span class="value">${player.name || ''}</span><span class="underline"></span></div>
+                            <div class="field"><span class="label">Team:</span><span class="value">${team?.name || ''}</span><span class="underline"></span></div>
+                            <div class="field small"><span class="label">HCP:</span><span class="value">${player.handicap !== '' ? player.handicap : ''}</span><span class="underline short"></span></div>
                         </div>
                         
-                        <!-- Score Grid - Excel Style -->
                         <table class="score-grid">
                             <thead>
                                 <tr>
@@ -943,20 +1246,10 @@ Bob Wilson, 15"></textarea>
                             </tbody>
                         </table>
                         
-                        <!-- Footer -->
                         <div class="footer-row">
-                            <div class="sig-field">
-                                <span class="label">Scorer:</span>
-                                <span class="sig-line"></span>
-                            </div>
-                            <div class="sig-field">
-                                <span class="label">Attest:</span>
-                                <span class="sig-line"></span>
-                            </div>
-                            <div class="sig-field">
-                                <span class="label">Date:</span>
-                                <span class="sig-line short"></span>
-                            </div>
+                            <div class="sig-field"><span class="label">Scorer:</span><span class="sig-line"></span></div>
+                            <div class="sig-field"><span class="label">Attest:</span><span class="sig-line"></span></div>
+                            <div class="sig-field"><span class="label">Date:</span><span class="sig-line short"></span></div>
                         </div>
                     </div>
                 `;
@@ -970,216 +1263,76 @@ Bob Wilson, 15"></textarea>
                     <title>Scorecards - ${league.name}</title>
                     <style>
                         * { margin: 0; padding: 0; box-sizing: border-box; }
-                        body { 
-                            font-family: Arial, sans-serif; 
-                            padding: 15px;
-                            background: #fff;
-                        }
-                        
-                        .scorecard {
-                            border: 3px solid #333;
-                            padding: 20px;
-                            margin-bottom: 20px;
-                            page-break-inside: avoid;
-                            background: #fff;
-                        }
-                        
-                        /* Header with QR */
-                        .card-header {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: flex-start;
-                            border-bottom: 3px solid #37b24a;
-                            padding-bottom: 15px;
-                            margin-bottom: 15px;
-                        }
-                        
-                        .header-left h1 {
-                            color: #37b24a;
-                            font-size: 28px;
-                            margin-bottom: 2px;
-                        }
-                        
-                        .header-left h2 {
-                            font-size: 18px;
-                            color: #333;
-                            font-weight: normal;
-                            margin-bottom: 5px;
-                        }
-                        
-                        .round-info {
-                            font-size: 14px;
-                            color: #666;
-                        }
-                        
-                        .qr-section {
-                            text-align: center;
-                        }
-                        
-                        .qr-code {
-                            width: 100px;
-                            height: 100px;
-                            border: 2px solid #333;
-                        }
-                        
-                        .qr-label {
-                            font-size: 10px;
-                            color: #666;
-                            margin-top: 5px;
-                        }
-                        
-                        /* Player Info */
-                        .player-row {
-                            display: flex;
-                            gap: 30px;
-                            margin-bottom: 15px;
-                            padding-bottom: 10px;
-                        }
-                        
-                        .player-row .field {
-                            display: flex;
-                            align-items: baseline;
-                            gap: 8px;
-                        }
-                        
-                        .player-row .label {
-                            font-weight: bold;
-                            font-size: 12px;
-                        }
-                        
-                        .player-row .value {
-                            font-size: 14px;
-                            min-width: 80px;
-                        }
-                        
-                        .player-row .underline {
-                            flex: 1;
-                            border-bottom: 1px solid #333;
-                            min-width: 100px;
-                        }
-                        
-                        .player-row .underline.short {
-                            min-width: 40px;
-                        }
-                        
-                        .player-row .field.small {
-                            flex: 0 0 auto;
-                        }
-                        
-                        /* Score Grid */
-                        .score-grid {
-                            width: 100%;
-                            border-collapse: collapse;
-                            margin-bottom: 15px;
-                            font-size: 11px;
-                        }
-                        
-                        .score-grid th,
-                        .score-grid td {
-                            border: 2px solid #333;
-                            padding: 8px 4px;
-                            text-align: center;
-                            min-width: 28px;
-                        }
-                        
-                        .score-grid th {
-                            background: #f0f0f0;
-                            font-weight: bold;
-                        }
-                        
-                        .score-grid .row-label {
-                            background: #333;
-                            color: #fff;
-                            font-weight: bold;
-                            width: 55px;
-                            text-align: center;
-                        }
-                        
-                        .score-grid .subtotal {
-                            background: #e0e0e0;
-                            font-weight: bold;
-                        }
-                        
-                        .score-grid .total {
-                            background: #c0c0c0;
-                            font-weight: bold;
-                        }
-                        
-                        .score-grid .net {
-                            background: #37b24a;
-                            color: #fff;
-                        }
-                        
-                        .score-grid .par-row td {
-                            background: #f8f8f8;
-                            font-size: 12px;
-                        }
-                        
-                        .score-grid .par-row .row-label {
-                            background: #666;
-                        }
-                        
-                        .score-grid .score-row td.input-cell {
-                            background: #fff;
-                            height: 35px;
-                        }
-                        
-                        .score-grid .score-row .subtotal.input-cell,
-                        .score-grid .score-row .total.input-cell {
-                            background: #fff;
-                        }
-                        
-                        .score-grid .score-row .net.input-cell {
-                            background: #e8f5e9;
-                        }
-                        
-                        /* Footer */
-                        .footer-row {
-                            display: flex;
-                            gap: 40px;
-                            padding-top: 10px;
-                            border-top: 1px solid #ccc;
-                        }
-                        
-                        .sig-field {
-                            display: flex;
-                            align-items: baseline;
-                            gap: 8px;
-                        }
-                        
-                        .sig-field .label {
-                            font-weight: bold;
-                            font-size: 11px;
-                        }
-                        
-                        .sig-line {
-                            border-bottom: 1px solid #333;
-                            min-width: 120px;
-                        }
-                        
-                        .sig-line.short {
-                            min-width: 80px;
-                        }
-                        
-                        @media print {
-                            body { padding: 0; }
-                            .scorecard { 
-                                margin-bottom: 15px;
-                                page-break-after: always;
-                            }
-                            .scorecard:last-child {
-                                page-break-after: auto;
-                            }
-                        }
+                        body { font-family: Arial, sans-serif; padding: 15px; background: #fff; }
+                        .scorecard { border: 3px solid #333; padding: 20px; margin-bottom: 20px; page-break-inside: avoid; background: #fff; }
+                        .card-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #37b24a; padding-bottom: 15px; margin-bottom: 15px; }
+                        .header-left h1 { color: #37b24a; font-size: 28px; margin-bottom: 2px; }
+                        .header-left h2 { font-size: 18px; color: #333; font-weight: normal; margin-bottom: 5px; }
+                        .round-info { font-size: 14px; color: #666; }
+                        .qr-section { text-align: center; }
+                        .qr-code { width: 100px; height: 100px; border: 2px solid #333; }
+                        .qr-label { font-size: 10px; color: #666; margin-top: 5px; }
+                        .player-row { display: flex; gap: 30px; margin-bottom: 15px; }
+                        .player-row .field { display: flex; align-items: baseline; gap: 8px; }
+                        .player-row .label { font-weight: bold; font-size: 12px; }
+                        .player-row .value { font-size: 14px; min-width: 80px; }
+                        .player-row .underline { flex: 1; border-bottom: 1px solid #333; min-width: 100px; }
+                        .player-row .underline.short { min-width: 40px; }
+                        .player-row .field.small { flex: 0 0 auto; }
+                        .score-grid { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11px; }
+                        .score-grid th, .score-grid td { border: 2px solid #333; padding: 8px 4px; text-align: center; min-width: 28px; }
+                        .score-grid th { background: #f0f0f0; font-weight: bold; }
+                        .score-grid .row-label { background: #333; color: #fff; font-weight: bold; width: 55px; }
+                        .score-grid .subtotal { background: #e0e0e0; font-weight: bold; }
+                        .score-grid .total { background: #c0c0c0; font-weight: bold; }
+                        .score-grid .net { background: #37b24a; color: #fff; }
+                        .score-grid .par-row td { background: #f8f8f8; font-size: 12px; }
+                        .score-grid .par-row .row-label { background: #666; }
+                        .score-grid .score-row td.input-cell { background: #fff; height: 35px; }
+                        .score-grid .score-row .net.input-cell { background: #e8f5e9; }
+                        .footer-row { display: flex; gap: 40px; padding-top: 10px; border-top: 1px solid #ccc; }
+                        .sig-field { display: flex; align-items: baseline; gap: 8px; }
+                        .sig-field .label { font-weight: bold; font-size: 11px; }
+                        .sig-line { border-bottom: 1px solid #333; min-width: 120px; }
+                        .sig-line.short { min-width: 80px; }
+                        @media print { body { padding: 0; } .scorecard { margin-bottom: 15px; page-break-after: always; } .scorecard:last-child { page-break-after: auto; } }
                     </style>
                 </head>
                 <body>
-                    ${players.map((p, i) => buildCard(p, i)).join('')}
+                    ${players.map(p => buildCard(p)).join('')}
                 </body>
                 </html>
             `);
             printWindow.document.close();
             setTimeout(() => printWindow.print(), 300);
+        }
+
+        function viewAllScores() {
+            window.location.href = 'tournaments.html';
+        }
+
+        function exportData() {
+            const data = JSON.stringify(league, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${league.name.replace(/\s+/g, '_')}_export.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function resetLeague() {
+            if (!confirm('Delete the entire league? This cannot be undone!')) return;
+            if (!confirm('Are you absolutely sure?')) return;
+            
+            localStorage.removeItem('golfcove_league');
+            league = null;
+            init();
+        }
+
+        function save() {
+            localStorage.setItem('golfcove_league', JSON.stringify(league));
         }
 
         init();
