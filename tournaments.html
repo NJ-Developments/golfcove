@@ -295,6 +295,13 @@
             font-weight: 600;
             margin-left: 8px;
         }
+        .standings-table th.highlight {
+            background: #37b24a;
+            color: #fff;
+        }
+        .missed-week {
+            color: #ccc;
+        }
         @media (max-width: 600px) {
             .stats-row {
                 gap: 30px;
@@ -414,15 +421,15 @@
                 </div>
 
                 <div class="standings-card">
-                    <h2>🏆 Season Standings</h2>
+                    <h2>🏆 Global Leaderboard</h2>
                     
                     ${hasScores ? `
                     <div style="padding: 15px 20px; border-bottom: 1px solid #eee;">
+                        <p style="font-size: 13px; color: #666; margin-bottom: 12px;">Cumulative scores across all rounds • Lower is better</p>
                         <div class="view-toggle">
-                            <button class="view-btn active" onclick="setView('cumulative-net')">Cumulative Net</button>
-                            <button class="view-btn" onclick="setView('cumulative-gross')">Cumulative Gross</button>
-                            <button class="view-btn" onclick="setView('average')">Average Score</button>
-                            <button class="view-btn" onclick="setView('by-round')">By Round</button>
+                            <button class="view-btn active" onclick="setView('cumulative-net')">Net Score</button>
+                            <button class="view-btn" onclick="setView('cumulative-gross')">Gross Score</button>
+                            <button class="view-btn" onclick="setView('by-round')">Week by Week</button>
                         </div>
                         <div class="export-row">
                             <button class="export-btn" onclick="exportToExcel()">
@@ -555,59 +562,45 @@
             
             switch(view) {
                 case 'cumulative-gross':
-                    headers = `<th>#</th><th>Player</th><th>HCP</th>${has18 ? '<th>OUT</th><th>IN</th>' : ''}<th>TOT</th><th>Rnds</th>`;
+                    headers = `<th>#</th><th>Player</th><th>Weeks</th><th class="highlight">Gross Total</th>`;
                     renderRow = (s, i, pos) => `
                         <td class="pos ${pos <= 3 ? 'pos-' + pos : ''}">${pos || '-'}</td>
                         <td><span class="player-name">${s.name}</span></td>
-                        <td>${s.handicap}</td>
-                        ${has18 ? `<td>${s.roundsPlayed > 0 ? s.totalOut : '-'}</td><td>${s.roundsPlayed > 0 ? s.totalIn : '-'}</td>` : ''}
+                        <td>${s.roundsPlayed}</td>
                         <td class="cumulative-score gross-score">${s.roundsPlayed > 0 ? s.totalGross : '-'}</td>
-                        <td>${s.roundsPlayed}</td>
-                    `;
-                    break;
-                    
-                case 'average':
-                    headers = `<th>#</th><th>Player</th><th>HCP</th><th>Avg Gross</th><th>Avg Net</th><th>Rnds</th>`;
-                    renderRow = (s, i, pos) => `
-                        <td class="pos ${pos <= 3 ? 'pos-' + pos : ''}">${pos || '-'}</td>
-                        <td><span class="player-name">${s.name}</span></td>
-                        <td>${s.handicap}</td>
-                        <td>${s.avgGross || '-'}</td>
-                        <td class="net-score">${s.avgNet || '-'}</td>
-                        <td>${s.roundsPlayed}</td>
                     `;
                     break;
                     
                 case 'by-round':
-                    const roundHeaders = league.rounds.map(r => `<th title="${r.date}">${r.name}</th>`).join('');
-                    headers = `<th>#</th><th>Player</th><th>HCP</th>${roundHeaders}<th>TOT</th><th>NET</th>`;
+                    const roundHeaders = league.rounds.map(r => `<th title="${r.date}">${r.name.replace('Week ', 'Wk ')}</th>`).join('');
+                    headers = `<th>#</th><th>Player</th>${roundHeaders}<th>Total</th>`;
                     renderRow = (s, i, pos) => {
                         const roundScores = league.rounds.map(r => {
                             const rd = s.roundDetails.find(d => d.name === r.name);
-                            return `<td>${rd ? rd.gross : '-'}</td>`;
+                            return `<td style="${rd ? '' : 'color: #ccc;'}">${rd ? rd.net : '-'}</td>`;
                         }).join('');
                         return `
                             <td class="pos ${pos <= 3 ? 'pos-' + pos : ''}">${pos || '-'}</td>
                             <td><span class="player-name">${s.name}</span></td>
-                            <td>${s.handicap}</td>
                             ${roundScores}
-                            <td>${s.roundsPlayed > 0 ? s.totalGross : '-'}</td>
                             <td class="net-score">${s.roundsPlayed > 0 ? s.totalNet : '-'}</td>
+                        `;
+                    };
+                    break;
                         `;
                     };
                     break;
                     
                 case 'cumulative-net':
                 default:
-                    headers = `<th>#</th><th>Player</th><th>HCP</th>${has18 ? '<th>OUT</th><th>IN</th>' : ''}<th>TOT</th><th>NET</th><th>Rnds</th>`;
+                    headers = `<th>#</th><th>Player</th><th>HCP</th><th>Weeks</th><th>Gross</th><th class="highlight">Net Total</th>`;
                     renderRow = (s, i, pos) => `
                         <td class="pos ${pos <= 3 ? 'pos-' + pos : ''}">${pos || '-'}</td>
                         <td><span class="player-name">${s.name}</span></td>
                         <td>${s.handicap}</td>
-                        ${has18 ? `<td>${s.roundsPlayed > 0 ? s.totalOut : '-'}</td><td>${s.roundsPlayed > 0 ? s.totalIn : '-'}</td>` : ''}
+                        <td>${s.roundsPlayed}</td>
                         <td>${s.roundsPlayed > 0 ? s.totalGross : '-'}</td>
                         <td class="net-score cumulative-score">${s.roundsPlayed > 0 ? s.totalNet : '-'}</td>
-                        <td>${s.roundsPlayed}</td>
                     `;
                     break;
             }
