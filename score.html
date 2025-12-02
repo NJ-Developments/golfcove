@@ -66,6 +66,140 @@
             border-color: #37b24a;
             outline: none;
         }
+        
+        /* Divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: #999;
+            font-size: 13px;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e0e0e0;
+        }
+        .divider span { padding: 0 15px; }
+        
+        /* Register button */
+        .register-btn {
+            width: 100%;
+            padding: 14px;
+            background: #fff;
+            border: 2px dashed #37b24a;
+            border-radius: 8px;
+            color: #37b24a;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .register-btn:hover {
+            background: #37b24a;
+            color: #fff;
+            border-style: solid;
+        }
+        
+        /* Profile card */
+        .profile-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .profile-avatar {
+            font-size: 40px;
+            color: #37b24a;
+        }
+        .profile-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        .profile-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #666;
+            margin-top: 3px;
+        }
+        .profile-meta i { color: #37b24a; margin-right: 4px; }
+        .switch-btn {
+            background: none;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #666;
+            cursor: pointer;
+        }
+        .switch-btn:hover { background: #f5f5f5; }
+        
+        /* Registration form */
+        .registration-form {
+            background: #fff;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .registration-form h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .registration-form h2 i { color: #37b24a; }
+        .form-desc {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 6px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: #37b24a;
+            outline: none;
+        }
+        .cancel-btn {
+            width: 100%;
+            padding: 14px;
+            background: #f5f5f5;
+            border: none;
+            border-radius: 8px;
+            color: #666;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .cancel-btn:hover { background: #eee; }
+        
         .scores-card {
             background: #fff;
             border-radius: 12px;
@@ -330,6 +464,22 @@
         let league = null;
         let roundId = null;
         let playerId = null;
+        
+        // Profile management
+        function getSavedProfile() {
+            const saved = localStorage.getItem('golfcove_profile');
+            return saved ? JSON.parse(saved) : null;
+        }
+        
+        function saveProfile(id) {
+            localStorage.setItem('golfcove_profile', JSON.stringify({ playerId: id }));
+        }
+        
+        function clearProfile() {
+            localStorage.removeItem('golfcove_profile');
+            playerId = null;
+            render();
+        }
 
         function init() {
             // Listen for real-time updates from Firebase
@@ -344,11 +494,23 @@
                 // Ensure arrays exist (Firebase returns undefined for empty arrays)
                 league.players = league.players || [];
                 league.rounds = league.rounds || [];
+                league.teams = league.teams || [];
                 league.scores = league.scores || {};
 
                 const params = new URLSearchParams(window.location.search);
                 roundId = params.get('r');
-                playerId = params.get('p');
+                const urlPlayerId = params.get('p');
+                
+                // Priority: URL param > saved profile
+                if (urlPlayerId) {
+                    playerId = urlPlayerId;
+                    saveProfile(urlPlayerId);
+                } else {
+                    const savedProfile = getSavedProfile();
+                    if (savedProfile && league.players.find(p => p.id === savedProfile.playerId)) {
+                        playerId = savedProfile.playerId;
+                    }
+                }
 
                 // Get current round if not specified
                 if (!roundId && league.rounds.length > 0) {
@@ -380,24 +542,51 @@
             const container = document.getElementById('content');
             const scores = getScores();
             const submitted = scores.submitted;
+            const currentPlayer = league.players.find(p => p.id === playerId);
+            
+            // Show profile header if player is selected
+            let profileHeader = '';
+            if (currentPlayer) {
+                const team = league.teams.find(t => t.id === currentPlayer.teamId);
+                profileHeader = `
+                    <div class="profile-card">
+                        <div class="profile-info">
+                            <div class="profile-avatar"><i class="fas fa-user-circle"></i></div>
+                            <div class="profile-details">
+                                <div class="profile-name">${currentPlayer.name}</div>
+                                <div class="profile-meta">
+                                    ${team ? `<span><i class="fas fa-users"></i> ${team.name}</span>` : ''}
+                                    <span><i class="fas fa-golf-ball"></i> HCP ${currentPlayer.handicap || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="switch-btn" onclick="showPlayerSelect()"><i class="fas fa-exchange-alt"></i> Switch</button>
+                    </div>
+                `;
+            }
 
-            // Build player dropdown
-            let html = `
-                <div class="player-select">
-                    <label>Select Your Name</label>
-                    <select id="playerSelect" onchange="selectPlayer(this.value)">
-                        <option value="">-- Choose --</option>
-                        ${league.players.map(p => `
-                            <option value="${p.id}" ${p.id === playerId ? 'selected' : ''}>${p.name}</option>
-                        `).join('')}
-                    </select>
-                </div>
-            `;
-
-            if (!playerId) {
+            // Build player selection / registration
+            let html = '';
+            
+            if (!playerId || document.getElementById('showingSelect')) {
+                html = `
+                    <div class="player-select">
+                        <label>Select Your Name</label>
+                        <select id="playerSelect" onchange="selectPlayer(this.value)">
+                            <option value="">-- Choose --</option>
+                            ${league.players.map(p => `
+                                <option value="${p.id}" ${p.id === playerId ? 'selected' : ''}>${p.name}</option>
+                            `).join('')}
+                        </select>
+                        <div class="divider"><span>or</span></div>
+                        <button class="register-btn" onclick="showRegistration()"><i class="fas fa-user-plus"></i> Create New Profile</button>
+                    </div>
+                `;
                 container.innerHTML = html;
                 return;
             }
+            
+            html = profileHeader;
 
             if (submitted) {
                 let out = 0, inScore = 0, total = 0;
@@ -544,11 +733,73 @@
         function selectPlayer(id) {
             playerId = id;
             if (id) {
+                saveProfile(id);
                 const url = new URL(window.location);
                 url.searchParams.set('p', id);
                 window.history.pushState({}, '', url);
             }
             render();
+        }
+        
+        function showPlayerSelect() {
+            playerId = null;
+            render();
+        }
+        
+        function showRegistration() {
+            const container = document.getElementById('content');
+            container.innerHTML = `
+                <div class="registration-form">
+                    <h2><i class="fas fa-user-plus"></i> Create Profile</h2>
+                    <p class="form-desc">Register to start entering your scores</p>
+                    <form onsubmit="registerPlayer(event)">
+                        <div class="form-group">
+                            <label>Your Name</label>
+                            <input type="text" id="regName" required placeholder="John Smith" autocomplete="name">
+                        </div>
+                        <div class="form-group">
+                            <label>Handicap</label>
+                            <input type="number" id="regHandicap" value="0" min="0" max="54">
+                        </div>
+                        <div class="form-group">
+                            <label>Team (Optional)</label>
+                            <select id="regTeam">
+                                <option value="">-- No Team --</option>
+                                ${league.teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <button type="submit" class="submit-btn"><i class="fas fa-check"></i> Create Profile</button>
+                        <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
+                    </form>
+                </div>
+            `;
+        }
+        
+        function generatePin() {
+            return Math.floor(1000 + Math.random() * 9000).toString();
+        }
+        
+        function registerPlayer(e) {
+            e.preventDefault();
+            const name = document.getElementById('regName').value.trim();
+            const handicap = parseInt(document.getElementById('regHandicap').value) || 0;
+            const teamId = document.getElementById('regTeam').value || null;
+            
+            if (!name) return;
+            
+            const newPlayer = {
+                id: 'p' + Date.now(),
+                name,
+                handicap,
+                teamId,
+                pin: generatePin()
+            };
+            
+            league.players.push(newPlayer);
+            leagueRef.set(league);
+            
+            // Auto-select the new player
+            selectPlayer(newPlayer.id);
         }
 
         function getScores() {

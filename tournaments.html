@@ -290,6 +290,31 @@
         }
         .score-cell.net { color: #37b24a; }
         .score-cell.gross { color: #333; }
+        
+        /* Trend indicators */
+        .trend-up { color: #37b24a; font-weight: bold; }
+        .trend-down { color: #e74c3c; font-weight: bold; }
+        .trend-flat { color: #95a5a6; }
+        
+        /* To-par styling */
+        .to-par { font-weight: 600; }
+        .to-par.over { color: #e74c3c; }
+        .to-par.under { color: #37b24a; }
+        .to-par.even { color: #333; }
+        
+        /* Stats summary in expanded row */
+        .stats-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 10px 15px;
+            background: #f0f7f0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .stats-summary span { color: #555; }
+        .stats-summary strong { color: #37b24a; }
 
         /* Expand Row */
         .expand-row {
@@ -716,10 +741,13 @@
             const frontNine = Math.min(9, holes);
             const players = league.players || [];
             const rounds = league.rounds || [];
+            const coursePar = (league.course?.pars || []).reduce((a, b) => a + b, 0) || (holes * 4);
             
             return players.map(player => {
                 let totalGross = 0, totalOut = 0, totalIn = 0, roundsPlayed = 0;
                 let roundDetails = [];
+                let bestGross = null, worstGross = null, bestNet = null;
+                let allGross = [], allNet = [];
 
                 rounds.forEach(round => {
                     const ps = league.scores?.[round.id]?.[player.id];
@@ -735,16 +763,42 @@
                             inScore += score; gross += score;
                         }
                         
+                        const net = gross - (player.handicap || 0);
                         totalGross += gross; totalOut += out; totalIn += inScore; roundsPlayed++;
-                        roundDetails.push({ name: round.name, date: round.date, out, in: inScore, gross, net: gross - (player.handicap || 0) });
+                        roundDetails.push({ name: round.name, date: round.date, out, in: inScore, gross, net });
+                        
+                        allGross.push(gross);
+                        allNet.push(net);
+                        if (bestGross === null || gross < bestGross) bestGross = gross;
+                        if (worstGross === null || gross > worstGross) worstGross = gross;
+                        if (bestNet === null || net < bestNet) bestNet = net;
                     }
                 });
 
                 const totalNet = totalGross - ((player.handicap || 0) * roundsPlayed);
+                const avgGross = roundsPlayed > 0 ? (totalGross / roundsPlayed).toFixed(1) : null;
+                const avgNet = roundsPlayed > 0 ? (totalNet / roundsPlayed).toFixed(1) : null;
+                const toPar = roundsPlayed > 0 ? totalGross - (coursePar * roundsPlayed) : null;
+                
+                // Calculate trend (last 3 rounds vs previous 3)
+                let trend = null;
+                if (allNet.length >= 2) {
+                    const recent = allNet.slice(-Math.min(3, allNet.length));
+                    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+                    if (allNet.length >= 4) {
+                        const older = allNet.slice(-6, -3);
+                        if (older.length > 0) {
+                            const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+                            trend = olderAvg - recentAvg; // positive = improving
+                        }
+                    }
+                }
+                
                 return {
                     id: player.id, name: player.name, teamId: player.teamId || null,
                     handicap: player.handicap || 0, totalOut, totalIn, totalGross, totalNet,
-                    roundsPlayed, roundDetails
+                    roundsPlayed, roundDetails, bestGross, worstGross, bestNet, avgGross, avgNet,
+                    toPar, trend, coursePar
                 };
             });
         }
@@ -783,12 +837,28 @@
 
             let headers, renderRow;
             
+            // Helper for trend arrow
+            const getTrendIcon = (trend) => {
+                if (trend === null) return '';
+                if (trend > 1) return '<span class="trend-up" title="Improving">↑</span>';
+                if (trend < -1) return '<span class="trend-down" title="Declining">↓</span>';
+                return '<span class="trend-flat" title="Steady">→</span>';
+            };
+            
+            const formatToPar = (toPar) => {
+                if (toPar === null) return '-';
+                if (toPar === 0) return 'E';
+                return toPar > 0 ? `+${toPar}` : toPar;
+            };
+
             if (view === 'cumulative-gross') {
-                headers = `<th style="width:50px">#</th><th>Player</th><th>Rounds</th><th class="highlight">Total Gross</th>`;
+                headers = `<th style="width:50px">#</th><th>Player</th><th>Rounds</th><th>Best</th><th>Avg</th><th class="highlight">Total</th>`;
                 renderRow = (s, pos) => `
                     <td><span class="pos-badge ${pos <= 3 ? 'pos-' + pos : 'pos-other'}">${pos || '-'}</span></td>
                     <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                     <td>${s.roundsPlayed}</td>
+                    <td>${s.bestGross || '-'}</td>
+                    <td>${s.avgGross || '-'}</td>
                     <td><span class="score-cell gross">${s.roundsPlayed > 0 ? s.totalGross : '-'}</span></td>
                 `;
             } else if (view === 'by-round') {
@@ -807,14 +877,17 @@
                     `;
                 };
             } else {
-                headers = `<th style="width:50px">#</th><th>Player</th><th>HCP</th><th>Rounds</th><th>Gross</th><th class="highlight">Net Total</th>`;
+                headers = `<th style="width:50px">#</th><th>Player</th><th>HCP</th><th>Rnds</th><th>Best</th><th>Avg</th><th>To Par</th><th class="highlight">Net</th><th></th>`;
                 renderRow = (s, pos) => `
                     <td><span class="pos-badge ${pos <= 3 ? 'pos-' + pos : 'pos-other'}">${pos || '-'}</span></td>
                     <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                     <td>${s.handicap}</td>
                     <td>${s.roundsPlayed}</td>
-                    <td>${s.roundsPlayed > 0 ? s.totalGross : '-'}</td>
+                    <td>${s.bestNet || '-'}</td>
+                    <td>${s.avgNet || '-'}</td>
+                    <td class="to-par ${s.toPar !== null ? (s.toPar > 0 ? 'over' : s.toPar < 0 ? 'under' : 'even') : ''}">${formatToPar(s.toPar)}</td>
                     <td><span class="score-cell net">${s.roundsPlayed > 0 ? s.totalNet : '-'}</span></td>
+                    <td>${getTrendIcon(s.trend)}</td>
                 `;
             }
 
@@ -829,12 +902,19 @@
                                 <tr class="expand-row" id="details-${s.id}">
                                     <td colspan="10">
                                         <div class="round-breakdown">
-                                            ${s.roundDetails.length > 0 ? s.roundDetails.map(r => `
+                                            ${s.roundDetails.length > 0 ? `
+                                                <div class="stats-summary">
+                                                    <span><strong>Best:</strong> ${s.bestGross}</span>
+                                                    <span><strong>Worst:</strong> ${s.worstGross}</span>
+                                                    <span><strong>Avg:</strong> ${s.avgGross}</span>
+                                                    ${s.trend !== null ? `<span><strong>Trend:</strong> ${s.trend > 0 ? '↑ Improving' : s.trend < 0 ? '↓ Declining' : '→ Steady'}</span>` : ''}
+                                                </div>
+                                                ${s.roundDetails.map(r => `
                                                 <div class="round-chip">
                                                     <div class="week">${r.name}</div>
                                                     <div class="scores">${has18 ? `OUT ${r.out} • IN ${r.in} • ` : ''}Gross ${r.gross} → <span class="net-val">Net ${r.net}</span></div>
                                                 </div>
-                                            `).join('') : '<span style="color:#999">No rounds played yet</span>'}
+                                            `).join('')}` : '<span style="color:#999">No rounds played yet</span>'}
                                         </div>
                                     </td>
                                 </tr>
