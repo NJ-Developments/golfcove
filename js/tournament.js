@@ -4,6 +4,216 @@
  * Supports leagues with cumulative scoring across multiple rounds
  */
 
+// ==========================================
+// LEAGUE SYSTEM FUNCTIONS (New Simplified)
+// ==========================================
+
+const LeagueSystem = {
+    // Get the single league
+    getLeague() {
+        return JSON.parse(localStorage.getItem('golfcove_league') || 'null');
+    },
+
+    // Save the league
+    saveLeague(league) {
+        localStorage.setItem('golfcove_league', JSON.stringify(league));
+    },
+
+    // Get all scores
+    getScores() {
+        return JSON.parse(localStorage.getItem('golfcove_scores') || '[]');
+    },
+
+    // Save scores
+    saveScores(scores) {
+        localStorage.setItem('golfcove_scores', JSON.stringify(scores));
+    },
+
+    // Initialize a new league
+    initLeague(name, season) {
+        const league = {
+            id: 'league_' + Date.now(),
+            name: name || 'Golf Cove Weekly League',
+            season: season || '2025 Season',
+            players: [],
+            rounds: [],
+            createdAt: new Date().toISOString()
+        };
+        this.saveLeague(league);
+        return league;
+    },
+
+    // Add a player to the league
+    addPlayer(name, handicap = 0) {
+        const league = this.getLeague();
+        if (!league) return null;
+
+        const player = {
+            id: 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            name: name.trim(),
+            handicap: parseInt(handicap) || 0
+        };
+
+        league.players.push(player);
+        this.saveLeague(league);
+        return player;
+    },
+
+    // Remove a player
+    removePlayer(playerId) {
+        const league = this.getLeague();
+        if (!league) return;
+
+        league.players = league.players.filter(p => p.id !== playerId);
+        this.saveLeague(league);
+    },
+
+    // Update a player
+    updatePlayer(playerId, name, handicap) {
+        const league = this.getLeague();
+        if (!league) return;
+
+        const player = league.players.find(p => p.id === playerId);
+        if (player) {
+            player.name = name.trim();
+            player.handicap = parseInt(handicap) || 0;
+            this.saveLeague(league);
+        }
+    },
+
+    // Add a new round
+    addRound(date, courseName = 'Golf Cove') {
+        const league = this.getLeague();
+        if (!league) return null;
+
+        const round = {
+            id: 'round_' + Date.now(),
+            date: date,
+            courseName: courseName,
+            createdAt: new Date().toISOString()
+        };
+
+        league.rounds.push(round);
+        this.saveLeague(league);
+        return round;
+    },
+
+    // Delete a round
+    deleteRound(roundId) {
+        const league = this.getLeague();
+        if (!league) return;
+
+        league.rounds = league.rounds.filter(r => r.id !== roundId);
+        this.saveLeague(league);
+
+        // Also delete scores for this round
+        let scores = this.getScores();
+        scores = scores.filter(s => s.roundId !== roundId);
+        this.saveScores(scores);
+    },
+
+    // Get or create a score entry for a player in a round
+    getPlayerRoundScore(playerId, roundId) {
+        const scores = this.getScores();
+        return scores.find(s => s.playerId === playerId && s.roundId === roundId);
+    },
+
+    // Save a player's score for a round
+    savePlayerScore(playerId, roundId, holes, currentHole, isComplete = false) {
+        let scores = this.getScores();
+        const existingIndex = scores.findIndex(s => s.playerId === playerId && s.roundId === roundId);
+
+        const totalGross = isComplete ? holes.reduce((sum, h) => sum + (h || 0), 0) : 0;
+
+        const scoreEntry = {
+            playerId,
+            roundId,
+            holes: holes,
+            currentHole: currentHole,
+            totalGross: totalGross,
+            submittedAt: isComplete ? new Date().toISOString() : null
+        };
+
+        if (existingIndex >= 0) {
+            scores[existingIndex] = scoreEntry;
+        } else {
+            scores.push(scoreEntry);
+        }
+
+        this.saveScores(scores);
+        return scoreEntry;
+    },
+
+    // Calculate season standings
+    calculateStandings() {
+        const league = this.getLeague();
+        if (!league) return [];
+
+        const scores = this.getScores();
+
+        const standings = league.players.map(player => {
+            const playerScores = scores.filter(s => s.playerId === player.id && s.totalGross > 0);
+            
+            let totalGross = 0;
+            let totalNet = 0;
+            const roundDetails = [];
+
+            playerScores.forEach(score => {
+                const round = league.rounds.find(r => r.id === score.roundId);
+                totalGross += score.totalGross || 0;
+                // Net calculation: gross - (handicap * 0.9) per round
+                const handicapAllowance = Math.round((player.handicap || 0) * 0.9);
+                const netScore = (score.totalGross || 0) - handicapAllowance;
+                totalNet += netScore;
+
+                roundDetails.push({
+                    roundId: score.roundId,
+                    date: round ? round.date : null,
+                    gross: score.totalGross,
+                    net: netScore
+                });
+            });
+
+            return {
+                ...player,
+                roundsPlayed: playerScores.length,
+                totalGross,
+                totalNet,
+                average: playerScores.length > 0 ? Math.round(totalNet / playerScores.length * 10) / 10 : 0,
+                roundDetails
+            };
+        });
+
+        // Sort by total net (lowest wins), then by rounds played (more is better for ties)
+        standings.sort((a, b) => {
+            if (a.roundsPlayed === 0 && b.roundsPlayed === 0) return 0;
+            if (a.roundsPlayed === 0) return 1;
+            if (b.roundsPlayed === 0) return -1;
+            if (a.totalNet !== b.totalNet) return a.totalNet - b.totalNet;
+            return b.roundsPlayed - a.roundsPlayed;
+        });
+
+        return standings;
+    },
+
+    // Get current round (most recent)
+    getCurrentRound() {
+        const league = this.getLeague();
+        if (!league || !league.rounds.length) return null;
+        return league.rounds[league.rounds.length - 1];
+    },
+
+    // Get scoring URL for a round
+    getScoringUrl(roundId) {
+        const baseUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+        return `${baseUrl}score.html?round=${roundId}`;
+    }
+};
+
+// ==========================================
+// ORIGINAL TOURNAMENT MANAGER (for backward compatibility)
+// ==========================================
+
 const TournamentManager = {
     // Initialize the system
     init() {
