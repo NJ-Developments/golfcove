@@ -881,8 +881,8 @@
 
             if (view === 'cumulative-gross') {
                 headers = `<th style="width:50px">#</th><th>Player</th><th>Rounds</th><th>Best</th><th>Avg</th><th class="highlight">Total</th>`;
-                renderRow = (s, pos) => `
-                    <td><span class="pos-badge ${pos <= 3 ? 'pos-' + pos : 'pos-other'}">${pos || '-'}</span></td>
+                renderRow = (s, posDisplay, posNum) => `
+                    <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                     <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                     <td>${s.roundsPlayed}</td>
                     <td>${s.bestGross || '-'}</td>
@@ -892,13 +892,13 @@
             } else if (view === 'by-round') {
                 const roundHeaders = (league.rounds || []).map(r => `<th>${r.name.replace('Week ', 'W')}</th>`).join('');
                 headers = `<th style="width:50px">#</th><th>Player</th>${roundHeaders}<th class="highlight">Net</th>`;
-                renderRow = (s, pos) => {
+                renderRow = (s, posDisplay, posNum) => {
                     const cells = (league.rounds || []).map(r => {
                         const rd = s.roundDetails.find(d => d.name === r.name);
                         return `<td style="${rd ? '' : 'color:#ccc'}">${rd ? rd.net : '-'}</td>`;
                     }).join('');
                     return `
-                        <td><span class="pos-badge ${pos <= 3 ? 'pos-' + pos : 'pos-other'}">${pos || '-'}</span></td>
+                        <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                         <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                         ${cells}
                         <td><span class="score-cell net">${s.roundsPlayed > 0 ? s.totalNet : '-'}</span></td>
@@ -906,8 +906,8 @@
                 };
             } else {
                 headers = `<th style="width:50px">#</th><th>Player</th><th>HCP</th><th>Rnds</th><th>Best</th><th>Avg</th><th>To Par</th><th class="highlight">Net</th><th></th>`;
-                renderRow = (s, pos) => `
-                    <td><span class="pos-badge ${pos <= 3 ? 'pos-' + pos : 'pos-other'}">${pos || '-'}</span></td>
+                renderRow = (s, posDisplay, posNum) => `
+                    <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                     <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                     <td>${s.handicap}</td>
                     <td>${s.roundsPlayed}</td>
@@ -953,7 +953,7 @@
                             ).length > 0;
                             const posDisplay = pos ? (isTied ? `T${pos}` : pos) : null;
                             return `
-                                <tr onclick="toggleDetails('${s.id}')">${renderRow(s, posDisplay)}</tr>
+                                <tr onclick="toggleDetails('${s.id}')">${renderRow(s, posDisplay, pos)}</tr>
                                 <tr class="expand-row" id="details-${s.id}">
                                     <td colspan="10">
                                         <div class="round-breakdown">
