@@ -8,6 +8,9 @@
     <link rel="icon" type="image/png" href="images/golfcovelogo.png">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
         /* Hero Banner */
         .league-hero {
@@ -473,17 +476,33 @@
         <div class="header-main">
             <div class="logo">
                 <a href="index.html">
-                    <img src="images/golfCoveLogo6.png" alt="Golf Cove Logo">
+                    <img src="images/golfCoveLogo6.png" alt="Golf Cove Logo" width="200" height="75">
                 </a>
             </div>
             <nav class="main-nav" id="mainNav">
                 <ul class="nav-menu">
-                    <li><a href="index.html">Home</a></li>
                     <li><a href="pricing.html">Pricing</a></li>
                     <li><a href="memberships.html">Memberships</a></li>
-                    <li><a href="lessons-leagues.html">Lessons & Leagues</a></li>
-                    <li><a href="tournaments.html" class="active">Standings</a></li>
+                    <li class="dropdown">
+                        <a href="lessons-leagues.html">Lessons & Leagues <i class="fas fa-chevron-down"></i></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="lessons-leagues.html">Lessons & Leagues</a></li>
+                            <li><a href="pinseeker.html">PinSeeker at Golf Cove</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="private-events.html">Private Events <i class="fas fa-chevron-down"></i></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="private-events.html">Private Events</a></li>
+                            <li><a href="concierge.html">The Cove Concierge</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="multisport.html">MultiSport Arcade</a></li>
+                    <li><a href="gift-cards.html">Gift Cards</a></li>
+                    <li><a href="tournaments.html" class="active">Tournaments</a></li>
+                    <li><a href="menu.html">Menu</a></li>
                     <li><a href="contact.html">Contact</a></li>
+                    <li><a href="https://golfcove.globalitllc.com/booking#" class="btn-book" target="_blank">RESERVE A ROOM</a></li>
                 </ul>
             </nav>
             <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle Menu">
@@ -497,83 +516,96 @@
     </main>
 
     <!-- Footer -->
-    <footer class="main-footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <img src="images/golfcovelogo.png" alt="Golf Cove" class="footer-logo">
-                    <p>Your Premier Indoor Golf and MultiSport Destination in North Haven, CT</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Contact</h4>
-                    <p><i class="fas fa-phone"></i> 203.390.5994</p>
-                    <p><i class="fas fa-envelope"></i> info@golfcovect.com</p>
-                    <p><i class="fas fa-map-marker-alt"></i> 336 State Street, North Haven, CT 06473</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Quick Links</h4>
-                    <a href="pricing.html">Pricing</a>
-                    <a href="memberships.html">Memberships</a>
-                    <a href="lessons-leagues.html">Lessons & Leagues</a>
-                    <a href="private-events.html">Private Events</a>
-                </div>
+    <footer>
+        <div class="footer-simple">
+            <div class="footer-social-center">
+                <a href="https://www.facebook.com/golfcove/" target="_blank" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                <a href="https://www.instagram.com/golfcovect/" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
             </div>
-            <div class="footer-bottom">
-                <p>&copy; 2025 Golf Cove. All rights reserved.</p>
-            </div>
+            <p class="footer-social-text">Please visit our facebook and instagram pages frequently for events, updates and promotions!</p>
+            <p class="footer-address"><a href="https://maps.google.com/?q=336+State+Street,+North+Haven,+CT+06473" target="_blank">336 State Street, North Haven, CT 06473</a> | Phone: <a href="tel:2033905994">203.390.5994</a></p>
+            <p class="footer-copyright">© 2025 Golf Cove | <a href="contact.html">Contact Us</a> | <a href="sitemap.html">Site Map</a></p>
         </div>
     </footer>
 
     <script src="js/main.js"></script>
     <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8SH5Eh7OhIFLUkL2hjZS23uXkCsDJXGc",
+            authDomain: "golfcove.firebaseapp.com",
+            databaseURL: "https://golfcove-default-rtdb.firebaseio.com",
+            projectId: "golfcove",
+            storageBucket: "golfcove.firebasestorage.app",
+            messagingSenderId: "284762891644",
+            appId: "1:284762891644:web:424223b102f08a230f70f9"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const leagueRef = db.ref('league');
+        
         let currentView = 'cumulative-net';
         let currentTeamFilter = '';
         let cachedLeague = null;
         let cachedStandings = null;
 
+        // Default demo league shown when no league exists
+        const defaultLeague = {
+            name: 'Golf Cove League',
+            season: 'Winter 2025',
+            course: { name: 'Golf Cove', holes: 18, pars: Array(18).fill(4) },
+            teams: [{ id: 't1', name: 'Demo Team' }],
+            players: [
+                { id: 'p1', name: 'Javi', teamId: 't1', handicap: 10 }
+            ],
+            rounds: [],
+            scores: {}
+        };
+
         function init() {
-            const league = JSON.parse(localStorage.getItem('golfcove_league') || 'null');
             const app = document.getElementById('app');
-
-            if (!league) {
-                app.innerHTML = `
-                    <div class="setup-prompt">
-                        <div class="setup-card">
-                            <div class="icon"><i class="fas fa-trophy"></i></div>
-                            <h2>No League Set Up</h2>
-                            <p>A league hasn't been created yet. Once an admin sets up a league, standings and scores will appear here.</p>
-                            <div class="action-row">
-                                <a href="league-admin.html" class="league-btn"><i class="fas fa-plus"></i> Set Up League</a>
-                                <a href="index.html" class="league-btn league-btn-outline"><i class="fas fa-home"></i> Home</a>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-
+            app.innerHTML = '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#37b24a;"></i><p style="margin-top:15px;color:#666;">Loading standings...</p></div>';
+            
+            // Listen for real-time updates from Firebase
+            leagueRef.on('value', (snapshot) => {
+                let league = snapshot.val();
+                
+                // Use default league if none exists
+                if (!league) {
+                    league = defaultLeague;
+                }
+                
+                renderLeague(league);
+            });
+        }
+        
+        function renderLeague(league) {
+            const app = document.getElementById('app');
+            
             cachedLeague = league;
             cachedStandings = calculateStandings(league);
             const hasScores = cachedStandings.some(s => s.roundsPlayed > 0);
 
             // Check for live round
             const today = new Date().toISOString().split('T')[0];
-            const activeRound = league.rounds.find(r => r.date === today);
+            const activeRound = (league.rounds || []).find(r => r.date === today);
             let liveBannerHTML = '';
             
             if (activeRound) {
-                const submittedCount = league.players.filter(p => 
+                const submittedCount = (league.players || []).filter(p => 
                     league.scores?.[activeRound.id]?.[p.id]?.submitted
                 ).length;
                 
-                if (submittedCount < league.players.length) {
+                if (submittedCount < (league.players || []).length) {
                     liveBannerHTML = `
                         <div class="live-banner">
                             <div class="info">
                                 <span class="live-dot"></span>
                                 <strong>${activeRound.name} IN PROGRESS</strong>
                             </div>
-                            <div class="count">${submittedCount}/${league.players.length} scores submitted</div>
+                            <div class="count">${submittedCount}/${(league.players || []).length} scores submitted</div>
                         </div>
                     `;
                 }
