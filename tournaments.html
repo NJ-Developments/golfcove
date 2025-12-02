@@ -578,6 +578,10 @@
                 }
                 
                 renderLeague(league);
+            }, (error) => {
+                console.error('Firebase error:', error);
+                // Fallback to default league on error
+                renderLeague(defaultLeague);
             });
         }
         
