@@ -1,0 +1,2371 @@
+<!DOCTYPE html>
+<!-- saved from url=(0034)https://www.golfcovect.com/pricing -->
+<html lang="en-gb" dir="ltr" data-config="{&quot;twitter&quot;:0,&quot;plusone&quot;:0,&quot;facebook&quot;:0,&quot;style&quot;:&quot;121&quot;}" class="uk-notouch"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+    <!-- Google Tag Manager -->
+    <script>//# sourceURL=jsSdk.js
+var telmeSdk =
+{
+    sessionIdentifier: null,
+    timer: null,
+    replaceAllNumberDetail: {},
+    options: {"isIntl":false,"trackPage":false,"formTrack":false,"formDataTrack":true,"enableHtmlListener":true,"enableDynamicEntireDomListener":false,"debugMode":false},
+    timeOutMs: 5000000,
+    hasErrorTracking: window.Sentry && document.getElementById("telme-error-handler") !== null,
+    isSafariOnIOS: false,
+    cacheKey: "telme.js.session",
+    pooledCookieKey: "telme.js.poolNumbers",
+    numbersCookieKey: "telme.js.numbers",
+    sessionCookieKey: "telme.js.session",
+    contextArray: null,
+    replacedNumbers: null,
+    replacedImages: null,
+    replacedTexts: null,
+    contextExactURLs: null,
+    currentPage: null,
+    lookUpPhoneNumberRgx: null,
+    alreadyViewedNumbers: {},
+    elementReplacedAttr: "dni-replaced",
+    gaConfigIds: null,
+
+    escape: function (text) {
+        return text.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    },
+    createDocumentFragment: function (content) {
+        var frag = document.createDocumentFragment(), tmp = document.createElement('body'), child;
+        tmp.innerHTML = content;
+        while (child = tmp.firstChild) {
+            frag.appendChild(child);
+        }
+        tmp = null;
+        return frag;
+    },
+    purgeNode: function (d) {
+        var a = d.attributes, i, l, n;
+        if (a) {
+            for (i = a.length - 1; i >= 0; i -= 1) {
+                n = a[i].name;
+                if (typeof d[n] === 'function') {
+                    d[n] = null;
+                }
+            }
+        }
+        a = d.childNodes;
+        if (a) {
+            l = a.length;
+            for (i = 0; i < l; i += 1) {
+                telmeSdk.purgeNode(d.childNodes[i]);
+            }
+        }
+    },
+    encodeBase64: function (value) {
+        if (typeof (btoa) !== 'function') {
+            return telmeBase64.encode(value);
+        } else {
+            return btoa(value);
+        }
+    },
+    decodeBase64: function (value) {
+        if (typeof (atob) !== 'function') {
+            return telmeBase64.decode(value);
+        } else {
+            return atob(value);
+        }
+    },
+    createLocalStorageEntry: function (value) {
+        telmeSdk.setLocalStorageData(value);
+    },
+
+    createJSONP: function (URL, success) {
+        var ud = 'telmeJson' + (Math.random() * 100).toString().replace(/\./g, '');
+        window[ud] = function (o) {
+            success && success(o);
+        };
+        document.getElementsByTagName('body')[0].appendChild((function () {
+            var s = document.createElement('script');
+            s.type = 'text/javascript';
+            s.src = URL.replace('cb=?', 'cb=' + ud);
+            return s;
+        })());
+    },
+
+    clearCaches: function () {
+        localStorage.removeItem(telmeSdk.cacheKey);
+    },
+
+    processForm: function (e) {
+        var sessionId = telmeSdk.sessionIdentifier;
+
+        var form = e.target;
+        var formData = { attributes: [], fields: [] };
+        for (var i = 0; i < form.attributes.length; i++) {
+            if (form.attributes[i].name) {
+                formData.attributes.push({ name: form.attributes[i].name, value: form.attributes[i].value });
+            }
+        }
+        var formTrackQueryVal = 0;
+        if (telmeSdk.options.formDataTrack === true) {
+            formTrackQueryVal = 1;
+            for (var i = 0; i < form.elements.length; i++) {
+                if (form.elements[i].name) {
+                    cleanVal = form.elements[i].value.replace(/[^\w]/gi, '');
+                    var digitPattern = /^\d\d\d\d\d\d\d\d\d\d\d\d+$/;
+                    if (cleanVal.match(digitPattern))
+                        continue;
+
+                    formData.fields.push({ name: form.elements[i].name, value: form.elements[i].value });
+                }
+            }
+        }
+        var data = {
+            sessionIdentifier: sessionId,
+            pageUrl: encodeURIComponent(document.URL),
+            jsonSessionForm: telmeBase64.J.serialize(formData),
+            captureData: formTrackQueryVal
+        };
+
+        var url = "https://js.web-2-tel.com/org-jdnisf";
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader("Content-type", "application/json");
+        xhr.timeout = telmeSdk.timeOutMs;
+        xhr.ontimeout = function () { console.log("Web2Tel import has failed."); };
+        xhr.send(telmeBase64.J.serialize(data));
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                console.log("Web2Tel sent form data.");
+            }
+        }
+    },
+
+    attachFormHandler: function () {
+        if (document.readyState === "interactive" || document.readyState === "loaded" || document.readyState === "complete") {
+            var forms = document.forms;
+            for (i = 0; i < forms.length; i++) {
+                if (forms[i].attachEvent) {
+                    forms[i].attachEvent("submit", telmeSdk.processForm);
+                } else {
+                    forms[i].addEventListener("submit", telmeSdk.processForm);
+                }
+            }
+        } else {
+            setTimeout(function () {
+                telmeSdk.attachFormHandler();
+            }, 100);
+        }
+    },
+
+    trackPage: function () {
+        if (telmeSdk.currentPage === null)
+            return;
+
+        if (document.readyState === "interactive" || document.readyState === "loaded" || document.readyState === "complete") {
+            var url = telmeSdk.getCurrentPageUrl();
+
+            if (telmeSdk.currentPage === url) {
+                return;
+            }
+            telmeSdk.currentPage = url;
+            telmeSdk.sendPageTrackData(url);
+        } else {
+            setTimeout(function () {
+                telmeSdk.attachFormHandler();
+            }, 100);
+        }
+    },
+
+    sendPageTrackData: function (pageUrl) {
+        var data = {
+            SessionIdentifier: telmeSdk.sessionIdentifier,
+            PageUrl: pageUrl
+        };
+        var url = "https://js.web-2-tel.com/org-dpt";
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.timeout = this.timeOutMs;
+        xhr.ontimeout = function () { console.log("Web2Tel import has failed."); };
+        xhr.send(telmeBase64.J.serialize(data));
+    },
+
+    getCurrentPageUrl() {
+        return window.location.href.split(/[?#]/)[0];
+    },
+
+    replaceText: function (element, searchPatternWrapper, replacementPattern) {
+        if (element != document.body) {
+            if (element.nodeType === 3 && searchPatternWrapper.childNodes && searchPatternWrapper.childNodes.length === 1 && searchPatternWrapper.firstChild && searchPatternWrapper.firstChild.nodeType === 3) {
+                var sp = new RegExp(telmeSdk.escape(searchPatternWrapper.innerHTML), "g");
+                element.nodeValue = element.nodeValue.replace(sp, replacementPattern);
+                return;
+            } else if (element.nodeType === 3 && searchPatternWrapper.childNodes && searchPatternWrapper.childNodes.length > 1 && searchPatternWrapper.firstChild && searchPatternWrapper.firstChild.nodeType === 3) {
+                var matchedIndex = element.nodeValue.indexOf(searchPatternWrapper.firstChild.nodeValue);
+                if (matchedIndex >= 0) {
+                    var targetNode = document.createElement("div");
+                    targetNode.appendChild(searchPatternWrapper.firstChild.cloneNode(true));
+                    var nodesToRemove = [];
+                    var searchPatternNextSibling = searchPatternWrapper.firstChild.nextSibling;
+                    var nextSibling = element.nextSibling;
+                    while (true) {
+                        if (!nextSibling || !searchPatternNextSibling) {
+                            break;
+                        }
+                        targetNode.appendChild(nextSibling.cloneNode(true));
+                        nodesToRemove.push(nextSibling);
+                        nextSibling = nextSibling.nextSibling;
+                        searchPatternNextSibling = searchPatternNextSibling.nextSibling;
+                    }
+                    if (targetNode.innerHTML.indexOf(searchPatternWrapper.innerHTML) === 0) { //TODO: use start with for better performance
+                        var replacementHTML = element.nodeValue.substring(0, matchedIndex) + replacementPattern;
+                        if (targetNode.lastChild.nodeType === 3) {
+                            var lastMatchedIndex = targetNode.lastChild.nodeValue.indexOf(searchPatternWrapper.lastChild.nodeValue);
+                            replacementHTML += targetNode.lastChild.nodeValue.substring(lastMatchedIndex + searchPatternWrapper.lastChild.nodeValue.length);
+                        }
+                        var replacementNode = telmeSdk.createDocumentFragment(replacementHTML);
+                        for (c = 0; c < nodesToRemove.length; c++) {
+                            element.parentNode.removeChild(nodesToRemove[c]);
+                            telmeSdk.purgeNode(nodesToRemove[c]);
+                        }
+                        element.parentNode.replaceChild(replacementNode, element);
+                        telmeSdk.purgeNode(targetNode);
+                        targetNode = null;
+                        return;
+                    }
+                    telmeSdk.purgeNode(targetNode);
+                    targetNode = null;
+                }
+            } else if (element.nodeType != 3 && searchPatternWrapper.firstChild && searchPatternWrapper.firstChild.nodeType === element.nodeType && searchPatternWrapper.firstChild.localName === element.localName) {
+                var targetNode = document.createElement("div");
+                var nodesToRemove = [];
+                var searchPatternNextSibling = searchPatternWrapper.firstChild;
+                var nextSibling = element;
+                var posibleMatch = true;
+                var count = 0; //add a node to remove only it's not element
+                while (true) {
+                    if (!nextSibling || !searchPatternNextSibling) {
+                        break;
+                    }
+                    if (nextSibling.nodeType != searchPatternNextSibling.nodeType || searchPatternWrapper.firstChild.localName != element.localName) {
+                        posibleMatch = false;
+                        break;
+                    }
+                    targetNode.appendChild(nextSibling.cloneNode(true));
+                    if (count > 0)
+                        nodesToRemove.push(nextSibling);
+                    nextSibling = nextSibling.nextSibling;
+                    searchPatternNextSibling = searchPatternNextSibling.nextSibling;
+                    count++;
+                }
+                if (posibleMatch && targetNode.innerHTML.indexOf(searchPatternWrapper.innerHTML) === 0) {
+                    var replacementHTML = replacementPattern;
+                    if (targetNode.lastChild.nodeType === 3 && searchPatternWrapper.lastChild.nodeType === 3) {
+                        var lastMatchedIndex = targetNode.lastChild.nodeValue.indexOf(searchPatternWrapper.lastChild.nodeValue);
+                        replacementHTML += targetNode.lastChild.nodeValue.substring(lastMatchedIndex + searchPatternWrapper.lastChild.nodeValue.length);
+                    }
+                    var replacementNode = telmeSdk.createDocumentFragment(replacementHTML);
+                    for (c = 0; c < nodesToRemove.length; c++) {
+                        element.parentNode.removeChild(nodesToRemove[c]);
+                        telmeSdk.purgeNode(nodesToRemove[c]);
+                    }
+                    element.parentNode.replaceChild(replacementNode, element);
+                    telmeSdk.purgeNode(targetNode);
+                    targetNode = null;
+                    return;
+                }
+                telmeSdk.purgeNode(targetNode);
+                targetNode = null;
+            }
+        }
+
+        if (element.childNodes.length > 0) {
+            for (var i = 0; i < element.childNodes.length; i++)
+                telmeSdk.replaceText(element.childNodes[i], searchPatternWrapper, replacementPattern);
+        }
+    },
+
+    replaceNumberInLinkHref: function (linkElement, orginalNumberRegEx, replacementPattern) {
+        var link = linkElement.href;
+        if (!link || typeof link.indexOf !== "function" || !orginalNumberRegEx || !replacementPattern)
+            return;
+        if (link.indexOf("tel:") === 0) {
+            var newNumber = link.substring(4).replace(orginalNumberRegEx, replacementPattern)?.replace(/ /g, '');
+            var isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
+                navigator.userAgent &&
+                navigator.userAgent.indexOf('CriOS') === -1 &&
+                navigator.userAgent.indexOf('FxiOS') === -1;
+            // when the second number is zero, safari would miss the 0, special case to add a zero after the first number, 
+            // replacement pattern 10 means to replace position 1 with 0
+            if (isSafari
+                && replacementPattern.substring(2, 4) === "10" && newNumber.replace(/[^0-9]/g, "").length === 9) {
+                var firstNumber = newNumber.replace(/[^0-9]/g, "")[0];
+                var indexOfFirstNumber = newNumber.indexOf(firstNumber);
+                newNumber = newNumber.substring(0, indexOfFirstNumber + 1) + "0" + newNumber.substring(indexOfFirstNumber + 1, newNumber.length);
+            }
+            // case that has a leading 1- or 1.
+            else if (isSafari) {
+                var regex = RegExp("^\s*1\s*([.]|[-]|[(])");
+                if (regex.test(newNumber) && replacementPattern.substring(4, 6) === "10"
+                    && newNumber.replace(/[^0-9]/g, "").length === 10) {
+                    var firstNumberAfterLeadingOne = newNumber.replace(/[^0-9]/g, "")[1];
+                    var indexOfFirstNumberAfterLeadingOne = newNumber.indexOf(firstNumberAfterLeadingOne);
+                    newNumber = newNumber.substring(0, indexOfFirstNumberAfterLeadingOne + 1) + "0" + newNumber.substring(indexOfFirstNumberAfterLeadingOne + 1, newNumber.length);
+                }
+            }
+            linkElement.href = "tel:" + newNumber;
+            linkElement.setAttribute(telmeSdk.elementReplacedAttr, "true");
+            if (linkElement.hasAttribute("title") && orginalNumberRegEx.test(linkElement.title)) {
+                linkElement.title = linkElement.title.replace(orginalNumberRegEx, replacementPattern);
+            }
+            return;
+        }
+        else if (link.indexOf("sms:") === 0) {
+            linkElement.href = "sms:" + link.substring(4).replace(orginalNumberRegEx, replacementPattern);
+            linkElement.setAttribute(telmeSdk.elementReplacedAttr, "true");
+            return;
+        }
+        else if (link.indexOf("callto:") === 0) {
+            linkElement.href = "callto:" + link.substring(7).replace(orginalNumberRegEx, replacementPattern);
+            linkElement.setAttribute(telmeSdk.elementReplacedAttr, "true");
+            return;
+        }
+        else if (link.indexOf("wtai://wp/mc;") === 0) {
+            linkElement.href = "wtai://wp/mc;" + link.substring(13).replace(orginalNumberRegEx, replacementPattern);
+            linkElement.setAttribute(telmeSdk.elementReplacedAttr, "true");
+            return;
+        }
+        else if (link.indexOf("wtai://wp/ap;") === 0) {
+            linkElement.href = "wtai://wp/ap;" + link.substring(13).replace(orginalNumberRegEx, replacementPattern);
+            linkElement.setAttribute(telmeSdk.elementReplacedAttr, "true");
+            return;
+        }
+        else if (link.indexOf("wtai://wp/sd;") === 0) {
+            linkElement.href = "wtai://wp/sd;" + link.substring(13).replace(orginalNumberRegEx, replacementPattern);
+            linkElement.setAttribute(telmeSdk.elementReplacedAttr, "true");
+            return;
+        }
+    },
+    replaceNumberInLink: function (linkElement, orginalNumberRegEx, replacementPattern) {
+        if (!linkElement.length) {
+            telmeSdk.replaceNumberInLinkHref(linkElement, orginalNumberRegEx, replacementPattern)
+            return;
+        }
+        // handles special cases for links with multiple imbedded links
+        for (var i = 0; i < linkElement.length; i++) {
+            telmeSdk.replaceNumberInLinkHref(linkElement[i], orginalNumberRegEx, replacementPattern)
+        }
+    },
+
+    replaceImage: function (searchPattern, replacePattern) {
+        var images = document.images;
+        for (var i = 0; i < images.length; i++) {
+            if (images[i].src.toLowerCase().lastIndexOf(searchPattern.toLowerCase()) != -1)
+                images[i].src = replacePattern;
+        }
+    },
+
+    doHtmlNumberReplacement: function (element, previousVal, pattern, newNumber, internationalFormattedNumber) {
+        var isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1 &&
+            navigator.userAgent &&
+            navigator.userAgent.indexOf('CriOS') === -1 &&
+            navigator.userAgent.indexOf('FxiOS') === -1;
+        // when the second number is zero, safari would miss the 0, special case to add a zero after the first number, 
+        // replacement pattern 10 means to replace position one with 0
+        if (isSafari
+            && pattern.substring(2, 4) === "10" && newNumber.replace(/[^0-9]/g, "").length === 9) {
+            var firstNumber = newNumber.replace(/[^0-9]/g, "")[0];
+            var indexOfFirstNumber = newNumber.indexOf(firstNumber);
+            newNumber = newNumber.substring(0, indexOfFirstNumber + 1) + "0" + newNumber.substring(indexOfFirstNumber + 1, newNumber.length);
+        }
+        // case that has a leading 1- or 1.  with the missing 0 would have length 10
+        else if (isSafari) {
+            var regex = RegExp("^\s*1\s*([.]|[-]|[(])");
+            if (regex.test(newNumber) && pattern.substring(4, 6) === "10"
+                && newNumber.replace(/[^0-9]/g, "").length === 10) {
+                var firstNumberAfterLeadingOne = newNumber.replace(/[^0-9]/g, "")[1];
+                var indexOfFirstNumberAfterLeadingOne = newNumber.indexOf(firstNumberAfterLeadingOne);
+                newNumber = newNumber.substring(0, indexOfFirstNumberAfterLeadingOne + 1) + "0" + newNumber.substring(indexOfFirstNumberAfterLeadingOne + 1, newNumber.length);
+            }
+        }
+        element.nodeValue = newNumber;
+        
+        if (telmeSdk.options.debugMode === true) {
+            element.parentElement.style = "color: red";
+        }
+        element.parentElement.setAttribute(telmeSdk.elementReplacedAttr, "true");
+
+        var currentVal = element.nodeValue;
+        if (telmeSdk.isSafariOnIOS && previousVal !== currentVal && (!element.parentNode || !telmeSdk.hasHrefParent(element))) {
+            var dom = telmeSdk.getDocumentFromElement(element);
+            var a = dom.createElement('a');
+            var linkText = dom.createTextNode(currentVal);
+            if (telmeSdk.options.isIntl === true) {
+                a.href = "tel:" + internationalFormattedNumber.replace(/\s/g, '');
+            }
+            else {
+                a.href = "tel:" + pattern[0] + pattern[3] + pattern[6] + pattern[9] + pattern[12] + pattern[15] + pattern[18] + pattern[21] + pattern[24] + pattern[27];
+            }
+            a.appendChild(linkText);
+            if (element.parentNode !== null) {
+                element.parentNode.replaceChild(a, element);
+            }
+        }
+    },
+
+    getDocumentFromElement(el) {
+        const root = el.getRootNode();
+        // If the root itself *is* a Document, return it directly.
+        if (root instanceof Document) return root;
+        // Otherwise, we're in a ShadowRoot — use its ownerDocument.
+        return root.ownerDocument;
+    },
+
+    hasHrefParent: function (element) {
+        var parent = element.parentNode;
+        while (parent) {
+            if (parent.nodeType === 1 && parent.hasAttribute("href")) {
+                return true;
+            }
+            parent = parent.parentNode;
+        }
+        return false;
+    },
+
+    createOriginalNumberPattern: function (key) {
+        var l = key.length;
+        var pattern = "";
+        for (var i = 0; i < l; i++) {
+            if (i === 0)
+                pattern += "(?:" + key[i] + ")";
+            else
+                pattern += "((?:[^0-9a-zA-Z<]|(?:&.{2,6};)|(?:<[^>]*>)){0,6})(?:" + key[i] + ")";
+        }
+        return pattern;
+    },
+
+    createReplacementPattern: function (key, oriNumLength) {
+        var pattern = "";
+        var limit = key.length - 1;
+        var offset = 0;
+        if (key.length > oriNumLength) {
+            offset = key.length - oriNumLength;
+        }
+        for (var i = limit; i >= offset; i--) {
+            if (i > offset)
+                pattern = "$" + (i - offset).toString() + key[i] + pattern;
+            else
+                pattern = key[i] + pattern;
+        }
+        return pattern;
+    },
+
+    createInternationalReplacementPattern: function (key, oriNumLength) {
+        // Generate the replacement pattern
+        let pattern = "";
+        const lengthDiff = key.length - oriNumLength;
+        let i = 0;
+        for (i = 0; i < oriNumLength - 1; i++) {
+            pattern += key[i] + "$" + (i + 1).toString();
+        }
+
+        // Append extra replacement numbers, if any
+        if (i < oriNumLength) {
+            pattern += key.slice(oriNumLength - 1);
+        }
+
+        return pattern;
+    },
+
+    getReplacementDetail: function (number) {
+        if (!number || !telmeSdk.patternDictionary.hasOwnProperty(number.toLowerCase())) {
+            return null;
+        }
+        var key = number.toLowerCase();
+        var replacementDetails = telmeSdk.patternDictionary[key]
+
+        var defaultReplacement = null;
+        var contextReplacement = null;
+
+        for (var i = 0; i < replacementDetails.length; i++) {
+            var replacement = replacementDetails[i];
+
+            if (!replacement.exactUrl && replacement?.contexts?.length == 0) {
+                defaultReplacement = replacement;
+                continue;
+            }
+            if (telmeSdk.contextsMatches(replacement)) {
+                contextReplacement = replacement;
+            }
+        }
+
+        if (contextReplacement) {
+            return contextReplacement;
+        }
+        return defaultReplacement
+    },
+
+    addToPatternDictionary: function (originalNumber, dniNumber, internationalFormattedNumber, exactUrl, contexts) {
+        if (!originalNumber || !dniNumber) {
+            return;
+        }
+        try {
+            var number = originalNumber.toLowerCase();
+            var replacementDetails = telmeSdk.createReplacementDetails(originalNumber, dniNumber, internationalFormattedNumber);
+
+            if (!telmeSdk.patternDictionary.hasOwnProperty(number)) {
+                telmeSdk.patternDictionary[number] = [];
+            }
+            var patterns = telmeSdk.patternDictionary[number];
+            var patternFound = false;
+
+            for (var i = 0; i < patterns.length; i++) {
+                var pattern = patterns[i];
+
+                if (dniNumber == pattern.dniNumber) {
+                    patternFound = true;
+                    break;
+                }
+            }
+
+            if (!patternFound) {
+                telmeSdk.patternDictionary[number.toLowerCase()].push({
+                    "dniNumber": dniNumber,
+                    "searchPattern": replacementDetails.searchPattern,
+                    "replacementPattern": replacementDetails.replacementPattern,
+                    "linkReplacementPattern": replacementDetails.linkReplacementPattern,
+                    "internationalFormattedNumber": internationalFormattedNumber,
+                    "contexts": contexts,
+                    "exactUrl": exactUrl
+                });
+            }
+        }
+        catch (e) {
+            console.warn("Unable to generate pattern for " + originalNumber);
+        }
+    },
+
+    createReplacementDetails: function (originalNumber, dniNumber, internationalFormattedNumber) {
+        var replacementPattern = "";
+        var linkReplacementPattern = "";
+        var originalNumberRegExp = RegExp(telmeSdk.createOriginalNumberPattern(originalNumber), "gi");
+
+        if (internationalFormattedNumber && internationalFormattedNumber !== '' && this.options.isIntl === true) {
+            var strippedInternationNumber = this.stripPhoneNumber(internationalFormattedNumber);
+            var replacementNumber = originalNumber.indexOf("44") === 0 || originalNumber.indexOf("64") === 0 || originalNumber.indexOf("61") === 0
+                ? dniNumber : strippedInternationNumber;
+
+            replacementPattern = telmeSdk.createInternationalReplacementPattern(
+                replacementNumber
+                , originalNumber.length);
+            linkReplacementPattern = replacementPattern;
+        }
+        else {
+            replacementPattern = telmeSdk.createReplacementPattern(dniNumber, originalNumber.length);
+            linkReplacementPattern = replacementPattern;
+        }
+        return {
+            "searchPattern": originalNumberRegExp,
+            "replacementPattern": replacementPattern,
+            "linkReplacementPattern": linkReplacementPattern
+        };
+    },
+
+
+
+    doLookUpReplacementOnNode: function (element) {
+        var link = element.href;
+        if (element.nodeType === 3 && element.nodeValue.length >= 10) {
+            var nodeVal = element.nodeValue;
+            var matches = nodeVal.match(this.lookUpPhoneNumberRgx);
+
+            if (matches && matches.length > 0) {
+                for (var i = 0; i < matches.length; i++) {
+                    var previousVal = matches[i];
+                    var strippedNumber = telmeSdk.stripPhoneNumber(previousVal);
+
+                    if (strippedNumber === null
+                        || strippedNumber.length > 30) {
+                        continue;
+                    }
+
+                    var nodeSearchPattern, nodeReplacementPattern;
+                    var replacementDetail = telmeSdk.getReplacementDetail(strippedNumber);
+                    var internationalNumber = "";
+
+                    // Generate the search and replacement patterns from either the pattern Dictionary or replace all dni number
+                    if (strippedNumber.length >= 9
+                        && replacementDetail
+                    ) {
+                        nodeSearchPattern = replacementDetail.searchPattern;
+                        nodeReplacementPattern = replacementDetail.replacementPattern;
+                        internationalNumber = replacementDetail.internationalFormattedNumber;
+                    }
+                    else if (telmeSdk.replaceAllNumberDetail
+                        && telmeSdk.replaceAllNumberDetail.DniNumber
+                    ) {
+                        var replacementDetails = telmeSdk.createReplacementDetails(strippedNumber, this.replaceAllNumberDetail.DniNumber, this.replaceAllNumberDetail.InternationalFormattedNumber);
+                        nodeSearchPattern = replacementDetails.searchPattern;
+                        nodeReplacementPattern = replacementDetails.replacementPattern;
+                        internationalNumber = this.replaceAllNumberDetail.InternationalFormattedNumber;
+                    }
+                    if (nodeSearchPattern && nodeReplacementPattern) {
+                        var newNumber = element.nodeValue.replace(nodeSearchPattern, nodeReplacementPattern);
+                        telmeSdk.doHtmlNumberReplacement(element, previousVal, nodeReplacementPattern, newNumber, internationalNumber);
+                    }
+                }
+            }
+            if (MARCHEX_DNI_SCANNER && MARCHEX_DNI_SCANNER._VANITY_RGX_LIST && MARCHEX_DNI_SCANNER._VANITY_RGX_LIST.length > 0) {
+                var n = MARCHEX_DNI_SCANNER._VANITY_RGX_LIST.length;
+                for (var i = 0; i < n; i++) {
+
+                    var rgx = MARCHEX_DNI_SCANNER._VANITY_RGX_LIST[i];
+                    var matches = nodeVal.match(rgx);
+                    if (!matches || matches.length == 0) {
+                        continue;
+                    }
+
+                    for (var j = 0; j < matches.length; j++) {
+                        var previousVal = matches[j];
+                        var strippedVanityNumber = telmeSdk.stripVanityPhoneNumber(previousVal).toLowerCase();
+
+                        if (strippedVanityNumber === null
+                            || strippedVanityNumber.length > 30
+                            || !telmeSdk.patternDictionary.hasOwnProperty(strippedVanityNumber)) {
+                            return;
+                        }
+
+                        var nodeSearchPattern, nodeReplacementPattern;
+                        var replacementDetail = telmeSdk.getReplacementDetail(strippedVanityNumber);
+                        var internationalNumber = "";
+                        // Generate the search and replacement patterns from either the pattern Dictionary or replace all dni number
+                        if (strippedVanityNumber.length >= 9
+                            && replacementDetail
+                        ) {
+                            nodeSearchPattern = replacementDetail.searchPattern;
+                            nodeReplacementPattern = replacementDetail.replacementPattern;
+                            internationalNumber = replacementDetail.InternationalFormattedNumber
+                        }
+                        else if (telmeSdk.replaceAllNumberDetail
+                            && telmeSdk.replaceAllNumberDetail.DniNumber) {
+                            var replacementDetails = telmeSdk.createReplacementDetails(strippedNumber, this.replaceAllNumberDetail.DniNumber, this.replaceAllNumberDetail.InternationalFormattedNumber);
+                            nodeSearchPattern = replacementDetails.searchPattern;
+                            nodeReplacementPattern = replacementDetails.replacementPattern;
+                            internationalNumber = this.replaceAllNumberDetail.InternationalFormattedNumber;
+                        }
+                        if (nodeSearchPattern && nodeReplacementPattern) {
+                            var newNumber = element.nodeValue.replace(nodeSearchPattern, nodeReplacementPattern);
+                            telmeSdk.doHtmlNumberReplacement(element, previousVal, nodeReplacementPattern, newNumber, internationalNumber);
+                        }
+                    }
+                }
+            }
+        }
+        else if (link && typeof link.indexOf === "function") {
+            var strippedNumberInLink = this.stripPhoneNumber(link.substring(4));
+            var linkSearchPattern, linkReplacementPattern;
+            var linkReplacementDetail = telmeSdk.getReplacementDetail(strippedNumberInLink);
+
+            if (linkReplacementDetail) {
+                linkSearchPattern = linkReplacementDetail.searchPattern;
+                linkReplacementPattern = linkReplacementDetail.replacementPattern;
+            }
+            else if (telmeSdk.replaceAllNumberDetail
+                && telmeSdk.replaceAllNumberDetail.DniNumber
+            ) {
+                var replacementLinkDetails = this.createReplacementDetails(strippedNumberInLink, this.replaceAllNumberDetail.DniNumber, this.replaceAllNumberDetail.internationalFormattedNumber);
+                linkReplacementPattern = replacementLinkDetails.linkReplacementPattern;
+                linkSearchPattern = replacementLinkDetails.searchPattern;
+            }
+            if (linkSearchPattern && linkReplacementPattern) {
+                telmeSdk.replaceNumberInLink(element, linkSearchPattern, linkReplacementPattern);
+            }
+        }
+    },
+
+    replaceNumbersInNodes: function (elementsWithPhoneNumber) {
+        // Replace the numbers 
+        for (var i = 0; i < elementsWithPhoneNumber.length; i++) {
+            var element = elementsWithPhoneNumber[i];
+            telmeSdk.doLookUpReplacementOnNode(element);
+        }
+    },
+
+    replaceImages: function (images) {
+        for (var contextKey in images) {
+            if (telmeSdk.contextMatched(contextKey)) {
+                for (var key in images[contextKey]) {
+                    var matched = telmeSdk.replacedImages.indexOf(key);
+                    if (matched != -1) {
+                        continue;
+                    }
+                    telmeSdk.replacedNumbers.push(key);
+                    telmeSdk.replaceWhenDOMReady(key, images[contextKey][key], "image");
+                }
+            }
+        }
+
+        for (var key in images["[default]"]) {
+            var matched = telmeSdk.replacedImages.indexOf(key);
+            if (matched != -1) {
+                continue;
+            }
+            telmeSdk.replaceWhenDOMReady(key, images["[default]"][key], "image");
+        }
+    },
+    replaceWhenDOMReady: function (searchPattern, replacementPattern, type, element) {
+        if (document.readyState === 'interactive' || document.readyState === 'loaded' || document.readyState === 'complete') {
+            if (type === 'image') {
+                telmeSdk.replaceImage(searchPattern, replacementPattern);
+                return;
+            }
+            if (type === 'text') {
+                var searchPatternParent = document.createElement('div');
+                searchPatternParent.appendChild(telmeSdk.createDocumentFragment(searchPattern));
+                telmeSdk.replaceText(element, searchPatternParent.cloneNode(true), replacementPattern);
+                telmeSdk.purgeNode(searchPatternParent);
+                searchPatternParent = null;
+                return;
+            }
+
+        } else {
+            setTimeout(function () {
+                telmeSdk.replaceWhenDOMReady(searchPattern, replacementPattern, type, element);
+            }, 1);
+        }
+    },
+
+    replaceTexts: function (texts, dom) {
+        if (!texts) {
+            return;
+        }
+        for (var contextKey in texts) {
+            if (telmeSdk.contextMatched(contextKey)) {
+                for (var key in texts[contextKey]) {
+                    var matched = telmeSdk.replacedTexts.indexOf(key);
+                    if (matched != -1) {
+                        continue;
+                    }
+                    telmeSdk.replaceWhenDOMReady(key, texts[contextKey][key], 'text', dom);
+                }
+            }
+        }
+        if (!texts['[default]']) {
+            return;
+        }
+        for (var key in texts['[default]']) {
+            var matched = telmeSdk.replacedTexts.indexOf(key);
+            if (matched != -1) {
+                continue;
+            }
+            telmeSdk.replaceWhenDOMReady(key, texts['[default]'][key], 'text');
+        }
+    },
+
+
+    contextsMatches: function (dniNumber) {
+        var contexts = telmeSdk.getContextArray();
+        var exactMatched = dniNumber.exactMatched;
+
+        if (!exactMatched && (!dniNumber.contexts || dniNumber.contexts?.length === 0)) {
+            return true;
+        }
+        else if (!exactMatched && dniNumber.contexts?.length > contexts.length) {
+            return false;
+        }
+        else if (exactMatched && contexts.length !== dniNumber.contexts?.length) {
+            return false;
+        }
+        else if (exactMatched && dniNumber.contexts?.length === 0 && contexts.length === 0) {
+            return true;
+        }
+
+        for (var i = 0; i < dniNumber.contexts?.length; i++) {
+            if (dniNumber.contexts[i] !== contexts[i]) {
+                return false;
+            }
+        }
+        return true;
+    },
+
+
+    contextMatched: function (contextKey) {
+        var matched = false;
+        for (var i = 0; i < telmeSdk.contextArray.length; i++) {
+            var exactMatched = telmeSdk.contextExactURLs != null && telmeSdk.contextExactURLs[contextKey] ? telmeSdk.contextExactURLs[contextKey] : false;
+            if (exactMatched) {
+                return contextKey === telmeSdk.contextArray[i];
+            } else {
+                matched = contextKey === telmeSdk.contextArray[i];
+                if (matched)
+                    return matched;
+            }
+        }
+        return matched;
+    },
+
+
+    getContextArray: function () {
+        var contexts = [];
+        var pathArray = window.location.pathname.split('/');
+        for (var i = 0; i < pathArray.length; i++) {
+            if (pathArray[i]) {
+                contexts.push(pathArray[i].toLowerCase());
+            }
+        }
+        return contexts
+    },
+
+    setContextArray: function () {
+        var pathArray = window.location.pathname.split('/');
+        for (var i = 0; i < pathArray.length; i++) {
+            if (pathArray[i]) {
+                telmeSdk.contextArray.push(pathArray[i].toLowerCase());
+            }
+        }
+    },
+
+    traverseJson: function (jsonObject) {
+        if (telmeSdk.patterns.length === 0)
+            return;
+        for (var property in jsonObject) {
+            if (!jsonObject.hasOwnProperty(property) || typeof jsonObject[property] === 'function')
+                continue;
+            if (typeof jsonObject[property] === 'object') {
+                telmeSdk.traverseJson(jsonObject[property]);
+            } else {
+                if (typeof jsonObject[property] === 'string') {
+                    for (var i = 0; i < telmeSdk.patterns.length; i++) {
+                        jsonObject[property] = jsonObject[property].replace(telmeSdk.patterns[i].searchPattern, telmeSdk.patterns[i].replacementPattern);
+                    }
+                }
+            }
+
+        }
+    },
+
+    getGeoCoors: function (sessionId, origins) {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                telmeSdk.sendGeoCoors(sessionId, origins, position);
+            });
+        } else {
+            console.log("Geolocation is not supported by this browser.");
+        }
+    },
+
+    sendGeoCoors: function (sessionId, origins, p) {
+        var data = { 'sessionIdentifier': sessionId, 'origins': origins, 'latitude': p.coords.latitude, 'longitude': p.coords.longitude }
+        var url = "https://js.web-2-tel.com/org-ssgc";
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.timeout = this.timeOutMs;
+        xhr.ontimeout = function () { console.log("Web2Tel import has failed."); };
+        xhr.send(telmeBase64.J.serialize(data));
+    },
+
+    observeDOM: function (obj, scanner, callback) {
+        var mutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+        eventListenerSupported = window.addEventListener;
+        if (mutationObserver) {
+            var obs = new MutationObserver(function (mutations, observer) {
+                var numbers = [];
+                var htmlNodesWithNumber = [];
+                for (var i = 0; i < mutations.length; i++) {
+                    if (!mutations[i].addedNodes || mutations[i].addedNodes.length === 0) {
+                        continue;
+                    }
+                    for (var j = 0; j < mutations[i].addedNodes.length; j++) {
+                        var element = mutations[i].addedNodes[j];
+                        var found = scanner(element);
+                        if (found.newNumbersFound && found.newNumbersFound.length && found.newNumbersFound.length > 0) {
+                            for (var k = 0; k < found.newNumbersFound.length; k++) {
+                                var entry = found.newNumbersFound[k];
+                                if (numbers.indexOf(entry) === -1) {
+                                    numbers.push(entry);
+                                }
+                            }
+                        }
+                        htmlNodesWithNumber = htmlNodesWithNumber.concat(found.elementsWithNumbers);
+                    }
+                }
+                callback(numbers, htmlNodesWithNumber);
+            });
+            obs.observe(obj, { childList: true, subtree: true });
+        }
+    },
+
+    observeEntireDOM: function (obj, scanner, callback) {
+        var mutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+        eventListenerSupported = window.addEventListener;
+        if (mutationObserver) {
+            var obs = new MutationObserver(function (mutations, observer) {
+                MARCHEX_DNI_SCANNER.nodesWithNumbers = [];
+                MARCHEX_DNI_SCANNER.searchDOM(MARCHEX_DNI_SCANNER._searchOptions.isIntl, MARCHEX_DNI_SCANNER._VANITY_RGX_LIST);
+                var numbers = MARCHEX_DNI_SCANNER.getAllFoundNumbers();
+                var htmlNodesWithNumber = MARCHEX_DNI_SCANNER.getAllNodesWithNumbers();
+
+                callback(numbers, htmlNodesWithNumber);
+            });
+            obs.observe(obj, { childList: true, subtree: true });
+        }
+    },
+
+    stripPhoneNumber: function (number) {
+        if (typeof number !== 'string') {
+            return null;
+        }
+        //TODO: Could be a problem with %20
+        var preDecodeNumber = number;
+        try {
+            number = decodeURI(number);
+        }
+        catch (e) {
+            number = preDecodeNumber;
+        }
+        //var firstPlus = number.charAt(0) === '+';       
+        var stripped = number.replace(/[^0-9]/g, '');
+        //if (firstPlus) {
+        //    stripped = '+' + stripped;
+        //}
+        // Account for toll free numbers with leading 1
+        if (!telmeSdk.options.isIntl && stripped && stripped.length === 11 && stripped[0] == 1) {
+            return stripped.substring(1)
+        }
+        return stripped;
+    },
+
+    stripVanityPhoneNumber: function (number) {
+        if (typeof number !== 'string') {
+            return null;
+        }
+        var preDecodeNumber = number;
+        try {
+            number = decodeURI(number);
+        }
+        catch (e) {
+            number = preDecodeNumber;
+        }
+        var stripped = number.replace(/[^0-9a-zA-z]/g, '');
+        if (!telmeSdk.options.isIntl && stripped && stripped.length === 11 && stripped[0] == 1) {
+            return stripped.substring(1)
+        }
+        return stripped;
+    },
+
+    getLocalStorageData: function () {
+        var result = localStorage.getItem(telmeSdk.cacheKey);
+        if (!result || result === "")
+            return {
+                sessionData: {},
+                replacementCollection: {}
+            };
+        return telmeBase64.J.deserialize(result);
+    },
+
+    setLocalStorageData: function (data) {
+        localStorage.setItem(telmeSdk.cacheKey, telmeBase64.J.serialize(data));
+    },
+
+    enableDynamicHtmlListener: function () {
+        telmeSdk.observeDOM(document.documentElement, MARCHEX_DNI_SCANNER.searchDOMNode, function (newNumbers, nodesWithNumbers) {
+            if (telmeSdk.options.formTrack === true)
+                telmeSdk.attachFormHandler();
+
+            var cache = telmeSdk.getLocalStorageData();
+
+            if (!nodesWithNumbers || nodesWithNumbers.length === 0 || !cache.replacementCollection) {
+                return;
+            }
+            var leftOverNumbers = [];
+            newNumbers.forEach(function (number) {
+                if (leftOverNumbers.indexOf(number) === -1) {
+                    if (!telmeSdk.alreadyViewedNumbers.hasOwnProperty(number)) {
+                        telmeSdk.alreadyViewedNumbers[number] = true;
+                    }
+                    else {
+                        return;
+                    }
+                    var replacementDetail = telmeSdk.getReplacementDetail(number)
+                    if (!replacementDetail) {
+                        leftOverNumbers.push(number);
+                    }
+                }
+            });
+
+            if (leftOverNumbers && leftOverNumbers.length > 0) {
+                telmeSdk.getDniNumbersForNodes(leftOverNumbers, nodesWithNumbers);
+            }
+            else {
+                for (var i = 0; i < nodesWithNumbers.length; i++) {
+                    telmeSdk.doLookUpReplacementOnNode(nodesWithNumbers[i]);
+                }
+            }
+        });
+    },
+
+    enableDynamicEntireDomListener: function () {
+        telmeSdk.observeEntireDOM(document.documentElement, MARCHEX_DNI_SCANNER.searchDOMNode, function (newNumbers, nodesWithNumbers) {
+            if (telmeSdk.options.formTrack === true)
+                telmeSdk.attachFormHandler();
+
+            if (telmeSdk.options.trackPage === true)
+                telmeSdk.trackPage();
+
+            if (!telmeSdk.foundNumbers) {
+                telmeSdk.foundNumbers = [];
+            }
+            var cache = telmeSdk.getLocalStorageData();
+
+            if (!nodesWithNumbers || nodesWithNumbers.length === 0 || !cache.replacementCollection) {
+                return;
+            }
+            var leftOverNumbers = [];
+            var url = telmeSdk.getCurrentPageUrl();
+            var cachedNumbers = cache.replacementCollection.Numbers;
+            newNumbers.forEach(function (number) {
+                var addLeftOver = true;
+                if (telmeSdk.foundNumbers[number] != url) {
+                    telmeSdk.foundNumbers[number] = url;
+                }
+                else {
+                    addLeftOver = false;
+                }
+                var replacementDetail = telmeSdk.getReplacementDetail(number)
+                if (replacementDetail && leftOverNumbers.indexOf(number) === -1) {
+                    return
+                }
+                if (addLeftOver) {
+                    leftOverNumbers.push(number);
+                }
+            });
+
+            if (leftOverNumbers && leftOverNumbers.length > 0) {
+                telmeSdk.getDniNumbersForNodes(leftOverNumbers, nodesWithNumbers);
+            }
+            else {
+                for (var i = 0; i < nodesWithNumbers.length; i++) {
+                    telmeSdk.doLookUpReplacementOnNode(nodesWithNumbers[i]);
+                }
+            }
+        });
+    },
+
+    getDniNumbersForNodes: function (numbers, nodesWithNumbers) {
+        var xhr = new XMLHttpRequest();
+        var url = 'https://js.web-2-tel.com/org-jsGetScannedNumbers';
+        var data = {
+            sessionId: telmeSdk.sessionIdentifier,
+            numbers: numbers,
+            pageUrl: window.location.href
+        };
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader("Content-type", "application/json");
+        xhr.timeout = this.timeOutMs;
+        xhr.ontimeout = function () { console.log("Web2Tel import has failed."); };
+        xhr.send(telmeBase64.J.serialize(data));
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                if (xhr.response !== "") {
+                    var json = telmeBase64.J.deserialize(xhr.response);
+                    telmeSdk.doCallBackNumberReplacement(json, nodesWithNumbers);
+                }
+                else {
+                    telmeSdk.replaceNumbersInNodes(nodesWithNumbers);
+                }
+            }
+        }.bind(nodesWithNumbers);
+    },
+
+    doCallBackNumberReplacement: function (numbers, nodes) {
+        if (!numbers)
+            return;
+        var cache = telmeSdk.getLocalStorageData();
+        for (var key in numbers) {
+            var poolReplacement = numbers[key];
+
+            if (!poolReplacement.OriginalNumber) {
+                continue;
+            }
+            telmeSdk.addToPatternDictionary(poolReplacement.OriginalNumber,
+                poolReplacement.DniNumber,
+                poolReplacement.InternationalFormattedNumber,
+                poolReplacement.ExactUrl,
+                poolReplacement.Contexts);
+            cache.replacementCollection.Numbers["[default]"][poolReplacement.OriginalNumber] = poolReplacement;
+        }
+        telmeSdk.replaceNumbersInNodes(nodes)
+        telmeSdk.setLocalStorageData(cache);
+    },
+
+    getGADataFromGtag: function () {
+
+        if (!window.dataLayer || typeof gtag === "undefined") {
+            return null;
+        }
+
+        for (var i = 0; i < window.dataLayer.length; i++) {
+            if (window.dataLayer[i].toString() !== '[object Arguments]')
+                continue;
+            if (window.dataLayer[i][0] !== 'config')
+                continue;
+            else {
+                var trackingId = window.dataLayer[i][1];
+                var clientId = '';
+
+                gtag('get', trackingId, 'client_id', (field) => { clientId = field })
+
+                if (clientId !== '')
+                    return new {
+                        trackingId: trackingId,
+                        clientId: clientId
+                    }
+            }
+        }
+        return null;
+
+    },
+
+    getGADataFromGAJs: function () {
+        if (typeof ga !== "undefined" && ga && ga.getAll()[0]) {
+
+            var googleAnalyticsCookieData = {};
+            googleAnalyticsCookieData.trackingId = ga.getAll()[0].get('trackingId');
+            googleAnalyticsCookieData.userId = ga.getAll()[0].get('userId')?.toString();
+            googleAnalyticsCookieData.campaignMedium = ga.getAll()[0].get('campaignMedium');
+            googleAnalyticsCookieData.clientId = ga.getAll()[0].get('clientId');
+
+            if (googleAnalyticsCookieData.clientId == '' || googleAnalyticsCookieData.clientId == null) {
+                return null;
+            }
+
+            googleAnalyticsCookieData.referrer = ga.getAll()[0].get('referrer');
+            if (ga.getAll()[0].get('referrer') != undefined) {
+                googleAnalyticsCookieData.referrer = (ga.getAll()[0].get('referrer')).slice(0, 2000);
+            }
+            else {
+                googleAnalyticsCookieData.referrer = ga.getAll()[0].get('referrer');
+            }
+            googleAnalyticsCookieData.location = ga.getAll()[0].get('location')?.toString();
+            googleAnalyticsCookieData.page = ga.getAll()[0].get('page')?.toString();
+            googleAnalyticsCookieData.screenResolution = ga.getAll()[0].get('screenResolution')?.toString();
+            googleAnalyticsCookieData.screenColors = ga.getAll()[0].get('screenColors')?.toString();
+            googleAnalyticsCookieData.viewportSize = ga.getAll()[0].get('viewportSize')?.toString();
+            googleAnalyticsCookieData.flashVersion = ga.getAll()[0].get('flashVersion')?.toString();
+            googleAnalyticsCookieData.encoding = ga.getAll()[0].get('encoding')?.toString();
+            googleAnalyticsCookieData.javaEnabled = ga.getAll()[0].get('javaEnabled')?.toString();
+            googleAnalyticsCookieData.language = ga.getAll()[0].get('language')?.toString();
+            googleAnalyticsCookieData.dimension1 = ga.getAll()[0].get('dimension1')?.toString();
+            googleAnalyticsCookieData.dimension2 = ga.getAll()[0].get('dimension2')?.toString();
+            googleAnalyticsCookieData.dimension3 = ga.getAll()[0].get('dimension3')?.toString();
+            googleAnalyticsCookieData.dimension4 = ga.getAll()[0].get('dimension4')?.toString();
+            googleAnalyticsCookieData.dimension5 = ga.getAll()[0].get('dimension5')?.toString();
+            googleAnalyticsCookieData.dimension6 = ga.getAll()[0].get('dimension6')?.toString();
+            googleAnalyticsCookieData.dimension7 = ga.getAll()[0].get('dimension7')?.toString();
+            googleAnalyticsCookieData.dimension8 = ga.getAll()[0].get('dimension8')?.toString();
+            googleAnalyticsCookieData.dimension9 = ga.getAll()[0].get('dimension9')?.toString();
+            googleAnalyticsCookieData.dimension10 = ga.getAll()[0].get('dimension10')?.toString();
+            googleAnalyticsCookieData.dimension11 = ga.getAll()[0].get('dimension11')?.toString();
+            googleAnalyticsCookieData.dimension12 = ga.getAll()[0].get('dimension12')?.toString();
+            googleAnalyticsCookieData.dimension13 = ga.getAll()[0].get('dimension13')?.toString();
+            googleAnalyticsCookieData.dimension14 = ga.getAll()[0].get('dimension14')?.toString();
+            googleAnalyticsCookieData.dimension15 = ga.getAll()[0].get('dimension15')?.toString();
+            googleAnalyticsCookieData.dimension16 = ga.getAll()[0].get('dimension16')?.toString();
+            googleAnalyticsCookieData.dimension17 = ga.getAll()[0].get('dimension17')?.toString();
+            googleAnalyticsCookieData.dimension18 = ga.getAll()[0].get('dimension18')?.toString();
+            googleAnalyticsCookieData.dimension19 = ga.getAll()[0].get('dimension19')?.toString();
+            googleAnalyticsCookieData.dimension20 = ga.getAll()[0].get('dimension20')?.toString();
+            googleAnalyticsCookieData.hitType = ga.getAll()[0].get('hitType');
+
+            return googleAnalyticsCookieData;
+        }
+        return null;
+    },
+
+    getGADataFromCookie: function () {
+        var cookieMatch = document.cookie.match(/_ga=(.+?);/);
+        if (cookieMatch == null || cookieMatch.length < 2) {
+            return null;
+        }
+        var gaUserId = document.cookie.match(/_ga=(.+?);/)[1].split('.').slice(-2).join(".")
+        return {
+            clientId: gaUserId
+        }
+    },
+
+    getGaSessionId: function () {
+        var ga_session_id = '';
+
+        const pattern = /_ga_[A-Z0-9]{10}=GS\d\.\d\.(.+?)(?:;|$)/;
+        const match = document.cookie.match(pattern);
+
+        if (match) {
+            const rawValue = match[1];
+
+            if (rawValue) {
+                if (rawValue.startsWith('s')) {
+                    // GS2 format extract numeric part after "s"
+                    const sessionMatch = rawValue.match(/s(\d+)/);
+                    if (sessionMatch && sessionMatch[1]) {
+                        ga_session_id = sessionMatch[1];
+                    }
+                }else {
+                    // GS1 format take first numeric block
+                    const parts = rawValue.split('.');
+                    if (parts.length > 0 && parts[0]) {
+                        ga_session_id = parts[0];
+                    }
+                }
+            }
+        }
+
+        if (ga_session_id === '' && gaGlobal && gaGlobal.sid) {
+            ga_session_id = gaGlobal.sid
+        }
+
+        return ga_session_id;
+    },
+    getGa4ConfigSessionIds: function () {
+        if (
+            !this.gaConfigIds ||
+            this.gaConfigIds.length === 0 ||
+            typeof gtag === "undefined" ||
+            typeof Promise === "undefined"
+        ) {
+            return null;
+        }
+
+        var targetMeasurementIDs = telmeSdk.gaConfigIds;
+        return new Promise((resolve) => {
+            const sessionIDs = []; // Object to store Measurement ID → Session ID
+
+            const observer = new PerformanceObserver((list) => {
+                list.getEntries().forEach((entry) => {
+                    const url = new URL(entry.name);
+                    const tid = url.searchParams.get("tid"); // GA4 Measurement ID
+                    const sid = url.searchParams.get("sid"); // Session ID
+
+                    if (tid && sid && targetMeasurementIDs.includes(tid)) {
+                        sessionIDs.push({ measurementId: tid, sessionId: sid });
+                    }
+                });
+
+                resolve(sessionIDs);
+            });
+
+            observer.observe({ type: "resource", buffered: true });
+
+            // Stop observing after 3 seconds and return filtered session IDs
+            setTimeout(() => {
+                observer.disconnect();
+                resolve(sessionIDs);
+            }, 3000);
+        });
+    },
+
+    sendCookieSessionData: async function () {
+        setTimeout(async () => {
+            var googleAnalyticsCookieData = {};
+            var adobeAnalyticsCookieData = {};
+            var hasCookieData = false;
+
+            try {
+                let gaData = telmeSdk.getGADataFromGAJs() ||
+                    telmeSdk.getGADataFromCookie() ||
+                    telmeSdk.getGADataFromGtag();
+
+                if (gaData) {
+                    googleAnalyticsCookieData = gaData;
+                    hasCookieData = true;
+
+                    let getGa4ConfigSessionIds = await telmeSdk.getGa4ConfigSessionIds();
+                    if (getGa4ConfigSessionIds) {
+                        googleAnalyticsCookieData.gA4ConfigSessionIds = getGa4ConfigSessionIds;
+                    }
+
+                    let gaSessionId = telmeSdk.getGaSessionId();
+                    if (gaSessionId && gaSessionId.length > 0) {
+                        googleAnalyticsCookieData.gaSessionId = gaSessionId;
+                        hasCookieData = true;
+                    }
+                }
+
+                // Adobe Analytics data extraction
+                if (typeof s !== 'undefined' && typeof AppMeasurement !== 'undefined') {
+                    hasCookieData = true;
+
+                    var cookieMatch = document.cookie.match('(^|; )' + 's_vi' + '=([^;]*)');
+                    var visitorId = cookieMatch ? decodeURIComponent(cookieMatch[2]) : null;
+
+                    adobeAnalyticsCookieData = {
+                        channel: s.channel && s.channel.length ? s.channel : s._channel,
+                        visitorId: s.marketingCloudVisitorID || visitorId,
+                        campaign: s.campaign && s.campaign.length ? s.campaign : s._campaign,
+                        pageName: s.pageName && s.pageName.length ? s.pageName : s._pageName
+                    };
+                }
+
+                if (hasCookieData) {
+                    let xhr = new XMLHttpRequest();
+                    let url = 'https://js.web-2-tel.com/org-jsSaveCookie';
+                    let data = {
+                        googleAnalyticsCookie: googleAnalyticsCookieData,
+                        adobeAnalyticsCookie: adobeAnalyticsCookieData,
+                        sessionIdentifier: telmeSdk.sessionIdentifier
+                    };
+
+                    xhr.open('POST', url, true);
+                    xhr.setRequestHeader("Content-type", "application/json");
+                    xhr.timeout = this.timeOutMs;
+                    xhr.ontimeout = () => console.log("Web2Tel import has failed.");
+                    xhr.send(telmeBase64.J.serialize(data));
+
+                    var cache = telmeSdk.getLocalStorageData();
+                    cache.dataSent = {
+                        integrationData: data
+                    };
+                    telmeSdk.setLocalStorageData(cache);
+                }
+            } catch (e) {
+                console.error("Error in sendCookieSessionData:", e);
+            }
+        }, 6500);
+    },
+
+    setUpPhoneNumberRegex: function () {
+        if (this.options && this.options.isIntl) {
+            var parts = [
+                '(', // begin match group
+                '[[\\(\\+]?', // optional leading chars: [(+
+                '(?:[0-9](?:[[\\]()\\s.\\-', telmeSdk.getSpecialChars(), ']|%20)*', ')', // body of number
+                '{4,}[0-9]', // at least 5 chars, but no more than 20 ending in a digit
+                ')' // end capture group
+            ];
+            var intlString = parts.join('');
+            telmeSdk.lookUpPhoneNumberRgx = new RegExp(intlString, 'gi');
+        }
+        else {
+            var nanpxRgx = /((?:[^0-9])*)(\d{3})((?:[^0-9])+)(\d{3})((?:[^0-9])*)(\d{4})((?:[^0-9])*)|\d*\d\d\d\d\d\d\d\d\d\d/gi;
+            telmeSdk.lookUpPhoneNumberRgx = new RegExp(nanpxRgx);
+        }
+    },
+
+    getSpecialChars: function () {
+        var puncts = [
+            '\\', 'xAD', // soft hyphen
+            '\\', 'xB7', // middle dot
+            '\\', 'u2010', // hyphen
+            '\\', 'u2011', // non-breaking hyphen
+            '\\', 'u2013', // en dash
+            '\\', 'u2014', // em dash
+            '\\', 'u2015', // horizontal bar
+            '\\', 'u2022', // bullet
+            '\\', 'u2027', // hyphen point
+            '\\', 'u2043', // hyphen bullet
+            '\\', 'u2063', // invisible separator
+            '\\', 'u2212' // minus
+        ];
+        var punct_str = puncts.join('');
+        return punct_str;
+    },
+
+    onViewPortChange: function () {
+        clearTimeout(telmeSdk.timer);
+        telmeSdk.timer = setTimeout(function () {
+            var viewPortlookup = MARCHEX_DNI_SCANNER.getPhoneNumberNodesFromViewPort();
+            if (viewPortlookup.elementsWithNumbers.length == 0) {
+                return;
+            }
+            var nodesWithNumbers = viewPortlookup.elementsWithNumbers;
+            var nodesWithNumbersToReplace = [];
+
+            nodesWithNumbers.forEach(function (element) {
+                if ((element.hasAttribute != null
+                    && element.hasAttribute(telmeSdk.elementReplacedAttr)
+                    && element.getAttribute(telmeSdk.elementReplacedAttr) === "true")
+                    ||
+                    (element.parentElement
+                        && element.parentElement.hasAttribute(telmeSdk.elementReplacedAttr)
+                        && element.parentElement.getAttribute(telmeSdk.elementReplacedAttr) === "true")) {
+                    return;
+                }
+                nodesWithNumbersToReplace.push(element);
+            });
+
+            var viewPortNumbers = viewPortlookup.phoneNumbers;
+            var leftOverNumbers = [];
+            var url = telmeSdk.getCurrentPageUrl();
+            viewPortNumbers.forEach(function (number) {
+                if (leftOverNumbers.indexOf(number) === -1) {
+                    var addLeftOver = true;
+                    if (telmeSdk.alreadyViewedNumbers[number] != url) {
+                        telmeSdk.alreadyViewedNumbers[number] = url;
+                    }
+                    else {
+                        addLeftOver = false;
+                    }
+                    var replacementDetail = telmeSdk.getReplacementDetail(number);
+                    if (replacementDetail) {
+                        return;
+                    }
+                    if (addLeftOver) {
+                        leftOverNumbers.push(number);
+                    }
+                }
+            });
+
+            if (nodesWithNumbersToReplace.length == 0) {
+                return;
+            }
+
+            if (leftOverNumbers && leftOverNumbers.length > 0) {
+                telmeSdk.getDniNumbersForNodes(leftOverNumbers, nodesWithNumbersToReplace);
+            }
+            else {
+                for (var i = 0; i < nodesWithNumbersToReplace.length; i++) {
+                    telmeSdk.doLookUpReplacementOnNode(nodesWithNumbersToReplace[i]);
+                }
+            }
+        }, 150);
+    },
+
+    isTelephoneHrefLink: function (link) {
+        return link.indexOf("tel:") === 0 || link.indexOf("sms:") === 0 || link.indexOf("callto:") === 0;
+    },
+
+    replaceHtmlAttributes: function (htmlAttributeReplacements, dom) {
+        if (!htmlAttributeReplacements || htmlAttributeReplacements.length == 0) {
+            return;
+        }
+
+        for (var r = 0; r < htmlAttributeReplacements.length; r++) {
+            var querySelector = htmlAttributeReplacements[r].QuerySelector;
+            var numberReplacement = htmlAttributeReplacements[r].NumberReplacement;
+
+            if (!numberReplacement.DniNumber) {
+                continue;
+            }
+
+            try {
+                var nodeList = dom.querySelectorAll(querySelector)
+                if (nodeList.length == 0) {
+                    continue;
+                }
+
+                for (var i = 0; i < nodeList.length; i++) {
+                    var node = nodeList[i];
+                    if (node.href && node.href !== '' && node.href.length > 0) {
+                        var link = node.href;
+
+                        if (this.isTelephoneHrefLink(link)) {
+                            var strippedNumberInLink = this.stripPhoneNumber(link.substring(4));
+                            var matches = strippedNumberInLink.match(this.lookUpPhoneNumberRgx);
+
+                            if (matches && matches.length > 0) {
+
+                                var replacementDetails = telmeSdk.createReplacementDetails(strippedNumberInLink,
+                                    numberReplacement.DniNumber,
+                                    numberReplacement.InternationalFormattedNumber);
+
+                                var linkReplacementPattern = replacementDetails.linkReplacementPattern;
+                                var linkSearchPattern = replacementDetails.searchPattern;
+
+                                if (linkSearchPattern && linkReplacementPattern) {
+                                    telmeSdk.replaceNumberInLink(node, linkSearchPattern, linkReplacementPattern);
+                                }
+                            }
+                        }
+                    }
+                    var nodesWithNumbers = MARCHEX_DNI_SCANNER.searchDOMNode(node);
+                    if (nodesWithNumbers.elementsWithNumbers.length > 0) {
+                        for (var j = 0; j < nodesWithNumbers.elementsWithNumbers.length; j++) {
+                            var element = nodesWithNumbers.elementsWithNumbers[j];
+
+                            if (!element.nodeValue) {
+                                continue;
+                            }
+
+                            var matches = element.nodeValue.match(this.lookUpPhoneNumberRgx);
+
+                            if (!matches || matches.length == 0) {
+                                continue;
+                            }
+
+                            for (var k = 0; k < matches.length; k++) {
+                                var previousVal = matches[k];
+                                var strippedNumber = telmeSdk.stripPhoneNumber(previousVal);
+
+                                var replacementDetails = telmeSdk.createReplacementDetails(strippedNumber,
+                                    numberReplacement.DniNumber,
+                                    numberReplacement.InternationalFormattedNumber);
+
+                                var newNumber = element.nodeValue.replace(replacementDetails.searchPattern,
+                                    replacementDetails.replacementPattern);
+
+                                telmeSdk.doHtmlNumberReplacement(element,
+                                    previousVal,
+                                    replacementDetails.replacementPattern,
+                                    newNumber,
+                                    replacementDetails.internationalFormattedNumber);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (ex) {
+                // swallow
+            }
+        }
+    },
+
+    
+
+    enableShadowDOMDynamicHtmlListener: function () {
+        telmeSdk.observeAllShadowDOMs(function (newNumbers, nodesWithNumbers)
+        {
+            const cache = telmeSdk.getLocalStorageData();
+
+            if (!nodesWithNumbers || nodesWithNumbers.length === 0 || !cache.replacementCollection) {
+                return;
+            }
+            const leftOverNumbers = [];
+
+             newNumbers.forEach(function (number) {
+                if (leftOverNumbers.indexOf(number) === -1) {
+                    if (!telmeSdk.alreadyViewedNumbers.hasOwnProperty(number)) {
+                        telmeSdk.alreadyViewedNumbers[number] = true;
+                    }
+                    else {
+                        return;
+                    }
+                    if (!telmeSdk.patternDictionary.hasOwnProperty(number)) {
+                        leftOverNumbers.push(number);
+                    }
+                }
+            });
+
+            if (leftOverNumbers && leftOverNumbers.length > 0) {
+                telmeSdk.getDniNumbersForNodes(leftOverNumbers, nodesWithNumbers);
+            }
+            else {
+                for (var i = 0; i < nodesWithNumbers.length; i++) {
+                    telmeSdk.doLookUpReplacementOnNode(nodesWithNumbers[i]);
+                }
+            }
+
+        }, MARCHEX_DNI_SCANNER.searchDOMNode)
+    },
+
+    observeAllShadowDOMs: function (callback, scanner, options = {}) {
+        const defaultOptions = {
+            childList: true,
+            subtree: true
+        };
+        const obsOptions = { ...defaultOptions, ...options };
+
+        const rootObservers = new Map();      // ShadowRoot -> MutationObserver
+        const hostIndex = new Map();          // Element(host) -> number
+        let counter = 0;
+
+        function attachObserver(shadowRoot) {
+            if (!shadowRoot || rootObservers.has(shadowRoot)) return;
+
+            const host = shadowRoot.host;
+            if (!hostIndex.has(host)) hostIndex.set(host, ++counter);
+
+            const observer = new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                    var numbers = [];
+                    var htmlNodesWithNumber = [];
+
+                    for (var i = 0; i < mutations.length; i++) {
+                        if (!mutations[i].addedNodes || mutations[i].addedNodes.length === 0) {
+                            continue;
+                        }
+                        for (var j = 0; j < mutations[i].addedNodes.length; j++) {
+                            var element = mutations[i].addedNodes[j];
+                            var found = scanner(element);
+                            if (found.newNumbersFound && found.newNumbersFound.length && found.newNumbersFound.length > 0) {
+                                for (var k = 0; k < found.newNumbersFound.length; k++) {
+                                    var entry = found.newNumbersFound[k];
+                                    if (numbers.indexOf(entry) === -1) {
+                                        numbers.push(entry);
+                                    }
+                                }
+                            }
+                            htmlNodesWithNumber = htmlNodesWithNumber.concat(found.elementsWithNumbers);
+                        }
+                    }
+                    callback(numbers, htmlNodesWithNumber);
+                }
+            });
+
+            observer.observe(shadowRoot, obsOptions);
+            rootObservers.set(shadowRoot, observer);
+
+            for (const el of shadowRoot.querySelectorAll('*')) {
+                if (el.shadowRoot) attachObserver(el.shadowRoot);
+            }
+        }
+
+        (function attachExisting() {
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_ELEMENT,
+                null,
+                false
+            );
+            let node = walker.currentNode;
+            while (node) {
+                if (node.shadowRoot) attachObserver(node.shadowRoot);
+                node = walker.nextNode();
+            }
+        })();
+
+        // Patch attachShadow to catch future open roots created via JS
+        const origAttachShadow = Element.prototype.attachShadow;
+        function patchedAttachShadow(init) {
+            const sr = origAttachShadow.call(this, init);
+            // Only open roots are accessible/observable
+            if (init && init.mode === 'open') {
+                // Defer to next microtask so component markup can render a bit
+                queueMicrotask(() => attachObserver(sr));
+            }
+            return sr;
+        }
+        Element.prototype.attachShadow = patchedAttachShadow;
+
+        // Observe the light DOM for elements that *later* gain a shadowRoot,
+        // or for newly added hosts that already have one.
+        const domObserver = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                // Added nodes may themselves be hosts with a shadowRoot
+                for (const n of m.addedNodes) {
+                    if (n.nodeType !== 1) continue; // ELEMENT_NODE
+                    const el = /** @type {Element} */ (n);
+                    if ('shadowRoot' in el && el.shadowRoot) {
+                        attachObserver(el.shadowRoot);
+                    }
+                    // Also scan any descendants for hosts with open roots
+                    for (const d of el.querySelectorAll?.('*') ?? []) {
+                        if (d.shadowRoot) attachObserver(d.shadowRoot);
+                    }
+                }
+            }
+        });
+
+        domObserver.observe(document.documentElement, { childList: true, subtree: true });
+
+        // Provide a teardown function to disconnect everything and restore the patch
+        function stop() {
+            domObserver.disconnect();
+            for (const [sr, ob] of rootObservers) ob.disconnect();
+            rootObservers.clear();
+            Element.prototype.attachShadow = origAttachShadow;
+        }
+
+        if (telmeSdk.options.debugMode === true) { 
+            // A tiny logger to show what we attached to (optional)
+            if (counter > 0) {
+                console.log(`✅ Observing ${counter} open Shadow DOM root(s).`);
+            } else {
+                console.log('ℹ️ No open Shadow DOMs found yet. Will attach to future ones automatically.');
+            }
+        }
+       
+        return stop;
+    },
+
+    init: function (sessionData, collection) {
+        if (!Array.prototype.indexOf) {
+            Array.prototype.indexOf = function (obj) {
+                for (var i = 0; i < this.length; i++) {
+                    if (this[i] === obj) {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+        }
+        telmeSdk.gaConfigIds = collection.Ga4MeasurementIds;
+        telmeSdk.sessionIdentifier = sessionData.SessionIdentifier;
+        telmeSdk.replacedNumbers = new Array();
+        telmeSdk.replacedImages = new Array();
+        telmeSdk.replacedTexts = new Array();
+        telmeSdk.contextArray = new Array();
+        telmeSdk.patterns = new Array();
+        telmeSdk.patternDictionary = [];
+        telmeSdk.isSafariOnIOS = navigator.userAgent.match(/(iPod|iPhone|iPad)/) && navigator.userAgent.match(/AppleWebKit/);
+        telmeSdk.setContextArray();
+        telmeSdk.currentPage = telmeSdk.getCurrentPageUrl();
+        telmeSdk.setUpPhoneNumberRegex();
+
+        if (telmeSdk.options.formTrack === true)
+            telmeSdk.attachFormHandler();
+        if (telmeSdk.options.enableHtmlListener === true)
+            if (telmeSdk.options.enableDynamicEntireDomListener) {
+                telmeSdk.enableDynamicEntireDomListener()
+            }
+            else {
+                telmeSdk.enableDynamicHtmlListener();
+                telmeSdk.enableShadowDOMDynamicHtmlListener();
+            }
+        if (sessionData.GeoEnabled) {
+            telmeSdk.getGeoCoors(sessionData.SessionIdentifier, ["dni"]);
+        }
+
+        var cache  = telmeSdk.getLocalStorageData();
+        if (collection.UseCachedReplacementCollection && cache.replacementCollection.Numbers) {
+            var newNumbers = collection.Numbers;
+            collection = cache.replacementCollection;
+
+            if (newNumbers && newNumbers["[default]"]) {
+                for (var key in newNumbers["[default]"]) {
+                    collection.Numbers["[default]"][key] = newNumbers["[default]"][key];
+                }
+            }
+        }
+        else {
+            cache = {
+                sessionData: sessionData,
+                replacementCollection: collection
+            };
+            telmeSdk.setLocalStorageData(cache);
+        }
+        telmeSdk.contextExactURLs = collection.ContextExactURLs;
+        cache.sessionData = sessionData;
+        telmeSdk.sessionData = cache.sessionData;
+
+        if (telmeSdk.hasErrorTracking && sessionData) {
+            window.Sentry.configureScope(function (scope) {
+                scope.setUser({ "id": telmeSdk.sessionData.SessionIdentifier });
+            });
+        }
+        if (collection.ReplaceAll && collection.ReplaceAll.DniNumber) {
+            this.replaceAllNumberDetail = collection.ReplaceAll;
+        };
+        // Add numbers to dictionary pattern
+        for (var key in collection.Numbers["[default]"]) {
+            var numberReplacement = collection.Numbers["[default]"][key];
+            var originalNumber = key
+            telmeSdk.addToPatternDictionary(originalNumber,
+                numberReplacement.DniNumber,
+                numberReplacement.InternationalFormattedNumber,
+                numberReplacement.ExactUrl,
+                numberReplacement.Contexts);
+        }
+
+        // Replace NUMBERS before text, the order is important
+        telmeSdk.replaceNumbersInNodes(MARCHEX_DNI_SCANNER.getAllNodesWithNumbers());
+        telmeSdk.replaceTexts(collection.TextReplacements, document.body);
+        telmeSdk.replaceHtmlAttributes(collection.HtmlAttributes, document);
+        telmeSdk.sendCookieSessionData();
+
+        var shadowHosts = MARCHEX_DNI_SCANNER.getShadowHosts();
+        for (var i = 0; i < shadowHosts.length; i++) {
+            var shadowDOM = shadowHosts[i];
+
+            telmeSdk.replaceTexts(collection.TextReplacements, shadowDOM);
+            telmeSdk.replaceHtmlAttributes(collection.HtmlAttributes, shadowDOM);
+        }
+
+        window.addEventListener('scroll', telmeSdk.onViewPortChange, false);
+        window.addEventListener('resize', telmeSdk.onViewPortChange, false);
+    }
+
+};
+
+function safeWrap(service, fn) {
+    var ogFn = service[fn];
+    service[fn] = function () {
+        try { return ogFn.apply(service, arguments); }
+        catch (ex) {
+            // doh.
+            window.Sentry && window.Sentry.captureException(ex);
+        }
+    };
+};
+
+function wrapObj(service) {
+    if (!document.getElementById("telme-error-handler") || !window.Sentry) {
+        return;
+    }
+    for (var fn in service) {
+        var type = typeof (service[fn]);
+        if (type === 'function') {
+            safeWrap(service, fn);
+        }
+    }
+};
+wrapObj(telmeSdk);telmeSdk.clearCaches();telmeSdk.init({"SessionIdentifier":"8609d3c4-05a0-4248-b27e-96987ce22145","PreviousSessionIdentifier":null,"GeoEnabled":false}, {"isPooled":false,"SessionIdentifier":"8609d3c4-05a0-4248-b27e-96987ce22145","UseCachedReplacementCollection":false,"Numbers":{"[default]":{}},"Images":{},"TextReplacements":{},"HtmlAttributes":[],"ContextExactURLs":{},"TriggeredRules":[],"ReplaceAll":null,"VanityNumbers":[],"Ga4MeasurementIds":[]})</script><script type="text/javascript" async="" src="./Pricing background_files/js"></script><script type="text/javascript" async="" src="./Pricing background_files/js(1)"></script><script async="" src="./Pricing background_files/gtm.js.download"></script><script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-NK84JQ5T');</script>
+    <!-- End Google Tag Manager -->
+  
+    
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--<base href="https://www.golfcovect.com/pricing">--><base href=".">
+	<meta name="keywords" content="Golf Cove pricing, indoor golf rates, virtual sports rates, North Haven CT, private room rates, golf lessons, golf gift cards, corporate memberships, golf cove, Connecticut golf.">
+	<meta name="author" content="Super User">
+		
+	<meta name="description" content="Discover Golf Cove&#39;s hourly rates, memberships, and packages for indoor golf and virtual sports in North Haven, CT.">
+		<title>Pricing</title>
+	<link href="https://www.golfcovect.com/templates/yoo_avanti/favicon.ico" rel="shortcut icon" type="image/vnd.microsoft.icon">
+	<script src="./Pricing background_files/jquery.min.js.download" type="text/javascript"></script>
+	<script src="./Pricing background_files/jquery-noconflict.js.download" type="text/javascript"></script>
+	<script src="./Pricing background_files/jquery-migrate.min.js.download" type="text/javascript"></script>
+	<script src="./Pricing background_files/bootstrap.min.js.download" type="text/javascript"></script>
+	<script src="./Pricing background_files/uikit2-12632da8.js.download" type="text/javascript"></script>
+	<script src="./Pricing background_files/wk-scripts-f0fd3463.js.download" type="text/javascript"></script>
+	<script type="text/javascript">
+GOOGLE_MAPS_API_KEY = "AIzaSyDReE8GJBO_uzNWATrGPiNB-Qtj5APGHOE";
+	</script>
+	<script async="" src="./Pricing background_files/js(2)"></script>
+	<script>
+	  window.dataLayer = window.dataLayer || [];
+	  function gtag(){dataLayer.push(arguments);}
+	  gtag('js', new Date());
+	  gtag('config', 'G-9RV6YE5QL6');
+	</script>
+
+<link rel="apple-touch-icon-precomposed" href="https://www.golfcovect.com/templates/yoo_avanti/apple_touch_icon.png">
+<link rel="stylesheet" href="./Pricing background_files/bootstrap.css">
+<link rel="stylesheet" href="./Pricing background_files/theme.css">
+<link rel="stylesheet" href="./Pricing background_files/extensions.css">
+<link rel="stylesheet" href="./Pricing background_files/master_v2.css">
+<link rel="stylesheet" href="./Pricing background_files/custom.css">
+<script src="./Pricing background_files/uikit.js.download"></script>
+<script src="./Pricing background_files/autocomplete.js.download"></script>
+<script src="./Pricing background_files/datepicker.js.download"></script>
+<script src="./Pricing background_files/search.js.download"></script>
+<script src="./Pricing background_files/sticky.js.download"></script>
+<script src="./Pricing background_files/timepicker.js.download"></script>
+<script src="./Pricing background_files/tooltip.js.download"></script>
+<script src="./Pricing background_files/social.js.download"></script>
+<script src="./Pricing background_files/theme.js.download"></script>
+<script src="./Pricing background_files/animated-text.js.download"></script>
+<script src="./Pricing background_files/accordion-parent.js.download"></script>
+<script src="./Pricing background_files/extensions.js.download"></script>
+<script src="./Pricing background_files/master.js.download"></script>
+<script src="./Pricing background_files/custom.js.download"></script>
+    </head>
+
+    <body class="tm-isblog     tm-navbar-sticky   " data-new-gr-c-s-check-loaded="14.1264.0" data-gr-ext-installed="">
+  
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NK84JQ5T"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+		
+		<div class="tm-wrapper">
+		
+        
+            <div id="tm-header" class="tm-block-header"><div id="skiptocontent"><a href="https://www.golfcovect.com/pricing#tm-main">skip to main content</a></div>
+
+                <div class="uk-sticky-placeholder" style="margin: 0px;"><div class="tm-navbar-wrapper  uk-sticky-init uk-active" data-uk-sticky="{media: 767}" style="position: fixed; top: 0px; width: 943px;">
+		
+    
+						<div class="tm-toolbar uk-hidden-small">
+						<div class="uk-container uk-container-center">
+
+																<div class="uk-float-left"><div class="">
+	<div class="top-info"><div><a href="tel:2033905994">203.390.5994 <span class="uk-margin-small-left uk-margin-right uk-icon-phone"></span></a> </div><div><a href="https://www.golfcovect.com/contact">336 State Street, North Haven, CT 06473<span class="uk-margin-small-left uk-icon-map-marker"></span></a></div></div></div></div>
+								<div class="uk-float-right uk-text-right"><div class="">
+	<div class="social-icons"><a href="https://www.facebook.com/golfcove/" target="_blank" class="uk-icon-facebook" aria-label="Facebook"><span class="uk-hidden">Facebook</span></a>  <a href="https://www.instagram.com/golfcovect/" target="_blank" class="uk-icon-instagram" aria-label="Instagram"><span class="uk-hidden">Instagram</span></a></div></div></div>
+								
+						</div>
+				</div>
+						<div class="tm-navbar uk-navbar">
+
+        <div class="uk-container uk-container-center tm-navbar-container">
+
+                        <div class="tm-navbar-left uk-flex uk-flex-middle">
+
+                                <a class="uk-navbar-brand uk-flex uk-flex-middle uk-hidden-small" href="https://www.golfcovect.com/">
+	<div><img src="./Pricing background_files/logo.png" alt="Golf Cove Logo" width="96" height="90"></div></a>
+                				
+
+            </div>
+            						
+
+                        <div class="tm-navbar-center uk-flex uk-flex-center uk-flex-middle uk-hidden-medium">
+                <ul class="uk-navbar-nav uk-hidden-small">
+<li class="uk-active"><a href="https://www.golfcovect.com/pricing">Pricing</a></li><li><a href="https://www.golfcovect.com/golf-memberships">Memberships</a></li><li class="uk-parent" data-uk-dropdown="{&#39;preventflip&#39;:&#39;y&#39;}" aria-haspopup="true" aria-expanded="false"><a href="https://www.golfcovect.com/lessons-leagues">Lessons &amp; Leagues</a><div class="uk-dropdown uk-dropdown-navbar uk-dropdown-width-1 uk-dropdown-center uk-dropdown-bottom" aria-hidden="true" style="top: 50px; left: -38.5px;" tabindex=""><div class="uk-grid uk-dropdown-grid"><div class="uk-width-1-1"><ul class="uk-nav uk-nav-navbar"><li><a href="https://www.golfcovect.com/lessons-leagues/lessons-leagues">Lessons &amp; Leagues</a></li><li><a href="https://www.golfcovect.com/lessons-leagues/pinseeker">PinSeeker at Golf Cove</a></li></ul></div></div></div></li><li class="uk-parent" data-uk-dropdown="{&#39;preventflip&#39;:&#39;y&#39;}" aria-haspopup="true" aria-expanded="false"><a href="https://www.golfcovect.com/private-events/events">Private Events</a><div class="uk-dropdown uk-dropdown-navbar uk-dropdown-width-1 uk-dropdown-center uk-dropdown-bottom" aria-hidden="true" style="top: 50px; left: -42.5px;" tabindex=""><div class="uk-grid uk-dropdown-grid"><div class="uk-width-1-1"><ul class="uk-nav uk-nav-navbar"><li><a href="https://www.golfcovect.com/private-events/events">Private Events</a></li><li><a href="https://www.golfcovect.com/private-events/the-cove-concierge">The Cove Concierge</a></li></ul></div></div></div></li><li><a href="https://www.golfcovect.com/multisport-arcade-at-the-cove">MultiSport Arcade</a></li><li><a href="https://www.golfcovect.com/gift-cards">Gift Cards</a></li><li><a href="https://www.golfcovect.com/menu">Menu</a></li><li><a href="https://www.golfcovect.com/contact">Contact</a></li></ul>					
+            </div>
+            						
+						            <div class="tm-navbar-right uk-flex uk-flex-right uk-flex-middle uk-hidden-small">
+								<div class="">
+	<div><a class="uk-button" href="https://918booking.com/emb-bookings?course=7" target="_blank" rel="noopener">Reserve a Room</a></div></div>						</div>
+									
+						
+						
+							
+												<div class="tm-navbar-small uk-flex uk-flex-middle uk-flex-center uk-flex-space-between uk-hidden-large">		
+								
+															<a class="tm-logo-small uk-navbar-brand uk-flex uk-flex-middle uk-visible-small" href="https://www.golfcovect.com/">
+	<div><img src="./Pricing background_files/logo.png" alt="Golf Cove Logo" width="96" height="90"></div></a>
+							
+														<div class="uk-navbar-small-right uk-flex uk-flex-middle">
+							
+																			<div class="mobile-icon uk-visible-small">
+										<div class="">
+	<div><a href="tel:2033905994" class="uk-icon-phone" aria-label="Phone"><span class="uk-hidden">Phone</span></a></div></div>
+										</div>
+										
+							
+																		<a href="https://www.golfcovect.com/pricing#offcanvas" class="uk-navbar-toggle" data-uk-offcanvas=""><span class="uk-hidden">Mobile Menu</span></a>
+									
+							</div>
+														
+						</div>
+						        </div>
+    </div>
+</div></div>
+
+                                <div class="tm-header-container">
+                    <div class="uk-panel">
+<div class="uk-contrast" data-uk-slideshow="{autoplay: true ,autoplayInterval: 5000,pauseOnHover: false}">
+
+    <div class="uk-position-relative">
+
+        <ul class="uk-slideshow uk-overlay-active" style="height: 250px;">
+        
+            <li style="min-height: 300px; height: 250px;" data-slideshow-slide="img" aria-hidden="false" class="uk-active"><div class="uk-cover-background uk-position-cover" style="background-image: url(&quot;/images/slideshows/sub_banner_pricing.jpg&quot;);"></div>
+
+                
+                    <img src="./Pricing background_files/sub_banner_pricing.jpg" alt="" style="width: 100%; height: auto; opacity: 0;">
+                    
+                                        <div class="uk-overlay-panel uk-flex uk-flex-center uk-flex-middle uk-text-center uk-overlay-fade">
+
+                                                <div>
+                        
+                        
+                                                <div class=" uk-margin">		<div class="moduletable mod-title uk-text-center">
+						<h1>Pricing</h1>		</div>
+	</div>
+                        
+                        
+                                                </div>
+                        
+                    </div>
+                    
+                    
+                
+            </li>
+
+                </ul>
+
+        
+        
+    </div>
+
+    
+</div>
+</div>                </div>
+																
+								
+            </div>
+
+        
+        
+        
+        
+        
+                <div id="tm-main" class="tm-block-main uk-block uk-block-default uk-block-large ">
+
+            <div class="uk-container uk-container-center">
+
+                <div class="tm-middle uk-grid" data-uk-grid-match="" data-uk-grid-margin="">
+
+                                        <div class="tm-main uk-width-medium-1-1 uk-row-first">
+
+                        
+                                                <main id="tm-content" class="tm-content">
+
+                            
+                            <div id="system-message-container">
+</div>
+
+    <article class="uk-article">
+
+	
+	
+	
+	
+	
+	
+			
+<h1 style="text-align: center;"><strong>HOURLY RATES</strong></h1>
+<p style="text-align: center;"><img src="./Pricing background_files/hourly_rates.png" alt="hourly rates"></p>
+<h4 style="text-align: center;"><strong>Need-to-Know: Hourly Rate Details</strong></h4>
+<p style="text-align: center;"><strong>•&nbsp;</strong>Each booking includes up to 5 players<br><strong>•&nbsp;</strong>Rooms 3, 4, &amp; 5 offer Virtual Sports &amp; Games in addition to Golf<br><strong>•&nbsp;</strong>Members receive priority booking in Rooms 1 &amp; 2 - which include TruGolf Apogee technology&nbsp;<br><strong>•&nbsp;</strong>It takes approximately two hours for two golfers to play 18 holes with 10-foot auto-putt<br><strong>•&nbsp;</strong>Special Discounts: 10% Discount for Seniors, Military, &amp; First Responders</p>
+<p style="text-align: center;"><img src="./Pricing background_files/april_to_october3.png" alt="april to october3"></p>
+<p style="text-align: center;"><img src="./Pricing background_files/nov_to_march2.png" alt="nov to march2"></p>
+<p dir="auto" style="display: block; text-align: center;">
+
+</p><div id="wk-gridc0f" class="uk-grid-width-1-1 uk-grid-width-medium-1-2 uk-grid-width-large-1-2 uk-grid uk-grid-match uk-text-center " data-uk-grid-match="{target:&#39;&gt; div &gt; .uk-panel&#39;, row:true}" data-uk-grid-margin="" data-uk-scrollspy="{cls:&#39;uk-animation-slide-left uk-invisible&#39;, target:&#39;&gt; div &gt; .uk-panel&#39;, delay:300}">
+
+
+    <div class="uk-row-first">
+        <div class="uk-panel uk-panel-box uk-scrollspy-init-inview uk-scrollspy-inview uk-animation-slide-left" style="min-height: 237px;">
+
+            
+            
+            
+            
+                        <h3 class="uk-h3 uk-margin-top-remove">
+
+                                    Golf Memberships &amp; Packages                
+                
+            </h3>
+            
+            
+            
+                        <div class="uk-margin"><a href="https://www.golfcovect.com/golf-memberships" class="uk-button uk-button-large">More Info Here</a></div>
+            
+            
+            
+            
+        </div>
+    </div>
+
+
+    <div>
+        <div class="uk-panel uk-panel-box uk-scrollspy-inview uk-animation-slide-left" style="min-height: 237px;">
+
+            
+            
+            
+            
+                        <h3 class="uk-h3 uk-margin-top-remove">
+
+                                    Golf Lessons                
+                
+            </h3>
+            
+            
+            
+                        <div class="uk-margin"><a href="https://www.golfcovect.com/lessons-leagues" class="uk-button uk-button-large">More Info Here</a></div>
+            
+            
+            
+            
+        </div>
+    </div>
+
+
+    <div class="uk-grid-margin uk-row-first">
+        <div class="uk-panel uk-panel-box uk-scrollspy-inview uk-animation-slide-left" style="min-height: 201px;">
+
+            
+            
+            
+            
+                        <h3 class="uk-h3 uk-margin-top-remove">
+
+                                    Gift Cards                
+                
+            </h3>
+            
+            
+            
+                        <div class="uk-margin"><a href="https://www.golfcovect.com/gift-cards" class="uk-button uk-button-large">Purchase Here</a></div>
+            
+            
+            
+            
+        </div>
+    </div>
+
+
+    <div class="uk-grid-margin">
+        <div class="uk-panel uk-panel-box uk-scrollspy-inview uk-animation-slide-left" style="min-height: 201px;">
+
+            
+            
+            
+            
+                        <h3 class="uk-h3 uk-margin-top-remove">
+
+                                    Golf Leagues                
+                
+            </h3>
+            
+            
+            
+                        <div class="uk-margin"><a href="https://www.golfcovect.com/lessons-leagues" class="uk-button uk-button-large">More Info Here</a></div>
+            
+            
+            
+            
+        </div>
+    </div>
+
+
+</div>
+
+<script>
+(function($){
+
+    // get the images of the gallery and replace it by a canvas of the same size to fix the problem with overlapping images on load.
+    $('img[width][height]:not(.uk-overlay-panel)', $('#wk-gridc0f')).each(function() {
+
+        var $img = $(this);
+
+        if (this.width == 'auto' || this.height == 'auto' || !$img.is(':visible')) {
+            return;
+        }
+
+        var $canvas = $('<canvas class="uk-responsive-width"></canvas>').attr({width:$img.attr('width'), height:$img.attr('height')}),
+            img = new Image,
+            release = function() {
+                $canvas.remove();
+                $img.css('display', '');
+                release = function(){};
+            };
+
+        $img.css('display', 'none').after($canvas);
+
+        $(img).on('load', function(){ release(); });
+        setTimeout(function(){ release(); }, 1000);
+
+        img.src = this.src;
+
+    });
+
+})(jQuery);
+</script>
+<p></p> 	
+	
+	
+	
+	
+	
+	
+</article>
+
+
+                        </main>
+                        
+                        
+                    </div>
+                    
+                    
+                </div>
+
+            </div>
+
+        </div>
+        
+        
+        
+        
+        				
+		</div>
+
+        <div id="tm-footer" class="tm-block-footer tm-footer-centered uk-block-muted">
+
+	<div class="uk-container uk-container-center">
+
+						<footer class="tm-footer">			
+					<div class="uk-panel">
+	<div class="footer-social"><a class="uk-icon-facebook" href="https://www.facebook.com/golfcove/" target="_blank" rel="noopener" aria-label="Facebook"><span class="uk-hidden">Facebook</span></a> <a class="uk-icon-instagram" href="https://www.instagram.com/golfcovect/" target="_blank" rel="noopener" aria-label="Instagram"><span class="uk-hidden">Instagram</span></a></div>
+<div>Please visit our facebook and instagram pages frequently for events, updates and promotions!</div></div>
+<div class="uk-panel">
+	<p><strong>336 State Street, North Haven, CT 06473 | Phone:</strong> <a href="tel:2033905994">203.390.5994</a><br>© 2025 Golf Cove | <a title="Contact Us" href="https://www.golfcovect.com/contact">Contact Us</a> | <a title="Site Map" href="https://www.golfcovect.com/site-map">Site Map</a><br>Powered by <a href="https://www.foreupgolf.com/" target="_blank" rel="noopener">foreUP</a></p></div>				</footer>
+			</div>
+
+</div>
+
+	<div class="totop-scroller-container uk-text-center">
+	<a id="tm-anchor-bottom" class="tm-totop-scroller" data-uk-smooth-scroll="" href="https://www.golfcovect.com/pricing#" aria-label="Back to Top"><span class="uk-hidden">Back to Top Scroller</span></a>
+	</div>
+
+        
+                <div id="offcanvas" class="uk-offcanvas">
+            <div class="uk-offcanvas-bar uk-offcanvas-bar-flip">
+						
+							<a class="uk-offcanvas-close" onclick="UIkit.offcanvas.hide([force = false])">Close <span class="uk-modal-close uk-close uk-close-alt"></span></a>
+						
+							<div class="uk-panel">
+
+<div id="wk-grid078" class="uk-grid-width-1-5 uk-grid uk-grid-match uk-grid-collapse uk-text-center mobile-buttons" data-uk-grid-match="{target:&#39;&gt; div &gt; .uk-panel&#39;, row:true}" data-uk-grid-margin="">
+
+
+    <div class="uk-row-first">
+        <div class="uk-panel">
+
+                        <a class="uk-position-cover uk-position-z-index" href="https://www.golfcovect.com/"><span class="uk-hidden">Home</span></a>
+            
+            
+            
+            
+            									 <div class="uk-text-center"><div class="uk-overlay "><span class="uk-icon-home"></span></div></div>
+            						
+						
+                        <div class="uk-panel-title uk-margin-bottom-remove">Home</div>
+            
+            
+            
+            
+            
+            
+            
+        </div>
+    </div>
+
+
+    <div class="uk-row-first">
+        <div class="uk-panel">
+
+                        <a class="uk-position-cover uk-position-z-index" href="https://918booking.com/emb-bookings?course=7"><span class="uk-hidden">Tee Times</span></a>
+            
+            
+            
+            
+            									 <div class="uk-text-center"><div class="uk-overlay "><span class="uk-icon-map-pin"></span></div></div>
+            						
+						
+                        <div class="uk-panel-title uk-margin-bottom-remove">Tee Times</div>
+            
+            
+            
+            
+            
+            
+            
+        </div>
+    </div>
+
+
+    <div class="uk-row-first">
+        <div class="uk-panel">
+
+                        <a class="uk-position-cover uk-position-z-index" href="https://www.golfcovect.com/menu"><span class="uk-hidden">Food</span></a>
+            
+            
+            
+            
+            									 <div class="uk-text-center"><div class="uk-overlay "><span class="uk-icon-cutlery"></span></div></div>
+            						
+						
+                        <div class="uk-panel-title uk-margin-bottom-remove">Food</div>
+            
+            
+            
+            
+            
+            
+            
+        </div>
+    </div>
+
+
+    <div class="uk-row-first">
+        <div class="uk-panel">
+
+                        <a class="uk-position-cover uk-position-z-index" href="https://www.golfcovect.com/gift-cards"><span class="uk-hidden">Gift Cards</span></a>
+            
+            
+            
+            
+            									 <div class="uk-text-center"><div class="uk-overlay "><span class="uk-icon-gift"></span></div></div>
+            						
+						
+                        <div class="uk-panel-title uk-margin-bottom-remove">Gift Cards</div>
+            
+            
+            
+            
+            
+            
+            
+        </div>
+    </div>
+
+
+    <div class="uk-row-first">
+        <div class="uk-panel">
+
+                        <a class="uk-position-cover uk-position-z-index" href="https://www.golfcovect.com/contact"><span class="uk-hidden">Contact</span></a>
+            
+            
+            
+            
+            									 <div class="uk-text-center"><div class="uk-overlay "><span class="uk-icon-phone"></span></div></div>
+            						
+						
+                        <div class="uk-panel-title uk-margin-bottom-remove">Contact</div>
+            
+            
+            
+            
+            
+            
+            
+        </div>
+    </div>
+
+
+</div>
+
+<script>
+    (function($){
+        // get the images of the grid and replace it by a canvas of the same size to fix the problem with overlapping images on load.
+        $('img:first', $('#wk-grid078')).each(function() {
+            var $img = $(this),
+                $canvas = $('<canvas class="uk-responsive-width"></canvas>').attr({width:$img.attr('width'), height:$img.attr('height')}),
+                img = new Image;
+
+            $img.css('display', 'none').after($canvas);
+
+            img.onload = function(){
+                $canvas.remove();
+                $img.css('display', '');
+            };
+
+            img.src = this.src;
+        });
+
+    })(jQuery);
+</script>
+</div>
+<ul class="uk-nav uk-nav-parent-icon uk-nav-offcanvas" data-uk-nav="{}">
+<li class="uk-active"><a href="https://www.golfcovect.com/pricing">Pricing</a></li><li><a href="https://www.golfcovect.com/golf-memberships">Memberships</a></li><li class="uk-parent" aria-expanded="false"><a href="https://www.golfcovect.com/pricing#">Lessons &amp; Leagues</a><div style="overflow:hidden;height:0;position:relative;" class="uk-hidden"><ul class="uk-nav-sub" role="menu"><li><a href="https://www.golfcovect.com/lessons-leagues/lessons-leagues">Lessons &amp; Leagues</a></li><li><a href="https://www.golfcovect.com/lessons-leagues/pinseeker">PinSeeker at Golf Cove</a></li></ul></div></li><li class="uk-parent" aria-expanded="false"><a href="https://www.golfcovect.com/pricing#">Private Events</a><div style="overflow:hidden;height:0;position:relative;" class="uk-hidden"><ul class="uk-nav-sub" role="menu"><li><a href="https://www.golfcovect.com/private-events/events">Private Events</a></li><li><a href="https://www.golfcovect.com/private-events/the-cove-concierge">The Cove Concierge</a></li></ul></div></li><li><a href="https://www.golfcovect.com/multisport-arcade-at-the-cove">MultiSport Arcade</a></li><li><a href="https://www.golfcovect.com/gift-cards">Gift Cards</a></li><li><a href="https://www.golfcovect.com/menu">Menu</a></li><li><a href="https://www.golfcovect.com/contact">Contact</a></li></ul>						
+														<div class="toolbar-assets">
+								<div class="">
+	<div><a class="uk-button" href="https://918booking.com/emb-bookings?course=7" target="_blank" rel="noopener">Reserve a Room</a></div></div>								<div class="">
+	<div class="top-info"><div><a href="tel:2033905994">203.390.5994 <span class="uk-margin-small-left uk-margin-right uk-icon-phone"></span></a> </div><div><a href="https://www.golfcovect.com/contact">336 State Street, North Haven, CT 06473<span class="uk-margin-small-left uk-icon-map-marker"></span></a></div></div></div>								<div class="">
+	<div class="social-icons"><a href="https://www.facebook.com/golfcove/" target="_blank" class="uk-icon-facebook" aria-label="Facebook"><span class="uk-hidden">Facebook</span></a>  <a href="https://www.instagram.com/golfcovect/" target="_blank" class="uk-icon-instagram" aria-label="Instagram"><span class="uk-hidden">Instagram</span></a></div></div>							</div>
+														
+						</div>
+        </div>
+        
+        
+        
+    
+<script id="" text="" charset="" type="text/javascript" src="./Pricing background_files/org-sdk"></script>
+<script id="" text="" charset="" type="text/javascript" src="./Pricing background_files/js(3)"></script>
+<script type="text/javascript" id="" charset="">window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date);gtag("config","G-CRHS2CRZ4T");</script></body><grammarly-desktop-integration data-grammarly-shadow-root="true"><template shadowrootmode="open"><style>
+      div.grammarly-desktop-integration {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select:none;
+        user-select:none;
+      }
+
+      div.grammarly-desktop-integration:before {
+        content: attr(data-content);
+      }
+    </style><div aria-label="grammarly-integration" role="group" tabindex="-1" class="grammarly-desktop-integration" data-content="{&quot;mode&quot;:&quot;full&quot;,&quot;isActive&quot;:true,&quot;isUserDisabled&quot;:false}"></div></template></grammarly-desktop-integration></html>

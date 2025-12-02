@@ -1,0 +1,505 @@
+﻿/* Copyright (C) 121 Marketing - 121marketing.com */
+
+/* ========================================================================
+   1-2-1 Modifications - Custom
+ ========================================================================== */
+ 
+/* =========================== Font Family ================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap');
+
+html, body, .cb_template .checkbox-inline, .cb_template label[for="reminderUsername"], .cb_template label[for="reminderPassword"], #form-login-remember label, .uk-form-row label:not(.uk-form-label), h3.quote-title, select, textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"], .uneditable-input, .uk-form select, .uk-form textarea, .uk-form input:not([type]), .uk-form input[type="text"], .uk-form input[type="password"], .uk-form input[type="datetime"], .uk-form input[type="datetime-local"], .uk-form input[type="date"], .uk-form input[type="month"], .uk-form input[type="time"], .uk-form input[type="week"], .uk-form input[type="number"], .uk-form input[type="email"], .uk-form input[type="url"], .uk-form input[type="search"], .uk-form input[type="tel"], .uk-form input[type="color"], .cb_template body, .cb_template, .htabs a, .footer-social, .uk-nav-navbar > li > a, ul.uk-nav-sub, .uk-nav-navbar ul a, .uk-nav-offcanvas ul a,.uk-form-horizontal .uk-form-label,.uk-form label   {
+	font-family: 'Open Sans', sans-serif;
+}
+.uk-article .pagenavcounter, h5, .uk-h5, h6, .uk-h6, .tm-toolbar, .uk-nav-offcanvas ul.uk-nav-sub, .tm-navbar ul.uk-nav-sub, .uk-navbar-nav > li > a, .uk-subnav > * > *, .uk-button, .uk-button-link, .btn, .uk-nav-offcanvas > li > a,.nav > li > a, .uk-offcanvas .uk-panel .uk-panel-title, .uk-panel-box .uk-nav-side > li > a, .uk-nav-side > li > a, .events-121 a, .date-121, .coursetour-121 .uk-tab > li > a, .coursetour-121 .uk-nav-dropdown > li > a, #header_oc .links a, .cb_template input[type="submit"], .eclub-121 .uk-panel-title, .uk-article table:not(.yui-calendar) th, .toolbar-assets > div:not(.social-icons) > a, .toolbar-assets > div:not(.social-icons) > span, .cal_td_daysnames,span.mod_events_latest_date h5,.uk-article .pager ul li,.uk-pagination > li > a, .uk-pagination > li > span,.uk-nav-header  {
+	font-family: 'Open Sans', sans-serif;
+}
+h1, h2, .uk-h1, .uk-h2, h3, .uk-h3, .cb_template h3, .uk-panel-title, #header_oc #cart .heading h4, h4, .uk-h4, .testimonial-slider .uk-overlay-panel > div:before, blockquote::before  {
+	font-family: 'Roboto', sans-serif;
+}
+
+/* =========================== Font Sizes ================================ */
+
+.uk-h1.uk-heading-large, .uk-heading-large, .mod-title h1,h1, .uk-h1, .uk-article-title{
+	font-size: 50px;
+}
+h2, .uk-h2, .mijoshop_heading_h1 {
+	font-size: 42px;
+}
+h3, .uk-h3, .uk-panel-title, .cb_template h3,span.mod_events_latest_date h5 span {
+	font-size: 32px;
+}
+h4, .uk-h4, .latest-news .uk-panel-title, .eclub-121 .uk-panel-title, .uk-text-large,#header_oc #cart .heading h4 {
+	font-size: 24px;
+}
+h5, .uk-h5, .uk-article table:not(.yui-calendar) th, .cal_td_daysnames,.latest-news .uk-slidenav-previous:before, .latest-news .uk-slidenav-next:before{
+	font-size: 18px;
+}
+html, h3.quote-title, .uk-article table:not(.yui-calendar), .uk-nav-offcanvas > li > a, blockquote, .ev_td_left,span.mod_events_latest_date,.calendar-title,.jev_toprow div.currentmonth,.coursetour-121 .uk-tab > li > a,.uk-article .pager ul li,.uk-pagination > li > a, .uk-pagination > li > span,.uk-navbar-nav > li.uk-parent:after {
+	font-size: 16px;
+}
+.uk-form-horizontal .uk-form-label,.uk-form label,.nav-tabs.nav-stacked > li > a {
+	font-size:14px;
+}
+small, h6, .uk-h6, .uk-article .pagenavcounter, #form-login-remember label, .uk-form-row label:not(.uk-form-label), .homepage-buttons .button-wrapper, footer, .uk-overflow-container:after, .event-registration .tm-content:after, #header_oc .links a, .footer-top, .coursetour-121 .uk-subnav > * > a, .nav > li > a, ul.uk-nav-sub, .uk-nav-offcanvas ul.uk-nav-sub, select, textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"], .uneditable-input, .uk-form select, .uk-form textarea, .uk-form input:not([type]), .uk-form input[type="text"], .uk-form input[type="password"], .uk-form input[type="datetime"], .uk-form input[type="datetime-local"], .uk-form input[type="date"], .uk-form input[type="month"], .uk-form input[type="time"], .uk-form input[type="week"], .uk-form input[type="number"], .uk-form input[type="email"], .uk-form input[type="url"], .uk-form input[type="search"], .uk-form input[type="tel"], .uk-form input[type="color"], .uk-button, .uk-button-link, .btn, .tm-toolbar, .uk-navbar-nav > li > a, .uk-nav-navbar > li > a, .tm-tobottom-scroller, .uk-subnav > * > *, .link-121, .events-121 .mod_events_latest_callink > a, .uk-nav-side > li > a, .uk-nav-side ul.uk-nav-sub > li,  .uk-nav-dropdown > li > a, .uk-nav-navbar > li > a, .date-121, span.mod_events_latest_date,span.icon-clock,.acysubbuttons .button,.jev_daysnames,#jevents_body a,#jevents_body .tableh1,#jevents_body .buttontext a,.cb_template input[type="submit"],.uk-nav-header   {
+	font-size: 13px;
+}
+
+/* Responsive */
+
+@media (max-width: 1219px) {
+.uk-navbar-nav > li > a, .tm-navbar-right .uk-button, .tm-toolbar {font-size: 11px;}
+}
+
+@media (max-width: 1024px) {
+.uk-navbar-nav > li > a, .tm-navbar-right .uk-button, .tm-toolbar {font-size: 10px;}
+}
+
+@media (max-width: 767px) {
+.uk-h1.uk-heading-large, .uk-heading-large, .mod-title h1 {font-size: 50px}
+h1, .uk-h1, .uk-article-title {font-size: 40px;}
+h2, .uk-h2, .mijoshop_heading_h1 {font-size: 32px;}
+}
+
+@media (max-width: 500px) {
+.uk-h1.uk-heading-large, .uk-heading-large, .mod-title h1 {font-size: 42px}
+h1, .uk-h1, .uk-article-title {font-size: 36px;}
+.slideshow-overlay h5 {font-size: 4vw;}
+.slideshow-overlay .uk-heading-large {font-size: 10vw;}
+}
+
+/* =========================== Font Style, Weights, Spacing & Line Heights================================ */
+
+blockquote h6, .mobile-buttons a, .eclub-121 .uk-panel-title, .latest-news .uk-panel-title, h1, .uk-h1, .uk-article-title, h2, .uk-h2, h4, .uk-h4, .homepage-slideshow h1, .coursetour-121 .uk-tab > li > a, .coursetour-121 .uk-nav-dropdown > li > a, .eclub-121 .uk-h1, .uk-panel-box .uk-nav-side > li > a, .uk-nav-side > li > a, .uk-nav-side ul.uk-nav-sub > li {
+	font-style: normal;
+}
+.homepage .uk-article.uk-active h1 *,.uk-panel-title, #header_oc #cart .heading h4, h4, .uk-h4, .testimonial-slider .uk-overlay-panel > div:before, blockquote::before  {
+	font-style: normal;
+}
+html, .cb_template .checkbox-inline, .cb_template label[for="reminderUsername"], .cb_template label[for="reminderPassword"], .formError, .formRed, .cal_td_daysnames, #header_oc #cart .heading h4, .latest-news .uk-slidenav:before, .footer-top, .uk-nav-navbar > li > a, ul.uk-nav-sub, .uk-nav-offcanvas ul.uk-nav-sub, .uk-form label, .tm-navbar ul.uk-nav-sub, .cb_template input[type="submit"],.jev_gray .jevdateicon1,.jev_gray .jevdateicon2,.jev_gray .jevdateicon,.jev_daysnames,.uk-nav-header  {
+	font-weight: 400;
+}
+strong,.uk-pagination > .uk-active > span, .tm-footer a:not([class]), .uk-article a:not([class]), h5, .uk-h5, h6, .uk-h6, .coursetour-121 .uk-tab > li > a, .coursetour-121 .uk-nav-dropdown > li > a, .tm-toolbar, .uk-navbar-nav > li > a, .uk-subnav > * > *, .uk-button, .uk-button-link, .btn, .uk-nav-offcanvas > li > a,.nav > li > a, .uk-offcanvas .uk-panel .uk-panel-title, #header_oc .links a, .uk-panel-box .uk-nav-side > li > a, .uk-nav-side > li > a, .date-121, .events-121 a,.uk-article table:not(.yui-calendar) th,.acysubbuttons .button,.jev_toprow div.currentmonth,a,.accordion-121 .uk-accordion-title,.uk-article .pager ul li,.uk-pagination > li > a, .uk-pagination > li > span,.uk-nav-navbar > li > a,ul.uk-nav-sub,.tm-navbar ul.uk-nav-sub  {
+	font-weight: 700;
+}
+h1, h2, .uk-h1, .uk-h2, h3, .uk-h3, .cb_template h3,span.mod_events_latest_date h5,h4,.uk-h4,.uk-article-title, aside .uk-panel-title,main .uk-panel .uk-panel-title,.uk-panel.latest-news h3,.uk-panel.latest-news .uk-h3{
+	font-weight:400;
+}
+.uk-navbar-nav  > li > a:not(.uk-button), .cal_td_daysnames, .uk-article table:not(.yui-calendar) th, h5, .uk-h5, h6, .uk-h6, .uk-nav-offcanvas > li > a, #header_oc .links a, .uk-panel-box .uk-nav-side > li > a, .uk-nav-side > li > a, .link-121, .events-121 .mod_events_latest_callink > a, .date-121, .uk-subnav > * > *, .cb_template input[type="submit"], .uk-button, .uk-button-link, .btn, .tm-toolbar, .tm-toolbar a, .toolbar-assets > div:not(.social-icons) > a, .toolbar-assets > div:not(.social-icons) > span,.coursetour-121 .uk-tab > li > a,.acysubbuttons .button,.jev_toprow div.currentmonth {
+	letter-spacing: 1px;	
+}
+h1, .uk-h1, .uk-article-title, h2, .uk-h2, h3, .uk-h3, #header_oc #cart .heading h4, h4, .uk-h4, .uk-nav-navbar > li > a, ul.uk-nav-sub, .uk-nav-navbar ul a, .footer-social, .coursetour-121 .uk-nav-dropdown > li > a, select, textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"], .uneditable-input, .uk-form select, .uk-form textarea, .uk-form input:not([type]), .uk-form input[type="text"], .uk-form input[type="password"], .uk-form input[type="datetime"], .uk-form input[type="datetime-local"], .uk-form input[type="date"], .uk-form input[type="month"], .uk-form input[type="time"], .uk-form input[type="week"], .uk-form input[type="number"], .uk-form input[type="email"], .uk-form input[type="url"], .uk-form input[type="search"], .uk-form input[type="tel"], .uk-form input[type="color"],.nav-tabs.nav-stacked > li > a ,.uk-nav-header  {
+  letter-spacing: 0;
+}
+
+.uk-h1.uk-heading-large, .uk-heading-large, .mod-title h1,h1, .uk-h1, .uk-article-title{
+	line-height:54px;
+}
+h2, .uk-h2, .mijoshop_heading_h1 {
+	line-height:50px;
+}
+h3, .uk-h3, .uk-panel-title, .cb_template h3 {
+	line-height:36px;
+}
+ #header_oc #cart .heading h4, h4, .uk-h4,span.mod_events_latest_date h5{
+	line-height:30px;
+}
+.uk-article, .uk-text-large, blockquote, main ul > li, aside ul > li {
+	line-height: 30px;
+}
+ h5, .uk-h5, h6, .uk-h6 {
+	line-height: 24px;
+}
+small, .uk-article table:not(.yui-calendar), [id*='wk-grid'], .homepage-buttons .button-wrapper {
+	line-height: 22px;
+}
+.slideshow-overlay .uk-h1,.uk-header-line {
+	line-height: 1.1;
+}
+.latest-news .uk-slidenav {
+    line-height: .35;
+}
+
+@media (max-width: 767px) {
+html, .uk-article, .uk-text-large {
+	line-height: 28px;
+}
+}
+
+/* =========================== Text Transform ================================ */
+
+h1, .uk-h1, h2, .uk-h2, h3, .uk-h3, h4, .uk-h4, .uk-panel-title, .uk-nav-navbar > li > a, ul.uk-nav-sub, .uk-nav-navbar ul a, .footer-social, select, textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"], .uneditable-input, .uk-form select, .uk-form textarea, .uk-form input:not([type]), .uk-form input[type="text"], .uk-form input[type="password"], .uk-form input[type="datetime"], .uk-form input[type="datetime-local"], .uk-form input[type="date"], .uk-form input[type="month"], .uk-form input[type="time"], .uk-form input[type="week"], .uk-form input[type="number"], .uk-form input[type="email"], .uk-form input[type="url"], .uk-form input[type="search"], .uk-form input[type="tel"], .uk-form input[type="color"], #header_oc #cart .heading h4 {
+	text-transform:none;
+}
+h5, .uk-h5, h6, .uk-h6, .uk-article .pagenavcounter, #header_oc .links a, .uk-article table:not(.yui-calendar):not(.myForm) th, .date-121, .latest-news .uk-slidenav.uk-slidenav:before, .tm-toolbar, .uk-button, .uk-button-link, .btn, .tm-tobottom-scroller, .link-121, .events-121 .mod_events_latest_callink > a, .cal_td_daysnames, .toolbar-assets > div:not(.social-icons) > a, .toolbar-assets > div:not(.social-icons) > span,.jev_toprow div.currentmonth,.accordion-121 .uk-accordion-title,.uk-nav-header {
+	text-transform: uppercase;
+}
+.uk-form-horizontal .uk-form-label,.nav-tabs.nav-stacked > li > a,.uk-nav-navbar > li > a,ul.uk-nav-sub,.tm-navbar ul.uk-nav-sub {
+	text-transform:capitalize;
+}
+
+/* =========================== Backgrounds ================================ */
+
+.switcher-121,.accordion-121 .uk-accordion-content,.accordion-121 .uk-accordion-title,.coursetour-121,.tm-toolbar, #header_oc #search_oc input, .uk-block-muted, select, textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"], .uneditable-input, .uk-form select, .uk-form textarea, .uk-form input:not([type]), .uk-form input[type="text"], .uk-form input[type="password"], .uk-form input[type="datetime"], .uk-form input[type="datetime-local"], .uk-form input[type="date"], .uk-form input[type="month"], .uk-form input[type="time"], .uk-form input[type="week"], .uk-form input[type="number"], .uk-form input[type="email"], .uk-form input[type="url"], .uk-form input[type="search"], .uk-form input[type="tel"], .uk-form input[type="color"], select:focus, textarea:focus, input[type="text"]:focus, input[type="password"]:focus, input[type="datetime"]:focus, input[type="datetime-local"]:focus, input[type="date"]:focus, input[type="month"]:focus, input[type="time"]:focus, input[type="week"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="url"]:focus, input[type="search"]:focus, input[type="tel"]:focus, input[type="color"]:focus, .uneditable-input:focus, .uk-form select:focus, .uk-form textarea:focus, .uk-form input:not([type]):focus, .uk-form input[type="text"]:focus, .uk-form input[type="password"]:focus, .uk-form input[type="datetime"]:focus, .uk-form input[type="datetime-local"]:focus, .uk-form input[type="date"]:focus, .uk-form input[type="month"]:focus, .uk-form input[type="time"]:focus, .uk-form input[type="week"]:focus, .uk-form input[type="number"]:focus, .uk-form input[type="email"]:focus, .uk-form input[type="url"]:focus, .uk-form input[type="search"]:focus, .uk-form input[type="tel"]:focus, .uk-form input[type="color"]:focus,table.ev_table tr:nth-child(odd), .uk-article table:not(.yui-calendar):not(.myForm) tr:nth-child(odd),.jev_daysnames_gray, table.ev_table td.cal_td_daysnames_gray {
+	background:#f0f0f0; background-color: #f0f0f0;
+}
+body, .totop-scroller-container, blockquote, .uk-block-default, .homepage-buttons .button-wrapper, .ev_table,.tm-navbar-wrapper-animate:not(.uk-active) .uk-navbar ,#jevents_body .jev_listview .jev_listrow div.jevleft,.jev_listview .jev_listrow, .uk-panel-box-primary .uk-form select, .uk-panel-box-primary .uk-form textarea, .uk-panel-box-primary .uk-form input:not([type]), .uk-panel-box-primary .uk-form input[type="text"], .uk-panel-box-primary .uk-form input[type="password"], .uk-panel-box-primary .uk-form input[type="datetime"], .uk-panel-box-primary .uk-form input[type="datetime-local"], .uk-panel-box-primary .uk-form input[type="date"], .uk-panel-box-primary .uk-form input[type="month"], .uk-panel-box-primary .uk-form input[type="time"], .uk-panel-box-primary .uk-form input[type="week"], .uk-panel-box-primary .uk-form input[type="number"], .uk-panel-box-primary .uk-form input[type="email"], .uk-panel-box-primary .uk-form input[type="url"], .uk-panel-box-primary .uk-form input[type="search"], .uk-panel-box-primary .uk-form input[type="tel"], .uk-panel-box-primary .uk-form input[type="color"], .uk-article table:not(.yui-calendar):not(.myForm), .uk-panel-box, #header_oc #cart .content_oc, .tm-wrapper, .uk-block-default, .uk-contrast .uk-form select, .uk-contrast .uk-form textarea, .uk-contrast .uk-form input:not([type]), .uk-contrast .uk-form input[type="text"], .uk-contrast .uk-form input[type="password"], .uk-contrast .uk-form input[type="datetime"], .uk-contrast .uk-form input[type="datetime-local"], .uk-contrast .uk-form input[type="date"], .uk-contrast .uk-form input[type="month"], .uk-contrast .uk-form input[type="time"], .uk-contrast .uk-form input[type="week"], .uk-contrast .uk-form input[type="number"], .uk-contrast .uk-form input[type="email"], .uk-contrast .uk-form input[type="url"], .uk-contrast .uk-form input[type="search"], .uk-contrast .uk-form input[type="tel"], .uk-contrast .uk-form input[type="color"], .uk-contrast .uk-form select:focus, .uk-contrast .uk-form textarea:focus, .uk-contrast .uk-form input:not([type]):focus, .uk-contrast .uk-form input[type="text"]:focus, .uk-contrast .uk-form input[type="password"]:focus, .uk-contrast .uk-form input[type="datetime"]:focus, .uk-contrast .uk-form input[type="datetime-local"]:focus, .uk-contrast .uk-form input[type="date"]:focus, .uk-contrast .uk-form input[type="month"]:focus, .uk-contrast .uk-form input[type="time"]:focus, .uk-contrast .uk-form input[type="week"]:focus, .uk-contrast .uk-form input[type="number"]:focus, .uk-contrast .uk-form input[type="email"]:focus, .uk-contrast .uk-form input[type="url"]:focus, .uk-contrast .uk-form input[type="search"]:focus, .uk-contrast .uk-form input[type="tel"]:focus, .uk-contrast .uk-form input[type="color"]:focus {
+	background: #ffffff; background-color: #ffffff;
+}
+.tm-navbar-sticky .tm-navbar-wrapper-animate.uk-active,.switcher-121 .uk-tab > li.uk-active > a,.uk-pagination > .uk-active > span, .uk-pagination > li > a:hover, .uk-pagination > li > a:focus, .uk-contrast .uk-button, .eclub-121 .uk-header-line:before, .eclub-121 .uk-header-line:after, .tm-block-footer [class*='uk-icon-']:hover, .tm-block-footer [class*='uk-icon-']:focus, .uk-button-link:after, .uk-button-link:hover:after, .uk-button-link:focus:after, .uk-button-link:active:after, .uk-button-link.uk-active:after, .uk-button-link:disabled:after,a.uk-button.uk-button-link:after, a.uk-button.uk-button-link:hover:after, a.uk-button.uk-button-link:focus:after, a.uk-button.uk-button-link:active:after, a.uk-button.uk-button-link.uk-active:after, a.uk-button.uk-button-link:disabled:after, .social-icons [class*='uk-icon-']:hover, .social-icons [class*='uk-icon-']:focus,  .uk-block-secondary.uk-contrast .uk-button, .uk-block-primary .uk-button, .uk-panel-box.uk-panel-box-primary .uk-button, .uk-alert-warning, .uk-button, .uk-button-primary, .btn-primary, a.jev_back, .uk-button.uk-button-secondary:hover, .uk-button.uk-button-secondary:focus, .uk-alert, .btn, .tooltip-inner, .events-121 .mod_events_latest_callink > a, .mobile-buttons, .uk-nav-offcanvas > li > a.uk-button, .uk-navbar-nav > li.uk-active > a:not(.uk-button):after, .uk-navbar-nav > li:hover > a:not(.uk-button):after, .uk-navbar-nav > li > a:not(.uk-button):focus:after, .uk-navbar-nav > li.uk-open > a:not(.uk-button):after, .uk-dropdown-navbar:after,.uk-header-line:before,.event-info:hover,.jev_listview .jev_toprow,.jev_toprow div.currentmonth span,.jev_gray .jev_toprow div.currentmonth,.latest-news .uk-dotnav > .uk-active > *, .latest-news .uk-dotnav > * > :hover, .latest-news .uk-dotnav > * > :focus,.latest-news .uk-slidenav:hover, .latest-news .uk-slidenav:focus,.coursetour-121 .uk-tab > li > a, .coursetour-121 .uk-nav-dropdown > li > a {
+	background: #37b24a; background-color: #37b24a;
+}
+.uk-contrast .uk-button:hover, .uk-contrast .uk-button:focus, .tm-header-container .uk-slideshow > li .uk-overlay-panel:after, .uk-block-secondary.uk-contrast .uk-button:hover, .uk-block-secondary.uk-contrast .uk-button:focus, .uk-block-primary .uk-button:hover, .uk-block-primary .uk-button:focus, .uk-panel-box.uk-panel-box-primary .uk-button:hover, .uk-panel-box.uk-panel-box-primary .uk-button:focus, .uk-button:hover, .uk-button:focus, .uk-button-primary:hover, .uk-button-primary:focus, .uk-button-primary:active, .uk-button-primary.uk-active, .btn-primary:hover, .btn-primary:focus, a.jev_back:hover, a.jev_back:focus, #jevents #jevents_body a.jev_back:hover, .uk-contrast .uk-button-primary:hover, .uk-contrast .uk-button-primary:focus, .events-121 .mod_events_latest_callink > a:hover, .events-121 .mod_events_latest_callink > a:focus, .uk-navbar-nav > li:hover > a.uk-button, .uk-navbar-nav > li > a.uk-button:focus, .uk-navbar-nav > li.uk-open > a.uk-button, html:not(.uk-touch) .uk-nav-offcanvas > li > a.uk-button:hover,.coursetour-121 .uk-tab > li.uk-active > a, .coursetour-121 .uk-tab > li > a:hover, .coursetour-121 .uk-tab > li > a:focus, .coursetour-121 .uk-tab > li.uk-open > a, .coursetour-121 .uk-nav-dropdown > li.uk-active > a, .coursetour-121 .uk-nav-dropdown > li > a:hover, .coursetour-121 .uk-nav-dropdown > li > a:focus,ul.dt-steps li.active:before  {
+	background: #3cc551; background-color: #3cc551;
+}
+.uk-dotnav > * > *{
+	background: #37b24a; background-color: #37b24a;
+}
+.uk-offcanvas-bar {
+	background: #3a3a3a;
+}
+.latest-news .uk-overlay-panel:before,.uk-block-primary, .cal_td_daysnames, .uk-article table:not(.yui-calendar) th,.events-121 .uk-panel-title, .date-121, .testimonial-slider h3.quote-title:before, .uk-header-line:after,.jev_toprow div.previousmonth span,.jev_toprow div.nextmonth span,.jev_listview .jev_daysnames,ul.dt-steps li.dt-completed:before,ul.dt-steps li.dt-completed:after {
+	background: #413d3c;
+}
+.uk-panel-box-primary,#header_oc #cart,.tm-block-bottom-d.book-cta{
+	background:#2d2a29;
+}
+.homepage-slideshow:before  {
+  background:rgb(0 0 0 / 45%);
+}
+.tm-header-container .uk-slideshow > li .uk-overlay-panel:before  {
+	background:rgb(0 0 0 / 45%);
+  }
+
+@media (max-width: 1024px) {
+.latest-news .uk-slidenav {background:#37b24a;}
+.tm-navbar-wrapper-animate.uk-active .uk-navbar{background:#fff;}
+}
+
+/* =========================== Colors ================================ */
+
+#tm-anchor-bottom:before, .uk-nav-side > li > a, .uk-nav-side ul a, .uk-nav-navbar > li > a, .nav-tabs > li > a:hover, .uk-contrast .uk-form select, .uk-contrast .uk-form textarea, .uk-contrast .uk-form input:not([type]), .uk-contrast .uk-form input[type="text"], .uk-contrast .uk-form input[type="password"], .uk-contrast .uk-form input[type="datetime"], .uk-contrast .uk-form input[type="datetime-local"], .uk-contrast .uk-form input[type="date"], .uk-contrast .uk-form input[type="month"], .uk-contrast .uk-form input[type="time"], .uk-contrast .uk-form input[type="week"], .uk-contrast .uk-form input[type="number"], .uk-contrast .uk-form input[type="email"], .uk-contrast .uk-form input[type="url"], .uk-contrast .uk-form input[type="search"], .uk-contrast .uk-form input[type="tel"], .uk-contrast .uk-form input[type="color"], .uk-contrast .uk-form select:focus, .uk-contrast .uk-form textarea:focus, .uk-contrast .uk-form input:not([type]):focus, .uk-contrast .uk-form input[type="text"]:focus, .uk-contrast .uk-form input[type="password"]:focus, .uk-contrast .uk-form input[type="datetime"]:focus, .uk-contrast .uk-form input[type="datetime-local"]:focus, .uk-contrast .uk-form input[type="date"]:focus, .uk-contrast .uk-form input[type="month"]:focus, .uk-contrast .uk-form input[type="time"]:focus, .uk-contrast .uk-form input[type="week"]:focus, .uk-contrast .uk-form input[type="number"]:focus, .uk-contrast .uk-form input[type="email"]:focus, .uk-contrast .uk-form input[type="url"]:focus, .uk-contrast .uk-form input[type="search"]:focus, .uk-contrast .uk-form input[type="tel"]:focus, .uk-contrast .uk-form input[type="color"]:focus {
+	color: #f0f0f0;
+}
+.uk-panel-box-primary .uk-button,.latest-news .uk-overlay-panel h3.uk-h3,.tm-navbar-sticky .tm-navbar-wrapper-animate.uk-active .uk-navbar-nav > li > a,.switcher-121 .uk-tab > li.uk-active > a,.uk-pagination > .uk-active > span, .uk-pagination > li > a:hover, .uk-pagination > li > a:focus, .uk-contrast h1, .uk-contrast .uk-h1, .uk-contrast h2, .uk-contrast .uk-h2, .uk-contrast h3, .uk-contrast .uk-h3, .uk-contrast h4, .uk-contrast .uk-h4, .uk-contrast h5, .uk-contrast .uk-h5, .uk-contrast h6, .uk-contrast .uk-h6, .uk-button.uk-button-secondary:hover, .uk-button.uk-button-secondary:focus, .tm-block-footer [class*='uk-icon-']:hover, .tm-block-footer [class*='uk-icon-']:focus, .social-icons [class*='uk-icon-']:hover, .social-icons [class*='uk-icon-']:focus, .homepage-slideshow .uk-slidenav, .uk-nav-navbar > li > a, ul.uk-nav-sub, .uk-nav-navbar ul a, .nav > li > a, .uk-dropdown-navbar .uk-nav-navbar > li.uk-active > a, .uk-nav-navbar ul a:hover, .uk-nav-navbar > li > a:hover, .uk-nav-navbar > li > a:focus, .uk-block-primary h2, .eclub-121, .latest-news .uk-panel-title, .cb_template input[type="submit"], .coursetour-121 .uk-tab > li > a, .coursetour-121 .uk-nav-dropdown > li > a, .uk-panel-box.uk-panel-box-primary:not(.events-121) form .uk-list li > a, .uk-panel-box.uk-panel-box-primary .uk-button:hover, .uk-panel-box.uk-panel-box-primary .uk-button:focus, .homepage-slideshow h1, .mod-title, .uk-panel-box.uk-panel-box-primary, .uk-panel-box.uk-panel-box-primary .uk-panel-title, .uk-contrast .footer-top a:not([class]), .mod-title h1, .latest-news .uk-overlay-panel, .latest-news .uk-slidenav, ul.uk-list a:focus, .uk-contrast .uk-subnav > li > a, .uk-dropdown-navbar, .tm-toolbar .uk-button, .tm-toolbar .uk-button:hover, .tm-toolbar .uk-button:focus, .tm-navbar ul.uk-nav-sub, .uk-contrast .uk-button, .uk-contrast .uk-button:hover, .uk-contrast .uk-button:focus, .tm-tobottom-scroller, .uk-article table:not(.yui-calendar) th, .uk-offcanvas-bar, .uk-offcanvas-bar a, .uk-offcanvas-bar .uk-link, .uk-nav-offcanvas > li > a, .coursetour-121 .uk-tab > li.uk-active > a, .coursetour-121 .uk-tab > li > a:hover, .coursetour-121 .uk-tab > li > a:focus, .coursetour-121 .uk-tab > li.uk-open > a, .events-121.uk-panel .uk-panel-title, .date-121, .uk-panel-box.events-121 .mod_events_latest_callink > a, .uk-panel-box.events-121 .mod_events_latest_callink > a:hover, .uk-panel-box.events-121 .mod_events_latest_callink > a:focus, .coursetour-121 .uk-nav-dropdown > li.uk-active > a, .coursetour-121 .uk-nav-dropdown > li > a:hover, .coursetour-121 .uk-nav-dropdown > li > a:focus, .cal_td_daysnames, .uk-form button[type="submit"], .uk-navbar-nav > li > a.uk-button, .uk-navbar-nav > li:hover > a.uk-button, .uk-navbar-nav > li > a.uk-button:focus, .uk-navbar-nav > li.uk-open > a.uk-button, #tm-footer.uk-contrast, .uk-contrast a:not([class]):hover, .uk-contrast .uk-link:hover, html:not(.uk-touch) .uk-nav-offcanvas > li > a.uk-button:hover,.jev_toprow div.currentmonth,.jev_gray .jev_toprow div.previousmonth a,.jev_gray .jev_toprow div.nextmonth a,.jev_listview .jev_daysnames,#header_oc #cart .heading h4,.latest-news .uk-slidenav:hover, .latest-news .uk-slidenav:focus,.tm-navbar-sticky .tm-navbar-wrapper-animate.uk-active .uk-navbar-nav > li.uk-parent:after,.uk-nav-navbar .uk-nav-header   {
+	color: #ffffff;
+}
+.uk-navbar-toggle:hover, .uk-navbar-toggle:focus, .tm-toolbar a:hover, .tm-toolbar a:focus, a.ev_link_row:hover, a.ev_link_row:link:hover, a.ev_link_row:visited:hover, li#form-login-forgot a:hover, li#form-login-forgot a:focus, .uk-nav-side > li > a:hover, .uk-nav-side > li > a:focus, .uk-nav-side > li.uk-active > a, a:hover, .uk-link:hover, a:focus, #tm-footer.uk-contrast a:hover, #tm-footer.uk-contrast a:focus, .uk-button-link:hover, .uk-button-link:focus, .uk-button-link:active, .uk-button-link.uk-active, .link-121:hover, .link-121:focus, .nav-tabs > .active > a, .nav-tabs > .active > a:hover, .nav-tabs > .active > a:focus, .uk-panel-box:not(.events-121) > a:not([class]):hover, .uk-panel-box:not(.events-121) > :not([class*='uk-nav']) a:not([class]):hover,.nav-tabs.nav-stacked > li > a,.nav-tabs.nav-stacked > li > a:hover, .nav-tabs.nav-stacked > li > a:focus   {
+	color: #3cc551;
+}
+html,.uk-pagination > li > a, .uk-pagination > li > span,.social-icons [class*='uk-icon-'],.uk-navbar-nav  > li > a, .uk-navbar-nav > li.uk-active > a, .uk-navbar-nav > li:hover > a, .uk-navbar-nav > li > a:focus, .uk-navbar-nav > li.uk-open > a,.homepage .uk-article,.tm-toolbar, .tm-toolbar a,.accordion-121 .uk-accordion-title::before,.accordion-121 .uk-accordion-title, #header_oc #search_oc input, li#form-login-forgot a, .uk-form .uk-form-row + .uk-list > li a:not([class]), .uk-subnav > * > *, .coursetour-121, .uk-nav-side > li > a, .uk-panel-box, .footer-social, .tm-block-footer [class*='uk-icon-'], footer, em, .mijoshop_heading_h1, main ul > li, aside ul > li, .ev_td_left, .uk-nav-side ul a:hover, select, textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"], .uneditable-input, .uk-form select, .uk-form textarea, .uk-form input:not([type]), .uk-form input[type="text"], .uk-form input[type="password"], .uk-form input[type="datetime"], .uk-form input[type="datetime-local"], .uk-form input[type="date"], .uk-form input[type="month"], .uk-form input[type="time"], .uk-form input[type="week"], .uk-form input[type="number"], .uk-form input[type="email"], .uk-form input[type="url"], .uk-form input[type="search"], .uk-form input[type="tel"], .uk-form input[type="color"],.calendar-title, table.ev_table td.cal_td_daysnames_gray,.uk-form-horizontal .uk-form-label,ul.dt-steps + .tab-content #individual .controls input::placeholder,.uk-navbar-nav > li.uk-parent:after    {
+	color: #3a3a3a;
+}
+
+.social-icons a,.mobile-icon a, .uk-navbar-toggle,blockquote::before,.switcher-121 .uk-tab > li:not(.uk-active) > a:hover, .switcher-121 .uk-tab > li:not(.uk-active) > a:focus, .switcher-121 .uk-tab > li.uk-open:not(.uk-active) > a,.accordion-121 .uk-accordion-title:hover::before,.accordion-121 .uk-accordion-title.uk-active::before,.accordion-121 .uk-accordion-title.uk-active,.accordion-121 .uk-accordion-title:active,.accordion-121 .uk-accordion-title:hover,.uk-article .pager li, .eclub-121 .uk-header-line, .uk-button.uk-button-secondary, .homepage-buttons .uk-panel:hover .button-wrapper h3, .uk-navbar-toggle:focus, a, .uk-link, .uk-button-link, .uk-button-link:hover, .uk-button-link:focus, a.uk-button.uk-button-link:hover, a.uk-button.uk-button-link:focus, .uk-button-link:active, .uk-button-link.uk-active, .uk-button-link:disabled, .uk-subnav > .uk-active > *, .uk-subnav > * > :hover, .uk-subnav > * > :focus, .link-121, a.ev_link_row, a.ev_link_row:link, a.ev_link_row:visited, .uk-contrast a:not([class]), .uk-contrast .uk-link, .events-121 span.uk-icon-calendar, .uk-color-primary, .uk-panel-box:not(.events-121) > a:not([class]), .uk-panel-box:not(.events-121) > :not([class*='uk-nav']) a:not([class]),span.mod_events_latest_date h5,#jevents_body a:hover,.uk-button-link .event_button.green,.uk-panel-box.uk-panel-box-primary .uk-button-link:hover, li#form-login-forgot a,ul.dt-steps li.active a, ul.dt-steps li.active a:focus, ul.dt-steps li.active a:hover,#dttype_choice .registration-type:hover .registration-type-img,#dttype_choice .registration-type:hover,.uk-form .uk-form-row + .uk-list > li a:not([class]),.uk-navbar-nav > li:hover > a,.uk-navbar-nav > li.uk-parent:hover:after  {
+	color: #37b24a;
+}
+.coursetour-121 h3, .uk-header-line, .uk-slidenav, .testimonial-slider .uk-overlay-panel > div,#tm-anchor-bottom:before, .uk-block-muted h1, .uk-block-muted .uk-h1, .uk-block-muted h2, .uk-block-muted .uk-h2, .uk-block-muted h3, .uk-block-muted .uk-h3, .uk-block-muted h4, .uk-block-muted .uk-h4, .uk-slidenav:hover, .uk-slidenav:focus,.uk-panel-box .uk-panel-title, h1, .uk-h1, h2, .uk-h2, h3, .uk-h3, h4, .uk-h4, h5, .uk-h5, h6, .uk-h6, .uk-panel-title,span.mod_events_latest_date h5 span,#jevents_body a,ul.dt-steps li.dt-completed a  {
+	color: #413d3c;
+}
+.uk-header-line span{
+color:#2d2a29;
+}
+
+.uk-nav-offcanvas ul.uk-nav-sub a {
+	color: rgba(255,255,255,.8);
+}
+
+/* Placeholder - Do not combine ( Keep Separate Lines) */
+
+:-ms-input-placeholder {color: #3a3a3a;}
+::-moz-placeholder {color: #3a3a3a;}
+::-webkit-input-placeholder {color: #3a3a3a;}
+
+.uk-form :-ms-input-placeholder {color: #3a3a3a !important;}
+.uk-form ::-moz-placeholder {color: #3a3a3a;}
+.uk-form ::-webkit-input-placeholder {color: #3a3a3a;}
+.uk-form :disabled:-ms-input-placeholder {color: #3a3a3a !important;}
+.uk-form :disabled::-moz-placeholder {color: #3a3a3a;}
+.uk-form :disabled::-webkit-input-placeholder {color: #3a3a3a;}
+
+/* Placeholder - Label Forms */
+
+.uk-form-horizontal .uk-form-label {opacity: 1 !important;}
+
+.uk-form :-ms-input-placeholder {opacity: 0;}
+.uk-form ::-moz-placeholder {opacity: 0;}
+.uk-form ::-webkit-input-placeholder {opacity: 0;}
+
+.admin-121 .uk-form :-ms-input-placeholder {opacity: 1 !important;}
+.admin-121 .uk-form ::-moz-placeholder {opacity: 1 !important;}
+.admin-121 .uk-form ::-webkit-input-placeholder {opacity: 1 !important;}
+
+/* =========================== Borders ================================ */
+
+.uk-panel-box, #header_oc #cart, blockquote, #header_oc #cart .content_oc {
+  border-bottom: 6px solid ;
+}
+.iconicdaterow {
+  border-top: 1px solid #d5d5d5;
+}
+.tooltip.top .tooltip-arrow {
+	border-top-color: #37b24a;
+}
+.mobile-buttons > *:nth-child(n+2),.social-icons [class*='uk-icon-'] {
+	border-color: #3a3a3a;
+}
+.uk-panel-box,.uk-panel-box.eclub-121{
+	border-color:#2d2a29;
+}
+#header_oc #cart .content_oc, blockquote, #header_oc #cart,.uk-button.uk-button-secondary, .tm-block-footer [class*='uk-icon-']:hover, .tm-block-footer [class*='uk-icon-']:focus, .social-icons [class*='uk-icon-']:hover, .social-icons [class*='uk-icon-']:focus, .homepage-buttons .button-wrapper, .nav-tabs > li > a:hover, select:focus, textarea:focus, input[type="text"]:focus, input[type="password"]:focus, input[type="datetime"]:focus, input[type="datetime-local"]:focus, input[type="date"]:focus, input[type="month"]:focus, input[type="time"]:focus, input[type="week"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="url"]:focus, input[type="search"]:focus, input[type="tel"]:focus, input[type="color"]:focus, .uneditable-input:focus, .uk-form select:focus, .uk-form textarea:focus, .uk-form input:not([type]):focus, .uk-form input[type="text"]:focus, .uk-form input[type="password"]:focus, .uk-form input[type="datetime"]:focus, .uk-form input[type="datetime-local"]:focus, .uk-form input[type="date"]:focus, .uk-form input[type="month"]:focus, .uk-form input[type="time"]:focus, .uk-form input[type="week"]:focus, .uk-form input[type="number"]:focus, .uk-form input[type="email"]:focus, .uk-form input[type="url"]:focus, .uk-form input[type="search"]:focus, .uk-form input[type="color"]:focus, .uk-form input[type="tel"]:focus, .uk-contrast .uk-form select:focus, .uk-contrast .uk-form textarea:focus, .uk-contrast .uk-form input:not([type]):focus, .uk-contrast .uk-form input[type="text"]:focus, .uk-contrast .uk-form input[type="password"]:focus, .uk-contrast .uk-form input[type="datetime"]:focus, .uk-contrast .uk-form input[type="datetime-local"]:focus, .uk-contrast .uk-form input[type="date"]:focus, .uk-contrast .uk-form input[type="month"]:focus, .uk-contrast .uk-form input[type="time"]:focus, .uk-contrast .uk-form input[type="week"]:focus, .uk-contrast .uk-form input[type="number"]:focus, .uk-contrast .uk-form input[type="email"]:focus, .uk-contrast .uk-form input[type="url"]:focus, .uk-contrast .uk-form input[type="search"]:focus, .uk-contrast .uk-form input[type="tel"]:focus, .uk-contrast .uk-form input[type="color"]:focus,.latest-news .uk-slidenav:hover, .latest-news .uk-slidenav:focus,#dttype_choice .registration-type:hover  {
+	border-color: #37b24a;
+}
+.uk-nav-offcanvas > li > a, html:not(.uk-touch) .uk-nav-offcanvas > li > a.uk-button:hover {
+	border-bottom-color:transparent;
+}
+select, textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"], .uneditable-input, .uk-form select, .uk-form textarea, .uk-form input:not([type]), .uk-form input[type="text"], .uk-form input[type="password"], .uk-form input[type="datetime"], .uk-form input[type="datetime-local"], .uk-form input[type="date"], .uk-form input[type="month"], .uk-form input[type="time"], .uk-form input[type="week"], .uk-form input[type="number"], .uk-form input[type="email"], .uk-form input[type="url"], .uk-form input[type="search"], .uk-form input[type="tel"], .uk-form input[type="color"] {
+	border-color:transparent;
+}
+.uk-dropdown-navbar:not(.uk-dropdown-stack) > .uk-grid > [class*='uk-width-']:nth-child(n+2), .uk-article table:not(.yui-calendar):not(.myForm) th + th, #offcanvas .uk-nav:after, html .uk-nav.uk-nav-offcanvas > li.uk-active > a, .uk-nav-offcanvas > .uk-open > a, html:not(.uk-touch) .uk-nav-offcanvas > li > a:hover, html:not(.uk-touch) .uk-nav-offcanvas > li > a:focus, .uk-nav-offcanvas > li > a:active {
+	border-color: rgba(255,255,255,.3);
+}
+.totop-scroller-container, hr, .coursetour-121 .uk-tab > li:not(.uk-tab-responsive) > a, .nav-tabs, .nav-tabs > .active > a, .nav-tabs > .active > a:hover, .nav-tabs > .active > a:focus,.ev_table, .ev_td_left, .ev_td_right, .slideshow-overlay:before, .uk-article table:not(.yui-calendar):not(.myForm), .uk-article table:not(.yui-calendar):not(.myForm) td, .uk-article table:not(.yui-calendar):not(.myForm) tr:not(:last-child),.jev_listview .jev_listrow{
+	border-color: #eeebea;
+}
+.switcher-121 .uk-tab > li > a{
+border-color: #efefef;
+}
+.mobile-icon a, .tm-navbar-small .uk-navbar-toggle{
+	border-color:#bcbcbc;
+}
+
+@media (max-width: 767px) {
+.jev_listrow {border: 1px solid #eeebea;}
+}
+
+/* =========================== Text & Box Shadowing ================================ */
+
+.uk-panel-box, #header_oc #cart, blockquote, #header_oc #cart .content_oc {box-shadow: 0 5px 10px -2px rgba(0, 0, 0, 0.25);}
+
+
+/* =========================== Logo ================================ */
+
+@media (max-width: 1219px) {
+.uk-navbar-brand img {max-width: 60px;}
+}
+
+.tm-logo-small img {max-width: 60px;}
+
+
+/* =========================== Course Specific - Support Add Here ================================ */
+
+.fullwidth .tm-main {
+max-width: 80% !important;
+}
+@media (min-width: 1220px){
+.fullwidth .uk-container {
+max-width: 80% !important;;
+padding: 0 20px !important;
+}}
+
+#tm-header > div.uk-sticky-placeholder > div > div.tm-navbar.uk-navbar > div {
+	max-width: 1430px !important;
+}
+
+#tm-header > div.uk-sticky-placeholder > div > div.tm-navbar.uk-navbar > div > div.tm-navbar-center.uk-flex.uk-flex-center.uk-flex-middle.uk-hidden-medium > ul {
+	margin-right: 9.600px !important;
+}
+
+.tm-navbar.uk-navbar {
+    margin-top: 0px;
+    padding: 30px 0;
+    background: #fff;
+}
+ .tm-navbar-sticky .tm-navbar-wrapper-animate:not(.uk-active), .homepage #tm-footer, .totop-scroller-container {
+    z-index: 5;
+}
+.tm-wrapper > div:not(#tm-header) {
+    z-index: 3;
+}
+.uk-panel.hero-overlay {
+    position: absolute;
+    top: 100px;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin: 0 auto;
+	z-index: 2;
+}
+.uk-panel.hero-overlay h1 {
+	text-shadow: 0px 2px 3px #000;
+	color:#fff;
+	font-size:60px;
+}
+.hero-overlay-container {
+    text-align: center;
+}
+.tm-header-container .uk-slideshow  .uk-cover-background {
+    background-position: 50% 6%;
+}
+.homepage-slideshow:before, .tm-header-container .uk-slideshow > li .uk-overlay-panel:before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: .2;
+    display: block;
+	z-index: 1;
+}
+body:not(.homepage)  .tm-header-container .uk-slideshow > li .uk-overlay-panel:before {
+	z-index: 1;
+}
+.homepage-slideshow:after, .tm-header-container .uk-slideshow > li .uk-overlay-panel:after{display:none;}
+
+.mod-title h1 {
+    margin: 0;
+    position: relative;
+    z-index: 2;
+    text-shadow: 0px 2px 3px #000;
+}
+
+.homepage-slideshow .uk-slideshow > li .uk-overlay-panel > div {
+    width: 950px;
+    margin: 0 auto;
+}
+.homepage .uk-article h5 {
+    margin: 15px 0;
+}
+body:not(.homepage) .tm-header-container .uk-slideshow {
+    margin-top: 165px;
+}
+body:not(.homepage)  .uk-sticky-placeholder + .tm-header-container .uk-slideshow > li > .uk-overlay-panel {
+    padding-top: 35px;
+}
+.uk-sticky-placeholder + .tm-header-container .uk-slidenav-position .uk-slidenav {
+    z-index: 5;
+}
+
+.fullwidth .tm-main {
+max-width: 80% !important;
+}
+@media (min-width: 1220px){
+.fullwidth .uk-container {
+max-width: 80% !important;;
+padding: 0 20px !important;
+}}
+
+/* =========================== Responsive ================================ */
+@media (min-width: 960px) {
+	.hero-overlay-container {
+		width: 920px;
+	}
+	}
+@media (max-width: 1024px) {
+body:not(.homepage) .tm-header-container .uk-slideshow {
+    margin-top: 70px;
+}
+}
+@media (max-width: 959px) {
+.uk-grid.hero-buttons {
+    display: flex;
+    flex-direction: column;
+}
+.hero-overlay-container {
+   padding:0 40px;
+}
+}
+
+
+
+
+
+
+
+/* =========================== Template Updates ================================ */
+
+.mobile-buttons .uk-panel {display: flex;flex-direction: column;align-items: center;justify-content: center;}
+.uk-panel.footer-menu ul {display: flex;flex-direction: row;justify-content: center;align-items: center;padding-top:10px;padding-left: 0;}
+.uk-panel.footer-menu li {list-style: none;margin: 0 .8vw;}
+.ev_table,.jev_listview .jev_listrow {border-collapse: inherit;}
+.uk-dropdown:not(.uk-dropdown-small), .uk-dropdown-blank:not(.uk-dropdown-small) {width: max-content !important;min-width: max-content !important;max-width: max-content !important;}
+.uk-dropdown-grid .uk-width-1-2:first-child .uk-nav > li > a {padding-right: 25px;}
+.uk-dropdown:not(.uk-dropdown-small), .uk-dropdown-blank:not(.uk-dropdown-small) {padding: 30px;white-space: nowrap;}
+
+/* ======= Event Registration ======= */
+.com_dtregister .event-content .event-footer .uk-button {margin-right: 15px;}
+.com_dtregister h2 {display: none;}
+
+/* ======= Admin Form ======= */
+.uk-panel.uk-panel-box.uk-panel-box-primary.admin-121 input[type="checkbox"][type="checkbox"]{float: left !important;margin: 5px 10px 5px 0px !important;}
+
+/* ======= Calendar ======= */
+.jev_listview .jev_toprow,.jev_toprow div.currentmonth span,.jev_gray .jev_toprow div.currentmonth{background: #37b24a !important; background-color: #37b24a !important;}
+.jev_toprow div.previousmonth span,.jev_toprow div.nextmonth span,.jev_listview .jev_daysnames{background: #413d3c !important;}
+#jevents_body a,#jevents_body .tableh1,#jevents_body .buttontext a{font-size:13px !important;}
+#jevents .input-mini {width: 60px;padding: 15px 10px;}
+.jev_gray .jevdateicon1,.jev_gray .jevdateicon2,.jev_gray .jevdateicon,.jev_gray .jevdateicon1,#jevents_body .tableh1,#jevents_body .buttontext a,#jevents_body .buttontext a:hover,.jev_daysnames_gray{color: #3a3a3a !important;}
+
+/* ======= Ecwid Store ======= */
+input.ecwid-search-widget__input,html#ecwid_html body#ecwid_body .horizontal-menu-container.horizontal-desktop nav.horizontal-menu,html#ecwid_html body#ecwid_body .ec-size.ec-size--s .ec-store .ec-footer,html#ecwid_html body#ecwid_body .ec-size.ec-size--s .ec-store .form-control__text  {
+	background: #f4f4f4 !important;
+}
+html#ecwid_html body#ecwid_body .horizontal-menu-container.horizontal-desktop .horizontal-menu-item.horizontal-menu-item--hover>a,html#ecwid_html body#ecwid_body .ec-size .ec-store .form-control--primary .form-control__button,html#ecwid_html body#ecwid_body .horizontal-menu-container.horizontal-desktop .horizontal-menu-item.horizontal-menu-item--active>a {
+	background: #37b24a !important;
+}
+html#ecwid_html body#ecwid_body .ec-size .ec-store .form-control--primary .form-control__button:hover {
+	background-color: #3cc551 !important;
+}
+html#ecwid_html body#ecwid_body .ec-size .ec-store .grid__products--medium-items .grid-product__title-inner,html#ecwid_html body#ecwid_body .ec-size.ec-size--s .ec-store .ec-cart-item__title{
+    color: #37b24a !important;
+}
+html#ecwid_html body#ecwid_body .ec-size .ec-store .grid-product__wrap-inner:hover .grid-product__title .grid-product__title-inner,html#ecwid_html body#ecwid_body .ec-size .ec-store .ec-link--muted:hover,html#ecwid_html body#ecwid_body .ec-size .ec-store .ec-link--muted:active,html#ecwid_html body#ecwid_body .ec-size .ec-store .ec-cart-item__title:hover,html#ecwid_html body#ecwid_body .ec-size .ec-store .ec-link--muted:active,html#ecwid_html body#ecwid_body .ec-size .ec-store .ec-link:hover {
+    color: #3cc551 !important;
+}
+html#ecwid_html body#ecwid_body .ec-size .ec-store .form-control--select-inline .form-control__select-text,html#ecwid_html body#ecwid_body .ec-size .ec-store .form-control--select-inline .form-control__arrow{
+	color: #3a3a3a !important;
+}
+html#ecwid_html body#ecwid_body .horizontal-menu-container.horizontal-desktop .horizontal-menu-item.horizontal-menu-item--active>a{
+	color:#fff !important;
+}
+html#ecwid_html body#ecwid_body .ecwid span,html#ecwid_html body#ecwid_body .ec-size .ec-store .grid__products--medium-items .grid-product__title-inner,html#ecwid_html body#ecwid_body .ec-size .ec-store .form-control__button-text,html#ecwid_html body#ecwid_body .ec-size.ec-size--s .ec-store .ec-cart-item__title {
+    font-weight: 700 !important;
+}
+html#ecwid_html body#ecwid_body .ec-size .ec-store .form-control__button-text {
+	letter-spacing: 1px !important;font-size: 13px !important;    font-family: 'Literata', serif !important;text-transform: uppercase !important;line-height: 46px !important;font-weight: 700 !important;
+}
+
+/* == Nav Bar == */
+.uk-navbar-nav > li.uk-parent:after {content: '\f107';font-family: FontAwesome;}
+.uk-navbar-nav > li > a {display: inline;}
+.uk-navbar-nav > li {margin: 0 .5vw;}
+.uk-navbar-nav > li.uk-active > a:after, .uk-navbar-nav > li:hover > a:after, .uk-navbar-nav > li > a:focus:after, .uk-navbar-nav > li.uk-open > a:after {bottom: -20px;}
+.uk-navbar-nav > li.uk-active > a:after, .uk-navbar-nav > li:hover > a:after, .uk-navbar-nav > li > a:focus:after, .uk-navbar-nav > li.uk-open > a:after{display:none !important;}
+
+/* ======= Dropdown Nav Header ======= */
+.uk-nav-header {padding: 0px 33px;}
+.uk-nav-header:not(:first-child) {margin-top: 0;}
+.uk-dropdown:not(.uk-dropdown-stack) > .uk-dropdown-grid > [class*='uk-width-']:nth-child(n+2) {border-color: #bcbcbc;}
+.tm-navbar ul.uk-nav-sub {margin: 0px;padding: 0px 0 5px 0px;}
+
+/* ======= Admin Form ======= */
+.uk-panel.uk-panel-box.admin-121 input[type="checkbox"][type="checkbox"]{float: left !important;margin: 15px 10px 10px 0px !important;}
+
+/* =========================== Responsive ================================ */
+
+@media (min-width: 768px) {
+.moduletable.admin-121.uk-panel.uk-panel-box {width: 560px;margin: 0 auto;padding: 60px;}
+.contact fieldset.uk-form .uk-form-row {width: 100%;margin: 5px 0 !important;}
+}
+
+@media (max-width: 767px){
+.tm-main:not(.uk-width-medium-1-1):not(.uk-width-large-1-1), aside.tm-sidebar-a, aside.tm-sidebar-b {width: 100%;}
+.uk-flex-order-first-medium {-ms-flex-order: 1;-webkit-order: 1;order: 1;}
+}
+
+@media (max-width: 767px) and (min-width: 520px){
+.tm-sidebar-a .uk-panel.uk-panel-box.panel-fixed  {padding: 120px;}
+}
+

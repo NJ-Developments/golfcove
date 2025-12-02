@@ -1,0 +1,12 @@
+# Golf Cove Robots.txt
+# https://www.golfcovect.com
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://www.golfcovect.com/sitemap.xml
+
+# Disallow admin or private areas (if any)
+# Disallow: /admin/
+# Disallow: /private/
