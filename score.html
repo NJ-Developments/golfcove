@@ -1126,7 +1126,7 @@
                     return;
                 }
                 const newTeam = {
-                    id: 't' + Date.now(),
+                    id: 't' + Date.now() + Math.random().toString(36).substr(2, 5),
                     name: newTeamName
                 };
                 league.teams = league.teams || [];
@@ -1136,7 +1136,7 @@
             
             const pin = generatePin();
             const newPlayer = {
-                id: 'p' + Date.now(),
+                id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
                 name,
                 handicap,
                 teamId,
@@ -1255,6 +1255,11 @@
             league.scores[roundId][playerId].submittedAt = new Date().toISOString();
             leagueRef.set(league).then(() => {
                 window.location.href = 'tournaments.html';
+            }).catch((error) => {
+                console.error('Error submitting score:', error);
+                alert('Failed to submit score. Please check your connection and try again.');
+                league.scores[roundId][playerId].submitted = false;
+                delete league.scores[roundId][playerId].submittedAt;
             });
         }
 

@@ -773,31 +773,39 @@
                     const ps = league.scores?.[round.id]?.[player.id];
                     if (ps && ps.submitted) {
                         let gross = 0, out = 0, inScore = 0;
+                        let holesPlayed = 0;
                         
                         for (let h = 1; h <= frontNine; h++) {
-                            const score = ps[h] || 0;
-                            out += score; gross += score;
+                            const score = ps[h];
+                            if (score && score > 0) {
+                                out += score; gross += score; holesPlayed++;
+                            }
                         }
                         for (let h = frontNine + 1; h <= holes; h++) {
-                            const score = ps[h] || 0;
-                            inScore += score; gross += score;
+                            const score = ps[h];
+                            if (score && score > 0) {
+                                inScore += score; gross += score; holesPlayed++;
+                            }
                         }
                         
-                        const net = gross - (player.handicap || 0);
-                        totalGross += gross; totalOut += out; totalIn += inScore; roundsPlayed++;
-                        roundDetails.push({ name: round.name, date: round.date, out, in: inScore, gross, net });
-                        
-                        allGross.push(gross);
-                        allNet.push(net);
-                        if (bestGross === null || gross < bestGross) bestGross = gross;
-                        if (worstGross === null || gross > worstGross) worstGross = gross;
-                        if (bestNet === null || net < bestNet) bestNet = net;
+                        // Only count rounds where player actually played (at least 50% of holes)
+                        if (holesPlayed >= Math.ceil(holes / 2)) {
+                            const net = gross - (player.handicap || 0);
+                            totalGross += gross; totalOut += out; totalIn += inScore; roundsPlayed++;
+                            roundDetails.push({ name: round.name, date: round.date, out, in: inScore, gross, net, holesPlayed });
+                            
+                            allGross.push(gross);
+                            allNet.push(net);
+                            if (bestGross === null || gross < bestGross) bestGross = gross;
+                            if (worstGross === null || gross > worstGross) worstGross = gross;
+                            if (bestNet === null || net < bestNet) bestNet = net;
+                        }
                     }
                 });
 
                 const totalNet = totalGross - ((player.handicap || 0) * roundsPlayed);
-                const avgGross = roundsPlayed > 0 ? (totalGross / roundsPlayed).toFixed(1) : null;
-                const avgNet = roundsPlayed > 0 ? (totalNet / roundsPlayed).toFixed(1) : null;
+                const avgGross = roundsPlayed > 0 ? Math.round((totalGross / roundsPlayed) * 10) / 10 : null;
+                const avgNet = roundsPlayed > 0 ? Math.round((totalNet / roundsPlayed) * 10) / 10 : null;
                 const toPar = roundsPlayed > 0 ? totalGross - (coursePar * roundsPlayed) : null;
                 
                 // Calculate trend (last 3 rounds vs previous 3)
@@ -980,13 +988,31 @@
             if (!cachedLeague || !cachedStandings) return;
             const league = cachedLeague;
             const standings = sortStandings(cachedStandings, currentView);
+            const scoreKey = currentView === 'cumulative-gross' ? 'totalGross' : 'totalNet';
+            
+            // Calculate positions with ties for export
+            const getExportPos = (index) => {
+                if (standings[index].roundsPlayed === 0) return '-';
+                const currentScore = standings[index][scoreKey];
+                for (let i = 0; i < index; i++) {
+                    if (standings[i].roundsPlayed > 0 && standings[i][scoreKey] === currentScore) {
+                        return getExportPos(i);
+                    }
+                }
+                let pos = 1;
+                for (let i = 0; i < index; i++) {
+                    if (standings[i].roundsPlayed > 0) pos++;
+                }
+                const isTied = standings.some((x, j) => j !== index && x.roundsPlayed > 0 && x[scoreKey] === currentScore);
+                return isTied ? `T${pos}` : pos;
+            };
             
             let csv = [`${league.name} - ${league.season}`, `Exported: ${new Date().toLocaleDateString()}`, ''];
             csv.push(['Pos', 'Player', 'Team', 'HCP', 'Rounds', 'Gross', 'Net'].join(','));
             
             standings.forEach((s, i) => {
                 const teamName = (league.teams || []).find(t => t.id === s.teamId)?.name || '';
-                csv.push([s.roundsPlayed > 0 ? i + 1 : '-', `"${s.name}"`, `"${teamName}"`, s.handicap, s.roundsPlayed, s.totalGross || '-', s.totalNet || '-'].join(','));
+                csv.push([getExportPos(i), `"${s.name}"`, `"${teamName}"`, s.handicap, s.roundsPlayed, s.totalGross || '-', s.totalNet || '-'].join(','));
             });
             
             const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
