@@ -958,10 +958,17 @@
             leagueRef.on('value', (snapshot) => {
                 league = snapshot.val();
                 
+                // Ensure arrays exist (Firebase returns undefined for empty arrays)
+                if (league) {
+                    league.teams = league.teams || [];
+                    league.players = league.players || [];
+                    league.rounds = league.rounds || [];
+                    league.scores = league.scores || {};
+                }
+                
                 // Migration for old data
-                if (league && !league.teams) {
-                    league.teams = [];
-                    const teamNames = [...new Set((league.players || []).filter(p => p.team).map(p => p.team))];
+                if (league && league.teams.length === 0) {
+                    const teamNames = [...new Set(league.players.filter(p => p.team).map(p => p.team))];
                     teamNames.forEach(name => {
                         const teamId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
                         league.teams.push({ id: teamId, name });
@@ -969,7 +976,7 @@
                             if (p.team === name) p.teamId = teamId;
                         });
                     });
-                    (league.players || []).forEach(p => {
+                    league.players.forEach(p => {
                         if (!p.pin) p.pin = generatePin();
                     });
                     save();

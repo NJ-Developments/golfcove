@@ -568,17 +568,32 @@
             const app = document.getElementById('app');
             app.innerHTML = '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#37b24a;"></i><p style="margin-top:15px;color:#666;">Loading standings...</p></div>';
             
+            // Timeout fallback - if Firebase doesn't respond in 5 seconds, show default
+            const timeout = setTimeout(() => {
+                console.log('Firebase timeout - using default league');
+                renderLeague(defaultLeague);
+            }, 5000);
+            
             // Listen for real-time updates from Firebase
             leagueRef.on('value', (snapshot) => {
+                clearTimeout(timeout);
+                console.log('Firebase connected! Data:', snapshot.val());
                 let league = snapshot.val();
                 
                 // Use default league if none exists
                 if (!league) {
                     league = defaultLeague;
+                } else {
+                    // Ensure arrays exist (Firebase returns undefined for empty arrays)
+                    league.players = league.players || [];
+                    league.rounds = league.rounds || [];
+                    league.teams = league.teams || [];
+                    league.scores = league.scores || {};
                 }
                 
                 renderLeague(league);
             }, (error) => {
+                clearTimeout(timeout);
                 console.error('Firebase error:', error);
                 // Fallback to default league on error
                 renderLeague(defaultLeague);
@@ -625,11 +640,11 @@
                             <div class="stat-label">Teams</div>
                         </div>
                         <div class="stat">
-                            <div class="stat-num">${league.players.length}</div>
+                            <div class="stat-num">${(league.players || []).length}</div>
                             <div class="stat-label">Players</div>
                         </div>
                         <div class="stat">
-                            <div class="stat-num">${league.rounds.length}</div>
+                            <div class="stat-num">${(league.rounds || []).length}</div>
                             <div class="stat-label">Rounds</div>
                         </div>
                     </div>
@@ -699,12 +714,14 @@
         function calculateStandings(league) {
             const holes = league.course?.holes || 18;
             const frontNine = Math.min(9, holes);
+            const players = league.players || [];
+            const rounds = league.rounds || [];
             
-            return league.players.map(player => {
+            return players.map(player => {
                 let totalGross = 0, totalOut = 0, totalIn = 0, roundsPlayed = 0;
                 let roundDetails = [];
 
-                league.rounds.forEach(round => {
+                rounds.forEach(round => {
                     const ps = league.scores?.[round.id]?.[player.id];
                     if (ps && ps.submitted) {
                         let gross = 0, out = 0, inScore = 0;
@@ -775,10 +792,10 @@
                     <td><span class="score-cell gross">${s.roundsPlayed > 0 ? s.totalGross : '-'}</span></td>
                 `;
             } else if (view === 'by-round') {
-                const roundHeaders = league.rounds.map(r => `<th>${r.name.replace('Week ', 'W')}</th>`).join('');
+                const roundHeaders = (league.rounds || []).map(r => `<th>${r.name.replace('Week ', 'W')}</th>`).join('');
                 headers = `<th style="width:50px">#</th><th>Player</th>${roundHeaders}<th class="highlight">Net</th>`;
                 renderRow = (s, pos) => {
-                    const cells = league.rounds.map(r => {
+                    const cells = (league.rounds || []).map(r => {
                         const rd = s.roundDetails.find(d => d.name === r.name);
                         return `<td style="${rd ? '' : 'color:#ccc'}">${rd ? rd.net : '-'}</td>`;
                     }).join('');

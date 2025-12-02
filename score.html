@@ -341,16 +341,21 @@
                     return;
                 }
 
+                // Ensure arrays exist (Firebase returns undefined for empty arrays)
+                league.players = league.players || [];
+                league.rounds = league.rounds || [];
+                league.scores = league.scores || {};
+
                 const params = new URLSearchParams(window.location.search);
                 roundId = params.get('r');
                 playerId = params.get('p');
 
                 // Get current round if not specified
-                if (!roundId && (league.rounds || []).length > 0) {
+                if (!roundId && league.rounds.length > 0) {
                     roundId = league.rounds[league.rounds.length - 1].id;
                 }
 
-                const round = (league.rounds || []).find(r => r.id === roundId);
+                const round = league.rounds.find(r => r.id === roundId);
                 if (!round) {
                     showMessage('No active round. Ask admin to create one.', 'fa-flag');
                     return;
