@@ -882,6 +882,12 @@
                 const params = new URLSearchParams(window.location.search);
                 roundId = params.get('r');
                 const urlPlayerId = params.get('p');
+                const urlTeamId = params.get('t');  // Team-specific QR code
+                
+                // Store team filter if provided in URL
+                if (urlTeamId) {
+                    window.teamFilter = urlTeamId;
+                }
                 
                 // Priority: URL param > saved profile
                 if (urlPlayerId) {
@@ -1265,6 +1271,13 @@
                             <label>New Team Name</label>
                             <input type="text" id="newTeamName" placeholder="The Eagles">
                         </div>
+                        <div class="form-group">
+                            <label>Create Your PIN <span style="color:#888;font-weight:400">(4 digits)</span></label>
+                            <input type="text" id="regPin" required maxlength="4" pattern="[0-9]{4}" 
+                                   inputmode="numeric" placeholder="1234" autocomplete="off"
+                                   style="text-align:center; font-size:20px; font-weight:700; letter-spacing:8px;">
+                            <p style="font-size:12px; color:#888; margin-top:6px;"><i class="fas fa-info-circle"></i> You'll use this PIN to log back in</p>
+                        </div>
                         <div id="regError" class="error-msg" style="display:none"></div>
                         <button type="submit" class="submit-btn"><i class="fas fa-check"></i> Create Profile</button>
                         <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -1298,9 +1311,25 @@
             const name = document.getElementById('regName').value.trim();
             const handicap = parseInt(document.getElementById('regHandicap').value) || 0;
             let teamId = document.getElementById('regTeam').value || null;
+            const pin = document.getElementById('regPin').value.trim();
             const errorEl = document.getElementById('regError');
             
             if (!name) return;
+            
+            // Validate PIN
+            if (!/^[0-9]{4}$/.test(pin)) {
+                errorEl.textContent = 'PIN must be exactly 4 digits';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            // Check if PIN is already taken
+            const existingPinPlayer = (league.players || []).find(p => p.pin === pin);
+            if (existingPinPlayer) {
+                errorEl.textContent = 'This PIN is already taken. Please choose a different one.';
+                errorEl.style.display = 'block';
+                return;
+            }
             
             // Check for duplicate name
             const existingPlayer = (league.players || []).find(p => p.name.toLowerCase() === name.toLowerCase());
@@ -1334,7 +1363,6 @@
                 teamId = newTeam.id;
             }
             
-            const pin = generatePin();
             const newPlayer = {
                 id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
                 name,
