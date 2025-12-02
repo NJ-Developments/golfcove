@@ -6,6 +6,7 @@
     <title>League Admin - Golf Cove</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         .admin-container {
             max-width: 700px;
@@ -147,6 +148,16 @@
             border-radius: 10px;
             margin-top: 20px;
         }
+        .qr-box #qrcode {
+            display: inline-block;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .qr-box #qrcode img {
+            display: block;
+        }
         .qr-box .url {
             background: #fff;
             padding: 12px;
@@ -182,6 +193,82 @@
         }
         .danger-zone h2 {
             color: #dc3545;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.open {
+            display: flex;
+        }
+        .modal-content {
+            background: #fff;
+            border-radius: 12px;
+            padding: 25px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-content h3 {
+            margin: 0 0 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-content .close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .score-row .player {
+            font-weight: 600;
+        }
+        .score-row .gross {
+            font-size: 18px;
+            font-weight: 700;
+            color: #37b24a;
+        }
+        .score-row .net {
+            font-size: 13px;
+            color: #666;
+        }
+        .par-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 10px;
+        }
+        .par-inputs label {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .par-inputs input {
+            width: 100%;
+            padding: 8px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 16px;
         }
     </style>
 </head>
@@ -285,11 +372,31 @@ Bob Wilson, 15"></textarea>
             <!-- Current Round QR -->
             <div class="card" id="qrCard" style="display: none;">
                 <h2><i class="fas fa-qrcode"></i> Scoring Link</h2>
-                <p style="color: #666; margin-bottom: 15px;">Share this link with players to enter scores:</p>
+                <p style="color: #666; margin-bottom: 15px;">Players scan this QR code to enter their scores:</p>
                 <div class="qr-box">
+                    <div id="qrcode"></div>
                     <div class="url" id="scoringUrl"></div>
-                    <button class="btn" onclick="copyUrl()">
-                        <i class="fas fa-copy"></i> Copy Link
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                        <button class="btn" onclick="copyUrl()">
+                            <i class="fas fa-copy"></i> Copy Link
+                        </button>
+                        <button class="btn btn-secondary" onclick="printQR()">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Course Settings -->
+            <div class="card">
+                <h2><i class="fas fa-golf-ball"></i> Course Settings</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong id="courseInfo">Golf Cove</strong>
+                        <p style="color: #666; margin: 5px 0 0;">Par: <span id="totalPar">72</span></p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="openParModal()">
+                        <i class="fas fa-edit"></i> Edit Pars
                     </button>
                 </div>
             </div>
@@ -319,6 +426,32 @@ Bob Wilson, 15"></textarea>
                     <i class="fas fa-trash"></i> Delete Everything
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Score Modal -->
+    <div class="modal" id="scoreModal">
+        <div class="modal-content">
+            <h3>
+                <span id="modalTitle">Round Scores</span>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </h3>
+            <div id="modalScores"></div>
+        </div>
+    </div>
+
+    <!-- Par Modal -->
+    <div class="modal" id="parModal">
+        <div class="modal-content">
+            <h3>
+                <span>Set Course Pars</span>
+                <button class="close" onclick="closeParModal()">&times;</button>
+            </h3>
+            <p style="color: #666; margin-bottom: 20px;">Enter the par for each hole:</p>
+            <div class="par-inputs" id="parInputs"></div>
+            <button class="btn btn-block" style="margin-top: 20px;" onclick="savePars()">
+                <i class="fas fa-check"></i> Save Pars
+            </button>
         </div>
     </div>
 
@@ -378,6 +511,11 @@ Bob Wilson, 15"></textarea>
         function renderDashboard() {
             document.getElementById('leagueTitle').textContent = league.name;
             
+            // Show course info
+            document.getElementById('courseInfo').textContent = `${league.course?.name || 'Golf Cove'} - ${league.course?.holes || 18} Holes`;
+            const totalPar = (league.course?.pars || []).reduce((a, b) => a + b, 0) || (league.course?.holes || 18) * 4;
+            document.getElementById('totalPar').textContent = totalPar;
+            
             // Set default round name
             document.getElementById('roundName').value = 'Week ' + (league.rounds.length + 1);
             document.getElementById('roundDate').valueAsDate = new Date();
@@ -388,6 +526,18 @@ Bob Wilson, 15"></textarea>
                 const url = window.location.origin + window.location.pathname.replace('league-admin.html', '') + 'score.html?r=' + lastRound.id;
                 document.getElementById('scoringUrl').textContent = url;
                 document.getElementById('qrCard').style.display = 'block';
+                
+                // Generate QR code
+                const qrContainer = document.getElementById('qrcode');
+                qrContainer.innerHTML = '';
+                new QRCode(qrContainer, {
+                    text: url,
+                    width: 180,
+                    height: 180,
+                    colorDark: '#333333',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
             }
 
             renderRounds();
@@ -410,7 +560,14 @@ Bob Wilson, 15"></textarea>
                             <h4>${r.name}</h4>
                             <p>${new Date(r.date).toLocaleDateString()} • ${scored}/${league.players.length} scored</p>
                         </div>
-                        <button class="btn btn-secondary" onclick="deleteRound('${r.id}')">Delete</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn" onclick="viewScores('${r.id}')" style="padding: 8px 14px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-secondary" onclick="deleteRound('${r.id}')" style="padding: 8px 14px;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -494,6 +651,39 @@ Bob Wilson, 15"></textarea>
             alert('Link copied!');
         }
 
+        function printQR() {
+            const lastRound = league.rounds[league.rounds.length - 1];
+            const url = document.getElementById('scoringUrl').textContent;
+            const qrImg = document.querySelector('#qrcode img')?.src || '';
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Golf Cove League - Scoring QR</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+                        h1 { color: #37b24a; margin-bottom: 10px; }
+                        h2 { color: #333; font-weight: normal; margin-bottom: 30px; }
+                        .qr { margin: 30px auto; }
+                        .url { font-family: monospace; background: #f5f5f5; padding: 10px 20px; border-radius: 5px; display: inline-block; margin-top: 20px; font-size: 12px; }
+                        .instructions { margin-top: 30px; color: #666; font-size: 14px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>⛳ ${league.name}</h1>
+                    <h2>${lastRound.name} - ${new Date(lastRound.date).toLocaleDateString()}</h2>
+                    <div class="qr"><img src="${qrImg}" width="250" height="250"></div>
+                    <p class="instructions">Scan to enter your score</p>
+                    <div class="url">${url}</div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 250);
+        }
+
         function resetLeague() {
             if (!confirm('Delete the entire league? This cannot be undone!')) return;
             if (!confirm('Are you absolutely sure?')) return;
@@ -505,6 +695,82 @@ Bob Wilson, 15"></textarea>
 
         function save() {
             localStorage.setItem('golfcove_league', JSON.stringify(league));
+        }
+
+        function viewScores(roundId) {
+            const round = league.rounds.find(r => r.id === roundId);
+            if (!round) return;
+
+            document.getElementById('modalTitle').textContent = round.name + ' Scores';
+            
+            const scores = league.players.map(p => {
+                const ps = league.scores[roundId]?.[p.id];
+                if (!ps || !ps.submitted) return { name: p.name, handicap: p.handicap, gross: null };
+                
+                let gross = 0;
+                for (let h = 1; h <= (league.course?.holes || 18); h++) {
+                    gross += ps[h] || 0;
+                }
+                return { name: p.name, handicap: p.handicap, gross, net: gross - p.handicap };
+            }).sort((a, b) => {
+                if (a.gross === null) return 1;
+                if (b.gross === null) return -1;
+                return a.net - b.net;
+            });
+
+            document.getElementById('modalScores').innerHTML = scores.map(s => `
+                <div class="score-row">
+                    <span class="player">${s.name}</span>
+                    ${s.gross !== null ? `
+                        <div style="text-align: right;">
+                            <div class="gross">${s.gross}</div>
+                            <div class="net">Net: ${s.net}</div>
+                        </div>
+                    ` : '<span style="color: #999;">No score</span>'}
+                </div>
+            `).join('');
+
+            document.getElementById('scoreModal').classList.add('open');
+        }
+
+        function closeModal() {
+            document.getElementById('scoreModal').classList.remove('open');
+        }
+
+        function openParModal() {
+            const holes = league.course?.holes || 18;
+            const pars = league.course?.pars || Array(holes).fill(4);
+            
+            let html = '';
+            for (let i = 0; i < holes; i++) {
+                html += `
+                    <div>
+                        <label>Hole ${i + 1}</label>
+                        <input type="number" min="3" max="6" value="${pars[i]}" id="par${i}">
+                    </div>
+                `;
+            }
+            
+            document.getElementById('parInputs').innerHTML = html;
+            document.getElementById('parModal').classList.add('open');
+        }
+
+        function closeParModal() {
+            document.getElementById('parModal').classList.remove('open');
+        }
+
+        function savePars() {
+            const holes = league.course?.holes || 18;
+            const pars = [];
+            
+            for (let i = 0; i < holes; i++) {
+                pars.push(parseInt(document.getElementById('par' + i).value) || 4);
+            }
+            
+            league.course.pars = pars;
+            save();
+            closeParModal();
+            alert('Pars saved!');
         }
 
         init();

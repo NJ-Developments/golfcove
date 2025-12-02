@@ -151,6 +151,81 @@
         .admin-link a:hover {
             color: #37b24a;
         }
+        .live-banner {
+            background: linear-gradient(135deg, #37b24a, #2d9440);
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .live-banner .live-dot {
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+            margin-right: 10px;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .live-banner .info {
+            display: flex;
+            align-items: center;
+        }
+        .live-banner .count {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .round-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .round-tab {
+            padding: 10px 18px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            color: #666;
+        }
+        .round-tab.active {
+            background: #37b24a;
+            color: #fff;
+        }
+        .expand-row {
+            display: none;
+            background: #fafafa;
+        }
+        .expand-row.open {
+            display: table-row;
+        }
+        .expand-row td {
+            padding: 15px 20px;
+        }
+        .round-scores {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            font-size: 13px;
+        }
+        .round-scores span {
+            background: #fff;
+            padding: 5px 12px;
+            border-radius: 15px;
+            border: 1px solid #e0e0e0;
+        }
+        .clickable {
+            cursor: pointer;
+        }
         @media (max-width: 600px) {
             .stats-row {
                 gap: 30px;
@@ -223,11 +298,36 @@
             const standings = calculateStandings(league);
             const hasScores = standings.some(s => s.roundsPlayed > 0);
 
+            // Check for active round (today's round with incomplete scores)
+            const today = new Date().toISOString().split('T')[0];
+            const activeRound = league.rounds.find(r => r.date === today);
+            let liveBanner = '';
+            
+            if (activeRound) {
+                const submittedCount = league.players.filter(p => 
+                    league.scores?.[activeRound.id]?.[p.id]?.submitted
+                ).length;
+                
+                if (submittedCount < league.players.length) {
+                    liveBanner = `
+                        <div class="live-banner">
+                            <div class="info">
+                                <span class="live-dot"></span>
+                                <strong>${activeRound.name} - LIVE</strong>
+                            </div>
+                            <div class="count">${submittedCount}/${league.players.length} scores in</div>
+                        </div>
+                    `;
+                }
+            }
+
             container.innerHTML = `
                 <div class="league-header">
                     <h1>${league.name}</h1>
                     <div class="season">${league.season}</div>
                 </div>
+
+                ${liveBanner}
 
                 <div class="stats-row">
                     <div class="stat-box">
@@ -242,7 +342,8 @@
 
                 <div class="standings-card">
                     <h2>🏆 Season Standings</h2>
-                    ${hasScores ? renderTable(standings) : `
+                    <p style="font-size: 13px; color: #888; margin-bottom: 15px;">Tap a player to see round-by-round scores</p>
+                    ${hasScores ? renderTable(standings, league) : `
                         <div class="no-scores">
                             <i class="fas fa-trophy"></i>
                             <p>No scores submitted yet.<br>Standings appear after the first round.</p>
@@ -264,6 +365,7 @@
             return league.players.map(player => {
                 let totalGross = 0;
                 let roundsPlayed = 0;
+                let roundDetails = [];
 
                 league.rounds.forEach(round => {
                     const ps = league.scores?.[round.id]?.[player.id];
@@ -274,15 +376,21 @@
                         }
                         totalGross += gross;
                         roundsPlayed++;
+                        roundDetails.push({ name: round.name, gross, net: gross - (player.handicap || 0) });
                     }
                 });
 
+                const avgGross = roundsPlayed > 0 ? (totalGross / roundsPlayed).toFixed(1) : '-';
+
                 return {
+                    id: player.id,
                     name: player.name,
                     handicap: player.handicap || 0,
                     totalGross,
                     totalNet: totalGross - ((player.handicap || 0) * roundsPlayed),
-                    roundsPlayed
+                    roundsPlayed,
+                    avgGross,
+                    roundDetails
                 };
             }).sort((a, b) => {
                 if (a.roundsPlayed === 0 && b.roundsPlayed === 0) return 0;
@@ -292,20 +400,21 @@
             });
         }
 
-        function renderTable(standings) {
+        function renderTable(standings, league) {
             return `
                 <table class="standings-table">
                     <thead>
                         <tr>
                             <th>#</th>
                             <th>Player</th>
+                            <th>Avg</th>
                             <th>Rnds</th>
                             <th>Net</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${standings.map((s, i) => `
-                            <tr>
+                            <tr class="clickable" onclick="toggleDetails('${s.id}')">
                                 <td class="pos ${i < 3 && s.roundsPlayed > 0 ? 'pos-' + (i+1) : ''}">
                                     ${s.roundsPlayed > 0 ? i + 1 : '-'}
                                 </td>
@@ -313,13 +422,28 @@
                                     <span class="player-name">${s.name}</span>
                                     <span class="player-hcp">(${s.handicap})</span>
                                 </td>
+                                <td>${s.avgGross}</td>
                                 <td>${s.roundsPlayed}</td>
                                 <td class="net-score">${s.roundsPlayed > 0 ? s.totalNet : '-'}</td>
+                            </tr>
+                            <tr class="expand-row" id="details-${s.id}">
+                                <td colspan="5">
+                                    <div class="round-scores">
+                                        ${s.roundDetails.length > 0 ? s.roundDetails.map(r => `
+                                            <span>${r.name}: ${r.gross} (Net ${r.net})</span>
+                                        `).join('') : '<span>No rounds played</span>'}
+                                    </div>
+                                </td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
             `;
+        }
+
+        function toggleDetails(playerId) {
+            const row = document.getElementById('details-' + playerId);
+            if (row) row.classList.toggle('open');
         }
 
         init();

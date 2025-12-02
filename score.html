@@ -84,10 +84,19 @@
         .hole-row:last-child {
             border-bottom: none;
         }
+        .hole-info {
+            display: flex;
+            flex-direction: column;
+        }
         .hole-label {
             font-size: 15px;
             font-weight: 600;
             color: #333;
+        }
+        .hole-par {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
         }
         .score-input {
             width: 60px;
@@ -101,6 +110,21 @@
         .score-input:focus {
             border-color: #37b24a;
             outline: none;
+        }
+        .score-input.under-par {
+            border-color: #37b24a;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .score-input.over-par {
+            border-color: #ff9800;
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .score-input.double-over {
+            border-color: #f44336;
+            background: #ffebee;
+            color: #c62828;
         }
         .totals {
             display: flex;
@@ -252,22 +276,40 @@
             html += `<div class="scores-card"><div class="scores-header">Scores</div>`;
             
             let total = 0;
+            let totalPar = 0;
             for (let h = 1; h <= league.course.holes; h++) {
                 const val = scores[h] || '';
+                const par = league.course.pars?.[h-1] || 4;
+                totalPar += par;
                 if (val) total += val;
+                
+                let inputClass = '';
+                if (val) {
+                    if (val < par) inputClass = 'under-par';
+                    else if (val === par + 1) inputClass = 'over-par';
+                    else if (val > par + 1) inputClass = 'double-over';
+                }
+                
                 html += `
                     <div class="hole-row">
-                        <span class="hole-label">Hole ${h}</span>
-                        <input type="number" class="score-input" id="h${h}" 
+                        <div class="hole-info">
+                            <span class="hole-label">Hole ${h}</span>
+                            <span class="hole-par">Par ${par}</span>
+                        </div>
+                        <input type="number" class="score-input ${inputClass}" id="h${h}" 
                                value="${val}" min="1" max="15" inputmode="numeric"
+                               data-par="${par}"
                                onchange="saveHole(${h}, this.value)" onfocus="this.select()">
                     </div>
                 `;
             }
 
+            const vsPar = total ? total - totalPar : null;
+            const vsParDisplay = vsPar !== null ? (vsPar === 0 ? 'E' : (vsPar > 0 ? '+' + vsPar : vsPar)) : '';
+            
             html += `
                 <div class="totals">
-                    <span>Total</span>
+                    <span>Total ${vsParDisplay ? '(' + vsParDisplay + ')' : ''}</span>
                     <span class="value" id="total">${total || '-'}</span>
                 </div>
             </div>
@@ -307,6 +349,17 @@
             }
 
             localStorage.setItem('golfcove_league', JSON.stringify(league));
+            
+            // Update input styling
+            const input = document.getElementById('h' + hole);
+            const par = parseInt(input.dataset.par) || 4;
+            input.classList.remove('under-par', 'over-par', 'double-over');
+            if (score > 0) {
+                if (score < par) input.classList.add('under-par');
+                else if (score === par + 1) input.classList.add('over-par');
+                else if (score > par + 1) input.classList.add('double-over');
+            }
+            
             updateTotal();
         }
 
