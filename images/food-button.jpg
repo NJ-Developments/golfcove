@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
-  <rect width="300" height="200" fill="#8b7355"/>
-  <rect x="30" y="30" width="240" height="140" rx="10" fill="#1a472a"/>
-  <text x="150" y="80" font-family="Georgia, serif" font-size="22" fill="#ffffff" text-anchor="middle">FOOD</text>
-  <text x="150" y="110" font-family="Georgia, serif" font-size="22" fill="#ffffff" text-anchor="middle">MENU</text>
-  <text x="150" y="150" font-family="Arial, sans-serif" font-size="12" fill="#c9a227" text-anchor="middle">Click to View</text>
-</svg>

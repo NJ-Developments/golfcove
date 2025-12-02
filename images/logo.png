@@ -1,6 +1,0 @@
-<!-- Placeholder for logo - replace with actual Golf Cove logo -->
-<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
-  <rect width="200" height="60" fill="#1a472a"/>
-  <text x="100" y="30" font-family="Georgia, serif" font-size="20" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">Golf Cove</text>
-  <text x="100" y="48" font-family="Arial, sans-serif" font-size="8" fill="#c9a227" text-anchor="middle">INDOOR GOLF & MULTISPORT</text>
-</svg>
