@@ -473,17 +473,33 @@
         <div class="header-main">
             <div class="logo">
                 <a href="index.html">
-                    <img src="images/golfCoveLogo6.png" alt="Golf Cove Logo">
+                    <img src="images/golfCoveLogo6.png" alt="Golf Cove Logo" width="200" height="75">
                 </a>
             </div>
             <nav class="main-nav" id="mainNav">
                 <ul class="nav-menu">
-                    <li><a href="index.html">Home</a></li>
                     <li><a href="pricing.html">Pricing</a></li>
                     <li><a href="memberships.html">Memberships</a></li>
-                    <li><a href="lessons-leagues.html">Lessons & Leagues</a></li>
-                    <li><a href="tournaments.html" class="active">Standings</a></li>
+                    <li class="dropdown">
+                        <a href="lessons-leagues.html">Lessons & Leagues <i class="fas fa-chevron-down"></i></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="lessons-leagues.html">Lessons & Leagues</a></li>
+                            <li><a href="pinseeker.html">PinSeeker at Golf Cove</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="private-events.html">Private Events <i class="fas fa-chevron-down"></i></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="private-events.html">Private Events</a></li>
+                            <li><a href="concierge.html">The Cove Concierge</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="multisport.html">MultiSport Arcade</a></li>
+                    <li><a href="gift-cards.html">Gift Cards</a></li>
+                    <li><a href="tournaments.html" class="active">Tournaments</a></li>
+                    <li><a href="menu.html">Menu</a></li>
                     <li><a href="contact.html">Contact</a></li>
+                    <li><a href="https://golfcove.globalitllc.com/booking#" class="btn-book" target="_blank">RESERVE A ROOM</a></li>
                 </ul>
             </nav>
             <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle Menu">
