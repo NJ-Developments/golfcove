@@ -570,16 +570,36 @@
             
             if (!playerId || document.getElementById('showingSelect')) {
                 html = `
-                    <div class="player-select">
-                        <label>Select Your Name</label>
-                        <select id="playerSelect" onchange="selectPlayer(this.value)">
-                            <option value="">-- Choose --</option>
-                            ${league.players.map(p => `
-                                <option value="${p.id}" ${p.id === playerId ? 'selected' : ''}>${p.name}</option>
-                            `).join('')}
-                        </select>
-                        <div class="divider"><span>or</span></div>
-                        <button class="register-btn" onclick="showRegistration()"><i class="fas fa-user-plus"></i> Create New Profile</button>
+                    <div class="welcome-screen">
+                        <h2>Welcome to ${league.name}</h2>
+                        <p class="welcome-desc">How would you like to continue?</p>
+                        
+                        <div class="option-card" onclick="showPinEntry()">
+                            <div class="option-icon"><i class="fas fa-key"></i></div>
+                            <div class="option-text">
+                                <div class="option-title">I have a PIN</div>
+                                <div class="option-desc">Enter your 4-digit PIN to reconnect</div>
+                            </div>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        
+                        <div class="option-card" onclick="showRegistration()">
+                            <div class="option-icon"><i class="fas fa-user-plus"></i></div>
+                            <div class="option-text">
+                                <div class="option-title">I'm New</div>
+                                <div class="option-desc">Create your profile & join a team</div>
+                            </div>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        
+                        <div class="option-card secondary" onclick="showBrowsePlayers()">
+                            <div class="option-icon"><i class="fas fa-list"></i></div>
+                            <div class="option-text">
+                                <div class="option-title">Browse Players</div>
+                                <div class="option-desc">Find yourself in the list</div>
+                            </div>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
                     </div>
                 `;
                 container.innerHTML = html;
@@ -746,6 +766,90 @@
             render();
         }
         
+        function showPinEntry() {
+            const container = document.getElementById('content');
+            container.innerHTML = `
+                <div class="registration-form">
+                    <h2><i class="fas fa-key"></i> Enter Your PIN</h2>
+                    <p class="form-desc">Your 4-digit PIN was shown when you registered</p>
+                    <form onsubmit="loginWithPin(event)">
+                        <div class="form-group">
+                            <input type="text" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]{4}" 
+                                   inputmode="numeric" placeholder="••••" autocomplete="off" required>
+                        </div>
+                        <div id="pinError" class="error-msg" style="display:none"></div>
+                        <button type="submit" class="submit-btn"><i class="fas fa-sign-in-alt"></i> Continue</button>
+                        <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
+                    </form>
+                </div>
+            `;
+            document.getElementById('pinInput').focus();
+        }
+        
+        function loginWithPin(e) {
+            e.preventDefault();
+            const pin = document.getElementById('pinInput').value;
+            const player = league.players.find(p => p.pin === pin);
+            
+            if (player) {
+                selectPlayer(player.id);
+            } else {
+                const errorEl = document.getElementById('pinError');
+                errorEl.textContent = 'PIN not found. Please try again or create a new profile.';
+                errorEl.style.display = 'block';
+                document.getElementById('pinInput').value = '';
+                document.getElementById('pinInput').focus();
+            }
+        }
+        
+        function showBrowsePlayers() {
+            const container = document.getElementById('content');
+            const playersByTeam = {};
+            const noTeam = [];
+            
+            league.players.forEach(p => {
+                if (p.teamId) {
+                    if (!playersByTeam[p.teamId]) playersByTeam[p.teamId] = [];
+                    playersByTeam[p.teamId].push(p);
+                } else {
+                    noTeam.push(p);
+                }
+            });
+            
+            let playersHtml = '';
+            
+            league.teams.forEach(team => {
+                const teamPlayers = playersByTeam[team.id] || [];
+                if (teamPlayers.length > 0) {
+                    playersHtml += `<div class="team-group"><div class="team-name"><i class="fas fa-users"></i> ${team.name}</div>`;
+                    teamPlayers.forEach(p => {
+                        playersHtml += `<div class="player-item" onclick="selectPlayer('${p.id}')"><span>${p.name}</span><span class="hcp">HCP ${p.handicap || 0}</span></div>`;
+                    });
+                    playersHtml += `</div>`;
+                }
+            });
+            
+            if (noTeam.length > 0) {
+                playersHtml += `<div class="team-group"><div class="team-name"><i class="fas fa-user"></i> Individual Players</div>`;
+                noTeam.forEach(p => {
+                    playersHtml += `<div class="player-item" onclick="selectPlayer('${p.id}')"><span>${p.name}</span><span class="hcp">HCP ${p.handicap || 0}</span></div>`;
+                });
+                playersHtml += `</div>`;
+            }
+            
+            if (league.players.length === 0) {
+                playersHtml = `<div class="empty-state"><i class="fas fa-users-slash"></i><p>No players yet. Be the first to register!</p></div>`;
+            }
+            
+            container.innerHTML = `
+                <div class="browse-players">
+                    <h2><i class="fas fa-list"></i> Select Your Name</h2>
+                    <div class="players-list">${playersHtml}</div>
+                    <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
+            `;
+        }
+        
         function showRegistration() {
             const container = document.getElementById('content');
             container.innerHTML = `
@@ -762,17 +866,30 @@
                             <input type="number" id="regHandicap" value="0" min="0" max="54">
                         </div>
                         <div class="form-group">
-                            <label>Team (Optional)</label>
-                            <select id="regTeam">
+                            <label>Team</label>
+                            <select id="regTeam" onchange="toggleNewTeam(this.value)">
                                 <option value="">-- No Team --</option>
                                 ${league.teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                                <option value="__new__">➕ Create New Team</option>
                             </select>
+                        </div>
+                        <div class="form-group" id="newTeamGroup" style="display:none">
+                            <label>New Team Name</label>
+                            <input type="text" id="newTeamName" placeholder="The Eagles">
                         </div>
                         <button type="submit" class="submit-btn"><i class="fas fa-check"></i> Create Profile</button>
                         <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
                     </form>
                 </div>
             `;
+        }
+        
+        function toggleNewTeam(value) {
+            const newTeamGroup = document.getElementById('newTeamGroup');
+            newTeamGroup.style.display = value === '__new__' ? 'block' : 'none';
+            if (value === '__new__') {
+                document.getElementById('newTeamName').focus();
+            }
         }
         
         function generatePin() {
@@ -783,23 +900,61 @@
             e.preventDefault();
             const name = document.getElementById('regName').value.trim();
             const handicap = parseInt(document.getElementById('regHandicap').value) || 0;
-            const teamId = document.getElementById('regTeam').value || null;
+            let teamId = document.getElementById('regTeam').value || null;
             
             if (!name) return;
             
+            // Create new team if requested
+            if (teamId === '__new__') {
+                const newTeamName = document.getElementById('newTeamName').value.trim();
+                if (!newTeamName) {
+                    alert('Please enter a team name');
+                    return;
+                }
+                const newTeam = {
+                    id: 't' + Date.now(),
+                    name: newTeamName
+                };
+                league.teams = league.teams || [];
+                league.teams.push(newTeam);
+                teamId = newTeam.id;
+            }
+            
+            const pin = generatePin();
             const newPlayer = {
                 id: 'p' + Date.now(),
                 name,
                 handicap,
                 teamId,
-                pin: generatePin()
+                pin
             };
             
             league.players.push(newPlayer);
             leagueRef.set(league);
             
-            // Auto-select the new player
-            selectPlayer(newPlayer.id);
+            // Show PIN to user before continuing
+            showPinConfirmation(newPlayer);
+        }
+        
+        function showPinConfirmation(player) {
+            const container = document.getElementById('content');
+            const team = league.teams.find(t => t.id === player.teamId);
+            container.innerHTML = `
+                <div class="pin-confirmation">
+                    <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+                    <h2>Welcome, ${player.name}!</h2>
+                    <p>Your profile has been created${team ? ` on team <strong>${team.name}</strong>` : ''}.</p>
+                    
+                    <div class="pin-display">
+                        <div class="pin-label">Your PIN</div>
+                        <div class="pin-number">${player.pin}</div>
+                        <div class="pin-hint"><i class="fas fa-info-circle"></i> Save this PIN to reconnect next time</div>
+                    </div>
+                    
+                    <button class="submit-btn" onclick="selectPlayer('${player.id}')"><i class="fas fa-golf-ball"></i> Start Entering Scores</button>
+                    <a href="tournaments.html" class="back-link"><i class="fas fa-trophy"></i> View Leaderboard</a>
+                </div>
+            `;
         }
 
         function getScores() {

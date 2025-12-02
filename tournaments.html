@@ -34,8 +34,27 @@
             border-radius: 30px;
             font-size: 16px;
             font-weight: 600;
-            margin-bottom: 25px;
+            margin-bottom: 15px;
         }
+        .join-league-btn {
+            display: inline-block;
+            background: #fff;
+            color: #37b24a;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .join-league-btn:hover {
+            background: #37b24a;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+        .join-league-btn i { margin-right: 8px; }
         .league-hero .stats-grid {
             display: flex;
             justify-content: center;
@@ -659,6 +678,7 @@
                 <div class="league-hero">
                     <h1>🏆 ${league.name}</h1>
                     <div class="season-badge"><i class="fas fa-calendar-alt"></i> ${league.season}</div>
+                    <a href="score.html" class="join-league-btn"><i class="fas fa-user-plus"></i> Join League / Enter Score</a>
                     <div class="stats-grid">
                         <div class="stat">
                             <div class="stat-num">${league.teams?.length || 0}</div>
