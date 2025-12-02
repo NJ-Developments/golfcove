@@ -532,25 +532,26 @@
         let cachedLeague = null;
         let cachedStandings = null;
 
+        // Default demo league shown when no league exists
+        const defaultLeague = {
+            name: 'Golf Cove League',
+            season: 'Winter 2025',
+            course: { name: 'Golf Cove', holes: 18, pars: Array(18).fill(4) },
+            teams: [{ id: 't1', name: 'Demo Team' }],
+            players: [
+                { id: 'p1', name: 'Javi', teamId: 't1', handicap: 10 }
+            ],
+            rounds: [],
+            scores: {}
+        };
+
         function init() {
-            const league = JSON.parse(localStorage.getItem('golfcove_league') || 'null');
+            let league = JSON.parse(localStorage.getItem('golfcove_league') || 'null');
             const app = document.getElementById('app');
 
+            // Use default league if none exists
             if (!league) {
-                app.innerHTML = `
-                    <div class="setup-prompt">
-                        <div class="setup-card">
-                            <div class="icon"><i class="fas fa-trophy"></i></div>
-                            <h2>No League Set Up</h2>
-                            <p>A league hasn't been created yet. Once an admin sets up a league, standings and scores will appear here.</p>
-                            <div class="action-row">
-                                <a href="league-admin.html" class="league-btn"><i class="fas fa-plus"></i> Set Up League</a>
-                                <a href="index.html" class="league-btn league-btn-outline"><i class="fas fa-home"></i> Home</a>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                return;
+                league = defaultLeague;
             }
 
             cachedLeague = league;
