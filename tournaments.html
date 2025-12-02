@@ -95,51 +95,131 @@
             </div>
         </section>
 
-        <!-- Tournament Coming Soon -->
+        <!-- Tournament System -->
         <section class="tournaments-section">
             <div class="container">
-                <div class="coming-soon-content">
-                    <div class="coming-soon-badge">
-                        <i class="fas fa-clock" aria-hidden="true"></i> Coming Soon
+                <!-- Active Tournaments -->
+                <div class="tournament-active-section" id="activeTournaments">
+                    <!-- Dynamically populated -->
+                </div>
+
+                <!-- Tournament Features -->
+                <div class="tournament-features-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-bottom: 50px;">
+                    <div class="feature-card" style="background: #fff; padding: 40px 30px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); text-align: center;">
+                        <i class="fas fa-trophy" style="font-size: 48px; color: #37b24a; margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 15px; color: #333;">Live Leaderboards</h3>
+                        <p style="color: #666; line-height: 1.6;">Watch scores update in real-time as players submit their scores from the course.</p>
                     </div>
-                    <div class="coming-soon-icon">
-                        <i class="fas fa-golf-ball-tee" aria-hidden="true"></i>
+                    <div class="feature-card" style="background: #fff; padding: 40px 30px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); text-align: center;">
+                        <i class="fas fa-mobile-alt" style="font-size: 48px; color: #37b24a; margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 15px; color: #333;">Mobile Scoring</h3>
+                        <p style="color: #666; line-height: 1.6;">Players scan a QR code to enter scores hole-by-hole right from their phone.</p>
                     </div>
-                    <h2>Tournaments Coming Soon!</h2>
-                    <p class="coming-soon-text">We're working on bringing you an exciting tournament experience at Golf Cove. Stay tuned for upcoming events, online registration, live scoring, and more!</p>
-                    
-                    <div class="tournament-features-preview">
-                        <div class="feature-preview-item">
-                            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-                            <h4>Easy Registration</h4>
-                            <p>Simple online sign-up</p>
-                        </div>
-                        <div class="feature-preview-item">
-                            <i class="fas fa-chart-line" aria-hidden="true"></i>
-                            <h4>Live Scoring</h4>
-                            <p>Real-time leaderboards</p>
-                        </div>
-                        <div class="feature-preview-item">
-                            <i class="fas fa-users" aria-hidden="true"></i>
-                            <h4>Team Flights</h4>
-                            <p>Compete in your division</p>
-                        </div>
-                        <div class="feature-preview-item">
-                            <i class="fas fa-award" aria-hidden="true"></i>
-                            <h4>Handicapping</h4>
-                            <p>Fair competition for all</p>
-                        </div>
+                    <div class="feature-card" style="background: #fff; padding: 40px 30px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); text-align: center;">
+                        <i class="fas fa-print" style="font-size: 48px; color: #37b24a; margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 15px; color: #333;">Printable Scorecards</h3>
+                        <p style="color: #666; line-height: 1.6;">Generate professional scorecards with QR codes for each group.</p>
                     </div>
-                    
-                    <div class="coming-soon-cta">
-                        <p>Want to be notified when tournaments launch?</p>
-                        <a href="contact.html" class="btn-primary">
-                            <i class="fas fa-envelope" aria-hidden="true"></i> Get Notified
-                        </a>
+                    <div class="feature-card" style="background: #fff; padding: 40px 30px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); text-align: center;">
+                        <i class="fas fa-calculator" style="font-size: 48px; color: #37b24a; margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 15px; color: #333;">Net Scoring</h3>
+                        <p style="color: #666; line-height: 1.6;">Automatic handicap calculations for fair competition across all skill levels.</p>
+                    </div>
+                </div>
+
+                <!-- Admin Access -->
+                <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #37b24a, #2d9940); border-radius: 15px; color: #fff;">
+                    <h2 style="margin-bottom: 15px; font-size: 28px;">Tournament Administration</h2>
+                    <p style="margin-bottom: 25px; font-size: 18px; opacity: 0.9;">Create tournaments, manage players, and generate scorecards</p>
+                    <a href="tournament-admin.html" class="btn" style="background: #fff; color: #37b24a; padding: 15px 40px; font-size: 18px; font-weight: 600; display: inline-block; border-radius: 5px; text-decoration: none;">
+                        <i class="fas fa-cog"></i> Open Admin Panel
+                    </a>
+                </div>
+
+                <!-- Upcoming/Active Tournaments List -->
+                <div style="margin-top: 50px;">
+                    <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Upcoming Events</h2>
+                    <div id="upcomingTournaments" style="max-width: 800px; margin: 0 auto;">
+                        <!-- Dynamically populated -->
                     </div>
                 </div>
             </div>
         </section>
+
+        <script>
+            // Load and display tournaments
+            document.addEventListener('DOMContentLoaded', function() {
+                const tournaments = JSON.parse(localStorage.getItem('golfcove_tournaments') || '[]');
+                const courses = JSON.parse(localStorage.getItem('golfcove_courses') || '[]');
+                const scores = JSON.parse(localStorage.getItem('golfcove_scores') || '{}');
+                
+                const upcoming = document.getElementById('upcomingTournaments');
+                const active = document.getElementById('activeTournaments');
+                
+                // Filter and sort tournaments
+                const now = new Date();
+                const upcomingList = tournaments.filter(t => new Date(t.date) >= now || isActive(t));
+                upcomingList.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                function isActive(t) {
+                    const tournamentScores = scores[t.id] || {};
+                    const hasScores = Object.keys(tournamentScores).length > 0;
+                    const allSubmitted = t.players.every(p => tournamentScores[p.id]?.submitted);
+                    return hasScores && !allSubmitted;
+                }
+
+                if (upcomingList.length === 0) {
+                    upcoming.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No upcoming tournaments scheduled. Check back soon!</p>';
+                } else {
+                    upcoming.innerHTML = upcomingList.map(t => {
+                        const course = courses.find(c => c.id === t.courseId);
+                        const dateStr = new Date(t.date).toLocaleDateString('en-US', { 
+                            weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+                        });
+                        const activeClass = isActive(t) ? 'active-tournament' : '';
+                        const liveLabel = isActive(t) ? '<span style="background: #e74c3c; color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 12px; margin-left: 10px; animation: pulse 2s infinite;">● LIVE</span>' : '';
+                        
+                        return `
+                            <div class="tournament-card ${activeClass}" style="background: #fff; padding: 25px 30px; border-radius: 10px; box-shadow: 0 3px 15px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                                <div>
+                                    <h3 style="margin-bottom: 5px; color: #333;">${t.name} ${liveLabel}</h3>
+                                    <p style="color: #666; font-size: 14px;">${course ? course.name : 'TBD'} • ${dateStr} • ${t.players.length} players</p>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <a href="leaderboard.html?t=${t.id}" class="btn" style="background: #37b24a; color: #fff; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: 500;">
+                                        <i class="fas fa-trophy"></i> Leaderboard
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Check for active tournaments
+                const activeTournaments = tournaments.filter(t => isActive(t));
+                if (activeTournaments.length > 0) {
+                    active.innerHTML = `
+                        <div style="background: linear-gradient(135deg, #27ae60, #2ecc71); padding: 30px; border-radius: 15px; color: #fff; margin-bottom: 40px; text-align: center;">
+                            <h2 style="margin-bottom: 10px;"><i class="fas fa-flag-checkered"></i> Live Tournament In Progress!</h2>
+                            <p style="opacity: 0.9; margin-bottom: 20px;">${activeTournaments[0].name} is happening now</p>
+                            <a href="leaderboard.html?t=${activeTournaments[0].id}" class="btn" style="background: #fff; color: #27ae60; padding: 12px 30px; border-radius: 5px; text-decoration: none; font-weight: 600;">
+                                View Live Leaderboard
+                            </a>
+                        </div>
+                    `;
+                }
+            });
+        </script>
+
+        <style>
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+            .active-tournament {
+                border-left: 4px solid #e74c3c !important;
+            }
+        </style>
     </main>
 
     <!-- Footer -->

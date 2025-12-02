@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Admin - Golf Cove</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .admin-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin: 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #37b24a;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2d9440;
+        }
+        .btn-secondary {
+            background: #666;
+        }
+        .btn-secondary:hover {
+            background: #555;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .card h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 18px;
+            border-bottom: 2px solid #37b24a;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #37b24a;
+            outline: none;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .tournament-list {
+            display: grid;
+            gap: 15px;
+        }
+        .tournament-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .tournament-info h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        .tournament-info p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .tournament-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .tournament-actions .btn {
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        .players-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .players-table th,
+        .players-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .players-table th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+        .players-table tr:hover {
+            background: #f9f9f9;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        .modal-close:hover {
+            color: #333;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+        }
+        .tab:hover {
+            color: #37b24a;
+        }
+        .tab.active {
+            color: #37b24a;
+            border-bottom-color: #37b24a;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 3px;
+        }
+        .status-upcoming {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .status-active {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        .status-completed {
+            background: #f5f5f5;
+            color: #666;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #37b24a;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="container">
+            <div class="top-bar-left">
+                <a href="tel:2033905994"><i class="fas fa-phone"></i> 203.390.5994</a>
+                <a href="https://maps.google.com/?q=336+State+Street,+North+Haven,+CT+06473" target="_blank"><i class="fas fa-map-marker-alt"></i> 336 STATE STREET, NORTH HAVEN, CT 06473</a>
+            </div>
+            <div class="top-bar-right">
+                <div class="social-links">
+                    <a href="https://www.facebook.com/golfcove/" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://www.instagram.com/golfcovect/" target="_blank"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-main">
+            <div class="logo">
+                <a href="index.html">
+                    <img src="images/golfcovelogo.png" alt="Golf Cove Logo">
+                </a>
+            </div>
+            <nav class="main-nav" id="mainNav">
+                <ul class="nav-menu">
+                    <li><a href="pricing.html">Pricing</a></li>
+                    <li><a href="memberships.html">Memberships</a></li>
+                    <li class="dropdown">
+                        <a href="lessons-leagues.html">Lessons & Leagues <i class="fas fa-chevron-down"></i></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="lessons-leagues.html">Lessons & Leagues</a></li>
+                            <li><a href="pinseeker.html">PinSeeker at Golf Cove</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="private-events.html">Private Events <i class="fas fa-chevron-down"></i></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="private-events.html">Private Events</a></li>
+                            <li><a href="concierge.html">The Cove Concierge</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="multisport.html">MultiSport Arcade</a></li>
+                    <li><a href="gift-cards.html">Gift Cards</a></li>
+                    <li><a href="tournaments.html" class="active">Tournaments</a></li>
+                    <li><a href="menu.html">Menu</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="https://golfcove.globalitllc.com/booking#" class="btn-book" target="_blank">RESERVE A ROOM</a></li>
+                </ul>
+            </nav>
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Admin Content -->
+    <div class="admin-container">
+        <a href="tournaments.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Tournaments</a>
+        
+        <div class="admin-header">
+            <h1><i class="fas fa-trophy"></i> Tournament Administration</h1>
+            <button class="btn" onclick="openModal('createTournament')">
+                <i class="fas fa-plus"></i> Create Tournament
+            </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" data-tab="tournaments">All Tournaments</div>
+            <div class="tab" data-tab="leagues">Leagues</div>
+            <div class="tab" data-tab="active">Active Scoring</div>
+            <div class="tab" data-tab="courses">Course Setup</div>
+        </div>
+
+        <!-- Tournaments Tab -->
+        <div id="tournaments" class="tab-content active">
+            <div id="tournamentList" class="tournament-list">
+                <!-- Tournaments will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Leagues Tab -->
+        <div id="leagues" class="tab-content">
+            <div class="card">
+                <h3>Season Leagues</h3>
+                <p style="color: #666; margin-bottom: 20px;">Leagues track cumulative scores across multiple rounds for playoff standings.</p>
+                <div id="leagueList">
+                    <!-- Leagues will be loaded here -->
+                </div>
+                <button class="btn" onclick="openModal('createLeague')" style="margin-top: 20px;">
+                    <i class="fas fa-plus"></i> Create League
+                </button>
+            </div>
+        </div>
+
+        <!-- Active Scoring Tab -->
+        <div id="active" class="tab-content">
+            <div id="activeTournaments">
+                <!-- Active tournaments will be shown here -->
+            </div>
+        </div>
+
+        <!-- Course Setup Tab -->
+        <div id="courses" class="tab-content">
+            <div class="card">
+                <h3>Saved Courses</h3>
+                <div id="courseList">
+                    <!-- Courses will be loaded here -->
+                </div>
+                <button class="btn" onclick="openModal('createCourse')" style="margin-top: 20px;">
+                    <i class="fas fa-plus"></i> Add Course
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Tournament Modal -->
+    <div id="createTournament" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('createTournament')">&times;</span>
+            <h2 style="margin-bottom: 25px;">Create Tournament</h2>
+            <form id="tournamentForm" onsubmit="saveTournament(event)">
+                <div class="form-group">
+                    <label>Tournament Name *</label>
+                    <input type="text" id="tournamentName" required placeholder="e.g., Golf Cove Fall League 25'">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date *</label>
+                        <input type="date" id="tournamentDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tee Time</label>
+                        <input type="time" id="teeTime" value="09:00">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Course *</label>
+                    <select id="tournamentCourse" required>
+                        <option value="">Select a course...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>League (Optional)</label>
+                    <select id="tournamentLeague" onchange="togglePlayersForLeague()">
+                        <option value="">Standalone Tournament</option>
+                    </select>
+                    <small style="color: #666; display: block; margin-top: 5px;">Link to a league for cumulative scoring</small>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Format</label>
+                        <select id="tournamentFormat">
+                            <option value="stroke">Stroke Play</option>
+                            <option value="match">Match Play</option>
+                            <option value="scramble">Scramble</option>
+                            <option value="bestball">Best Ball</option>
+                            <option value="stableford">Stableford</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Starting Hole</label>
+                        <select id="startingHole">
+                            <option value="1">Hole 1</option>
+                            <option value="10">Hole 10</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="playersSection">
+                    <label>Players (one per line: Name, Handicap)</label>
+                    <textarea id="playersList" rows="6" placeholder="Joe Anastasio, 12&#10;Bill Smith, 8&#10;John Doe, 15"></textarea>
+                    <small style="color: #666; display: block; margin-top: 5px;">If a league is selected, players will be automatically imported from the league.</small>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createTournament')">Cancel</button>
+                    <button type="submit" class="btn">Create Tournament</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Course Modal -->
+    <div id="createCourse" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('createCourse')">&times;</span>
+            <h2 style="margin-bottom: 25px;">Add Course</h2>
+            <form id="courseForm" onsubmit="saveCourse(event)">
+                <div class="form-group">
+                    <label>Course Name *</label>
+                    <input type="text" id="courseName" required placeholder="e.g., Paradise Palms">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Number of Holes</label>
+                        <select id="courseHoles" onchange="generateParInputs()">
+                            <option value="18">18 Holes</option>
+                            <option value="9">9 Holes</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Course Par</label>
+                        <input type="number" id="coursePar" value="72" min="27" max="80">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Par for Each Hole</label>
+                    <div id="parInputs" style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px;">
+                        <!-- Par inputs will be generated here -->
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createCourse')">Cancel</button>
+                    <button type="submit" class="btn">Save Course</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Tournament Modal -->
+    <div id="viewTournament" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="modal-close" onclick="closeModal('viewTournament')">&times;</span>
+            <div id="tournamentDetails">
+                <!-- Tournament details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Create League Modal -->
+    <div id="createLeague" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('createLeague')">&times;</span>
+            <h2 style="margin-bottom: 25px;">Create League</h2>
+            <form id="leagueForm" onsubmit="saveLeague(event)">
+                <div class="form-group">
+                    <label>League Name *</label>
+                    <input type="text" id="leagueName" required placeholder="e.g., Golf Cove Fall League">
+                </div>
+                <div class="form-group">
+                    <label>Season *</label>
+                    <input type="text" id="leagueSeason" required placeholder="e.g., Fall 2025">
+                </div>
+                <div class="form-group">
+                    <label>Players (one per line: Name, Handicap)</label>
+                    <textarea id="leaguePlayersList" rows="8" placeholder="Joe Anastasio, 12&#10;Bill Smith, 8&#10;John Doe, 15&#10;Mike Johnson, 10"></textarea>
+                    <small style="color: #666; display: block; margin-top: 5px;">These players will be automatically added to all rounds in this league.</small>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createLeague')">Cancel</button>
+                    <button type="submit" class="btn">Create League</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-simple">
+            <div class="footer-social-center">
+                <a href="https://www.facebook.com/golfcove/" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                <a href="https://www.instagram.com/golfcovect/" target="_blank"><i class="fab fa-instagram"></i></a>
+            </div>
+            <p class="footer-social-text">Please visit our facebook and instagram pages frequently for events, updates and promotions!</p>
+            <p class="footer-address"><a href="https://maps.google.com/?q=336+State+Street,+North+Haven,+CT+06473" target="_blank">336 State Street, North Haven, CT 06473</a> | Phone: <a href="tel:2033905994">203.390.5994</a></p>
+            <p class="footer-copyright">© 2025 Golf Cove | <a href="contact.html">Contact Us</a> | <a href="sitemap.html">Site Map</a></p>
+            <p class="footer-powered">Powered by <a href="https://www.foreupgolf.com/" target="_blank">foreUP</a></p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script src="js/tournament.js"></script>
+</body>
+</html>
