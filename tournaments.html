@@ -649,7 +649,7 @@
             
             cachedLeague = league;
             cachedStandings = calculateStandings(league);
-            const hasScores = cachedStandings.some(s => s.roundsPlayed > 0);
+            const hasPlayers = (league.players || []).length > 0;
 
             // Check for live round
             const today = new Date().toISOString().split('T')[0];
@@ -703,7 +703,7 @@
                             <h2><span class="trophy">🏆</span> Leaderboard</h2>
                         </div>
 
-                        ${hasScores ? `
+                        ${hasPlayers ? `
                         <div class="controls-panel">
                             <div class="controls-row">
                                 <div class="filter-group">
@@ -726,11 +726,11 @@
                         ` : ''}
 
                         <div id="standingsContent">
-                            ${hasScores ? renderTable(cachedStandings, league, 'cumulative-net') : `
+                            ${hasPlayers ? renderTable(cachedStandings, league, 'cumulative-net') : `
                                 <div class="empty-state">
-                                    <i class="fas fa-hourglass-half"></i>
-                                    <h2>Waiting for Scores</h2>
-                                    <p>Standings will appear once the first round is complete.</p>
+                                    <i class="fas fa-users"></i>
+                                    <h2>No Players Yet</h2>
+                                    <p>Be the first to join the league!</p>
                                 </div>
                             `}
                         </div>
