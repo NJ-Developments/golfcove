@@ -226,6 +226,75 @@
         .clickable {
             cursor: pointer;
         }
+        .view-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .view-btn {
+            padding: 10px 16px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            color: #666;
+        }
+        .view-btn.active {
+            background: #37b24a;
+            color: #fff;
+        }
+        .view-btn:hover:not(.active) {
+            background: #e0e0e0;
+        }
+        .export-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+        .export-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #217346;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .export-btn:hover {
+            background: #1a5c38;
+        }
+        .score-breakdown {
+            display: flex;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .score-breakdown .out,
+        .score-breakdown .in {
+            color: #666;
+        }
+        .cumulative-score {
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .gross-score {
+            color: #333;
+        }
+        .net-badge {
+            background: #37b24a;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
         @media (max-width: 600px) {
             .stats-row {
                 gap: 30px;
@@ -297,6 +366,10 @@
             // Calculate standings
             const standings = calculateStandings(league);
             const hasScores = standings.some(s => s.roundsPlayed > 0);
+            
+            // Cache for view switching and export
+            cachedLeague = league;
+            cachedStandings = standings;
 
             // Check for active round (today's round with incomplete scores)
             const today = new Date().toISOString().split('T')[0];
@@ -342,13 +415,31 @@
 
                 <div class="standings-card">
                     <h2>🏆 Season Standings</h2>
-                    <p style="font-size: 13px; color: #888; margin-bottom: 15px;">Tap a player to see round-by-round scores</p>
-                    ${hasScores ? renderTable(standings, league) : `
+                    
+                    ${hasScores ? `
+                    <div style="padding: 15px 20px; border-bottom: 1px solid #eee;">
+                        <div class="view-toggle">
+                            <button class="view-btn active" onclick="setView('cumulative-net')">Cumulative Net</button>
+                            <button class="view-btn" onclick="setView('cumulative-gross')">Cumulative Gross</button>
+                            <button class="view-btn" onclick="setView('average')">Average Score</button>
+                            <button class="view-btn" onclick="setView('by-round')">By Round</button>
+                        </div>
+                        <div class="export-row">
+                            <button class="export-btn" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel"></i> Export to Excel
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div id="standingsContent">
+                    ${hasScores ? renderTable(standings, league, 'cumulative-net') : `
                         <div class="no-scores">
                             <i class="fas fa-trophy"></i>
                             <p>No scores submitted yet.<br>Standings appear after the first round.</p>
                         </div>
                     `}
+                    </div>
                 </div>
 
                 <div class="action-buttons">
@@ -361,9 +452,19 @@
             `;
         }
 
+        let currentView = 'cumulative-net';
+        let cachedLeague = null;
+        let cachedStandings = null;
+
         function calculateStandings(league) {
+            const holes = league.course?.holes || 18;
+            const frontNine = Math.min(9, holes);
+            const backNine = holes > 9 ? holes - 9 : 0;
+            
             return league.players.map(player => {
                 let totalGross = 0;
+                let totalOut = 0;  // Front 9 cumulative
+                let totalIn = 0;   // Back 9 cumulative
                 let roundsPlayed = 0;
                 let roundDetails = [];
 
@@ -371,71 +472,170 @@
                     const ps = league.scores?.[round.id]?.[player.id];
                     if (ps && ps.submitted) {
                         let gross = 0;
-                        for (let h = 1; h <= (league.course?.holes || 18); h++) {
-                            gross += ps[h] || 0;
+                        let out = 0;
+                        let inScore = 0;
+                        
+                        // Calculate OUT (holes 1-9)
+                        for (let h = 1; h <= frontNine; h++) {
+                            const score = ps[h] || 0;
+                            out += score;
+                            gross += score;
                         }
+                        
+                        // Calculate IN (holes 10-18)
+                        for (let h = frontNine + 1; h <= holes; h++) {
+                            const score = ps[h] || 0;
+                            inScore += score;
+                            gross += score;
+                        }
+                        
                         totalGross += gross;
+                        totalOut += out;
+                        totalIn += inScore;
                         roundsPlayed++;
-                        roundDetails.push({ name: round.name, gross, net: gross - (player.handicap || 0) });
+                        
+                        const net = gross - (player.handicap || 0);
+                        roundDetails.push({ 
+                            name: round.name, 
+                            date: round.date,
+                            out, 
+                            in: inScore, 
+                            gross, 
+                            net 
+                        });
                     }
                 });
 
-                const avgGross = roundsPlayed > 0 ? (totalGross / roundsPlayed).toFixed(1) : '-';
+                const totalNet = totalGross - ((player.handicap || 0) * roundsPlayed);
+                const avgGross = roundsPlayed > 0 ? (totalGross / roundsPlayed).toFixed(1) : null;
+                const avgNet = roundsPlayed > 0 ? (totalNet / roundsPlayed).toFixed(1) : null;
 
                 return {
                     id: player.id,
                     name: player.name,
                     handicap: player.handicap || 0,
+                    totalOut,
+                    totalIn,
                     totalGross,
-                    totalNet: totalGross - ((player.handicap || 0) * roundsPlayed),
+                    totalNet,
                     roundsPlayed,
                     avgGross,
+                    avgNet,
                     roundDetails
                 };
-            }).sort((a, b) => {
-                if (a.roundsPlayed === 0 && b.roundsPlayed === 0) return 0;
-                if (a.roundsPlayed === 0) return 1;
-                if (b.roundsPlayed === 0) return -1;
-                return a.totalNet - b.totalNet;
             });
         }
 
-        function renderTable(standings, league) {
+        function sortStandings(standings, view) {
+            return [...standings].sort((a, b) => {
+                if (a.roundsPlayed === 0 && b.roundsPlayed === 0) return 0;
+                if (a.roundsPlayed === 0) return 1;
+                if (b.roundsPlayed === 0) return -1;
+                
+                switch(view) {
+                    case 'cumulative-gross':
+                        return a.totalGross - b.totalGross;
+                    case 'average':
+                        return parseFloat(a.avgNet) - parseFloat(b.avgNet);
+                    case 'cumulative-net':
+                    default:
+                        return a.totalNet - b.totalNet;
+                }
+            });
+        }
+
+        function renderTable(standings, league, view = 'cumulative-net') {
+            const sorted = sortStandings(standings, view);
+            const holes = league.course?.holes || 18;
+            const has18 = holes >= 18;
+            
+            // Different headers based on view
+            let headers = '';
+            let renderRow = null;
+            
+            switch(view) {
+                case 'cumulative-gross':
+                    headers = `<th>#</th><th>Player</th><th>HCP</th>${has18 ? '<th>OUT</th><th>IN</th>' : ''}<th>TOT</th><th>Rnds</th>`;
+                    renderRow = (s, i, pos) => `
+                        <td class="pos ${pos <= 3 ? 'pos-' + pos : ''}">${pos || '-'}</td>
+                        <td><span class="player-name">${s.name}</span></td>
+                        <td>${s.handicap}</td>
+                        ${has18 ? `<td>${s.roundsPlayed > 0 ? s.totalOut : '-'}</td><td>${s.roundsPlayed > 0 ? s.totalIn : '-'}</td>` : ''}
+                        <td class="cumulative-score gross-score">${s.roundsPlayed > 0 ? s.totalGross : '-'}</td>
+                        <td>${s.roundsPlayed}</td>
+                    `;
+                    break;
+                    
+                case 'average':
+                    headers = `<th>#</th><th>Player</th><th>HCP</th><th>Avg Gross</th><th>Avg Net</th><th>Rnds</th>`;
+                    renderRow = (s, i, pos) => `
+                        <td class="pos ${pos <= 3 ? 'pos-' + pos : ''}">${pos || '-'}</td>
+                        <td><span class="player-name">${s.name}</span></td>
+                        <td>${s.handicap}</td>
+                        <td>${s.avgGross || '-'}</td>
+                        <td class="net-score">${s.avgNet || '-'}</td>
+                        <td>${s.roundsPlayed}</td>
+                    `;
+                    break;
+                    
+                case 'by-round':
+                    const roundHeaders = league.rounds.map(r => `<th title="${r.date}">${r.name}</th>`).join('');
+                    headers = `<th>#</th><th>Player</th><th>HCP</th>${roundHeaders}<th>TOT</th><th>NET</th>`;
+                    renderRow = (s, i, pos) => {
+                        const roundScores = league.rounds.map(r => {
+                            const rd = s.roundDetails.find(d => d.name === r.name);
+                            return `<td>${rd ? rd.gross : '-'}</td>`;
+                        }).join('');
+                        return `
+                            <td class="pos ${pos <= 3 ? 'pos-' + pos : ''}">${pos || '-'}</td>
+                            <td><span class="player-name">${s.name}</span></td>
+                            <td>${s.handicap}</td>
+                            ${roundScores}
+                            <td>${s.roundsPlayed > 0 ? s.totalGross : '-'}</td>
+                            <td class="net-score">${s.roundsPlayed > 0 ? s.totalNet : '-'}</td>
+                        `;
+                    };
+                    break;
+                    
+                case 'cumulative-net':
+                default:
+                    headers = `<th>#</th><th>Player</th><th>HCP</th>${has18 ? '<th>OUT</th><th>IN</th>' : ''}<th>TOT</th><th>NET</th><th>Rnds</th>`;
+                    renderRow = (s, i, pos) => `
+                        <td class="pos ${pos <= 3 ? 'pos-' + pos : ''}">${pos || '-'}</td>
+                        <td><span class="player-name">${s.name}</span></td>
+                        <td>${s.handicap}</td>
+                        ${has18 ? `<td>${s.roundsPlayed > 0 ? s.totalOut : '-'}</td><td>${s.roundsPlayed > 0 ? s.totalIn : '-'}</td>` : ''}
+                        <td>${s.roundsPlayed > 0 ? s.totalGross : '-'}</td>
+                        <td class="net-score cumulative-score">${s.roundsPlayed > 0 ? s.totalNet : '-'}</td>
+                        <td>${s.roundsPlayed}</td>
+                    `;
+                    break;
+            }
+            
             return `
+                <p style="font-size: 13px; color: #888; padding: 0 20px; margin-bottom: 10px;">Tap a player to see round breakdown</p>
                 <table class="standings-table">
                     <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Player</th>
-                            <th>Avg</th>
-                            <th>Rnds</th>
-                            <th>Net</th>
-                        </tr>
+                        <tr>${headers}</tr>
                     </thead>
                     <tbody>
-                        ${standings.map((s, i) => `
-                            <tr class="clickable" onclick="toggleDetails('${s.id}')">
-                                <td class="pos ${i < 3 && s.roundsPlayed > 0 ? 'pos-' + (i+1) : ''}">
-                                    ${s.roundsPlayed > 0 ? i + 1 : '-'}
-                                </td>
-                                <td>
-                                    <span class="player-name">${s.name}</span>
-                                    <span class="player-hcp">(${s.handicap})</span>
-                                </td>
-                                <td>${s.avgGross}</td>
-                                <td>${s.roundsPlayed}</td>
-                                <td class="net-score">${s.roundsPlayed > 0 ? s.totalNet : '-'}</td>
-                            </tr>
-                            <tr class="expand-row" id="details-${s.id}">
-                                <td colspan="5">
-                                    <div class="round-scores">
-                                        ${s.roundDetails.length > 0 ? s.roundDetails.map(r => `
-                                            <span>${r.name}: ${r.gross} (Net ${r.net})</span>
-                                        `).join('') : '<span>No rounds played</span>'}
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('')}
+                        ${sorted.map((s, i) => {
+                            const pos = s.roundsPlayed > 0 ? i + 1 : null;
+                            return `
+                                <tr class="clickable" onclick="toggleDetails('${s.id}')">
+                                    ${renderRow(s, i, pos)}
+                                </tr>
+                                <tr class="expand-row" id="details-${s.id}">
+                                    <td colspan="10">
+                                        <div class="round-scores">
+                                            ${s.roundDetails.length > 0 ? s.roundDetails.map(r => `
+                                                <span>${r.name}: ${has18 ? `OUT ${r.out} | IN ${r.in} = ` : ''}${r.gross} (Net ${r.net})</span>
+                                            `).join('') : '<span>No rounds played</span>'}
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;
@@ -444,6 +644,124 @@
         function toggleDetails(playerId) {
             const row = document.getElementById('details-' + playerId);
             if (row) row.classList.toggle('open');
+        }
+
+        function setView(view) {
+            currentView = view;
+            
+            // Update button states
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(view.replace('-', ' ').replace('cumulative ', ''))) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Find and activate correct button
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                const text = btn.textContent.toLowerCase();
+                const isMatch = 
+                    (view === 'cumulative-net' && text.includes('cumulative net')) ||
+                    (view === 'cumulative-gross' && text.includes('cumulative gross')) ||
+                    (view === 'average' && text.includes('average')) ||
+                    (view === 'by-round' && text.includes('by round'));
+                btn.classList.toggle('active', isMatch);
+            });
+            
+            // Re-render table
+            if (cachedLeague && cachedStandings) {
+                document.getElementById('standingsContent').innerHTML = 
+                    renderTable(cachedStandings, cachedLeague, view);
+            }
+        }
+
+        function exportToExcel() {
+            if (!cachedLeague || !cachedStandings) return;
+            
+            const league = cachedLeague;
+            const standings = sortStandings(cachedStandings, currentView);
+            const holes = league.course?.holes || 18;
+            const has18 = holes >= 18;
+            
+            // Build CSV content
+            let csv = [];
+            
+            // Header row
+            csv.push(`${league.name} - ${league.season}`);
+            csv.push(`Exported: ${new Date().toLocaleDateString()}`);
+            csv.push('');
+            
+            // Column headers matching Excel format
+            let headers = ['Pos', 'Player', 'HCP'];
+            if (currentView === 'by-round') {
+                league.rounds.forEach(r => headers.push(r.name));
+            } else if (has18) {
+                headers.push('OUT', 'IN');
+            }
+            headers.push('TOT');
+            if (currentView !== 'cumulative-gross') headers.push('NET');
+            headers.push('Rounds Played');
+            if (currentView === 'average') {
+                headers = ['Pos', 'Player', 'HCP', 'Avg Gross', 'Avg Net', 'Rounds Played'];
+            }
+            csv.push(headers.join(','));
+            
+            // Data rows
+            standings.forEach((s, i) => {
+                const pos = s.roundsPlayed > 0 ? i + 1 : '-';
+                let row = [pos, `"${s.name}"`, s.handicap];
+                
+                if (currentView === 'by-round') {
+                    league.rounds.forEach(r => {
+                        const rd = s.roundDetails.find(d => d.name === r.name);
+                        row.push(rd ? rd.gross : '-');
+                    });
+                    row.push(s.roundsPlayed > 0 ? s.totalGross : '-');
+                    row.push(s.roundsPlayed > 0 ? s.totalNet : '-');
+                    row.push(s.roundsPlayed);
+                } else if (currentView === 'average') {
+                    row.push(s.avgGross || '-');
+                    row.push(s.avgNet || '-');
+                    row.push(s.roundsPlayed);
+                } else if (currentView === 'cumulative-gross') {
+                    if (has18) {
+                        row.push(s.roundsPlayed > 0 ? s.totalOut : '-');
+                        row.push(s.roundsPlayed > 0 ? s.totalIn : '-');
+                    }
+                    row.push(s.roundsPlayed > 0 ? s.totalGross : '-');
+                    row.push(s.roundsPlayed);
+                } else {
+                    if (has18) {
+                        row.push(s.roundsPlayed > 0 ? s.totalOut : '-');
+                        row.push(s.roundsPlayed > 0 ? s.totalIn : '-');
+                    }
+                    row.push(s.roundsPlayed > 0 ? s.totalGross : '-');
+                    row.push(s.roundsPlayed > 0 ? s.totalNet : '-');
+                    row.push(s.roundsPlayed);
+                }
+                
+                csv.push(row.join(','));
+            });
+            
+            // Add round details at bottom
+            csv.push('');
+            csv.push('Round Details');
+            csv.push('');
+            
+            standings.filter(s => s.roundsPlayed > 0).forEach(s => {
+                csv.push(`${s.name} (HCP: ${s.handicap})`);
+                s.roundDetails.forEach(r => {
+                    csv.push(`  ${r.name},${has18 ? `OUT: ${r.out},IN: ${r.in},` : ''}Gross: ${r.gross},Net: ${r.net}`);
+                });
+                csv.push('');
+            });
+            
+            // Download
+            const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${league.name.replace(/\s+/g, '_')}_Standings_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
         }
 
         init();

@@ -138,6 +138,46 @@
             color: #37b24a;
             font-size: 20px;
         }
+        .section-header {
+            background: #333;
+            color: #fff;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+        }
+        .section-header .subtotal {
+            font-weight: 700;
+        }
+        .score-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: #e0e0e0;
+            margin-top: 1px;
+        }
+        .score-summary.nine-holes {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .score-summary .item {
+            background: #fff;
+            padding: 15px 10px;
+            text-align: center;
+        }
+        .score-summary .item .label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .score-summary .item .value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .score-summary .item .value.net {
+            color: #37b24a;
+        }
         .submit-btn {
             width: 100%;
             padding: 16px;
@@ -256,15 +296,34 @@
             }
 
             if (submitted) {
-                let total = 0;
-                for (let h = 1; h <= league.course.holes; h++) {
-                    total += scores[h] || 0;
+                let out = 0, inScore = 0, total = 0;
+                const frontNine = Math.min(9, league.course.holes);
+                const backNine = league.course.holes > 9 ? league.course.holes - 9 : 0;
+                
+                for (let h = 1; h <= frontNine; h++) {
+                    out += scores[h] || 0;
                 }
+                for (let h = frontNine + 1; h <= league.course.holes; h++) {
+                    inScore += scores[h] || 0;
+                }
+                total = out + inScore;
+                
+                const player = league.players.find(p => p.id === playerId);
+                const handicap = player?.handicap || 0;
+                const net = total - handicap;
+                const has18 = league.course.holes >= 18;
+                
                 html += `
                     <div class="submitted">
                         <h2>✓ Score Submitted</h2>
                         <p>Your round has been recorded.</p>
-                        <div class="score">${total}</div>
+                        <div class="score-summary ${has18 ? '' : 'nine-holes'}" style="margin: 20px -20px; border-radius: 0;">
+                            ${has18 ? `<div class="item"><div class="label">OUT</div><div class="value">${out}</div></div>` : ''}
+                            ${has18 ? `<div class="item"><div class="label">IN</div><div class="value">${inScore}</div></div>` : ''}
+                            <div class="item"><div class="label">TOT</div><div class="value">${total}</div></div>
+                            <div class="item"><div class="label">HCP</div><div class="value">${handicap}</div></div>
+                            <div class="item"><div class="label">NET</div><div class="value net">${net}</div></div>
+                        </div>
                     </div>
                     <a href="tournaments.html" class="back-link">View Standings →</a>
                 `;
@@ -273,15 +332,32 @@
             }
 
             // Build score inputs
-            html += `<div class="scores-card"><div class="scores-header">Scores</div>`;
+            const frontNine = Math.min(9, league.course.holes);
+            const backNine = league.course.holes > 9 ? league.course.holes - 9 : 0;
+            const has18 = league.course.holes >= 18;
+            
+            html += `<div class="scores-card">`;
+            
+            // Front 9 section
+            if (has18) {
+                html += `<div class="section-header"><span>Front 9</span><span class="subtotal" id="outTotal">OUT: -</span></div>`;
+            } else {
+                html += `<div class="section-header"><span>Scores</span></div>`;
+            }
             
             let total = 0;
+            let out = 0;
+            let inScore = 0;
             let totalPar = 0;
-            for (let h = 1; h <= league.course.holes; h++) {
+            
+            for (let h = 1; h <= frontNine; h++) {
                 const val = scores[h] || '';
                 const par = league.course.pars?.[h-1] || 4;
                 totalPar += par;
-                if (val) total += val;
+                if (val) {
+                    total += val;
+                    out += val;
+                }
                 
                 let inputClass = '';
                 if (val) {
@@ -298,19 +374,59 @@
                         </div>
                         <input type="number" class="score-input ${inputClass}" id="h${h}" 
                                value="${val}" min="1" max="15" inputmode="numeric"
-                               data-par="${par}"
+                               data-par="${par}" data-section="front"
                                onchange="saveHole(${h}, this.value)" onfocus="this.select()">
                     </div>
                 `;
             }
-
-            const vsPar = total ? total - totalPar : null;
-            const vsParDisplay = vsPar !== null ? (vsPar === 0 ? 'E' : (vsPar > 0 ? '+' + vsPar : vsPar)) : '';
             
+            // Back 9 section
+            if (has18) {
+                html += `<div class="section-header"><span>Back 9</span><span class="subtotal" id="inTotal">IN: -</span></div>`;
+                
+                for (let h = frontNine + 1; h <= league.course.holes; h++) {
+                    const val = scores[h] || '';
+                    const par = league.course.pars?.[h-1] || 4;
+                    totalPar += par;
+                    if (val) {
+                        total += val;
+                        inScore += val;
+                    }
+                    
+                    let inputClass = '';
+                    if (val) {
+                        if (val < par) inputClass = 'under-par';
+                        else if (val === par + 1) inputClass = 'over-par';
+                        else if (val > par + 1) inputClass = 'double-over';
+                    }
+                    
+                    html += `
+                        <div class="hole-row">
+                            <div class="hole-info">
+                                <span class="hole-label">Hole ${h}</span>
+                                <span class="hole-par">Par ${par}</span>
+                            </div>
+                            <input type="number" class="score-input ${inputClass}" id="h${h}" 
+                                   value="${val}" min="1" max="15" inputmode="numeric"
+                                   data-par="${par}" data-section="back"
+                                   onchange="saveHole(${h}, this.value)" onfocus="this.select()">
+                        </div>
+                    `;
+                }
+            }
+            
+            const player = league.players.find(p => p.id === playerId);
+            const handicap = player?.handicap || 0;
+            const net = total - handicap;
+            
+            // Score summary matching Excel format: OUT | IN | TOT | HCP | NET
             html += `
-                <div class="totals">
-                    <span>Total ${vsParDisplay ? '(' + vsParDisplay + ')' : ''}</span>
-                    <span class="value" id="total">${total || '-'}</span>
+                <div class="score-summary ${has18 ? '' : 'nine-holes'}">
+                    ${has18 ? `<div class="item"><div class="label">OUT</div><div class="value" id="outVal">${out || '-'}</div></div>` : ''}
+                    ${has18 ? `<div class="item"><div class="label">IN</div><div class="value" id="inVal">${inScore || '-'}</div></div>` : ''}
+                    <div class="item"><div class="label">TOT</div><div class="value" id="total">${total || '-'}</div></div>
+                    <div class="item"><div class="label">HCP</div><div class="value">${handicap}</div></div>
+                    <div class="item"><div class="label">NET</div><div class="value net" id="netVal">${total ? net : '-'}</div></div>
                 </div>
             </div>
             <button class="submit-btn" onclick="submit()">Submit Score</button>
@@ -365,11 +481,36 @@
 
         function updateTotal() {
             const scores = getScores();
-            let total = 0;
-            for (let h = 1; h <= league.course.holes; h++) {
-                total += scores[h] || 0;
+            const frontNine = Math.min(9, league.course.holes);
+            const has18 = league.course.holes >= 18;
+            
+            let out = 0, inScore = 0, total = 0;
+            
+            for (let h = 1; h <= frontNine; h++) {
+                out += scores[h] || 0;
             }
+            
+            if (has18) {
+                for (let h = frontNine + 1; h <= league.course.holes; h++) {
+                    inScore += scores[h] || 0;
+                }
+            }
+            
+            total = out + inScore;
+            
+            const player = league.players.find(p => p.id === playerId);
+            const handicap = player?.handicap || 0;
+            const net = total - handicap;
+            
+            // Update displays
             document.getElementById('total').textContent = total || '-';
+            if (has18) {
+                document.getElementById('outVal').textContent = out || '-';
+                document.getElementById('inVal').textContent = inScore || '-';
+                document.getElementById('outTotal').textContent = 'OUT: ' + (out || '-');
+                document.getElementById('inTotal').textContent = 'IN: ' + (inScore || '-');
+            }
+            document.getElementById('netVal').textContent = total ? net : '-';
         }
 
         function submit() {
