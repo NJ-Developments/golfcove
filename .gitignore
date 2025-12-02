@@ -1,0 +1,19 @@
+# Excel temp files
+~$*.xlsx
+~$*.xls
+
+# Excel files (keep local only)
+*.xlsx
+*.xls
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# Large video files (optional - uncomment if using CDN)
+# *.mp4

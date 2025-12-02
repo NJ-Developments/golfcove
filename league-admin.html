@@ -3,104 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>League Admin - Golf Cove</title>
+    <link rel="icon" type="image/png" href="images/golfcovelogo.png">
+    <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-            min-height: 100vh;
-        }
-        
-        /* Top Header */
-        .top-header {
-            background: #333;
-            color: #fff;
-            padding: 12px 20px;
+        /* Admin Layout */
+        .admin-wrapper {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            height: 56px;
-        }
-        .top-header .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 700;
-            font-size: 18px;
-        }
-        .top-header .logo img {
-            height: 32px;
-        }
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 5px;
+            min-height: calc(100vh - 120px);
         }
         
         /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 56px;
-            left: 0;
-            bottom: 0;
+        .admin-sidebar {
             width: 260px;
             background: #fff;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            z-index: 90;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
+            border-right: 1px solid #e0e0e0;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            height: calc(100vh - 120px);
             overflow-y: auto;
         }
-        .sidebar.open {
-            transform: translateX(0);
-        }
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            top: 56px;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.4);
-            z-index: 85;
-        }
-        .sidebar.open + .sidebar-overlay {
+        .admin-sidebar.mobile-open {
             display: block;
         }
         
         /* League Info in Sidebar */
         .league-info {
-            padding: 20px;
+            padding: 25px 20px;
             border-bottom: 1px solid #eee;
-            background: #f8f9fa;
+            background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
+            color: #fff;
         }
         .league-info h2 {
-            font-size: 16px;
-            color: #333;
+            font-size: 18px;
             margin-bottom: 4px;
         }
         .league-info .season {
-            font-size: 13px;
-            color: #37b24a;
-            font-weight: 600;
+            font-size: 14px;
+            opacity: 0.9;
         }
         
-        /* Nav Menu */
-        .nav-menu {
+        /* Admin Sidebar Nav Menu */
+        .admin-sidebar .admin-nav {
             padding: 15px 0;
         }
-        .nav-item {
+        .admin-sidebar .nav-item {
             display: flex;
             align-items: center;
             gap: 12px;
@@ -112,21 +63,21 @@
             font-weight: 500;
             border-left: 3px solid transparent;
         }
-        .nav-item:hover {
+        .admin-sidebar .nav-item:hover {
             background: #f5f5f5;
             color: #333;
         }
-        .nav-item.active {
+        .admin-sidebar .nav-item.active {
             background: #e8f5e9;
             color: #37b24a;
             border-left-color: #37b24a;
         }
-        .nav-item i {
+        .admin-sidebar .nav-item i {
             width: 20px;
             text-align: center;
             font-size: 16px;
         }
-        .nav-divider {
+        .admin-sidebar .nav-divider {
             height: 1px;
             background: #eee;
             margin: 10px 20px;
@@ -137,12 +88,57 @@
         .nav-item.danger:hover {
             background: #fff5f5;
         }
+        .nav-item.back-link {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            color: #37b24a;
+            font-weight: 600;
+        }
+        .nav-item.back-link:hover {
+            background: #e8f5e9;
+        }
         
         /* Main Content */
+        .admin-main {
+            flex: 1;
+            background: #f5f5f5;
+            min-height: calc(100vh - 120px);
+        }
         .main-content {
-            margin-top: 56px;
-            padding: 20px;
-            min-height: calc(100vh - 56px);
+            padding: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        /* Mobile sidebar toggle */
+        .mobile-admin-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: #37b24a;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(55,178,74,0.4);
+            z-index: 100;
+        }
+        .mobile-sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 150;
+        }
+        .mobile-sidebar-overlay.open {
+            display: block;
         }
         
         /* Page Sections */
@@ -558,106 +554,123 @@
             font-size: 24px;
         }
         
-        /* Desktop */
+        /* Desktop/Mobile */
         @media (min-width: 768px) {
-            .sidebar {
-                transform: translateX(0);
+            .admin-sidebar {
+                display: block !important;
             }
-            .sidebar-overlay {
+            .mobile-admin-toggle {
                 display: none !important;
             }
-            .main-content {
-                margin-left: 260px;
-            }
-            .menu-toggle {
+        }
+        @media (max-width: 767px) {
+            .admin-sidebar {
                 display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                z-index: 200;
+                box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+            }
+            .admin-sidebar.mobile-open {
+                display: block;
+            }
+            .mobile-admin-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .main-content {
+                padding: 20px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Top Header -->
-    <div class="top-header">
-        <div class="logo">
-            <button class="menu-toggle" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="container">
+            <div class="top-bar-left">
+                <a href="tel:2033905994"><i class="fas fa-phone"></i> 203.390.5994</a>
+                <a href="https://maps.google.com/?q=336+State+Street,+North+Haven,+CT+06473" target="_blank"><i class="fas fa-map-marker-alt"></i> 336 STATE STREET, NORTH HAVEN, CT</a>
+            </div>
+            <div class="top-bar-right">
+                <div class="social-links">
+                    <a href="https://www.facebook.com/golfcove/" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://www.instagram.com/golfcovect/" target="_blank"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-main">
+            <div class="logo">
+                <a href="index.html">
+                    <img src="images/golfcovelogo.png" alt="Golf Cove Logo">
+                </a>
+            </div>
+            <nav class="main-nav" id="mainNav">
+                <ul class="nav-menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="pricing.html">Pricing</a></li>
+                    <li><a href="lessons-leagues.html">Lessons & Leagues</a></li>
+                    <li><a href="tournaments.html">Standings</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                </ul>
+            </nav>
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle Menu">
+                <span></span><span></span><span></span>
             </button>
-            <span>⛳ League Admin</span>
         </div>
-        <a href="tournaments.html" style="color: #fff; font-size: 14px;">
-            <i class="fas fa-trophy"></i> View Leaderboard
-        </a>
-    </div>
+    </header>
 
-    <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
-        <div class="league-info" id="leagueInfo">
-            <h2 id="sidebarLeagueName">Golf Cove League</h2>
-            <div class="season" id="sidebarSeason">Fall 2025</div>
-        </div>
-        <div class="nav-menu">
-            <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
-                <i class="fas fa-home"></i> Dashboard
+    <!-- Admin Layout -->
+    <div class="admin-wrapper" id="adminWrapper" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="league-info">
+                <h2 id="sidebarLeagueName">Golf Cove League</h2>
+                <div class="season" id="sidebarSeason">Fall 2025</div>
             </div>
-            <div class="nav-item" data-section="teams" onclick="showSection('teams')">
-                <i class="fas fa-users"></i> Teams
-            </div>
-            <div class="nav-item" data-section="rounds" onclick="showSection('rounds')">
-                <i class="fas fa-flag"></i> Rounds
-            </div>
-            <div class="nav-item" data-section="print" onclick="showSection('print')">
-                <i class="fas fa-print"></i> Print
-            </div>
-            <div class="nav-divider"></div>
-            <div class="nav-item" data-section="settings" onclick="showSection('settings')">
-                <i class="fas fa-cog"></i> Settings
-            </div>
-            <div class="nav-item danger" onclick="resetLeague()">
-                <i class="fas fa-trash"></i> Reset League
-            </div>
-        </div>
-    </nav>
-    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-
-    <!-- Setup Form (no league) -->
-    <div class="setup-container" id="setupContainer" style="display: none;">
-        <div class="setup-card">
-            <h1><i class="fas fa-trophy"></i> Create League</h1>
-            <form onsubmit="createLeague(event)">
-                <div class="form-group">
-                    <label>League Name</label>
-                    <input type="text" id="leagueName" required placeholder="Golf Cove Fall League">
+            <div class="admin-nav">
+                <a href="tournaments.html" class="nav-item back-link">
+                    <i class="fas fa-arrow-left"></i> View Leaderboard
+                </a>
+                <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
+                    <i class="fas fa-home"></i> Dashboard
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Season</label>
-                        <input type="text" id="season" required placeholder="Fall 2025">
-                    </div>
-                    <div class="form-group">
-                        <label>Holes</label>
-                        <select id="holes">
-                            <option value="9">9 Holes</option>
-                            <option value="18" selected>18 Holes</option>
-                        </select>
-                    </div>
+                <div class="nav-item" data-section="teams" onclick="showSection('teams')">
+                    <i class="fas fa-users"></i> Teams
                 </div>
-                <div class="form-group">
-                    <label>Course Name</label>
-                    <input type="text" id="courseName" required placeholder="Golf Cove">
+                <div class="nav-item" data-section="rounds" onclick="showSection('rounds')">
+                    <i class="fas fa-flag"></i> Rounds
                 </div>
-                <button type="submit" class="btn btn-block" style="margin-top: 10px;">
-                    <i class="fas fa-check"></i> Create League
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content" id="mainContent">
+                <div class="nav-item" data-section="print" onclick="showSection('print')">
+                    <i class="fas fa-print"></i> Print
+                </div>
+                <div class="nav-divider"></div>
+                <div class="nav-item" data-section="settings" onclick="showSection('settings')">
+                    <i class="fas fa-cog"></i> Settings
+                </div>
+                <div class="nav-item danger" onclick="resetLeague()">
+                    <i class="fas fa-trash"></i> Reset League
+                </div>
+            </div>
+        </aside>
         
-        <!-- Dashboard Section -->
-        <div class="page-section active" id="section-dashboard">
-            <h1 class="page-title"><i class="fas fa-home"></i> Dashboard</h1>
+        <!-- Mobile overlay -->
+        <div class="mobile-sidebar-overlay" id="mobileSidebarOverlay" onclick="toggleMobileSidebar()"></div>
+        
+        <!-- Main Content Area -->
+        <main class="admin-main">
+            <div class="main-content">
+        
+                <!-- Dashboard Section -->
+                <div class="page-section active" id="section-dashboard">
+                    <h1 class="page-title"><i class="fas fa-home"></i> Dashboard</h1>
             
             <div id="currentRoundStatus"></div>
             
@@ -770,6 +783,72 @@
             </div>
         </div>
         
+            </div><!-- end main-content -->
+        </main>
+    </div><!-- end admin-wrapper -->
+    
+    <!-- Mobile FAB for sidebar -->
+    <button class="mobile-admin-toggle" id="mobileAdminToggle" onclick="toggleMobileSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Password Screen -->
+    <div class="setup-container" id="loginContainer">
+        <div class="setup-card" style="max-width: 360px;">
+            <div style="text-align: center; margin-bottom: 25px;">
+                <img src="images/golfcovelogo.png" alt="Golf Cove" style="height: 50px; margin-bottom: 15px;">
+                <h1 style="font-size: 22px;"><i class="fas fa-lock"></i> Admin Access</h1>
+                <p style="color: #666; font-size: 14px; margin-top: 8px;">Enter password to continue</p>
+            </div>
+            <form onsubmit="checkPassword(event)">
+                <div class="form-group">
+                    <input type="password" id="adminPassword" required placeholder="Password" 
+                           style="text-align: center; font-size: 18px; letter-spacing: 2px;">
+                </div>
+                <div id="loginError" style="color: #e53935; text-align: center; margin-bottom: 15px; display: none;">
+                    <i class="fas fa-exclamation-circle"></i> Incorrect password
+                </div>
+                <button type="submit" class="btn btn-block">
+                    <i class="fas fa-sign-in-alt"></i> Enter
+                </button>
+            </form>
+            <a href="tournaments.html" class="back-link" style="display: block; text-align: center; margin-top: 20px; color: #37b24a; text-decoration: none;">
+                <i class="fas fa-arrow-left"></i> Back to Standings
+            </a>
+        </div>
+    </div>
+
+    <!-- Setup Form (shown when no league exists) -->
+    <div class="setup-container" id="setupContainer" style="display: none;">
+        <div class="setup-card">
+            <h1><i class="fas fa-trophy"></i> Create League</h1>
+            <form onsubmit="createLeague(event)">
+                <div class="form-group">
+                    <label>League Name</label>
+                    <input type="text" id="leagueName" required placeholder="Golf Cove Fall League">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Season</label>
+                        <input type="text" id="season" required placeholder="Fall 2025">
+                    </div>
+                    <div class="form-group">
+                        <label>Holes</label>
+                        <select id="holes">
+                            <option value="9">9 Holes</option>
+                            <option value="18" selected>18 Holes</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Course Name</label>
+                    <input type="text" id="courseName" required placeholder="Golf Cove">
+                </div>
+                <button type="submit" class="btn btn-block" style="margin-top: 10px;">
+                    <i class="fas fa-check"></i> Create League
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Add Player Modal -->
@@ -824,12 +903,38 @@
 
     <script>
         let league = null;
+        const ADMIN_PASSWORD = 'EJ';
         
         function generatePin() {
             return String(Math.floor(1000 + Math.random() * 9000));
         }
         
+        function checkPassword(e) {
+            e.preventDefault();
+            const input = document.getElementById('adminPassword').value;
+            if (input === ADMIN_PASSWORD) {
+                sessionStorage.setItem('golfcove_admin_auth', 'true');
+                document.getElementById('loginContainer').style.display = 'none';
+                initAdmin();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
+            }
+        }
+        
         function init() {
+            // Check if already authenticated this session
+            if (sessionStorage.getItem('golfcove_admin_auth') === 'true') {
+                document.getElementById('loginContainer').style.display = 'none';
+                initAdmin();
+            } else {
+                document.getElementById('loginContainer').style.display = 'flex';
+                document.getElementById('adminPassword').focus();
+            }
+        }
+        
+        function initAdmin() {
             league = JSON.parse(localStorage.getItem('golfcove_league') || 'null');
             
             // Migration for old data
@@ -851,14 +956,21 @@
             
             if (league) {
                 document.getElementById('setupContainer').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                document.getElementById('sidebar').style.display = 'block';
+                document.getElementById('adminWrapper').style.display = 'flex';
+                document.getElementById('mobileAdminToggle').style.display = '';
                 renderAll();
             } else {
                 document.getElementById('setupContainer').style.display = 'block';
-                document.getElementById('mainContent').style.display = 'none';
-                document.getElementById('sidebar').style.display = 'none';
+                document.getElementById('adminWrapper').style.display = 'none';
+                document.getElementById('mobileAdminToggle').style.display = 'none';
             }
+        }
+        
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('adminSidebar');
+            const overlay = document.getElementById('mobileSidebarOverlay');
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('open');
         }
         
         function createLeague(e) {
@@ -876,7 +988,7 @@
                 createdAt: new Date().toISOString()
             };
             save();
-            init();
+            initAdmin();
         }
         
         function renderAll() {
@@ -1309,7 +1421,7 @@
             if (!confirm('Are you absolutely sure?')) return;
             localStorage.removeItem('golfcove_league');
             league = null;
-            init();
+            initAdmin();
         }
         
         // Modal helpers
@@ -1320,6 +1432,7 @@
         
         init();
     </script>
+    <script src="js/main.js"></script>
 </body>
 </html>
 
