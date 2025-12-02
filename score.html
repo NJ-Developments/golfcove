@@ -7,6 +7,9 @@
     <title>Enter Score - Golf Cove</title>
     <link rel="icon" type="image/png" href="images/golfcovelogo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -304,41 +307,60 @@
     </div>
 
     <div class="container" id="content">
-        <div class="message">Loading...</div>
+        <div class="message"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>
     </div>
 
     <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8SH5Eh7OhIFLUkL2hjZS23uXkCsDJXGc",
+            authDomain: "golfcove.firebaseapp.com",
+            databaseURL: "https://golfcove-default-rtdb.firebaseio.com",
+            projectId: "golfcove",
+            storageBucket: "golfcove.firebasestorage.app",
+            messagingSenderId: "284762891644",
+            appId: "1:284762891644:web:424223b102f08a230f70f9"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const leagueRef = db.ref('league');
+        
         let league = null;
         let roundId = null;
         let playerId = null;
 
         function init() {
-            league = JSON.parse(localStorage.getItem('golfcove_league') || 'null');
-            
-            if (!league) {
-                showMessage('No league found. Please set up a league first.', 'fa-exclamation-triangle');
-                return;
-            }
+            // Listen for real-time updates from Firebase
+            leagueRef.on('value', (snapshot) => {
+                league = snapshot.val();
+                
+                if (!league) {
+                    showMessage('No league found. Please set up a league first.', 'fa-exclamation-triangle');
+                    return;
+                }
 
-            const params = new URLSearchParams(window.location.search);
-            roundId = params.get('r');
-            playerId = params.get('p');
+                const params = new URLSearchParams(window.location.search);
+                roundId = params.get('r');
+                playerId = params.get('p');
 
-            // Get current round if not specified
-            if (!roundId && league.rounds.length > 0) {
-                roundId = league.rounds[league.rounds.length - 1].id;
-            }
+                // Get current round if not specified
+                if (!roundId && (league.rounds || []).length > 0) {
+                    roundId = league.rounds[league.rounds.length - 1].id;
+                }
 
-            const round = league.rounds.find(r => r.id === roundId);
-            if (!round) {
-                showMessage('No active round. Ask admin to create one.', 'fa-flag');
-                return;
-            }
+                const round = (league.rounds || []).find(r => r.id === roundId);
+                if (!round) {
+                    showMessage('No active round. Ask admin to create one.', 'fa-flag');
+                    return;
+                }
 
-            document.getElementById('leagueName').textContent = league.name;
-            document.getElementById('roundName').textContent = round.name;
+                document.getElementById('leagueName').textContent = league.name;
+                document.getElementById('roundName').textContent = round.name;
 
-            render();
+                render();
+            });
         }
 
         function showMessage(msg, icon = 'fa-info-circle') {
@@ -542,7 +564,7 @@
                 delete league.scores[roundId][playerId][hole];
             }
 
-            localStorage.setItem('golfcove_league', JSON.stringify(league));
+            leagueRef.set(league);
             
             // Update input styling
             const input = document.getElementById('h' + hole);
@@ -606,9 +628,9 @@
 
             league.scores[roundId][playerId].submitted = true;
             league.scores[roundId][playerId].submittedAt = new Date().toISOString();
-            localStorage.setItem('golfcove_league', JSON.stringify(league));
-
-            window.location.href = 'tournaments.html';
+            leagueRef.set(league).then(() => {
+                window.location.href = 'tournaments.html';
+            });
         }
 
         init();

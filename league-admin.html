@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
         /* Admin Layout */
         .admin-wrapper {
@@ -902,6 +905,22 @@
     </div>
 
     <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8SH5Eh7OhIFLUkL2hjZS23uXkCsDJXGc",
+            authDomain: "golfcove.firebaseapp.com",
+            databaseURL: "https://golfcove-default-rtdb.firebaseio.com",
+            projectId: "golfcove",
+            storageBucket: "golfcove.firebasestorage.app",
+            messagingSenderId: "284762891644",
+            appId: "1:284762891644:web:424223b102f08a230f70f9"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const leagueRef = db.ref('league');
+        
         let league = null;
         const ADMIN_PASSWORD = 'EJ';
         
@@ -935,35 +954,38 @@
         }
         
         function initAdmin() {
-            league = JSON.parse(localStorage.getItem('golfcove_league') || 'null');
-            
-            // Migration for old data
-            if (league && !league.teams) {
-                league.teams = [];
-                const teamNames = [...new Set(league.players.filter(p => p.team).map(p => p.team))];
-                teamNames.forEach(name => {
-                    const teamId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
-                    league.teams.push({ id: teamId, name });
-                    league.players.forEach(p => {
-                        if (p.team === name) p.teamId = teamId;
+            // Listen for real-time updates from Firebase
+            leagueRef.on('value', (snapshot) => {
+                league = snapshot.val();
+                
+                // Migration for old data
+                if (league && !league.teams) {
+                    league.teams = [];
+                    const teamNames = [...new Set((league.players || []).filter(p => p.team).map(p => p.team))];
+                    teamNames.forEach(name => {
+                        const teamId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
+                        league.teams.push({ id: teamId, name });
+                        league.players.forEach(p => {
+                            if (p.team === name) p.teamId = teamId;
+                        });
                     });
-                });
-                league.players.forEach(p => {
-                    if (!p.pin) p.pin = generatePin();
-                });
-                save();
-            }
-            
-            if (league) {
-                document.getElementById('setupContainer').style.display = 'none';
-                document.getElementById('adminWrapper').style.display = 'flex';
-                document.getElementById('mobileAdminToggle').style.display = '';
-                renderAll();
-            } else {
-                document.getElementById('setupContainer').style.display = 'block';
-                document.getElementById('adminWrapper').style.display = 'none';
-                document.getElementById('mobileAdminToggle').style.display = 'none';
-            }
+                    (league.players || []).forEach(p => {
+                        if (!p.pin) p.pin = generatePin();
+                    });
+                    save();
+                }
+                
+                if (league) {
+                    document.getElementById('setupContainer').style.display = 'none';
+                    document.getElementById('adminWrapper').style.display = 'flex';
+                    document.getElementById('mobileAdminToggle').style.display = '';
+                    renderAll();
+                } else {
+                    document.getElementById('setupContainer').style.display = 'block';
+                    document.getElementById('adminWrapper').style.display = 'none';
+                    document.getElementById('mobileAdminToggle').style.display = 'none';
+                }
+            });
         }
         
         function toggleMobileSidebar() {
@@ -1419,16 +1441,17 @@
         function resetLeague() {
             if (!confirm('Delete the entire league? This cannot be undone!')) return;
             if (!confirm('Are you absolutely sure?')) return;
-            localStorage.removeItem('golfcove_league');
+            leagueRef.remove();
             league = null;
-            initAdmin();
         }
         
         // Modal helpers
         function openModal(id) { document.getElementById(id).classList.add('open'); }
         function closeModal(id) { document.getElementById(id).classList.remove('open'); }
         
-        function save() { localStorage.setItem('golfcove_league', JSON.stringify(league)); }
+        function save() { 
+            leagueRef.set(league);
+        }
         
         init();
     </script>

@@ -8,6 +8,9 @@
     <link rel="icon" type="image/png" href="images/golfcovelogo.png">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
         /* Hero Banner */
         .league-hero {
@@ -527,6 +530,22 @@
 
     <script src="js/main.js"></script>
     <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8SH5Eh7OhIFLUkL2hjZS23uXkCsDJXGc",
+            authDomain: "golfcove.firebaseapp.com",
+            databaseURL: "https://golfcove-default-rtdb.firebaseio.com",
+            projectId: "golfcove",
+            storageBucket: "golfcove.firebasestorage.app",
+            messagingSenderId: "284762891644",
+            appId: "1:284762891644:web:424223b102f08a230f70f9"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const leagueRef = db.ref('league');
+        
         let currentView = 'cumulative-net';
         let currentTeamFilter = '';
         let cachedLeague = null;
@@ -546,36 +565,47 @@
         };
 
         function init() {
-            let league = JSON.parse(localStorage.getItem('golfcove_league') || 'null');
             const app = document.getElementById('app');
-
-            // Use default league if none exists
-            if (!league) {
-                league = defaultLeague;
-            }
-
+            app.innerHTML = '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#37b24a;"></i><p style="margin-top:15px;color:#666;">Loading standings...</p></div>';
+            
+            // Listen for real-time updates from Firebase
+            leagueRef.on('value', (snapshot) => {
+                let league = snapshot.val();
+                
+                // Use default league if none exists
+                if (!league) {
+                    league = defaultLeague;
+                }
+                
+                renderLeague(league);
+            });
+        }
+        
+        function renderLeague(league) {
+            const app = document.getElementById('app');
+            
             cachedLeague = league;
             cachedStandings = calculateStandings(league);
             const hasScores = cachedStandings.some(s => s.roundsPlayed > 0);
 
             // Check for live round
             const today = new Date().toISOString().split('T')[0];
-            const activeRound = league.rounds.find(r => r.date === today);
+            const activeRound = (league.rounds || []).find(r => r.date === today);
             let liveBannerHTML = '';
             
             if (activeRound) {
-                const submittedCount = league.players.filter(p => 
+                const submittedCount = (league.players || []).filter(p => 
                     league.scores?.[activeRound.id]?.[p.id]?.submitted
                 ).length;
                 
-                if (submittedCount < league.players.length) {
+                if (submittedCount < (league.players || []).length) {
                     liveBannerHTML = `
                         <div class="live-banner">
                             <div class="info">
                                 <span class="live-dot"></span>
                                 <strong>${activeRound.name} IN PROGRESS</strong>
                             </div>
-                            <div class="count">${submittedCount}/${league.players.length} scores submitted</div>
+                            <div class="count">${submittedCount}/${(league.players || []).length} scores submitted</div>
                         </div>
                     `;
                 }
