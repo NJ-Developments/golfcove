@@ -68,7 +68,7 @@
     </header>
 
     <!-- Page Hero -->
-    <section class="memberships-hero">
+    <section class="memberships-hero" style="background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), url('images/privateEventBanner.jpg') center/cover no-repeat;">
         <div class="container">
             <h1>Site Map</h1>
         </div>
@@ -76,58 +76,65 @@
 
     <!-- Sitemap Content -->
     <section style="padding: 60px 0;">
-        <div class="container">
-            <div class="events-packages fade-in" style="grid-template-columns: repeat(3, 1fr);">
-                <div class="event-package">
-                    <h3><i class="fas fa-home"></i> Main Pages</h3>
-                    <ul>
-                        <li><i class="fas fa-angle-right"></i> <a href="index.html">Home</a></li>
-                        <li><i class="fas fa-angle-right"></i> <a href="pricing.html">Pricing</a></li>
-                        <li><i class="fas fa-angle-right"></i> <a href="memberships.html">Memberships</a></li>
-                        <li><i class="fas fa-angle-right"></i> <a href="multisport.html">MultiSport Arcade</a></li>
-                        <li><i class="fas fa-angle-right"></i> <a href="gift-cards.html">Gift Cards</a></li>
-                        <li><i class="fas fa-angle-right"></i> <a href="menu.html">Menu</a></li>
-                        <li><i class="fas fa-angle-right"></i> <a href="contact.html">Contact</a></li>
-                    </ul>
-                </div>
-                
-                <div class="event-package">
-                    <h3><i class="fas fa-graduation-cap"></i> Lessons & Leagues</h3>
-                    <ul>
-                        <li><i class="fas fa-angle-right"></i> <a href="lessons-leagues.html">Lessons & Leagues</a></li>
-                        <li><i class="fas fa-angle-right"></i> <a href="pinseeker.html">PinSeeker at Golf Cove</a></li>
-                    </ul>
-                </div>
-                
-                <div class="event-package">
-                    <h3><i class="fas fa-calendar-alt"></i> Private Events</h3>
-                    <ul>
-                        <li><i class="fas fa-angle-right"></i> <a href="private-events.html">Private Events</a></li>
-                        <li><i class="fas fa-angle-right"></i> <a href="concierge.html">The Cove Concierge</a></li>
-                    </ul>
-                </div>
-                
-                <div class="event-package">
-                    <h3><i class="fas fa-trophy"></i> Tournaments</h3>
-                    <ul>
-                        <li><i class="fas fa-angle-right"></i> <a href="tournaments.html">Tournaments</a></li>
-                    </ul>
+        <div class="container" style="max-width: 1100px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 60px; justify-content: space-between;">
+            
+            <!-- Site Map Links -->
+            <div style="flex: 1; min-width: 300px;">
+                <ul style="list-style: disc; padding-left: 25px; font-size: 1.1rem; line-height: 2.2;">
+                    <li><a href="pricing.html" style="color: #37b24a;">Pricing</a></li>
+                    <li><a href="memberships.html" style="color: #37b24a;">Memberships</a></li>
+                    <li><a href="lessons-leagues.html" style="color: #37b24a;">Lessons & Leagues</a>
+                        <ul style="list-style: circle; padding-left: 25px; margin-top: 5px;">
+                            <li><a href="lessons-leagues.html" style="color: #37b24a;">Lessons & Leagues</a></li>
+                            <li><a href="pinseeker.html" style="color: #37b24a;">PinSeeker at Golf Cove</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="private-events.html" style="color: #37b24a;">Private Events</a>
+                        <ul style="list-style: circle; padding-left: 25px; margin-top: 5px;">
+                            <li><a href="private-events.html" style="color: #37b24a;">Private Events</a></li>
+                            <li><a href="concierge.html" style="color: #37b24a;">The Cove Concierge</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="multisport.html" style="color: #37b24a;">MultiSport Arcade</a></li>
+                    <li><a href="gift-cards.html" style="color: #37b24a;">Gift Cards</a></li>
+                    <li><a href="tournaments.html" style="color: #37b24a;">Tournaments & League</a></li>
+                    <li><a href="menu.html" style="color: #37b24a;">Menu</a></li>
+                    <li><a href="contact.html" style="color: #37b24a;">Contact</a></li>
+                </ul>
+            </div>
+
+            <!-- Admin Login Box -->
+            <div style="width: 320px; background: #fff; box-shadow: 0 2px 15px rgba(0,0,0,0.1); padding: 30px; border-radius: 5px;">
+                <h2 style="font-size: 1.8rem; color: #333; margin-bottom: 25px; font-weight: 400; font-style: italic;">Admin Login</h2>
+                <form>
+                    <input type="text" placeholder="Username" style="width: 100%; padding: 15px; margin-bottom: 15px; border: none; background: #e8e8e8; font-size: 1rem;">
+                    <input type="password" placeholder="Password" style="width: 100%; padding: 15px; margin-bottom: 15px; border: none; background: #e8e8e8; font-size: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px; color: #333; font-size: 0.95rem;">
+                        <input type="checkbox" checked style="accent-color: #37b24a;"> Remember Me
+                    </label>
+                    <button type="submit" style="background: #37b24a; color: #fff; border: none; padding: 12px 30px; font-size: 1rem; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;">Log In</button>
+                </form>
+                <div style="margin-top: 25px;">
+                    <a href="#" style="color: #37b24a; display: block; margin-bottom: 8px;">Forgot your password?</a>
+                    <a href="#" style="color: #37b24a;">Forgot your username?</a>
                 </div>
             </div>
-            
-            <div class="text-center mt-5 fade-in">
-                <h3 style="margin-bottom: 20px;">External Links</h3>
-                <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-                    <a href="https://golfcove.globalitllc.com/booking#" class="btn-primary" target="_blank">
-                        <i class="fas fa-calendar-check"></i> Book a Bay
-                    </a>
-                    <a href="score.html" class="btn-secondary" style="border-color: var(--primary-green); color: var(--primary-green);">
-                        <i class="fas fa-user-plus"></i> Join League
-                    </a>
-                    <a href="https://foreupsoftware.com/index.php/booking/21220/#/store/gift-cards" class="btn-secondary" target="_blank" style="border-color: var(--primary-green); color: var(--primary-green);">
-                        <i class="fas fa-gift"></i> Buy Gift Cards
-                    </a>
-                </div>
+
+        </div>
+        
+        <!-- External Links -->
+        <div class="container" style="max-width: 1100px; margin: 40px auto 0;">
+            <h3 style="margin-bottom: 20px; text-align: center;">Quick Links</h3>
+            <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                <a href="https://golfcove.globalitllc.com/booking#" class="btn-primary" target="_blank">
+                    <i class="fas fa-calendar-check"></i> Book a Bay
+                </a>
+                <a href="score.html" class="btn-secondary" style="border-color: var(--primary-green); color: var(--primary-green);">
+                    <i class="fas fa-user-plus"></i> Join League
+                </a>
+                <a href="https://foreupsoftware.com/index.php/booking/21220/#/store/gift-cards" class="btn-secondary" target="_blank" style="border-color: var(--primary-green); color: var(--primary-green);">
+                    <i class="fas fa-gift"></i> Buy Gift Cards
+                </a>
             </div>
         </div>
     </section>
