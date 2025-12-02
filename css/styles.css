@@ -283,6 +283,7 @@ header.scrolled {
     height: 85px;
     width: auto;
     transition: transform var(--transition-normal);
+    background: #ffffff;
 }
 
 .logo a {
