@@ -2554,12 +2554,23 @@ footer {
     
     .mobile-menu-toggle {
         display: flex;
+        position: relative;
+        z-index: 1002;
     }
     
     .main-nav {
         display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         width: 100%;
-        padding-top: 20px;
+        height: 100vh;
+        background: #ffffff;
+        z-index: 1001;
+        padding: 100px 30px 30px;
+        overflow-y: auto;
     }
     
     .main-nav.active {
@@ -2568,12 +2579,20 @@ footer {
     
     .nav-menu {
         flex-direction: column;
-        align-items: stretch;
+        align-items: center;
+        gap: 0;
+    }
+    
+    .nav-menu > li {
+        width: 100%;
+        text-align: center;
     }
     
     .nav-menu > li > a {
-        padding: 15px;
+        padding: 18px 15px;
         border-bottom: 1px solid var(--border-light);
+        font-size: 18px;
+        display: block;
     }
     
     .dropdown-menu {
@@ -2584,6 +2603,15 @@ footer {
         box-shadow: none;
         background: var(--bg-light);
         border-radius: 0;
+    }
+    
+    .dropdown-menu li a {
+        text-align: center;
+    }
+    
+    .nav-menu .btn-book {
+        margin-top: 20px;
+        display: inline-block;
     }
     
     .hero-content h1 {
