@@ -1197,36 +1197,40 @@
                         margin-bottom: 10px;
                         padding-bottom: 10px;
                         border-bottom: 2px solid #000;
+                        position: relative;
                     }
-                    #scorecardPreviewContainer .left-info {
+                    #scorecardPreviewContainer .center-header {
+                        flex: 1;
+                        text-align: center;
                         display: flex;
-                        gap: 12px;
+                        flex-direction: column;
                         align-items: center;
+                        gap: 4px;
                     }
                     #scorecardPreviewContainer .logo {
-                        height: 45px;
+                        height: 50px;
                         width: auto;
                     }
-                    #scorecardPreviewContainer .title-block {
-                        line-height: 1.3;
-                    }
                     #scorecardPreviewContainer .league-title {
-                        font-size: 16px;
+                        font-size: 14px;
                         font-weight: bold;
                         text-transform: uppercase;
                         letter-spacing: 0.5px;
                     }
+                    #scorecardPreviewContainer .tournament-details {
+                        font-size: 10px;
+                        color: #666;
+                        font-weight: 600;
+                    }
                     #scorecardPreviewContainer .team-info {
-                        font-size: 13px;
+                        font-size: 11px;
                         font-weight: bold;
                         color: #37b24a;
                     }
-                    #scorecardPreviewContainer .round-date {
-                        font-size: 10px;
-                        color: #666;
-                    }
                     #scorecardPreviewContainer .qr-container {
-                        flex-shrink: 0;
+                        position: absolute;
+                        right: 0;
+                        top: 0;
                     }
                     #scorecardPreviewContainer .qr-placeholder {
                         width: 55px;
@@ -1445,12 +1449,11 @@
                 </style>
                 <div class="scorecard">
                     <div class="top-section">
-                        <div class="left-info">
+                        <div class="center-header">
                             <img src="${logoPath}" alt="Golf Cove" class="logo">
-                            <div class="title-block">
-                                <div class="league-title">${league.name || 'League Name'}</div>
-                                ${teamInfo}
-                            </div>
+                            <div class="league-title">${league.name || 'League Name'}</div>
+                            <div class="tournament-details">${round.name} - ${new Date(round.date).toLocaleDateString()}</div>
+                            ${teamInfo}
                         </div>
                         ${qrSection}
                     </div>
@@ -1835,13 +1838,11 @@
                 return `
                     <div class="scorecard">
                         <div class="top-section">
-                            <div class="left-info">
+                            <div class="center-header">
                                 <img src="${logoPath}" class="logo">
-                                <div class="title-block">
-                                    <div class="league-title">${league.name}</div>
-                                    ${teamInfo}
-                                    <div class="round-date">${round.name} - ${new Date(round.date).toLocaleDateString()}</div>
-                                </div>
+                                <div class="league-title">${league.name}</div>
+                                <div class="tournament-details">${round.name} - ${new Date(round.date).toLocaleDateString()}</div>
+                                ${teamInfo}
                             </div>
                             ${qrSection}
                         </div>
@@ -1917,36 +1918,40 @@
                         margin-bottom: 8px;
                         padding-bottom: 8px;
                         border-bottom: 2px solid #000;
+                        position: relative;
                     }
-                    .left-info {
+                    .center-header {
+                        flex: 1;
+                        text-align: center;
                         display: flex;
-                        gap: 12px;
+                        flex-direction: column;
                         align-items: center;
+                        gap: 4px;
                     }
                     .logo {
-                        height: 45px;
+                        height: 50px;
                         width: auto;
                     }
-                    .title-block {
-                        line-height: 1.3;
-                    }
                     .league-title {
-                        font-size: 16px;
+                        font-size: 14px;
                         font-weight: bold;
                         text-transform: uppercase;
                         letter-spacing: 0.5px;
                     }
+                    .tournament-details {
+                        font-size: 10px;
+                        color: #666;
+                        font-weight: 600;
+                    }
                     .team-info {
-                        font-size: 13px;
+                        font-size: 11px;
                         font-weight: bold;
                         color: #37b24a;
                     }
-                    .round-date {
-                        font-size: 10px;
-                        color: #666;
-                    }
                     .qr-container {
-                        flex-shrink: 0;
+                        position: absolute;
+                        right: 0;
+                        top: 0;
                     }
                     .qr-img {
                         width: 55px;
