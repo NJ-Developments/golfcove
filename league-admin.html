@@ -1611,7 +1611,7 @@
                         <div class="center-header">
                             <img src="${logoPath}" alt="Golf Cove" class="logo">
                             <div class="league-title">${league.name || 'League Name'}</div>
-                            <div class="tournament-details">${round.name} - ${new Date(round.date).toLocaleDateString()}</div>
+                            <div class="tournament-details">${round.name} - ${round.startDate ? new Date(round.startDate).toLocaleDateString() : (round.date ? new Date(round.date).toLocaleDateString() : '')}</div>
                             ${teamInfo}
                         </div>
                         ${qrSection}
@@ -1944,7 +1944,7 @@
                 <style>body{font-family:Arial;text-align:center;padding:40px;}h1{color:#37b24a;}</style>
                 </head><body>
                 <h1>⛳ ${league.name}</h1>
-                <h2>${round.name} - ${new Date(round.date).toLocaleDateString()}</h2>
+                <h2>${round.name} - ${round.startDate ? new Date(round.startDate).toLocaleDateString() : (round.date ? new Date(round.date).toLocaleDateString() : 'TBD')}</h2>
                 <img src="${qrImg}" width="250" height="250" style="margin:30px;">
                 <p>Scan to enter your score</p>
                 <p style="font-family:monospace;background:#f5f5f5;padding:10px;border-radius:5px;">${url}</p>
@@ -2013,7 +2013,7 @@
                             <div class="center-header">
                                 <img src="${logoPath}" class="logo">
                                 <div class="league-title">${league.name}</div>
-                                <div class="tournament-details">${round.name} - ${new Date(round.date).toLocaleDateString()}</div>
+                                <div class="tournament-details">${round.name} - ${round.startDate ? new Date(round.startDate).toLocaleDateString() : (round.date ? new Date(round.date).toLocaleDateString() : 'TBD')}</div>
                                 ${teamInfo}
                             </div>
                             ${qrSection}
