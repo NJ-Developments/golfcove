@@ -62,9 +62,9 @@
         }
       },
       "scores": {
+        ".read": true,
         "$roundId": {
           "$playerId": {
-            ".read": true,
             ".write": "auth != null || (data.child('pin').val() == newData.child('pin').val())",
             ".validate": "newData.hasChildren(['holes', 'submitted'])",
             "holes": {

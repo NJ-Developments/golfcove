@@ -869,7 +869,7 @@
                 league = snapshot.val();
                 
                 if (!league) {
-                    showMessage('No league found. Please set up a league first.', 'fa-exclamation-triangle');
+                    showMessage('⚠️ League not set up yet. Admin needs to configure league first.', 'fa-exclamation-triangle');
                     return;
                 }
 
@@ -915,6 +915,14 @@
                 document.getElementById('roundName').textContent = round.name;
 
                 render();
+            }, (error) => {
+                // Handle Firebase errors (permissions, network, etc.)
+                console.error('Firebase error:', error);
+                if (error.code === 'PERMISSION_DENIED') {
+                    showMessage('🔒 Access denied. Database security rules may not be deployed yet. Contact admin.', 'fa-lock');
+                } else {
+                    showMessage('❌ Connection error: ' + error.message + '. Check your internet connection.', 'fa-exclamation-circle');
+                }
             });
         }
 
