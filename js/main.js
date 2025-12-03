@@ -153,17 +153,22 @@
         // MOBILE DROPDOWN TOGGLE
         // ============================================
         initMobileDropdowns: function() {
-            if (window.innerWidth <= 992) {
-                this.dropdowns.forEach(dropdown => {
-                    const link = dropdown.querySelector('a');
+            this.dropdowns.forEach(dropdown => {
+                const link = dropdown.querySelector(':scope > a');
+                if (link) {
                     link.addEventListener('click', (e) => {
                         if (window.innerWidth <= 992) {
                             e.preventDefault();
+                            e.stopPropagation();
+                            // Close other dropdowns
+                            this.dropdowns.forEach(d => {
+                                if (d !== dropdown) d.classList.remove('active');
+                            });
                             dropdown.classList.toggle('active');
                         }
                     });
-                });
-            }
+                }
+            });
         },
 
         // ============================================
