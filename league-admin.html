@@ -1719,7 +1719,8 @@
                 const startDate = r.startDate ? new Date(r.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
                 const endDate = r.endDate ? new Date(r.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
                 const dateDisplay = r.startDate && r.endDate ? `${startDate} - ${endDate}` : (r.date ? new Date(r.date).toLocaleDateString() : 'No date');
-                const status = r.finalized ? '<span style=\"color: #888; font-size: 12px;\">• Finalized</span>' : '';\n                return `
+                const status = r.finalized ? '<span style="color: #888; font-size: 12px;">• Finalized</span>' : '';
+                return `
                     <div class="round-item">
                         <div>
                             <h4>${r.name}</h4>
