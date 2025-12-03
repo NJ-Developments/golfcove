@@ -1456,9 +1456,10 @@
             
             const players = league.players.filter(p => p.teamId === teamId);
             
-            if (players.length === 0) { alert('No players on this team'); return; }
+            // Print enough blank scorecards for the team (or at least 5)
+            const cardCount = Math.max(players.length, 5);
             
-            const buildCard = (player) => {
+            const buildCard = () => {
                 let frontPars = '', backPars = '', frontTotal = 0, backTotal = 0;
                 for (let h = 0; h < frontNine; h++) { frontPars += `<td>${pars[h]}</td>`; frontTotal += pars[h]; }
                 if (has18) for (let h = 9; h < holes; h++) { backPars += `<td>${pars[h]}</td>`; backTotal += pars[h]; }
@@ -1466,7 +1467,7 @@
                 return `
                     <div class="scorecard">
                         <div class="header"><div class="left"><h1>⛳ ${league.course?.name || 'Golf Cove'}</h1><h2>${league.name} - ${team.name}</h2><p>${round.name} • ${new Date(round.date).toLocaleDateString()}</p></div><div class="qr">${qrImg ? `<img src="${qrImg}">` : ''}<span>Scan to enter score</span></div></div>
-                        <div class="info"><div class="field"><b>Player:</b> ${player.name}</div><div class="field"><b>HCP:</b> ${player.handicap}</div><div class="field"><b>PIN:</b> ${player.pin || '____'}</div></div>
+                        <div class="info"><div class="field"><b>Player:</b> ________________________</div><div class="field"><b>HCP:</b> ______</div><div class="field"><b>PIN:</b> ______</div></div>
                         <table><thead><tr><th class="label">HOLE</th>${Array.from({length:frontNine},(_,i)=>`<th>${i+1}</th>`).join('')}<th class="sub">OUT</th>${has18?Array.from({length:holes-9},(_,i)=>`<th>${i+10}</th>`).join(''):''}${has18?'<th class="sub">IN</th>':''}<th class="tot">TOT</th><th class="tot">HCP</th><th class="net">NET</th></tr></thead>
                         <tbody><tr class="par"><td class="label">PAR</td>${frontPars}<td class="sub">${frontTotal}</td>${has18?backPars:''}${has18?`<td class="sub">${backTotal}</td>`:''}<td class="tot">${frontTotal+backTotal}</td><td class="tot"></td><td class="net"></td></tr>
                         <tr class="score"><td class="label">SCORE</td>${Array.from({length:frontNine},()=>'<td></td>').join('')}<td class="sub"></td>${has18?Array.from({length:holes-9},()=>'<td></td>').join(''):''}${has18?'<td class="sub"></td>':''}<td class="tot"></td><td class="tot"></td><td class="net"></td></tr></tbody></table>
@@ -1477,7 +1478,7 @@
             
             const w = window.open('', '_blank');
             w.document.write(`
-                <!DOCTYPE html><html><head><title>Scorecards - ${team.name}</title>
+                <!DOCTYPE html><html><head><title>Blank Scorecards - ${team.name}</title>
                 <style>
                     * {
                         margin: 0;
@@ -1640,7 +1641,7 @@
                             page-break-after: auto;
                         }
                     }
-                </style></head><body>${players.map(p => buildCard(p)).join('')}</body></html>
+                </style></head><body>${Array.from({length: cardCount}, () => buildCard()).join('')}</body></html>
             `);
             w.document.close();
             setTimeout(() => w.print(), 300);
