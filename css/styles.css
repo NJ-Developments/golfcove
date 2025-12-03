@@ -1158,9 +1158,10 @@ section {
 
 .memberships-hero h1 {
     color: var(--text-light);
-    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-size: clamp(2rem, 4vw, 3rem);
     margin-bottom: 15px;
     position: relative;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .membership-tiers {
