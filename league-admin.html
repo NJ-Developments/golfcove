@@ -1240,22 +1240,6 @@
                         font-weight: bold;
                         color: #666;
                     }
-                    #scorecardPreviewContainer .player-row {
-                        display: flex;
-                        gap: 20px;
-                        margin-bottom: 10px;
-                        padding: 6px;
-                        background: #f5f5f5;
-                        border: 1px solid #000;
-                    }
-                    #scorecardPreviewContainer .player-row .field {
-                        font-size: 10px;
-                        display: flex;
-                        gap: 5px;
-                    }
-                    #scorecardPreviewContainer .player-row .field span {
-                        font-weight: bold;
-                    }
                     #scorecardPreviewContainer .score-grid {
                         width: 100%;
                         border-collapse: collapse;
@@ -1266,6 +1250,16 @@
                         text-align: center;
                         padding: 5px 2px;
                         font-size: 10px;
+                    }
+                    #scorecardPreviewContainer .name-cell {
+                        background: #333;
+                        color: #fff;
+                        font-weight: bold;
+                        font-size: 9px;
+                        text-transform: uppercase;
+                        width: 80px;
+                        text-align: left;
+                        padding-left: 4px;
                     }
                     #scorecardPreviewContainer .label-cell {
                         background: #333;
@@ -1278,14 +1272,21 @@
                     #scorecardPreviewContainer .holes-row td {
                         font-weight: bold;
                         font-size: 9px;
+                        background: #f5f5f5;
                     }
                     #scorecardPreviewContainer .par-row td {
                         background: #f5f5f5;
                         font-weight: 600;
                     }
-                    #scorecardPreviewContainer .score-row td {
-                        height: 25px;
+                    #scorecardPreviewContainer .player-row td {
+                        height: 22px;
                         background: #fff;
+                    }
+                    #scorecardPreviewContainer .player-row .name-cell {
+                        background: #fff;
+                        color: #000;
+                        border-right: 2px solid #000;
+                        font-weight: normal;
                     }
                     #scorecardPreviewContainer .total-cell {
                         background: #e8e8e8 !important;
@@ -1453,14 +1454,9 @@
                         </div>
                         ${qrSection}
                     </div>
-                    <div class="player-row">
-                        <div class="field"><span>PLAYER:</span> _______________________</div>
-                        <div class="field"><span>HCP:</span> ______</div>
-                        <div class="field"><span>PIN:</span> ______</div>
-                    </div>
                     <table class="score-grid">
                         <tr class="holes-row">
-                            <td class="label-cell">HOLE</td>
+                            <td class="name-cell">NAME</td>
                             ${Array.from({length:frontNine},(_,i)=>`<td>${i+1}</td>`).join('')}
                             <td class="total-cell">OUT</td>
                             ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
@@ -1470,7 +1466,7 @@
                             <td class="total-cell">NET</td>
                         </tr>
                         <tr class="par-row">
-                            <td class="label-cell">PAR</td>
+                            <td class="label-cell" style="background:#666;text-align:center;">PAR</td>
                             ${frontPars}
                             <td class="total-cell">${frontTotal}</td>
                             ${has18?backPars:''}
@@ -1479,8 +1475,9 @@
                             <td></td>
                             <td></td>
                         </tr>
-                        <tr class="score-row">
-                            <td class="label-cell">SCORE</td>
+                        ${Array.from({length:6},()=>`
+                        <tr class="player-row">
+                            <td class="name-cell"></td>
                             ${Array.from({length:frontNine},()=>'<td></td>').join('')}
                             <td class="total-cell"></td>
                             ${has18?Array.from({length:holes-9},()=>'<td></td>').join(''):''}
@@ -1488,7 +1485,7 @@
                             <td class="total-cell"></td>
                             <td></td>
                             <td></td>
-                        </tr>
+                        </tr>`).join('')}
                     </table>
                     <div class="bottom-row">
                         <div class="field"><span>SCORER:</span> _________________</div>
@@ -1849,15 +1846,9 @@
                             ${qrSection}
                         </div>
                         
-                        <div class="player-row">
-                            <div class="field"><span>PLAYER:</span> _____________________________</div>
-                            <div class="field"><span>HCP:</span> _______</div>
-                            <div class="field"><span>PIN:</span> _______</div>
-                        </div>
-                        
                         <table class="score-grid">
                             <tr class="holes-row">
-                                <td class="label-cell">HOLE</td>
+                                <td class="name-cell">NAME</td>
                                 ${Array.from({length:frontNine},(_,i)=>`<td>${i+1}</td>`).join('')}
                                 <td class="total-cell">OUT</td>
                                 ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
@@ -1867,25 +1858,26 @@
                                 <td class="total-cell">NET</td>
                             </tr>
                             <tr class="par-row">
-                                <td class="label-cell">PAR</td>
+                                <td class="label-cell" style="background:#666;text-align:center;">PAR</td>
                                 ${frontPars}
                                 <td class="total-cell">${frontTotal}</td>
                                 ${has18?backPars:''}
                                 ${has18?`<td class="total-cell">${backTotal}</td>`:''}
                                 <td class="total-cell">${frontTotal+backTotal}</td>
-                                <td class="total-cell"></td>
-                                <td class="total-cell"></td>
+                                <td></td>
+                                <td></td>
                             </tr>
-                            <tr class="score-row">
-                                <td class="label-cell">SCORE</td>
+                            ${Array.from({length:6},()=>`
+                            <tr class="player-row">
+                                <td class="name-cell"></td>
                                 ${Array.from({length:frontNine},()=>'<td></td>').join('')}
                                 <td class="total-cell"></td>
                                 ${has18?Array.from({length:holes-9},()=>'<td></td>').join(''):''}
                                 ${has18?'<td class="total-cell"></td>':''}
                                 <td class="total-cell"></td>
-                                <td class="total-cell"></td>
-                                <td class="total-cell"></td>
-                            </tr>
+                                <td></td>
+                                <td></td>
+                            </tr>`).join('')}
                         </table>
                         
                         <div class="bottom-row">
@@ -1962,23 +1954,6 @@
                         border: 1px solid #000;
                     }
                     
-                    .player-row {
-                        display: flex;
-                        gap: 25px;
-                        margin-bottom: 8px;
-                        padding: 6px;
-                        background: #f5f5f5;
-                        border: 1px solid #000;
-                    }
-                    .player-row .field {
-                        font-size: 9px;
-                        display: flex;
-                        gap: 5px;
-                    }
-                    .player-row .field span {
-                        font-weight: bold;
-                    }
-                    
                     .score-grid {
                         width: 100%;
                         border-collapse: collapse;
@@ -1989,6 +1964,16 @@
                         text-align: center;
                         padding: 4px 2px;
                         font-size: 10px;
+                    }
+                    .name-cell {
+                        background: #333;
+                        color: #fff;
+                        font-weight: bold;
+                        font-size: 9px;
+                        text-transform: uppercase;
+                        width: 80px;
+                        text-align: left;
+                        padding-left: 4px;
                     }
                     .label-cell {
                         background: #333;
@@ -2001,14 +1986,21 @@
                     .holes-row td {
                         font-weight: bold;
                         font-size: 9px;
+                        background: #f5f5f5;
                     }
                     .par-row td {
                         background: #f5f5f5;
                         font-weight: 600;
                     }
-                    .score-row td {
-                        height: 25px;
+                    .player-row td {
+                        height: 22px;
                         background: #fff;
+                    }
+                    .player-row .name-cell {
+                        background: #fff;
+                        color: #000;
+                        border-right: 2px solid #000;
+                        font-weight: normal;
                     }
                     .total-cell {
                         background: #e8e8e8 !important;
