@@ -60,7 +60,6 @@
             this.initTestimonialCarousel();
             this.highlightActiveNav();
             this.initLazyLoading();
-            this.initMobileDropdowns();
         },
 
         cacheElements: function() {
@@ -150,28 +149,6 @@
         },
 
         // ============================================
-        // MOBILE DROPDOWN TOGGLE
-        // ============================================
-        initMobileDropdowns: function() {
-            this.dropdowns.forEach(dropdown => {
-                const link = dropdown.querySelector(':scope > a');
-                if (link) {
-                    link.addEventListener('click', (e) => {
-                        if (window.innerWidth <= 992) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Close other dropdowns
-                            this.dropdowns.forEach(d => {
-                                if (d !== dropdown) d.classList.remove('active');
-                            });
-                            dropdown.classList.toggle('active');
-                        }
-                    });
-                }
-            });
-        },
-
-        // ============================================
         // BACK TO TOP
         // ============================================
         handleBackToTop: function() {
@@ -233,7 +210,7 @@
         // DROPDOWN ACCESSIBILITY
         // ============================================
         initDropdownAccessibility: function(dropdown) {
-            const link = dropdown.querySelector('a');
+            const link = dropdown.querySelector(':scope > a');
             const menu = dropdown.querySelector('.dropdown-menu');
             
             if (link && menu) {
@@ -242,27 +219,29 @@
                         e.preventDefault();
                         const isExpanded = link.getAttribute('aria-expanded') === 'true';
                         link.setAttribute('aria-expanded', !isExpanded);
-                        menu.style.display = isExpanded ? 'none' : 'block';
+                        dropdown.classList.toggle('active');
                     }
                 });
                 
-                // Touch device support
-                if (utils.isTouchDevice()) {
-                    link.addEventListener('touchstart', (e) => {
-                        if (window.innerWidth <= 992) {
-                            e.preventDefault();
-                            const isOpen = menu.style.display === 'block';
-                            
-                            // Close all other dropdowns
-                            this.dropdowns.forEach(d => {
-                                const m = d.querySelector('.dropdown-menu');
-                                if (m && m !== menu) m.style.display = 'none';
-                            });
-                            
-                            menu.style.display = isOpen ? 'none' : 'block';
-                        }
-                    });
-                }
+                // Click/touch support for mobile
+                link.addEventListener('click', (e) => {
+                    if (window.innerWidth <= 992) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        // Close all other dropdowns
+                        this.dropdowns.forEach(d => {
+                            if (d !== dropdown) {
+                                d.classList.remove('active');
+                                const dLink = d.querySelector(':scope > a');
+                                if (dLink) dLink.setAttribute('aria-expanded', 'false');
+                            }
+                        });
+                        
+                        const isOpen = dropdown.classList.toggle('active');
+                        link.setAttribute('aria-expanded', isOpen);
+                    }
+                });
             }
         },
 
