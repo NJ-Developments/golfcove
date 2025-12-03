@@ -1,0 +1,84 @@
+{
+  "rules": {
+    "league": {
+      ".read": true,
+      ".write": "auth != null",
+      ".validate": "newData.hasChildren(['name', 'course', 'teams', 'players', 'rounds'])",
+      "name": {
+        ".validate": "newData.isString() && newData.val().length > 0"
+      },
+      "course": {
+        ".validate": "newData.hasChildren(['holes', 'pars'])",
+        "holes": {
+          ".validate": "newData.isNumber() && (newData.val() == 9 || newData.val() == 18)"
+        },
+        "pars": {
+          ".validate": "newData.hasChildren()"
+        }
+      },
+      "teams": {
+        "$teamId": {
+          ".validate": "newData.hasChildren(['id', 'name'])",
+          "id": {
+            ".validate": "newData.isString()"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          }
+        }
+      },
+      "players": {
+        "$playerId": {
+          ".validate": "newData.hasChildren(['id', 'name', 'teamId', 'handicap', 'pin'])",
+          "id": {
+            ".validate": "newData.isString()"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "teamId": {
+            ".validate": "newData.isString()"
+          },
+          "handicap": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 54"
+          },
+          "pin": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+          }
+        }
+      },
+      "rounds": {
+        "$roundId": {
+          ".validate": "newData.hasChildren(['id', 'name', 'date'])",
+          "id": {
+            ".validate": "newData.isString()"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "date": {
+            ".validate": "newData.isString()"
+          }
+        }
+      },
+      "scores": {
+        "$roundId": {
+          "$playerId": {
+            ".read": true,
+            ".write": "auth != null || (data.child('pin').val() == newData.child('pin').val())",
+            ".validate": "newData.hasChildren(['holes', 'submitted'])",
+            "holes": {
+              ".validate": "newData.hasChildren()"
+            },
+            "submitted": {
+              ".validate": "newData.isBoolean()"
+            },
+            "pin": {
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+            }
+          }
+        }
+      }
+    }
+  }
+}

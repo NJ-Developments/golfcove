@@ -12,6 +12,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <style>
         /* Admin Layout */
         .admin-wrapper {
@@ -828,25 +829,34 @@
     <button class="mobile-admin-toggle" id="mobileAdminToggle" onclick="toggleMobileSidebar()">
         <i class="fas fa-bars"></i>
     </button>
+    
+    <!-- Logout Button (Desktop) -->
+    <button onclick="handleLogout()" style="position: fixed; top: 80px; right: 20px; background: #e74c3c; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.3s; z-index: 150; box-shadow: 0 2px 10px rgba(231,76,60,0.3);" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">
+        <i class="fas fa-sign-out-alt"></i> <span>Sign Out</span>
+    </button>
 
-    <!-- Password Screen -->
+    <!-- Login Screen -->
     <div class="setup-container" id="loginContainer">
-        <div class="setup-card" style="max-width: 360px;">
+        <div class="setup-card" style="max-width: 400px;">
             <div style="text-align: center; margin-bottom: 25px;">
                 <img src="images/golfcovelogo.png" alt="Golf Cove" style="height: 50px; margin-bottom: 15px;">
-                <h1 style="font-size: 22px;"><i class="fas fa-lock"></i> Admin Access</h1>
-                <p style="color: #666; font-size: 14px; margin-top: 8px;">Enter password to continue</p>
+                <h1 style="font-size: 22px;"><i class="fas fa-shield-alt"></i> Secure Admin Access</h1>
+                <p style="color: #666; font-size: 14px; margin-top: 8px;">Sign in with your admin account</p>
             </div>
-            <form onsubmit="checkPassword(event)">
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <input type="email" id="adminEmail" required placeholder="Email Address" 
+                           style="text-align: center; font-size: 16px;">
+                </div>
                 <div class="form-group">
                     <input type="password" id="adminPassword" required placeholder="Password" 
-                           style="text-align: center; font-size: 18px; letter-spacing: 2px;">
+                           style="text-align: center; font-size: 16px; letter-spacing: 2px;">
                 </div>
                 <div id="loginError" style="color: #e53935; text-align: center; margin-bottom: 15px; display: none;">
-                    <i class="fas fa-exclamation-circle"></i> Incorrect password
+                    <i class="fas fa-exclamation-circle"></i> <span id="loginErrorText">Invalid credentials</span>
                 </div>
-                <button type="submit" class="btn btn-block">
-                    <i class="fas fa-sign-in-alt"></i> Enter
+                <button type="submit" id="loginButton" class="btn btn-block">
+                    <i class="fas fa-sign-in-alt"></i> Sign In Securely
                 </button>
             </form>
             <a href="tournaments.html" class="back-link" style="display: block; text-align: center; margin-top: 20px; color: #37b24a; text-decoration: none;">
@@ -953,10 +963,38 @@
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const auth = firebase.auth();
         const leagueRef = db.ref('league');
         
         let league = null;
-        const ADMIN_PASSWORD = 'EJ';
+        let currentUser = null;
+        
+        // Rate limiting
+        const rateLimits = {
+            lastRequest: 0,
+            requestCount: 0,
+            windowStart: Date.now(),
+            maxRequests: 100,
+            windowMs: 60000 // 1 minute
+        };
+        
+        function checkRateLimit() {
+            const now = Date.now();
+            if (now - rateLimits.windowStart > rateLimits.windowMs) {
+                rateLimits.requestCount = 0;
+                rateLimits.windowStart = now;
+            }
+            rateLimits.requestCount++;
+            if (rateLimits.requestCount > rateLimits.maxRequests) {
+                throw new Error('Rate limit exceeded. Please wait before making more requests.');
+            }
+            const timeSinceLastRequest = now - rateLimits.lastRequest;
+            if (timeSinceLastRequest < 100) { // Minimum 100ms between requests
+                return false;
+            }
+            rateLimits.lastRequest = now;
+            return true;
+        }
         
         function generatePin() {
             // Generate unique 4-digit PIN
@@ -970,29 +1008,69 @@
             return pin;
         }
         
-        function checkPassword(e) {
+        // Authentication handlers
+        async function handleLogin(e) {
             e.preventDefault();
-            const input = document.getElementById('adminPassword').value;
-            if (input === ADMIN_PASSWORD) {
-                sessionStorage.setItem('golfcove_admin_auth', 'true');
-                document.getElementById('loginContainer').style.display = 'none';
-                initAdmin();
-            } else {
-                document.getElementById('loginError').style.display = 'block';
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const loginButton = document.getElementById('loginButton');
+            const errorDiv = document.getElementById('loginError');
+            const errorText = document.getElementById('loginErrorText');
+            
+            loginButton.disabled = true;
+            loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+            errorDiv.style.display = 'none';
+            
+            try {
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                currentUser = userCredential.user;
+                // Success handled by onAuthStateChanged
+            } catch (error) {
+                console.error('Login error:', error);
+                let message = 'Invalid credentials';
+                if (error.code === 'auth/user-not-found') message = 'No admin account found';
+                else if (error.code === 'auth/wrong-password') message = 'Incorrect password';
+                else if (error.code === 'auth/invalid-email') message = 'Invalid email format';
+                else if (error.code === 'auth/too-many-requests') message = 'Too many attempts. Please try later.';
+                else if (error.code === 'auth/network-request-failed') message = 'Network error. Check connection.';
+                
+                errorText.textContent = message;
+                errorDiv.style.display = 'block';
+                loginButton.disabled = false;
+                loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In Securely';
                 document.getElementById('adminPassword').value = '';
-                document.getElementById('adminPassword').focus();
             }
         }
         
-        function init() {
-            // Check if already authenticated this session
-            if (sessionStorage.getItem('golfcove_admin_auth') === 'true') {
+        async function handleLogout() {
+            if (confirm('Are you sure you want to sign out?')) {
+                try {
+                    await auth.signOut();
+                    document.getElementById('loginContainer').style.display = 'flex';
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    alert('Error signing out. Please try again.');
+                }
+            }
+        }
+        
+        // Monitor auth state
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
                 document.getElementById('loginContainer').style.display = 'none';
                 initAdmin();
             } else {
+                currentUser = null;
                 document.getElementById('loginContainer').style.display = 'flex';
-                document.getElementById('adminPassword').focus();
+                setTimeout(() => {
+                    document.getElementById('adminEmail')?.focus();
+                }, 100);
             }
+        });
+        
+        function init() {
+            // Auth state handled by onAuthStateChanged listener
         }
         
         function initAdmin() {
@@ -2092,8 +2170,20 @@
         function openModal(id) { document.getElementById(id).classList.add('open'); }
         function closeModal(id) { document.getElementById(id).classList.remove('open'); }
         
-        function save() { 
-            leagueRef.set(league);
+        function save() {
+            if (!currentUser) {
+                alert('You must be signed in to make changes.');
+                return;
+            }
+            try {
+                if (!checkRateLimit()) {
+                    console.warn('Request throttled - please slow down');
+                    return;
+                }
+                leagueRef.set(league);
+            } catch (error) {
+                alert(error.message);
+            }
         }
         
         init();
