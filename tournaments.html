@@ -709,7 +709,7 @@
                                 <div class="filter-group">
                                     <label><i class="fas fa-filter"></i> Team:</label>
                                     <select class="filter-select" id="teamFilter" onchange="filterByTeam(this.value)">
-                                        <option value="">All Teams</option>
+                                        <option value="">All Players</option>
                                         ${(league.teams || []).map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
                                     </select>
                                 </div>
