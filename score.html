@@ -1156,8 +1156,51 @@
         }
         
         function showPlayerSelect() {
-            playerId = null;
-            render();
+            // Show PIN prompt modal to switch players
+            const modal = document.createElement('div');
+            modal.id = 'switchPinModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:12px;padding:30px;max-width:400px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                    <h2 style="color:#37b24a;margin-bottom:10px;font-size:22px;"><i class="fas fa-key"></i> Enter PIN to Switch</h2>
+                    <p style="color:#666;margin-bottom:20px;font-size:14px;">Enter the 4-digit PIN of the player you want to switch to</p>
+                    <input type="text" id="switchPinInput" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" 
+                           placeholder="••••" autocomplete="off" 
+                           style="width:100%;padding:15px;border:2px solid #ddd;border-radius:8px;font-size:20px;text-align:center;letter-spacing:8px;margin-bottom:15px;">
+                    <div id="switchPinError" style="display:none;color:#e74c3c;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:6px;"></div>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="verifySwitchPin()" style="flex:1;background:#37b24a;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
+                            <i class="fas fa-check"></i> Confirm
+                        </button>
+                        <button onclick="closeSwitchModal()" style="flex:1;background:#6c757d;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            setTimeout(() => document.getElementById('switchPinInput').focus(), 100);
+        }
+        
+        function closeSwitchModal() {
+            const modal = document.getElementById('switchPinModal');
+            if (modal) modal.remove();
+        }
+        
+        function verifySwitchPin() {
+            const pin = document.getElementById('switchPinInput').value;
+            const player = league.players.find(p => p.pin === pin);
+            
+            if (player) {
+                closeSwitchModal();
+                selectPlayer(player.id);
+            } else {
+                const errorEl = document.getElementById('switchPinError');
+                errorEl.textContent = '❌ Invalid PIN. Please try again.';
+                errorEl.style.display = 'block';
+                document.getElementById('switchPinInput').value = '';
+                document.getElementById('switchPinInput').focus();
+            }
         }
         
         function showPinEntry() {
