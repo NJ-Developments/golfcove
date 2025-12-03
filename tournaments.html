@@ -713,9 +713,10 @@
         @media (max-width: 768px) {
             .league-hero { padding: 60px 20px 50px; }
             .league-hero h1 { font-size: 32px; }
+            .hero-subtitle { font-size: 16px; }
+            .hero-dates { font-size: 13px; }
             .league-hero .stats-grid { gap: 30px; flex-wrap: wrap; }
             .league-hero .stat-num { font-size: 42px; }
-            .live-banner { flex-direction: column; gap: 12px; text-align: center; margin: -25px 15px 25px; padding: 18px 20px; }
             .controls-row { flex-direction: column; align-items: stretch; gap: 15px; }
             .filter-group { justify-content: space-between; }
             .view-toggle { justify-content: center; width: 100%; }
@@ -888,33 +889,25 @@
             cachedStandings = calculateStandings(league);
             const hasPlayers = (league.players || []).length > 0;
 
-            // Check for live round
-            const today = new Date().toISOString().split('T')[0];
-            const activeRound = (league.rounds || []).find(r => r.date === today);
-            let liveBannerHTML = '';
+            // Check for active round
+            const activeRound = (league.rounds || []).find(r => !r.finalized);
+            let roundInfoHTML = '';
             
             if (activeRound) {
-                const submittedCount = (league.players || []).filter(p => 
-                    league.scores?.[activeRound.id]?.[p.id]?.submitted
-                ).length;
-                
-                if (submittedCount < (league.players || []).length) {
-                    liveBannerHTML = `
-                        <div class="live-banner">
-                            <div class="info">
-                                <span class="live-dot"></span>
-                                <strong>${activeRound.name} IN PROGRESS</strong>
-                            </div>
-                            <div class="count">${submittedCount}/${(league.players || []).length} scores submitted</div>
-                        </div>
-                    `;
-                }
+                const startDate = new Date(activeRound.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const endDate = new Date(activeRound.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                roundInfoHTML = `
+                    <div class="hero-subtitle">${activeRound.name}</div>
+                    <div class="hero-dates">${startDate} - ${endDate}</div>
+                    <a href="#schedule" class="view-schedule-btn" onclick="alert('Full schedule coming soon!'); return false;"><i class="fas fa-calendar"></i> View Full Schedule</a>
+                `;
             }
 
             app.innerHTML = `
                 <div class="league-hero">
                     <h1>🏆 ${league.name}</h1>
                     <div class="season-badge"><i class="fas fa-calendar-alt"></i> ${league.season}</div>
+                    ${roundInfoHTML}
                     <a href="score.html" class="join-league-btn"><i class="fas fa-user-plus"></i> Join League / Enter Score</a>
                     <div class="stats-grid">
                         <div class="stat">
@@ -933,8 +926,6 @@
                 </div>
 
                 <div class="league-container">
-                    ${liveBannerHTML}
-
                     <div class="standings-card">
                         <div class="standings-header">
                             <h2><span class="trophy">🏆</span> Leaderboard</h2>
