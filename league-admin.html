@@ -735,10 +735,11 @@
             
             <div class="card">
                 <h3><i class="fas fa-id-card"></i> Print Scorecards</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print scorecards for a team with their unique QR code for digital score entry.</p>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print blank scorecards for teams or generic use.</p>
                 <div class="print-grid">
                     <select id="printTeamSelect" onchange="updatePrintPreview()">
                         <option value="">Select a Team</option>
+                        <option value="blank">Blank (No Team Name)</option>
                     </select>
                 </div>
                 <div id="printPreview" style="display:none; margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; text-align: center;">
@@ -746,7 +747,7 @@
                     <div id="teamQRPreview" style="display: inline-block; padding: 10px; background: #fff; border-radius: 8px;"></div>
                     <p style="font-size: 11px; color: #888; margin-top: 10px;" id="teamQRUrl"></p>
                 </div>
-                <button class="btn" onclick="printScorecards()" id="printBtn" disabled><i class="fas fa-print"></i> Print Team Scorecards</button>
+                <button class="btn" onclick="printScorecards()" id="printBtn" disabled><i class="fas fa-print"></i> Print Scorecards</button>
             </div>
             
             <div class="card">
@@ -1113,6 +1114,13 @@
                 return;
             }
             
+            // Handle blank option
+            if (teamId === 'blank') {
+                preview.style.display = 'none';
+                btn.disabled = false;
+                return;
+            }
+            
             const round = league.rounds[league.rounds.length - 1];
             if (!round) {
                 alert('Create a round first');
@@ -1445,28 +1453,35 @@
             if (league.rounds.length === 0) { alert('Create a round first'); return; }
             
             const round = league.rounds[league.rounds.length - 1];
-            const team = league.teams.find(t => t.id === teamId);
+            const isBlank = teamId === 'blank';
+            const team = isBlank ? null : league.teams.find(t => t.id === teamId);
             const holes = league.course?.holes || 18;
             const pars = league.course?.pars || Array(holes).fill(4);
             const frontNine = Math.min(9, holes);
             const has18 = holes >= 18;
             
-            // Get the team-specific QR code
-            const qrImg = document.querySelector('#teamQRPreview img')?.src || '';
+            // Get the team-specific QR code (empty for blank cards)
+            const qrImg = isBlank ? '' : (document.querySelector('#teamQRPreview img')?.src || '');
             
-            const players = league.players.filter(p => p.teamId === teamId);
+            const players = isBlank ? [] : league.players.filter(p => p.teamId === teamId);
             
-            // Print enough blank scorecards for the team (or at least 5)
-            const cardCount = Math.max(players.length, 5);
+            // Print enough blank scorecards for the team (or 5 for blank option)
+            const cardCount = isBlank ? 5 : Math.max(players.length, 5);
             
             const buildCard = () => {
                 let frontPars = '', backPars = '', frontTotal = 0, backTotal = 0;
                 for (let h = 0; h < frontNine; h++) { frontPars += `<td>${pars[h]}</td>`; frontTotal += pars[h]; }
                 if (has18) for (let h = 9; h < holes; h++) { backPars += `<td>${pars[h]}</td>`; backTotal += pars[h]; }
                 
+                const headerText = isBlank 
+                    ? `<h1>⛳ ${league.course?.name || 'Golf Cove'}</h1><h2>${league.name}</h2><p>${round.name} • ${new Date(round.date).toLocaleDateString()}</p>`
+                    : `<h1>⛳ ${league.course?.name || 'Golf Cove'}</h1><h2>${league.name} - ${team.name}</h2><p>${round.name} • ${new Date(round.date).toLocaleDateString()}</p>`;
+                
+                const qrSection = qrImg ? `<div class="qr"><img src="${qrImg}"><span>Scan to enter score</span></div>` : '';
+                
                 return `
                     <div class="scorecard">
-                        <div class="header"><div class="left"><h1>⛳ ${league.course?.name || 'Golf Cove'}</h1><h2>${league.name} - ${team.name}</h2><p>${round.name} • ${new Date(round.date).toLocaleDateString()}</p></div><div class="qr">${qrImg ? `<img src="${qrImg}">` : ''}<span>Scan to enter score</span></div></div>
+                        <div class="header"><div class="left">${headerText}</div>${qrSection}</div>
                         <div class="info"><div class="field"><b>Player:</b> ________________________</div><div class="field"><b>HCP:</b> ______</div><div class="field"><b>PIN:</b> ______</div></div>
                         <table><thead><tr><th class="label">HOLE</th>${Array.from({length:frontNine},(_,i)=>`<th>${i+1}</th>`).join('')}<th class="sub">OUT</th>${has18?Array.from({length:holes-9},(_,i)=>`<th>${i+10}</th>`).join(''):''}${has18?'<th class="sub">IN</th>':''}<th class="tot">TOT</th><th class="tot">HCP</th><th class="net">NET</th></tr></thead>
                         <tbody><tr class="par"><td class="label">PAR</td>${frontPars}<td class="sub">${frontTotal}</td>${has18?backPars:''}${has18?`<td class="sub">${backTotal}</td>`:''}<td class="tot">${frontTotal+backTotal}</td><td class="tot"></td><td class="net"></td></tr>
@@ -1477,8 +1492,9 @@
             };
             
             const w = window.open('', '_blank');
+            const title = isBlank ? 'Blank Scorecards' : `Blank Scorecards - ${team.name}`;
             w.document.write(`
-                <!DOCTYPE html><html><head><title>Blank Scorecards - ${team.name}</title>
+                <!DOCTYPE html><html><head><title>${title}</title>
                 <style>
                     * {
                         margin: 0;
