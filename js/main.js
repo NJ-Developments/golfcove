@@ -60,6 +60,7 @@
             this.initTestimonialCarousel();
             this.highlightActiveNav();
             this.initLazyLoading();
+            this.initMobileDropdowns();
         },
 
         cacheElements: function() {
@@ -145,6 +146,23 @@
                     this.mobileMenuToggle.setAttribute('aria-expanded', 'false');
                     document.body.style.overflow = '';
                 }
+            }
+        },
+
+        // ============================================
+        // MOBILE DROPDOWN TOGGLE
+        // ============================================
+        initMobileDropdowns: function() {
+            if (window.innerWidth <= 992) {
+                this.dropdowns.forEach(dropdown => {
+                    const link = dropdown.querySelector('a');
+                    link.addEventListener('click', (e) => {
+                        if (window.innerWidth <= 992) {
+                            e.preventDefault();
+                            dropdown.classList.toggle('active');
+                        }
+                    });
+                });
             }
         },
 

@@ -2597,16 +2597,31 @@ footer {
     
     .dropdown-menu {
         position: static;
-        opacity: 1;
-        visibility: visible;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        visibility: hidden;
         transform: none;
         box-shadow: none;
         background: var(--bg-light);
         border-radius: 0;
+        transition: max-height 0.3s ease, opacity 0.3s ease;
+    }
+    
+    .dropdown:hover .dropdown-menu,
+    .dropdown.active .dropdown-menu {
+        max-height: 500px;
+        opacity: 1;
+        visibility: visible;
     }
     
     .dropdown-menu li a {
         text-align: center;
+        color: #333;
+    }
+    
+    .dropdown-menu li a:hover {
+        color: var(--primary-green);
     }
     
     .nav-menu .btn-book {
