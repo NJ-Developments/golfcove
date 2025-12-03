@@ -17,18 +17,20 @@
         .admin-wrapper {
             display: flex;
             min-height: calc(100vh - 120px);
+            background: #f8f9fa;
         }
         
         /* Sidebar */
         .admin-sidebar {
-            width: 260px;
+            width: 280px;
             background: #fff;
-            border-right: 1px solid #e0e0e0;
+            border-right: 1px solid #e5e7eb;
             flex-shrink: 0;
             position: sticky;
             top: 0;
             height: calc(100vh - 120px);
             overflow-y: auto;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.03);
         }
         .admin-sidebar.mobile-open {
             display: block;
@@ -36,44 +38,51 @@
         
         /* League Info in Sidebar */
         .league-info {
-            padding: 25px 20px;
-            border-bottom: 1px solid #eee;
+            padding: 30px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
             background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
             color: #fff;
+            box-shadow: 0 4px 12px rgba(55,178,74,0.15);
         }
         .league-info h2 {
-            font-size: 18px;
-            margin-bottom: 4px;
+            font-size: 20px;
+            margin-bottom: 6px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
         .league-info .season {
-            font-size: 14px;
-            opacity: 0.9;
+            font-size: 13px;
+            opacity: 0.85;
+            font-weight: 500;
         }
         
         /* Admin Sidebar Nav Menu */
         .admin-sidebar .admin-nav {
-            padding: 15px 0;
+            padding: 20px 0;
         }
         .admin-sidebar .nav-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 14px 20px;
-            color: #555;
+            gap: 14px;
+            padding: 15px 24px;
+            color: #6b7280;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.25s ease;
             font-size: 14px;
-            font-weight: 500;
-            border-left: 3px solid transparent;
+            font-weight: 600;
+            border-left: 4px solid transparent;
+            margin: 2px 0;
         }
         .admin-sidebar .nav-item:hover {
-            background: #f5f5f5;
-            color: #333;
+            background: #f9fafb;
+            color: #374151;
+            transform: translateX(2px);
         }
         .admin-sidebar .nav-item.active {
-            background: #e8f5e9;
+            background: linear-gradient(90deg, #e8f5e9 0%, #f0f9f1 100%);
             color: #37b24a;
             border-left-color: #37b24a;
+            font-weight: 700;
         }
         .admin-sidebar .nav-item i {
             width: 20px;
@@ -104,12 +113,12 @@
         /* Main Content */
         .admin-main {
             flex: 1;
-            background: #f5f5f5;
+            background: linear-gradient(to bottom, #f8f9fa 0%, #f1f3f5 100%);
             min-height: calc(100vh - 120px);
         }
         .main-content {
-            padding: 30px;
-            max-width: 900px;
+            padding: 40px;
+            max-width: 1000px;
             margin: 0 auto;
         }
         
@@ -154,48 +163,65 @@
             display: block;
         }
         .page-title {
-            font-size: 24px;
-            color: #333;
-            margin-bottom: 20px;
+            font-size: 28px;
+            color: #1f2937;
+            margin-bottom: 30px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
         .page-title i {
             color: #37b24a;
+            font-size: 30px;
         }
         
         /* Cards */
         .card {
             background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            padding: 20px;
-            margin-bottom: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            padding: 28px;
+            margin-bottom: 24px;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
         }
         .card h3 {
-            font-size: 15px;
-            color: #333;
-            margin-bottom: 15px;
+            font-size: 17px;
+            color: #1f2937;
+            margin-bottom: 18px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            font-weight: 700;
         }
         .card h3 i {
             color: #37b24a;
+            font-size: 20px;
         }
         
         /* Team Cards */
         .team-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
         }
         .team-card {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            border-left: 4px solid #37b24a;
+            background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+            border-radius: 14px;
+            padding: 20px;
+            border-left: 5px solid #37b24a;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+            transition: all 0.3s ease;
+        }
+        .team-card:hover {
+            box-shadow: 0 6px 20px rgba(55,178,74,0.15);
+            transform: translateY(-4px);
         }
         .team-card .team-header {
             display: flex;
@@ -251,63 +277,73 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 8px;
             width: 100%;
-            padding: 10px;
-            margin-top: 10px;
+            padding: 12px;
+            margin-top: 12px;
             background: #fff;
-            border: 2px dashed #ddd;
-            border-radius: 8px;
-            color: #666;
+            border: 2px dashed #d1d5db;
+            border-radius: 10px;
+            color: #6b7280;
             font-size: 13px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
         }
         .team-card .add-player-btn:hover {
             border-color: #37b24a;
+            background: #f0fdf4;
             color: #37b24a;
+            transform: scale(1.02);
         }
         
         /* Add Team */
         .add-team-card {
             background: #fff;
-            border: 2px dashed #ddd;
-            border-radius: 10px;
-            padding: 30px;
+            border: 3px dashed #d1d5db;
+            border-radius: 14px;
+            padding: 40px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 150px;
+            min-height: 180px;
         }
         .add-team-card:hover {
             border-color: #37b24a;
-            background: #f8fff9;
+            background: linear-gradient(135deg, #f0fdf4 0%, #f8fff9 100%);
+            transform: translateY(-4px);
+            box-shadow: 0 6px 20px rgba(55,178,74,0.15);
         }
         .add-team-card i {
-            font-size: 32px;
-            color: #ccc;
-            margin-bottom: 10px;
+            font-size: 40px;
+            color: #d1d5db;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
         }
         .add-team-card:hover i {
             color: #37b24a;
+            transform: scale(1.1);
         }
         
         /* QR Section */
         .qr-display {
             text-align: center;
-            padding: 20px;
+            padding: 30px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 12px;
         }
         .qr-display #qrcode {
             display: inline-block;
-            padding: 15px;
+            padding: 20px;
             background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 15px;
+            border-radius: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            margin-bottom: 20px;
+            border: 2px solid #e5e7eb;
         }
         .qr-display #qrcode img {
             display: block;
