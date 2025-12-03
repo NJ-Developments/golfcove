@@ -39,6 +39,7 @@
             letter-spacing: -0.5px;
             position: relative;
             z-index: 1;
+            color: #fff !important;
         }
         .league-hero .season-badge {
             display: inline-block;
@@ -48,25 +49,67 @@
             border-radius: 30px;
             font-size: 16px;
             font-weight: 600;
+            margin-bottom: 25px;
+        }
+        .hero-subtitle {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 20px 0 8px;
+            color: #fff;
+            position: relative;
+            z-index: 1;
+        }
+        .hero-dates {
+            font-size: 15px;
+            color: rgba(255,255,255,0.9);
             margin-bottom: 15px;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+        .view-schedule-btn {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.3);
+            position: relative;
+            z-index: 1;
+        }
+        .view-schedule-btn:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-1px);
+        }
+        .view-schedule-btn i { 
+            margin-right: 6px;
+            font-size: 12px;
         }
         .join-league-btn {
             display: inline-block;
             background: #fff;
             color: #37b24a;
-            padding: 12px 30px;
+            padding: 14px 32px;
             border-radius: 30px;
-            font-size: 15px;
-            font-weight: 600;
+            font-size: 16px;
+            font-weight: 700;
             text-decoration: none;
-            margin-bottom: 15px;
+            margin-top: 10px;
             transition: all 0.2s;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 1;
         }
         .join-league-btn:hover {
             background: #37b24a;
             color: #fff;
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
         }
         .join-league-btn i { margin-right: 8px; }
         .league-hero .stats-grid {
@@ -268,6 +311,12 @@
             color: #666;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .view-btn i {
+            font-size: 12px;
         }
         .view-btn.active {
             background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
@@ -553,6 +602,48 @@
             font-size: 13px;
         }
 
+        /* Loading Skeleton */
+        .skeleton-loader {
+            padding: 30px;
+        }
+        .skeleton-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        .skeleton-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(90deg, #e9ecef 25%, #f8f9fa 50%, #e9ecef 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s ease-in-out infinite;
+        }
+        .skeleton-text {
+            flex: 1;
+            height: 16px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #e9ecef 25%, #f8f9fa 50%, #e9ecef 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s ease-in-out infinite;
+        }
+        .skeleton-text-short {
+            width: 60px;
+            height: 16px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #e9ecef 25%, #f8f9fa 50%, #e9ecef 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s ease-in-out infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
         /* Empty States */
         .empty-state {
             text-align: center;
@@ -719,6 +810,7 @@
             .league-hero .stat-num { font-size: 42px; }
             .controls-row { flex-direction: column; align-items: stretch; gap: 15px; }
             .filter-group { justify-content: space-between; }
+            .view-btn { padding: 10px 12px; font-size: 12px; }
             .view-toggle { justify-content: center; width: 100%; }
             .view-btn { flex: 1; }
             .export-btn { margin: 0; justify-content: center; width: 100%; }
@@ -828,7 +920,7 @@
         const db = firebase.database();
         const leagueRef = db.ref('league');
         
-        let currentView = 'cumulative-net';
+        let currentView = 'team-standings';
         let currentTeamFilter = '';
         let cachedLeague = null;
         let cachedStandings = null;
@@ -885,21 +977,72 @@
         function renderLeague(league) {
             const app = document.getElementById('app');
             
+            // Show loading skeleton initially
+            if (!cachedLeague) {
+                app.innerHTML = `
+                    <div class="league-hero">
+                        <h1>🏆 Loading League...</h1>
+                    </div>
+                    <div class="league-container">
+                        <div class="standings-card">
+                            <div class="skeleton-loader">
+                                ${Array.from({length: 8}, () => `
+                                    <div class="skeleton-row">
+                                        <div class="skeleton-circle"></div>
+                                        <div class="skeleton-text"></div>
+                                        <div class="skeleton-text-short"></div>
+                                        <div class="skeleton-text-short"></div>
+                                        <div class="skeleton-text-short"></div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
             cachedLeague = league;
             cachedStandings = calculateStandings(league);
             const hasPlayers = (league.players || []).length > 0;
 
-            // Check for active round
-            const activeRound = (league.rounds || []).find(r => !r.finalized);
+            // Find current round based on today's date
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Reset time to midnight for accurate date comparison
+            
+            const rounds = league.rounds || [];
+            let currentRound = null;
+            
+            // First, try to find a round whose date range includes today
+            for (const round of rounds) {
+                if (round.startDate && round.endDate) {
+                    const start = new Date(round.startDate);
+                    const end = new Date(round.endDate);
+                    start.setHours(0, 0, 0, 0);
+                    end.setHours(23, 59, 59, 999);
+                    
+                    if (today >= start && today <= end) {
+                        currentRound = round;
+                        break;
+                    }
+                }
+            }
+            
+            // If no current round found, use the most recent one (last in array)
+            if (!currentRound && rounds.length > 0) {
+                currentRound = rounds[rounds.length - 1];
+            }
+            
             let roundInfoHTML = '';
             
-            if (activeRound) {
-                const startDate = new Date(activeRound.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                const endDate = new Date(activeRound.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            if (currentRound) {
+                const startDate = currentRound.startDate ? new Date(currentRound.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+                const endDate = currentRound.endDate ? new Date(currentRound.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                const dateDisplay = startDate && endDate ? `${startDate} - ${endDate}` : '';
+                
                 roundInfoHTML = `
-                    <div class="hero-subtitle">${activeRound.name}</div>
-                    <div class="hero-dates">${startDate} - ${endDate}</div>
-                    <a href="#schedule" class="view-schedule-btn" onclick="alert('Full schedule coming soon!'); return false;"><i class="fas fa-calendar"></i> View Full Schedule</a>
+                    <div class="hero-subtitle">${currentRound.name}</div>
+                    ${dateDisplay ? `<div class="hero-dates">${dateDisplay}</div>` : ''}
+                    <a href="schedule.html" class="view-schedule-btn"><i class="fas fa-calendar"></i> View Full Schedule</a>
                 `;
             }
 
@@ -910,17 +1053,17 @@
                     ${roundInfoHTML}
                     <a href="score.html" class="join-league-btn"><i class="fas fa-user-plus"></i> Join League / Enter Score</a>
                     <div class="stats-grid">
-                        <div class="stat">
-                            <div class="stat-num">${league.teams?.length || 0}</div>
-                            <div class="stat-label">Teams</div>
+                        <div class="stat" style="border-left: 4px solid #37b24a; padding-left: 20px;">
+                            <div class="stat-num" style="color: #37b24a;">${league.teams?.length || 0}</div>
+                            <div class="stat-label"><i class="fas fa-users"></i> Teams</div>
                         </div>
-                        <div class="stat">
-                            <div class="stat-num">${(league.players || []).length}</div>
-                            <div class="stat-label">Players</div>
+                        <div class="stat" style="border-left: 4px solid #2196F3; padding-left: 20px;">
+                            <div class="stat-num" style="color: #2196F3;">${(league.players || []).length}</div>
+                            <div class="stat-label"><i class="fas fa-user"></i> Players</div>
                         </div>
-                        <div class="stat">
-                            <div class="stat-num">${(league.rounds || []).length}</div>
-                            <div class="stat-label">Rounds</div>
+                        <div class="stat" style="border-left: 4px solid #FF9800; padding-left: 20px;">
+                            <div class="stat-num" style="color: #FF9800;">${(league.rounds || []).length}</div>
+                            <div class="stat-label"><i class="fas fa-flag"></i> Rounds</div>
                         </div>
                     </div>
                 </div>
@@ -942,9 +1085,12 @@
                                     </select>
                                 </div>
                                 <div class="view-toggle">
-                                    <button class="view-btn active" data-view="cumulative-net">Net</button>
-                                    <button class="view-btn" data-view="cumulative-gross">Gross</button>
-                                    <button class="view-btn" data-view="by-round">By Week</button>
+                                    <button class="view-btn active" data-view="team-standings" title="Team competition - combined net scores for 2-person teams"><i class="fas fa-users"></i> Teams</button>
+                                    <button class="view-btn" data-view="cumulative-net" title="Individual cumulative net scores (handicap adjusted)"><i class="fas fa-trophy"></i> Net</button>
+                                    <button class="view-btn" data-view="recent-form" title="Last 3 rounds - shows momentum & recent performance"><i class="fas fa-chart-line"></i> Recent Form</button>
+                                    <button class="view-btn" data-view="average" title="Average net per round - fairest for different round counts"><i class="fas fa-balance-scale"></i> Average</button>
+                                    <button class="view-btn" data-view="cumulative-gross" title="Individual gross scores without handicap adjustment"><i class="fas fa-golf-ball"></i> Gross</button>
+                                    <button class="view-btn" data-view="by-round" title="Week by week breakdown - see round-by-round performance"><i class="fas fa-calendar-week"></i> By Week</button>
                                 </div>
                                 <button class="export-btn" onclick="exportToExcel()">
                                     <i class="fas fa-file-excel"></i> Export
@@ -954,7 +1100,7 @@
                         ` : ''}
 
                         <div id="standingsContent">
-                            ${hasPlayers ? renderTable(cachedStandings, league, 'cumulative-net') : `
+                            ${hasPlayers ? renderTable(cachedStandings, league, 'team-standings') : `
                                 <div class="empty-state">
                                     <i class="fas fa-users"></i>
                                     <h2>No Players Yet</h2>
@@ -966,6 +1112,7 @@
 
                     <div class="action-row">
                         <a href="score.html" class="league-btn"><i class="fas fa-pencil-alt"></i> Enter My Score</a>
+                        <a href="schedule.html" class="league-btn" style="background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);"><i class="fas fa-calendar-alt"></i> View Schedule</a>
                     </div>
 
                     <div class="admin-footer">
@@ -1080,7 +1227,25 @@
             return [...standings].sort((a, b) => {
                 if (a.roundsPlayed === 0) return 1;
                 if (b.roundsPlayed === 0) return -1;
-                return view === 'cumulative-gross' ? a.totalGross - b.totalGross : a.totalNet - b.totalNet;
+                
+                if (view === 'cumulative-gross') {
+                    return a.totalGross - b.totalGross;
+                } else if (view === 'average') {
+                    // Sort by average net score (lower is better)
+                    const avgA = a.avgNet !== null ? a.avgNet : 999;
+                    const avgB = b.avgNet !== null ? b.avgNet : 999;
+                    return avgA - avgB;
+                } else if (view === 'recent-form') {
+                    // Sort by last 3 rounds total
+                    const recentA = a.roundDetails.slice(-3).reduce((sum, r) => sum + r.net, 0);
+                    const recentB = b.roundDetails.slice(-3).reduce((sum, r) => sum + r.net, 0);
+                    return recentA - recentB;
+                } else if (view === 'team-standings') {
+                    // Team view handled separately in renderTable
+                    return a.totalNet - b.totalNet;
+                } else {
+                    return a.totalNet - b.totalNet;
+                }
             });
         }
 
@@ -1108,22 +1273,22 @@
             };
 
             if (view === 'cumulative-gross') {
-                headers = `<th style="width:50px">#</th><th>Player</th><th>Rounds</th><th>Best</th><th>Avg</th><th class="highlight">Total</th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>Rounds</th><th>Best</th><th>Avg</th><th class="highlight">Gross Total</th>`;
                 renderRow = (s, posDisplay, posNum) => `
                     <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                     <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                     <td>${s.roundsPlayed}</td>
-                    <td>${s.bestGross || '-'}</td>
-                    <td>${s.avgGross || '-'}</td>
+                    <td>${s.bestGross !== null ? s.bestGross : '-'}</td>
+                    <td>${s.avgGross !== null ? s.avgGross : '-'}</td>
                     <td><span class="score-cell gross">${s.roundsPlayed > 0 ? s.totalGross : '-'}</span></td>
                 `;
             } else if (view === 'by-round') {
                 const roundHeaders = (league.rounds || []).map(r => `<th>${r.name.replace('Week ', 'W')}</th>`).join('');
-                headers = `<th style="width:50px">#</th><th>Player</th>${roundHeaders}<th class="highlight">Net</th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th>${roundHeaders}<th class="highlight">Net Total</th>`;
                 renderRow = (s, posDisplay, posNum) => {
                     const cells = (league.rounds || []).map(r => {
                         const rd = s.roundDetails.find(d => d.name === r.name);
-                        return `<td style="${rd ? '' : 'color:#ccc'}">${rd ? rd.net : '-'}</td>`;
+                        return `<td style="${rd ? '' : 'color:#ccc;opacity:0.5'}">${rd ? rd.net : '-'}</td>`;
                     }).join('');
                     return `
                         <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
@@ -1132,18 +1297,217 @@
                         <td><span class="score-cell net">${s.roundsPlayed > 0 ? s.totalNet : '-'}</span></td>
                     `;
                 };
+            } else if (view === 'recent-form') {
+                // Show last 3 rounds with detailed analysis
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>Last 3 Scores</th><th>Recent Avg</th><th>Season Avg</th><th>Momentum</th><th class="highlight">3-Round Total</th>`;
+                renderRow = (s, posDisplay, posNum) => {
+                    const recentRounds = s.roundDetails.slice(-3);
+                    const recentCount = recentRounds.length;
+                    
+                    if (recentCount === 0) {
+                        return `
+                            <td><span class="pos-badge pos-other">-</span></td>
+                            <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
+                            <td colspan="5" style="text-align:center;color:#999;">No recent rounds</td>
+                        `;
+                    }
+                    
+                    const recentTotal = recentRounds.reduce((sum, r) => sum + r.net, 0);
+                    const recentAvg = Math.round((recentTotal / recentCount) * 10) / 10;
+                    
+                    // Show individual scores for last 3 rounds
+                    const scoresList = recentRounds.map(r => r.net).join(', ');
+                    
+                    // Calculate momentum: recent avg vs season avg
+                    const seasonAvg = s.avgNet;
+                    let momentum = '';
+                    let momentumClass = '';
+                    if (seasonAvg !== null && recentCount >= 2) {
+                        const diff = seasonAvg - recentAvg;
+                        if (diff > 0.5) {
+                            momentum = `↑ ${Math.abs(diff).toFixed(1)}`;
+                            momentumClass = 'style="color:#27ae60;font-weight:700;"';
+                        } else if (diff < -0.5) {
+                            momentum = `↓ ${Math.abs(diff).toFixed(1)}`;
+                            momentumClass = 'style="color:#e74c3c;font-weight:700;"';
+                        } else {
+                            momentum = '→ Steady';
+                            momentumClass = 'style="color:#95a5a6;"';
+                        }
+                    } else {
+                        momentum = '-';
+                    }
+                    
+                    return `
+                        <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
+                        <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
+                        <td style="font-size:12px;color:#666;">${scoresList}</td>
+                        <td style="font-weight:600;">${recentAvg}</td>
+                        <td>${seasonAvg !== null ? seasonAvg : '-'}</td>
+                        <td ${momentumClass}>${momentum}</td>
+                        <td><span class="score-cell net" style="font-size:16px;font-weight:700;">${recentTotal}</span></td>
+                    `;
+                };
+            } else if (view === 'average') {
+                // Sort by best average net score - most fair for players with different round counts
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>HCP</th><th>Rnds</th><th>Best/Worst</th><th class="highlight">Avg Net</th><th>Consistency</th><th>Total</th>`;
+                renderRow = (s, posDisplay, posNum) => {
+                    // Calculate standard deviation for consistency
+                    let consistency = '-';
+                    if (s.roundDetails.length >= 3) {
+                        const netScores = s.roundDetails.map(r => r.net);
+                        const avg = netScores.reduce((a, b) => a + b, 0) / netScores.length;
+                        const variance = netScores.reduce((sum, score) => sum + Math.pow(score - avg, 2), 0) / netScores.length;
+                        const stdDev = Math.sqrt(variance);
+                        
+                        if (stdDev < 2) {
+                            consistency = '<span style="color:#27ae60;font-weight:600;" title="Very consistent scoring">★★★</span>';
+                        } else if (stdDev < 4) {
+                            consistency = '<span style="color:#f39c12;font-weight:600;" title="Moderately consistent">★★</span>';
+                        } else {
+                            consistency = '<span style="color:#e74c3c;font-weight:600;" title="Variable scoring">★</span>';
+                        }
+                    } else if (s.roundDetails.length > 0) {
+                        consistency = '<span style="color:#95a5a6;">N/A</span>';
+                    }
+                    
+                    const bestWorst = (s.bestNet !== null && s.roundDetails.length > 1) ? 
+                        `${s.bestNet} / ${Math.max(...s.roundDetails.map(r => r.net))}` : 
+                        (s.bestNet !== null ? `${s.bestNet}` : '-');
+                    
+                    return `
+                        <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
+                        <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
+                        <td>${s.handicap}</td>
+                        <td>${s.roundsPlayed}</td>
+                        <td style="font-size:12px;color:#666;">${bestWorst}</td>
+                        <td><span class="score-cell net" style="font-size:16px;font-weight:700;">${s.avgNet !== null ? s.avgNet : '-'}</span></td>
+                        <td style="text-align:center;">${consistency}</td>
+                        <td style="color:#888;">${s.roundsPlayed > 0 ? s.totalNet : '-'}</td>
+                    `;
+                };
+            } else if (view === 'team-standings') {
+                // Calculate team totals (combine both players' net scores)
+                const teamScores = {};
+                const teams = league.teams || [];
+                
+                teams.forEach(team => {
+                    const teamPlayers = sorted.filter(s => s.teamId === team.id);
+                    if (teamPlayers.length === 0) return;
+                    
+                    // Calculate team totals per round - ONLY count rounds where BOTH players played
+                    const teamRounds = {};
+                    teamPlayers.forEach(player => {
+                        player.roundDetails.forEach(rd => {
+                            if (!teamRounds[rd.name]) teamRounds[rd.name] = [];
+                            teamRounds[rd.name].push(rd.net);
+                        });
+                    });
+                    
+                    // Sum both players' scores for each round where both played
+                    let teamTotal = 0;
+                    let roundsPlayed = 0;
+                    const teamRoundScores = [];
+                    
+                    Object.entries(teamRounds).forEach(([roundName, roundScores]) => {
+                        // Only count if both team members played this round
+                        if (roundScores.length === 2) {
+                            const roundTotal = roundScores.reduce((a, b) => a + b, 0);
+                            teamTotal += roundTotal;
+                            teamRoundScores.push(roundTotal);
+                            roundsPlayed++;
+                        }
+                    });
+                    
+                    const avgPerRound = roundsPlayed > 0 ? Math.round((teamTotal / roundsPlayed) * 10) / 10 : null;
+                    const bestRound = teamRoundScores.length > 0 ? Math.min(...teamRoundScores) : null;
+                    
+                    // Calculate team consistency
+                    let consistency = '-';
+                    if (teamRoundScores.length >= 3) {
+                        const avg = teamTotal / roundsPlayed;
+                        const variance = teamRoundScores.reduce((sum, score) => sum + Math.pow(score - avg, 2), 0) / teamRoundScores.length;
+                        const stdDev = Math.sqrt(variance);
+                        
+                        if (stdDev < 4) {
+                            consistency = '<span style="color:#27ae60;font-weight:600;" title="Very consistent team">★★★</span>';
+                        } else if (stdDev < 7) {
+                            consistency = '<span style="color:#f39c12;font-weight:600;" title="Moderately consistent">★★</span>';
+                        } else {
+                            consistency = '<span style="color:#e74c3c;font-weight:600;" title="Variable performance">★</span>';
+                        }
+                    }
+                    
+                    // Check if team is complete (has 2 players)
+                    const isComplete = teamPlayers.length === 2;
+                    const playerNames = isComplete ? 
+                        teamPlayers.map(p => p.name).join(' & ') : 
+                        `${teamPlayers.map(p => p.name).join(', ')} <span style="color:#e74c3c;font-size:11px;">(Incomplete)</span>`;
+                    
+                    teamScores[team.id] = {
+                        teamId: team.id,
+                        teamName: team.name,
+                        playerCount: teamPlayers.length,
+                        players: playerNames,
+                        totalNet: teamTotal,
+                        roundsPlayed,
+                        avgPerRound,
+                        bestRound,
+                        consistency,
+                        isComplete
+                    };
+                });
+                
+                // Sort teams by total net (complete teams first, then by score)
+                const sortedTeams = Object.values(teamScores).sort((a, b) => {
+                    if (!a.isComplete && b.isComplete) return 1;
+                    if (a.isComplete && !b.isComplete) return -1;
+                    if (a.roundsPlayed === 0 && b.roundsPlayed > 0) return 1;
+                    if (b.roundsPlayed === 0 && a.roundsPlayed > 0) return -1;
+                    return a.totalNet - b.totalNet;
+                });
+                
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Team</th><th style="text-align:left">Players</th><th>Rnds</th><th>Best Rnd</th><th>Avg/Rnd</th><th>Consistency</th><th class="highlight">Team Total</th>`;
+                
+                let pos = 1;
+                return `
+                    <table class="standings-table">
+                        <thead><tr>${headers}</tr></thead>
+                        <tbody>
+                            ${sortedTeams.map((team, idx) => {
+                                const posDisplay = (team.roundsPlayed === 0 || !team.isComplete) ? '-' : 
+                                    (idx > 0 && sortedTeams[idx - 1].totalNet === team.totalNet && sortedTeams[idx - 1].isComplete) ? 
+                                    `T${pos}` : (pos = idx + 1);
+                                const posNum = (team.roundsPlayed === 0 || !team.isComplete) ? null : pos;
+                                
+                                return `
+                                    <tr style="${!team.isComplete ? 'opacity:0.6;' : ''}">
+                                        <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay}</span></td>
+                                        <td style="text-align:left"><div class="player-info"><span class="player-name" style="font-weight:700;color:#37b24a;">${team.teamName}</span></div></td>
+                                        <td style="text-align:left;font-size:13px;color:#666;">${team.players}</td>
+                                        <td>${team.roundsPlayed}</td>
+                                        <td style="font-weight:600;color:#2c3e50;">${team.bestRound !== null ? team.bestRound : '-'}</td>
+                                        <td style="font-weight:600;">${team.avgPerRound !== null ? team.avgPerRound : '-'}</td>
+                                        <td style="text-align:center;">${team.consistency}</td>
+                                        <td><span class="score-cell net" style="font-size:18px;font-weight:700;">${team.roundsPlayed > 0 ? team.totalNet : '-'}</span></td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
             } else {
-                headers = `<th style="width:50px">#</th><th>Player</th><th>HCP</th><th>Rnds</th><th>Best</th><th>Avg</th><th>To Par</th><th class="highlight">Net</th><th></th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>HCP</th><th>Rnds</th><th>Best</th><th>Avg</th><th>To Par</th><th class="highlight">Net Total</th><th style="width:40px"></th>`;
                 renderRow = (s, posDisplay, posNum) => `
                     <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                     <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                     <td>${s.handicap}</td>
                     <td>${s.roundsPlayed}</td>
-                    <td>${s.bestNet || '-'}</td>
-                    <td>${s.avgNet || '-'}</td>
+                    <td>${s.bestNet !== null ? s.bestNet : '-'}</td>
+                    <td>${s.avgNet !== null ? s.avgNet : '-'}</td>
                     <td class="to-par ${s.toPar !== null ? (s.toPar > 0 ? 'over' : s.toPar < 0 ? 'under' : 'even') : ''}">${formatToPar(s.toPar)}</td>
                     <td><span class="score-cell net">${s.roundsPlayed > 0 ? s.totalNet : '-'}</span></td>
-                    <td>${getTrendIcon(s.trend)}</td>
+                    <td style="text-align:center">${getTrendIcon(s.trend)}</td>
                 `;
             }
 
@@ -1151,14 +1515,38 @@
             const getPosition = (sorted, index, view) => {
                 if (sorted[index].roundsPlayed === 0) return null;
                 
-                const scoreKey = view === 'cumulative-gross' ? 'totalGross' : 'totalNet';
-                const currentScore = sorted[index][scoreKey];
+                let scoreKey, currentScore;
+                if (view === 'cumulative-gross') {
+                    scoreKey = 'totalGross';
+                    currentScore = sorted[index][scoreKey];
+                } else if (view === 'average') {
+                    scoreKey = 'avgNet';
+                    currentScore = sorted[index][scoreKey];
+                } else if (view === 'recent-form') {
+                    currentScore = sorted[index].roundDetails.slice(-3).reduce((sum, r) => sum + r.net, 0);
+                } else {
+                    scoreKey = 'totalNet';
+                    currentScore = sorted[index][scoreKey];
+                }
+                
+                if (currentScore === null || currentScore === undefined) return null;
                 
                 // Find first player with this score
                 for (let i = 0; i < index; i++) {
-                    if (sorted[i].roundsPlayed > 0 && sorted[i][scoreKey] === currentScore) {
-                        // Same position as earlier player with same score
-                        return getPosition(sorted, i, view);
+                    if (sorted[i].roundsPlayed > 0) {
+                        let compareScore;
+                        if (view === 'recent-form') {
+                            compareScore = sorted[i].roundDetails.slice(-3).reduce((sum, r) => sum + r.net, 0);
+                        } else if (view === 'average') {
+                            compareScore = sorted[i].avgNet;
+                        } else {
+                            compareScore = sorted[i][scoreKey];
+                        }
+                        
+                        if (compareScore === currentScore) {
+                            // Same position as earlier player with same score
+                            return getPosition(sorted, i, view);
+                        }
                     }
                 }
                 

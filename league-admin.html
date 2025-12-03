@@ -678,7 +678,10 @@
             </div>
             <div class="admin-nav">
                 <a href="tournaments.html" class="nav-item back-link">
-                    <i class="fas fa-arrow-left"></i> View Leaderboard
+                    <i class="fas fa-trophy"></i> View Leaderboard
+                </a>
+                <a href="schedule.html" class="nav-item back-link">
+                    <i class="fas fa-calendar-alt"></i> View Schedule
                 </a>
                 <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
                     <i class="fas fa-home"></i> Dashboard
@@ -734,6 +737,31 @@
                         <div style="font-size: 28px; font-weight: 700; color: #37b24a;" id="statRounds">0</div>
                         <div style="font-size: 13px; color: #888;">Rounds</div>
                     </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Common tasks for league management</p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                    <button class="btn" onclick="showSection('teams'); openModal('addTeamModal')" style="justify-content: center;">
+                        <i class="fas fa-users"></i> Add Team
+                    </button>
+                    <button class="btn" onclick="showSection('rounds')" style="justify-content: center;">
+                        <i class="fas fa-flag"></i> Add Round
+                    </button>
+                    <button class="btn btn-secondary" onclick="showSection('print')" style="justify-content: center;">
+                        <i class="fas fa-print"></i> Print Scorecards
+                    </button>
+                    <a href="tournaments.html" class="btn btn-secondary" style="justify-content: center; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-trophy"></i> View Leaderboard
+                    </a>
+                    <a href="schedule.html" class="btn btn-secondary" style="justify-content: center; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-calendar-alt"></i> View Schedule
+                    </a>
+                    <button class="btn btn-secondary" onclick="exportData()" style="justify-content: center;">
+                        <i class="fas fa-download"></i> Export Data
+                    </button>
                 </div>
             </div>
         </div>
@@ -1842,30 +1870,41 @@
         // Rounds
         function addRound(e) {
             e.preventDefault();
+            console.log('addRound called');
             const name = document.getElementById('roundName').value.trim();
             const startDate = document.getElementById('roundStartDate').value;
             const endDate = document.getElementById('roundEndDate').value;
+            
+            console.log('Round data:', { name, startDate, endDate });
             
             if (new Date(endDate) < new Date(startDate)) {
                 alert('End date must be after start date');
                 return;
             }
             
-            league.rounds.push({
+            const newRound = {
                 id: 'r' + Date.now() + Math.random().toString(36).substr(2, 5),
                 name,
                 startDate,
                 endDate,
                 finalized: false,
                 createdAt: new Date().toISOString()
-            });
+            };
+            
+            console.log('Adding round:', newRound);
+            league.rounds.push(newRound);
+            console.log('League rounds after push:', league.rounds);
+            
             save();
             renderAll();
         }
         
         function deleteRound(id) {
+            console.log('deleteRound called for id:', id);
             if (!confirm('Delete this round and all scores?')) return;
+            console.log('Rounds before delete:', league.rounds);
             league.rounds = league.rounds.filter(r => r.id !== id);
+            console.log('Rounds after delete:', league.rounds);
             if (league.scores) delete league.scores[id];
             save();
             renderAll();
@@ -2229,18 +2268,29 @@
         function closeModal(id) { document.getElementById(id).classList.remove('open'); }
         
         function save() {
+            console.log('save() called');
             if (!currentUser) {
+                console.error('No current user');
                 alert('You must be signed in to make changes.');
                 return;
             }
+            console.log('Current user:', currentUser.email);
+            console.log('Saving league:', league);
             try {
                 if (!checkRateLimit()) {
                     console.warn('Request throttled - please slow down');
                     return;
                 }
-                leagueRef.set(league);
+                console.log('Attempting to save to Firebase...');
+                leagueRef.set(league).then(() => {
+                    console.log('Successfully saved to Firebase');
+                }).catch(err => {
+                    console.error('Firebase save error:', err);
+                    alert('Error saving: ' + err.message);
+                });
             } catch (error) {
-                alert(error.message);
+                console.error('Save error:', error);
+                alert('Error: ' + error.message);
             }
         }
         
