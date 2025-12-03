@@ -1109,20 +1109,19 @@
             const btn = document.getElementById('printBtn');
             const previewContainer = document.getElementById('scorecardPreviewContainer');
             
-            if (!teamId) {
-                preview.style.display = 'none';
-                btn.disabled = true;
-                return;
-            }
-            
             const round = league.rounds[league.rounds.length - 1];
             if (!round) {
-                alert('Create a round first');
+                if (teamId) {
+                    alert('Create a round first');
+                    preview.style.display = 'none';
+                    btn.disabled = true;
+                }
                 return;
             }
             
-            const isBlank = teamId === 'blank';
-            const team = isBlank ? null : league.teams.find(t => t.id === teamId);
+            // Show preview even when no team selected (blank preview)
+            const isBlank = !teamId || teamId === 'blank';
+            const team = (teamId && teamId !== 'blank') ? league.teams.find(t => t.id === teamId) : null;
             const holes = league.course?.holes || 18;
             const pars = league.course?.pars || Array(holes).fill(4);
             const frontNine = Math.min(9, holes);
@@ -1162,7 +1161,7 @@
             }
             
             const headerText = isBlank 
-                ? `<h1>⛳ ${league.course?.name || 'Golf Cove'}</h1><h2>${league.name}</h2><p>${round.name} • ${new Date(round.date).toLocaleDateString()}</p>`
+                ? `<h1>⛳ ${league.course?.name || 'Golf Cove'}</h1><h2>${league.name}</h2><p>Round • Date</p>`
                 : `<h1>⛳ ${league.course?.name || 'Golf Cove'}</h1><h2>${league.name} - ${team.name}</h2><p>${round.name} • ${new Date(round.date).toLocaleDateString()}</p>`;
             
             const qrSection = !isBlank ? `<div class="qr"><div style="width: 90px; height: 90px; background: #e0e0e0; border: 2px solid #ddd; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999;">QR Code</div><span>Scan to enter score</span></div>` : '';
@@ -1314,7 +1313,7 @@
             `;
             
             preview.style.display = 'block';
-            btn.disabled = false;
+            btn.disabled = !teamId; // Disable button only when no option selected
         }
         
         function copyGeneralUrl() {
@@ -1390,8 +1389,11 @@
         
         function renderPrintOptions() {
             const select = document.getElementById('printTeamSelect');
-            select.innerHTML = '<option value="">Select a Team</option>' + 
+            select.innerHTML = '<option value="">Select a Team</option><option value="blank">Blank (No Team Name)</option>' + 
                 league.teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            
+            // Show blank preview by default
+            updatePrintPreview();
         }
         
         function renderParInputs() {
