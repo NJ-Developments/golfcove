@@ -742,7 +742,7 @@ section {
 .feature-card {
     background: var(--text-light);
     border-radius: var(--radius-xl);
-    padding: 45px 35px;
+    padding: 25px 20px;
     text-align: center;
     box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     transition: all var(--transition-normal);
@@ -776,15 +776,15 @@ section {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 65px;
-    height: 65px;
+    width: 45px;
+    height: 45px;
     background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);
     color: var(--text-light);
-    font-size: 1.8rem;
+    font-size: 1.4rem;
     font-weight: 700;
     font-family: var(--font-heading);
     border-radius: 50%;
-    margin-bottom: 28px;
+    margin-bottom: 15px;
     box-shadow: 0 8px 25px rgba(55, 178, 74, 0.35);
     transition: transform var(--transition-normal);
 }
@@ -794,16 +794,16 @@ section {
 }
 
 .feature-card h3 {
-    font-size: 1.35rem;
-    margin-bottom: 16px;
+    font-size: 1.1rem;
+    margin-bottom: 10px;
     color: var(--primary-green);
     font-weight: 600;
 }
 
 .feature-card p {
     color: var(--text-muted);
-    font-size: 1rem;
-    line-height: 1.75;
+    font-size: 0.95rem;
+    line-height: 1.6;
 }
 
 /* ============================================
