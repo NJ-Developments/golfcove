@@ -1330,7 +1330,7 @@
             `;
             
             preview.style.display = 'block';
-            btn.disabled = !teamId; // Disable button only when no option selected
+            btn.disabled = false; // Enable button for both blank and team scorecards
         }
         
         function copyGeneralUrl() {
@@ -1406,7 +1406,7 @@
         
         function renderPrintOptions() {
             const select = document.getElementById('printTeamSelect');
-            select.innerHTML = '<option value="">Select a Team</option><option value="blank">Blank (No Team Name)</option>' + 
+            select.innerHTML = '<option value="">Select a Team</option>' + 
                 league.teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
             
             // Show blank preview by default
@@ -1638,12 +1638,11 @@
         function printScorecards() {
             const teamId = document.getElementById('printTeamSelect').value;
             
-            if (!teamId) { alert('Select a team first'); return; }
             if (league.rounds.length === 0) { alert('Create a round first'); return; }
             
             const round = league.rounds[league.rounds.length - 1];
-            const isBlank = teamId === 'blank';
-            const team = isBlank ? null : league.teams.find(t => t.id === teamId);
+            const isBlank = !teamId;
+            const team = teamId ? league.teams.find(t => t.id === teamId) : null;
             const holes = league.course?.holes || 18;
             const pars = league.course?.pars || Array(holes).fill(4);
             const frontNine = Math.min(9, holes);
