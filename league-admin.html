@@ -853,14 +853,14 @@
                 <h1 style="font-size: 22px;"><i class="fas fa-shield-alt"></i> Secure Admin Access</h1>
                 <p style="color: #666; font-size: 14px; margin-top: 8px;">Sign in with your admin account</p>
             </div>
-            <form onsubmit="handleLogin(event)">
+            <form id="loginForm" onsubmit="return handleLogin(event);">
                 <div class="form-group" style="margin-bottom: 15px;">
                     <input type="email" id="adminEmail" required placeholder="Email Address" 
-                           style="text-align: center; font-size: 16px;">
+                           style="text-align: center; font-size: 16px;" autocomplete="email">
                 </div>
                 <div class="form-group">
                     <input type="password" id="adminPassword" required placeholder="Password" 
-                           style="text-align: center; font-size: 16px; letter-spacing: 2px;">
+                           style="text-align: center; font-size: 16px; letter-spacing: 2px;" autocomplete="current-password">
                 </div>
                 <div id="loginError" style="color: #e53935; text-align: center; margin-bottom: 15px; display: none;">
                     <i class="fas fa-exclamation-circle"></i> <span id="loginErrorText">Invalid credentials</span>
@@ -1020,19 +1020,35 @@
         
         // Authentication handlers
         async function handleLogin(e) {
-            e.preventDefault();
+            console.log('handleLogin called');
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
             const email = document.getElementById('adminEmail').value;
             const password = document.getElementById('adminPassword').value;
             const loginButton = document.getElementById('loginButton');
             const errorDiv = document.getElementById('loginError');
             const errorText = document.getElementById('loginErrorText');
             
+            console.log('Attempting login with email:', email);
+            
+            if (!email || !password) {
+                console.error('Email or password is empty');
+                errorText.textContent = 'Please enter email and password';
+                errorDiv.style.display = 'block';
+                return false;
+            }
+            
             loginButton.disabled = true;
             loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
             errorDiv.style.display = 'none';
             
             try {
+                console.log('Calling signInWithEmailAndPassword...');
                 const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                console.log('Login successful!', userCredential.user);
                 currentUser = userCredential.user;
                 // Success handled by onAuthStateChanged
             } catch (error) {
@@ -1056,6 +1072,8 @@
                 loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In Securely';
                 document.getElementById('adminPassword').value = '';
             }
+            
+            return false;
         }
         
         async function handleLogout() {
