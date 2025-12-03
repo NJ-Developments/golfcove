@@ -449,7 +449,7 @@ header.scrolled {
     display: block;
     width: 28px;
     height: 3px;
-    background: var(--primary-green);
+    background: #fff;
     border-radius: var(--radius-full);
     transition: all var(--transition-normal);
     transform-origin: center;

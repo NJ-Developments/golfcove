@@ -698,6 +698,10 @@
                 <div class="nav-item danger" onclick="resetLeague()">
                     <i class="fas fa-trash"></i> Reset League
                 </div>
+                <div class="admin-nav-divider"></div>
+                <div class="nav-item danger" onclick="handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                </div>
             </div>
         </aside>
         
@@ -751,9 +755,15 @@
                             <label>Round Name</label>
                             <input type="text" id="roundName" required placeholder="Week 1">
                         </div>
+                    </div>
+                    <div class="form-row">
                         <div class="form-group">
-                            <label>Date</label>
-                            <input type="date" id="roundDate" required>
+                            <label>Start Date</label>
+                            <input type="date" id="roundStartDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>End Date</label>
+                            <input type="date" id="roundEndDate" required>
                         </div>
                     </div>
                     <button type="submit" class="btn"><i class="fas fa-plus"></i> Add Round</button>
@@ -1148,7 +1158,11 @@
             document.getElementById('statRounds').textContent = league.rounds.length;
             
             document.getElementById('roundName').value = 'Week ' + (league.rounds.length + 1);
-            document.getElementById('roundDate').valueAsDate = new Date();
+            const today = new Date();
+            const nextWeek = new Date(today);
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            document.getElementById('roundStartDate').valueAsDate = today;
+            document.getElementById('roundEndDate').valueAsDate = nextWeek;
             
             renderCurrentRound();
             renderTeams();
@@ -1180,11 +1194,15 @@
             const scored = league.players.filter(p => (league.scores || {})[round.id]?.[p.id]?.submitted).length;
             const total = league.players.length;
             
+            const startDate = round.startDate ? new Date(round.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+            const endDate = round.endDate ? new Date(round.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+            const dateDisplay = startDate && endDate ? `${startDate} - ${endDate}` : (round.date ? new Date(round.date).toLocaleDateString() : 'No date');
+            
             container.innerHTML = `
                 <div class="round-status">
                     <div>
                         <h3>${round.name}</h3>
-                        <p>${new Date(round.date).toLocaleDateString()}</p>
+                        <p>${dateDisplay}</p>
                     </div>
                     <div class="score-count">
                         <div class="big">${scored}/${total}</div>
@@ -1672,11 +1690,14 @@
             
             container.innerHTML = league.rounds.slice().reverse().map(r => {
                 const scored = league.players.filter(p => (league.scores || {})[r.id]?.[p.id]?.submitted).length;
-                return `
+                const startDate = r.startDate ? new Date(r.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
+                const endDate = r.endDate ? new Date(r.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+                const dateDisplay = r.startDate && r.endDate ? `${startDate} - ${endDate}` : (r.date ? new Date(r.date).toLocaleDateString() : 'No date');
+                const status = r.finalized ? '<span style=\"color: #888; font-size: 12px;\">• Finalized</span>' : '';\n                return `
                     <div class="round-item">
                         <div>
                             <h4>${r.name}</h4>
-                            <p>${new Date(r.date).toLocaleDateString()} • ${scored}/${league.players.length} scores</p>
+                            <p>${dateDisplay} • ${scored}/${league.players.length} scores ${status}</p>
                         </div>
                         <div class="actions">
                             <button class="btn btn-sm btn-secondary" onclick="viewRoundScores('${r.id}')"><i class="fas fa-eye"></i></button>
@@ -1794,11 +1815,20 @@
         function addRound(e) {
             e.preventDefault();
             const name = document.getElementById('roundName').value.trim();
-            const date = document.getElementById('roundDate').value;
+            const startDate = document.getElementById('roundStartDate').value;
+            const endDate = document.getElementById('roundEndDate').value;
+            
+            if (new Date(endDate) < new Date(startDate)) {
+                alert('End date must be after start date');
+                return;
+            }
             
             league.rounds.push({
                 id: 'r' + Date.now() + Math.random().toString(36).substr(2, 5),
-                name, date,
+                name,
+                startDate,
+                endDate,
+                finalized: false,
                 createdAt: new Date().toISOString()
             });
             save();
