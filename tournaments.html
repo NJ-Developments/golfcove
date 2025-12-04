@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>League Standings - Golf Cove</title>
+    <title>Golf Cove - New Haven</title>
     <meta name="description" content="View live league standings, scores, and weekly results from Golf Cove leagues.">
     <link rel="icon" type="image/png" href="images/golfcovelogo.png">
     <link rel="stylesheet" href="css/styles.css">
@@ -920,8 +920,10 @@
         const db = firebase.database();
         const leagueRef = db.ref('league');
         
-        let currentView = 'team-standings';
+        // Default to Net view; Teams still available in toggle
+        let currentView = 'cumulative-net';
         let currentTeamFilter = '';
+        let minRoundsFilter = 0;
         let cachedLeague = null;
         let cachedStandings = null;
 
@@ -1084,13 +1086,22 @@
                                         ${(league.teams || []).map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
                                     </select>
                                 </div>
+                                <div class="filter-group">
+                                    <label><i class="fas fa-flag-checkered"></i> Min Rnds:</label>
+                                    <select class="filter-select" id="roundFilter" onchange="filterByRounds(this.value)">
+                                        <option value="0">All</option>
+                                        <option value="1">1+</option>
+                                        <option value="3">3+</option>
+                                        <option value="5">5+</option>
+                                    </select>
+                                </div>
                                 <div class="view-toggle">
-                                    <button class="view-btn active" data-view="team-standings" title="Team competition - combined net scores for 2-person teams"><i class="fas fa-users"></i> Teams</button>
-                                    <button class="view-btn" data-view="cumulative-net" title="Individual cumulative net scores (handicap adjusted)"><i class="fas fa-trophy"></i> Net</button>
-                                    <button class="view-btn" data-view="recent-form" title="Last 3 rounds - shows momentum & recent performance"><i class="fas fa-chart-line"></i> Recent Form</button>
-                                    <button class="view-btn" data-view="average" title="Average net per round - fairest for different round counts"><i class="fas fa-balance-scale"></i> Average</button>
-                                    <button class="view-btn" data-view="cumulative-gross" title="Individual gross scores without handicap adjustment"><i class="fas fa-golf-ball"></i> Gross</button>
-                                    <button class="view-btn" data-view="by-round" title="Week by week breakdown - see round-by-round performance"><i class="fas fa-calendar-week"></i> By Week</button>
+                                    <button class="view-btn ${currentView === 'cumulative-net' ? 'active' : ''}" data-view="cumulative-net" title="Individual cumulative net scores (handicap adjusted)"><i class="fas fa-trophy"></i> Net</button>
+                                    <button class="view-btn ${currentView === 'team-standings' ? 'active' : ''}" data-view="team-standings" title="Team competition - combined net scores for 2-person teams"><i class="fas fa-users"></i> Teams</button>
+                                    <button class="view-btn ${currentView === 'recent-form' ? 'active' : ''}" data-view="recent-form" title="Last 3 rounds - shows momentum & recent performance"><i class="fas fa-chart-line"></i> Recent Form</button>
+                                    <button class="view-btn ${currentView === 'average' ? 'active' : ''}" data-view="average" title="Average net per round - fairest for different round counts"><i class="fas fa-balance-scale"></i> Average</button>
+                                    <button class="view-btn ${currentView === 'cumulative-gross' ? 'active' : ''}" data-view="cumulative-gross" title="Individual gross scores without handicap adjustment"><i class="fas fa-golf-ball"></i> Gross</button>
+                                    <button class="view-btn ${currentView === 'by-round' ? 'active' : ''}" data-view="by-round" title="Week by week breakdown - see round-by-round performance"><i class="fas fa-calendar-week"></i> By Week</button>
                                 </div>
                                 <button class="export-btn" onclick="exportToExcel()">
                                     <i class="fas fa-file-excel"></i> Export
@@ -1100,7 +1111,7 @@
                         ` : ''}
 
                         <div id="standingsContent">
-                            ${hasPlayers ? renderTable(cachedStandings, league, 'team-standings') : `
+                            ${hasPlayers ? renderTable(cachedStandings, league, currentView) : `
                                 <div class="empty-state">
                                     <i class="fas fa-users"></i>
                                     <h2>No Players Yet</h2>
@@ -1119,11 +1130,11 @@
                         <a href="league-admin.html"><i class="fas fa-cog"></i> League Admin</a>
                     </div>
 
-                    <div class="refresh-note">
-                        <i class="fas fa-sync-alt"></i> Auto-refreshes every 30 seconds
-                    </div>
+                <div class="refresh-note">
+                    <i class="fas fa-sync-alt"></i> Auto-refreshes every 30 seconds
                 </div>
-            `;
+            </div>
+        `;
 
             // Attach view toggle handlers
             document.querySelectorAll('.view-btn').forEach(btn => {
@@ -1211,10 +1222,22 @@
             updateStandings();
         }
 
+        function filterByRounds(value) {
+            minRoundsFilter = parseInt(value, 10) || 0;
+            updateStandings();
+        }
+
         function updateStandings() {
             let filtered = cachedStandings;
             if (currentTeamFilter) filtered = cachedStandings.filter(s => s.teamId === currentTeamFilter);
+            if (minRoundsFilter) filtered = filtered.filter(s => s.roundsPlayed >= minRoundsFilter);
             document.getElementById('standingsContent').innerHTML = renderTable(filtered, cachedLeague, currentView);
+
+            // Sync round filter select with state
+            const roundFilter = document.getElementById('roundFilter');
+            if (roundFilter && roundFilter.value !== String(minRoundsFilter)) {
+                roundFilter.value = String(minRoundsFilter);
+            }
         }
 
         function setView(view) {
@@ -1228,23 +1251,36 @@
                 if (a.roundsPlayed === 0) return 1;
                 if (b.roundsPlayed === 0) return -1;
                 
+                const tieBreakNet = () => {
+                    // Tie-breakers: more rounds, then best net, then avg net
+                    if (a.roundsPlayed !== b.roundsPlayed) return b.roundsPlayed - a.roundsPlayed;
+                    if (a.bestNet !== null && b.bestNet !== null && a.bestNet !== b.bestNet) return a.bestNet - b.bestNet;
+                    const avgA = a.avgNet !== null ? a.avgNet : 999;
+                    const avgB = b.avgNet !== null ? b.avgNet : 999;
+                    return avgA - avgB;
+                };
+                
                 if (view === 'cumulative-gross') {
-                    return a.totalGross - b.totalGross;
+                    if (a.totalGross !== b.totalGross) return a.totalGross - b.totalGross;
+                    return tieBreakNet();
                 } else if (view === 'average') {
                     // Sort by average net score (lower is better)
                     const avgA = a.avgNet !== null ? a.avgNet : 999;
                     const avgB = b.avgNet !== null ? b.avgNet : 999;
-                    return avgA - avgB;
+                    if (avgA !== avgB) return avgA - avgB;
+                    return tieBreakNet();
                 } else if (view === 'recent-form') {
                     // Sort by last 3 rounds total
                     const recentA = a.roundDetails.slice(-3).reduce((sum, r) => sum + r.net, 0);
                     const recentB = b.roundDetails.slice(-3).reduce((sum, r) => sum + r.net, 0);
-                    return recentA - recentB;
+                    if (recentA !== recentB) return recentA - recentB;
+                    return tieBreakNet();
                 } else if (view === 'team-standings') {
-                    // Team view handled separately in renderTable
-                    return a.totalNet - b.totalNet;
+                    return tieBreakNet();
                 } else {
-                    return a.totalNet - b.totalNet;
+                    // Net default
+                    if (a.totalNet !== b.totalNet) return a.totalNet - b.totalNet;
+                    return tieBreakNet();
                 }
             });
         }
@@ -1497,16 +1533,16 @@
                     </table>
                 `;
             } else {
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>HCP</th><th>Rnds</th><th>Best</th><th>Avg</th><th>To Par</th><th class="highlight">Net Total</th><th style="width:40px"></th>`;
+                // Default Net view with key league metrics: gross/net, to-par, rounds, average
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th title="Rounds completed">Rnds</th><th title="Total gross strokes">Gross</th><th class="highlight" title="Total net strokes (after handicap)">Net</th><th title="Total vs course par">Vs Par</th><th title="Average net per round">Avg Net</th><th style="width:40px"></th>`;
                 renderRow = (s, posDisplay, posNum) => `
                     <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                     <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
-                    <td>${s.handicap}</td>
                     <td>${s.roundsPlayed}</td>
-                    <td>${s.bestNet !== null ? s.bestNet : '-'}</td>
-                    <td>${s.avgNet !== null ? s.avgNet : '-'}</td>
-                    <td class="to-par ${s.toPar !== null ? (s.toPar > 0 ? 'over' : s.toPar < 0 ? 'under' : 'even') : ''}">${formatToPar(s.toPar)}</td>
+                    <td>${s.roundsPlayed > 0 ? s.totalGross : '-'}</td>
                     <td><span class="score-cell net">${s.roundsPlayed > 0 ? s.totalNet : '-'}</span></td>
+                    <td class="to-par ${s.toPar !== null ? (s.toPar > 0 ? 'over' : s.toPar < 0 ? 'under' : 'even') : ''}">${formatToPar(s.toPar)}</td>
+                    <td>${s.avgNet !== null ? s.avgNet : '-'}</td>
                     <td style="text-align:center">${getTrendIcon(s.trend)}</td>
                 `;
             }
@@ -1643,4 +1679,6 @@
     </script>
 </body>
 </html>
+
+
 

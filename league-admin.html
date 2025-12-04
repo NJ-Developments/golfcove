@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>League Admin - Golf Cove</title>
+    <title>Golf Cove - New Haven</title>
     <link rel="icon" type="image/png" href="images/golfcovelogo.png">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -155,10 +155,39 @@
             display: block;
         }
         
+        /* Logout button */
+        #desktopLogoutBtn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: none;
+            gap: 8px;
+            align-items: center;
+            transition: all 0.3s;
+            z-index: 1500;
+            box-shadow: 0 2px 10px rgba(231,76,60,0.3);
+        }
+        #desktopLogoutBtn:hover { background: #c0392b; }
+        @media (max-width: 767px) {
+            #desktopLogoutBtn {
+                top: 12px;
+                right: 12px;
+                padding: 9px 14px;
+                font-size: 13px;
+            }
+        }
+        
         /* Page Sections */
         .page-section {
             display: none;
-            max-width: 800px;
+            max-width: 960px;
             margin: 0 auto;
         }
         .page-section.active {
@@ -495,6 +524,60 @@
             font-size: 14px;
         }
         
+        /* PIN panel */
+        .pin-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .pin-stats {
+            font-size: 13px;
+            color: #666;
+        }
+        .pin-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+        }
+        .pin-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .pin-row .info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .pin-row .name {
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .pin-row .meta {
+            font-size: 12px;
+            color: #777;
+        }
+        .pin-chip {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            letter-spacing: 2px;
+        }
+        .pin-actions .btn-sm {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
         /* Par Grid */
         .par-grid {
             display: grid;
@@ -695,6 +778,9 @@
                 <div class="nav-item" data-section="print" onclick="showSection('print')">
                     <i class="fas fa-print"></i> Print
                 </div>
+                <div class="nav-item" data-section="pins" onclick="showSection('pins')">
+                    <i class="fas fa-key"></i> PINs
+                </div>
                 <div class="nav-divider"></div>
                 <div class="nav-item" data-section="settings" onclick="showSection('settings')">
                     <i class="fas fa-cog"></i> Settings
@@ -848,6 +934,52 @@
             </div>
         </div>
         
+        <!-- PINs Section -->
+        <div class="page-section" id="section-pins">
+            <h1 class="page-title"><i class="fas fa-key"></i> Player PINs</h1>
+            
+            <div class="card">
+                <h3><i class="fas fa-shield-alt"></i> PIN Management</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">View, generate, and copy player PINs for score entry.</p>
+                
+                <div class="pin-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="generatePinsForAll()"><i class="fas fa-magic"></i> Generate Missing PINs</button>
+                    <button class="btn btn-secondary btn-sm" onclick="printPinSheet()"><i class="fas fa-print"></i> Print PIN Sheet</button>
+                    <div class="pin-stats" id="pinStats"></div>
+                </div>
+                
+                <div class="card" style="padding: 16px; border: 1px dashed #e5e7eb; margin-bottom: 16px;">
+                    <h4 style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 16px;">
+                        <i class="fas fa-edit" style="color:#37b24a;"></i> Set Specific PIN
+                    </h4>
+                    <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: end;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Team</label>
+                            <select id="pinTeamSelect" onchange="handlePinTeamChange()">
+                                <option value="">All Teams</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Player</label>
+                            <select id="pinPlayerSelect">
+                                <option value="">Select a player</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>PIN</label>
+                            <input type="text" id="pinManualInput" maxlength="4" pattern="[0-9]{4}" placeholder="1234" inputmode="numeric">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <button class="btn btn-sm" onclick="setCustomPin()"><i class="fas fa-save"></i> Save PIN</button>
+                        <button class="btn btn-secondary btn-sm" onclick="fillRandomPin()"><i class="fas fa-dice"></i> Random</button>
+                    </div>
+                </div>
+                
+                <div id="pinList" class="pin-list"></div>
+            </div>
+        </div>
+        
         <!-- Settings Section -->
         <div class="page-section" id="section-settings">
             <h1 class="page-title"><i class="fas fa-cog"></i> Settings</h1>
@@ -870,7 +1002,7 @@
     </button>
     
     <!-- Logout Button (Desktop) -->
-    <button id="desktopLogoutBtn" onclick="handleLogout()" style="position: fixed; top: 80px; right: 20px; background: #e74c3c; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: none; align-items: center; gap: 8px; transition: all 0.3s; z-index: 150; box-shadow: 0 2px 10px rgba(231,76,60,0.3);" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">
+    <button id="desktopLogoutBtn" onclick="handleLogout()">
         <i class="fas fa-sign-out-alt"></i> <span>Sign Out</span>
     </button>
 
@@ -1007,6 +1139,7 @@
         
         let league = null;
         let currentUser = null;
+        let leagueListener = null;
         
         // Rate limiting
         const rateLimits = {
@@ -1122,10 +1255,12 @@
             if (user) {
                 currentUser = user;
                 document.getElementById('loginContainer').style.display = 'none';
-                document.getElementById('desktopLogoutBtn').style.display = 'flex';
+                document.getElementById('desktopLogoutBtn').style.display = 'block';
                 initAdmin();
             } else {
                 currentUser = null;
+                detachLeagueListener();
+                league = null;
                 document.getElementById('loginContainer').style.display = 'flex';
                 document.getElementById('desktopLogoutBtn').style.display = 'none';
                 setTimeout(() => {
@@ -1137,10 +1272,19 @@
         function init() {
             // Auth state handled by onAuthStateChanged listener
         }
+
+        function detachLeagueListener() {
+            if (leagueListener) {
+                leagueRef.off('value', leagueListener);
+                leagueListener = null;
+            }
+        }
         
         function initAdmin() {
-            // Listen for real-time updates from Firebase
-            leagueRef.on('value', (snapshot) => {
+            // Avoid stacking listeners on re-login
+            detachLeagueListener();
+            
+            leagueListener = (snapshot) => {
                 league = snapshot.val();
                 
                 // Ensure arrays exist (Firebase returns undefined for empty arrays)
@@ -1177,7 +1321,9 @@
                     document.getElementById('adminWrapper').style.display = 'none';
                     document.getElementById('mobileAdminToggle').style.display = 'none';
                 }
-            });
+            };
+
+            leagueRef.on('value', leagueListener);
         }
         
         function toggleMobileSidebar() {
@@ -1223,6 +1369,7 @@
             renderTeams();
             renderRounds();
             renderPrintOptions();
+            renderPins();
             renderParInputs();
         }
         
@@ -1333,39 +1480,9 @@
                 }, 100);
             }
             
-            // Build scorecard preview HTML
-            let frontPars = '', backPars = '', frontTotal = 0, backTotal = 0;
-            
-            if (isBlank) {
-                // For blank scorecards, show empty par cells
-                for (let h = 0; h < frontNine; h++) { 
-                    frontPars += `<td></td>`; 
-                }
-                if (has18) {
-                    for (let h = 9; h < holes; h++) { 
-                        backPars += `<td></td>`; 
-                    }
-                }
-                frontTotal = '';
-                backTotal = '';
-            } else {
-                // For team scorecards, show actual pars
-                for (let h = 0; h < frontNine; h++) { 
-                    frontPars += `<td>${pars[h]}</td>`; 
-                    frontTotal += pars[h]; 
-                }
-                if (has18) {
-                    for (let h = 9; h < holes; h++) { 
-                        backPars += `<td>${pars[h]}</td>`; 
-                        backTotal += pars[h]; 
-                    }
-                }
-            }
-            
             const logoPath = 'images/golfcovelogo.png';
             const teamInfo = isBlank ? '' : `<div class="team-info">${team.name}</div>`;
             const qrSection = !isBlank ? `<div class="qr-container"><div class="qr-placeholder">QR</div></div>` : '';
-            const totalPar = isBlank ? '' : (frontTotal + backTotal);
             
             previewContainer.innerHTML = `
                 <style>
@@ -1464,10 +1581,6 @@
                         font-weight: bold;
                         font-size: 9px;
                         background: #f5f5f5;
-                    }
-                    #scorecardPreviewContainer .par-row td {
-                        background: #f5f5f5;
-                        font-weight: 600;
                     }
                     #scorecardPreviewContainer .player-row td {
                         height: 22px;
@@ -1580,16 +1693,6 @@
                         font-size: 9px;
                         letter-spacing: 0.5px;
                     }
-                    #scorecardPreviewContainer .par-row td {
-                        background: #f5f5f5;
-                        font-weight: 600;
-                        color: #000;
-                        font-size: 11px;
-                    }
-                    #scorecardPreviewContainer .par-row .row-label {
-                        background: #666 !important;
-                        color: #fff !important;
-                    }
                     #scorecardPreviewContainer .score-row td {
                         background: #fff;
                         height: 30px;
@@ -1649,27 +1752,17 @@
                             <td class="name-cell">NAME</td>
                             ${Array.from({length:frontNine},(_,i)=>`<td>${i+1}</td>`).join('')}
                             <td class="total-cell">OUT</td>
-                            ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
-                            ${has18?'<td class="total-cell">IN</td>':''}
-                            <td class="total-cell">TOT</td>
-                            <td class="total-cell">HCP</td>
-                            <td class="total-cell">NET</td>
-                        </tr>
-                        <tr class="par-row">
-                            <td class="label-cell" style="background:#666;text-align:center;">PAR</td>
-                            ${frontPars}
-                            <td class="total-cell">${frontTotal}</td>
-                            ${has18?backPars:''}
-                            ${has18?`<td class="total-cell">${backTotal}</td>`:''}
-                            <td class="total-cell">${totalPar}</td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                        ${Array.from({length:6},()=>`
-                        <tr class="player-row">
-                            <td class="name-cell"></td>
-                            ${Array.from({length:frontNine},()=>'<td></td>').join('')}
-                            <td class="total-cell"></td>
+                        ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
+                        ${has18?'<td class="total-cell">IN</td>':''}
+                        <td class="total-cell">TOT</td>
+                        <td class="total-cell">HCP</td>
+                        <td class="total-cell">NET</td>
+                    </tr>
+                    ${Array.from({length:6},()=>`
+                    <tr class="player-row">
+                        <td class="name-cell"></td>
+                        ${Array.from({length:frontNine},()=>'<td></td>').join('')}
+                        <td class="total-cell"></td>
                             ${has18?Array.from({length:holes-9},()=>'<td></td>').join(''):''}
                             ${has18?'<td class="total-cell"></td>':''}
                             <td class="total-cell"></td>
@@ -1773,6 +1866,80 @@
             updatePrintPreview();
         }
         
+        function renderPins() {
+            const list = document.getElementById('pinList');
+            const stats = document.getElementById('pinStats');
+            const teamSelect = document.getElementById('pinTeamSelect');
+            const playerSelect = document.getElementById('pinPlayerSelect');
+            if (!list) return;
+            
+            const total = league.players.length;
+            const withPin = league.players.filter(p => p.pin).length;
+            if (stats) stats.textContent = `${withPin}/${total} players have PINs`;
+            
+            // Rebuild team dropdown
+            if (teamSelect) {
+                const currentTeam = teamSelect.value;
+                teamSelect.innerHTML = '<option value="">All Teams</option>' + league.teams
+                    .slice()
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(t => `<option value="${t.id}">${t.name}</option>`)
+                    .join('');
+                if (currentTeam && league.teams.find(t => t.id === currentTeam)) {
+                    teamSelect.value = currentTeam;
+                }
+            }
+            
+            // Rebuild player dropdown (filtered by team if selected)
+            if (playerSelect) {
+                const selectedTeam = teamSelect?.value || '';
+                const currentPlayer = playerSelect.value;
+                const filteredPlayers = league.players
+                    .filter(p => !selectedTeam || p.teamId === selectedTeam)
+                    .slice()
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                playerSelect.innerHTML = '<option value="">Select a player</option>' + filteredPlayers
+                    .map(p => `<option value="${p.id}">${p.name}${p.pin ? ' (' + p.pin + ')' : ''}</option>`)
+                    .join('');
+                if (currentPlayer && filteredPlayers.find(p => p.id === currentPlayer)) {
+                    playerSelect.value = currentPlayer;
+                }
+            }
+            
+            if (total === 0) {
+                list.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <i class="fas fa-users-slash"></i>
+                        <p>No players yet. Add players to generate PINs.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const players = [...league.players].sort((a, b) => a.name.localeCompare(b.name));
+            list.innerHTML = players.map(p => {
+                const team = league.teams.find(t => t.id === p.teamId);
+                const pinDisplay = p.pin ? `<span class="pin-chip">${p.pin}</span>` : '<span style="color:#999;">No PIN</span>';
+                const actions = p.pin
+                    ? `<button class="btn btn-sm btn-secondary" onclick="copyPin('${p.id}')"><i class="fas fa-copy"></i> Copy</button>
+                       <button class="btn btn-sm" onclick="regeneratePin('${p.id}')"><i class="fas fa-sync-alt"></i> Regenerate</button>`
+                    : `<button class="btn btn-sm" onclick="regeneratePin('${p.id}')"><i class="fas fa-key"></i> Create PIN</button>`;
+                
+                return `
+                    <div class="pin-row">
+                        <div class="info">
+                            <span class="name">${p.name}</span>
+                            <span class="meta">${team ? team.name : 'No team'} · HCP ${p.handicap || 0}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap: wrap; justify-content: flex-end;">
+                            ${pinDisplay}
+                            ${actions}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
         function renderParInputs() {
             const container = document.getElementById('parInputsContainer');
             const holes = league.course?.holes || 18;
@@ -1853,7 +2020,7 @@
             league.players.push({
                 id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
                 name, teamId, handicap,
-                pin: generatePin()
+                pin: null  // No PIN until first score submission
             });
             save();
             closeModal('addPlayerModal');
@@ -1865,6 +2032,73 @@
             league.players = league.players.filter(p => p.id !== id);
             save();
             renderAll();
+        }
+        
+        // PIN management
+        function regeneratePin(playerId) {
+            const player = league.players.find(p => p.id === playerId);
+            if (!player) return;
+            player.pin = generatePin();
+            save();
+            renderPins();
+            alert(`${player.name}'s new PIN: ${player.pin}`);
+        }
+        
+        function handlePinTeamChange() {
+            renderPins();
+        }
+        
+        function setCustomPin() {
+            const playerId = document.getElementById('pinPlayerSelect')?.value;
+            const pin = document.getElementById('pinManualInput')?.value.trim();
+            if (!playerId) {
+                alert('Select a player first.');
+                return;
+            }
+            if (!pin || !/^[0-9]{4}$/.test(pin)) {
+                alert('PIN must be exactly 4 digits.');
+                return;
+            }
+            const player = league.players.find(p => p.id === playerId);
+            const idx = league.players.findIndex(p => p.id === playerId);
+            if (!player || idx === -1) return;
+            player.pin = pin;
+            save();
+            renderPins();
+            alert(`PIN set for ${player.name}`);
+        }
+        
+        function fillRandomPin() {
+            const pinInput = document.getElementById('pinManualInput');
+            if (!pinInput) return;
+            pinInput.value = generatePin();
+        }
+        
+        function generatePinsForAll() {
+            let created = 0;
+            league.players.forEach(p => {
+                if (!p.pin) {
+                    p.pin = generatePin();
+                    created++;
+                }
+            });
+            if (created === 0) {
+                alert('All players already have PINs.');
+                return;
+            }
+            save();
+            renderPins();
+            alert(`Generated ${created} PIN${created === 1 ? '' : 's'}.`);
+        }
+        
+        function copyPin(playerId) {
+            const player = league.players.find(p => p.id === playerId);
+            if (!player || !player.pin) return;
+            navigator.clipboard.writeText(player.pin).then(() => {
+                alert(`Copied PIN for ${player.name}`);
+            }).catch(() => {
+                alert('Could not copy PIN. Please try again.');
+            });
         }
         
         // Rounds
@@ -1979,7 +2213,7 @@
             
             const w = window.open('', '_blank');
             w.document.write(`
-                <!DOCTYPE html><html><head><title>QR Code</title>
+                <!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>
                 <style>body{font-family:Arial;text-align:center;padding:40px;}h1{color:#37b24a;}</style>
                 </head><body>
                 <h1>⛳ ${league.name}</h1>
@@ -1998,7 +2232,7 @@
             if (league.players.length === 0) { alert('No players'); return; }
             const w = window.open('', '_blank');
             w.document.write(`
-                <!DOCTYPE html><html><head><title>Player PINs</title>
+                <!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>
                 <style>body{font-family:Arial;padding:30px;}h1{color:#37b24a;}table{width:100%;border-collapse:collapse;}th,td{padding:10px 15px;text-align:left;border-bottom:1px solid #ddd;}th{background:#f5f5f5;}.pin{font-family:monospace;font-size:18px;font-weight:bold;}</style>
                 </head><body>
                 <h1>⛳ ${league.name}</h1>
@@ -2104,7 +2338,7 @@
             const w = window.open('', '_blank');
             const title = isBlank ? 'Blank Scorecards' : `Blank Scorecards - ${team.name}`;
             w.document.write(`
-                <!DOCTYPE html><html><head><title>${title}</title>
+                <!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>
                 <style>
                     @page { size: landscape; margin: 0.5cm; }
                     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -2299,4 +2533,6 @@
     <script src="js/main.js"></script>
 </body>
 </html>
+
+
 
