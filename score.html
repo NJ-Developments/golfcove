@@ -10,6 +10,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -842,10 +843,24 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const leagueRef = db.ref('league');
+        const auth = firebase.auth();
+
+        // Ensure we have an authenticated session (anonymous is fine) for write access
+        function ensureAuth() {
+            if (auth.currentUser) return Promise.resolve(auth.currentUser);
+            return auth.signInAnonymously().catch(err => {
+                console.error('Anonymous auth failed:', err);
+                throw err;
+            });
+        }
+
+        // Kick off auth immediately
+        ensureAuth();
         
         let league = null;
         let roundId = null;
         let playerId = null;
+        let isEnteringScores = false; // Flag to prevent re-render during score entry
         
         // Profile management
         function getSavedProfile() {
@@ -864,6 +879,9 @@
         }
 
         function init() {
+            // Ensure auth (needed for write access under secured rules)
+            ensureAuth();
+
             // Listen for real-time updates from Firebase
             leagueRef.on('value', (snapshot) => {
                 league = snapshot.val();
@@ -914,7 +932,10 @@
                 document.getElementById('leagueName').textContent = league.name;
                 document.getElementById('roundName').textContent = round.name;
 
-                render();
+                // Don't re-render if user is actively entering scores
+                if (!isEnteringScores) {
+                    render();
+                }
             }, (error) => {
                 // Handle Firebase errors (permissions, network, etc.)
                 console.error('Firebase error:', error);
@@ -1164,51 +1185,8 @@
         }
         
         function showPlayerSelect() {
-            // Show PIN prompt modal to switch players
-            const modal = document.createElement('div');
-            modal.id = 'switchPinModal';
-            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
-            modal.innerHTML = `
-                <div style="background:#fff;border-radius:12px;padding:30px;max-width:400px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-                    <h2 style="color:#37b24a;margin-bottom:10px;font-size:22px;"><i class="fas fa-key"></i> Enter PIN to Switch</h2>
-                    <p style="color:#666;margin-bottom:20px;font-size:14px;">Enter the 4-digit PIN of the player you want to switch to</p>
-                    <input type="text" id="switchPinInput" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" 
-                           placeholder="••••" autocomplete="off" 
-                           style="width:100%;padding:15px;border:2px solid #ddd;border-radius:8px;font-size:20px;text-align:center;letter-spacing:8px;margin-bottom:15px;">
-                    <div id="switchPinError" style="display:none;color:#e74c3c;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:6px;"></div>
-                    <div style="display:flex;gap:10px;">
-                        <button onclick="verifySwitchPin()" style="flex:1;background:#37b24a;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
-                            <i class="fas fa-check"></i> Confirm
-                        </button>
-                        <button onclick="closeSwitchModal()" style="flex:1;background:#6c757d;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            setTimeout(() => document.getElementById('switchPinInput').focus(), 100);
-        }
-        
-        function closeSwitchModal() {
-            const modal = document.getElementById('switchPinModal');
-            if (modal) modal.remove();
-        }
-        
-        function verifySwitchPin() {
-            const pin = document.getElementById('switchPinInput').value;
-            const player = league.players.find(p => p.pin === pin);
-            
-            if (player) {
-                closeSwitchModal();
-                selectPlayer(player.id);
-            } else {
-                const errorEl = document.getElementById('switchPinError');
-                errorEl.textContent = '❌ Invalid PIN. Please try again.';
-                errorEl.style.display = 'block';
-                document.getElementById('switchPinInput').value = '';
-                document.getElementById('switchPinInput').focus();
-            }
+            // Show the browse players list (PIN required when selecting)
+            showBrowsePlayers();
         }
         
         function showPinEntry() {
@@ -1240,7 +1218,7 @@
                 selectPlayer(player.id);
             } else {
                 const errorEl = document.getElementById('pinError');
-                errorEl.textContent = 'PIN not found. Please try again or create a new profile.';
+                errorEl.textContent = 'PIN not found. If you were added by an admin, try "Browse Players" instead.';
                 errorEl.style.display = 'block';
                 document.getElementById('pinInput').value = '';
                 document.getElementById('pinInput').focus();
@@ -1268,7 +1246,7 @@
                 if (teamPlayers.length > 0) {
                     playersHtml += `<div class="team-group"><div class="team-name"><i class="fas fa-users"></i> ${team.name}</div>`;
                     teamPlayers.forEach(p => {
-                        playersHtml += `<div class="player-item" onclick="selectPlayer('${p.id}')"><span>${p.name}</span><span class="hcp">HCP ${p.handicap || 0}</span></div>`;
+                        playersHtml += `<div class="player-item" onclick="promptPinForPlayer('${p.id}', '${p.name.replace(/'/g, "\\'")}')"><span>${p.name}</span><span class="hcp">HCP ${p.handicap || 0}</span></div>`;
                     });
                     playersHtml += `</div>`;
                 }
@@ -1277,7 +1255,7 @@
             if (noTeam.length > 0) {
                 playersHtml += `<div class="team-group"><div class="team-name"><i class="fas fa-user"></i> Individual Players</div>`;
                 noTeam.forEach(p => {
-                    playersHtml += `<div class="player-item" onclick="selectPlayer('${p.id}')"><span>${p.name}</span><span class="hcp">HCP ${p.handicap || 0}</span></div>`;
+                    playersHtml += `<div class="player-item" onclick="promptPinForPlayer('${p.id}', '${p.name.replace(/'/g, "\\'")}')"><span>${p.name}</span><span class="hcp">HCP ${p.handicap || 0}</span></div>`;
                 });
                 playersHtml += `</div>`;
             }
@@ -1293,6 +1271,185 @@
                     <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
                 </div>
             `;
+        }
+        
+        function promptPinForPlayer(playerId, playerName) {
+            const player = league.players.find(p => p.id === playerId);
+            
+            // If player has no PIN, allow them to select themselves without verification
+            if (!player.pin) {
+                selectPlayer(playerId);
+                return;
+            }
+            
+            const modal = document.createElement('div');
+            modal.id = 'browsePinModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:12px;padding:30px;max-width:400px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                    <h2 style="color:#37b24a;margin-bottom:10px;font-size:22px;"><i class="fas fa-key"></i> Enter Your PIN</h2>
+                    <p style="color:#666;margin-bottom:20px;font-size:14px;">Hi ${playerName}! Please enter your 4-digit PIN to continue</p>
+                    <input type="text" id="browsePinInput" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" 
+                           placeholder="••••" autocomplete="off" 
+                           style="width:100%;padding:15px;border:2px solid #ddd;border-radius:8px;font-size:20px;text-align:center;letter-spacing:8px;margin-bottom:15px;">
+                    <div id="browsePinError" style="display:none;color:#e74c3c;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:6px;"></div>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="verifyBrowsePin('${playerId}')" style="flex:1;background:#37b24a;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
+                            <i class="fas fa-check"></i> Confirm
+                        </button>
+                        <button onclick="closeBrowsePinModal()" style="flex:1;background:#6c757d;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            setTimeout(() => document.getElementById('browsePinInput').focus(), 100);
+        }
+        
+        function closeBrowsePinModal() {
+            const modal = document.getElementById('browsePinModal');
+            if (modal) modal.remove();
+        }
+        
+        function verifyBrowsePin(expectedPlayerId) {
+            const player = league.players.find(p => p.id === expectedPlayerId);
+            
+            // If player has no PIN, allow them through directly (no PIN creation needed yet)
+            if (player && !player.pin) {
+                closeBrowsePinModal();
+                selectPlayer(player.id);
+                return;
+            }
+            
+            const pin = document.getElementById('browsePinInput').value;
+            
+            if (player && player.pin === pin) {
+                closeBrowsePinModal();
+                selectPlayer(player.id);
+            } else {
+                const errorEl = document.getElementById('browsePinError');
+                errorEl.textContent = '❌ Incorrect PIN. Please try again.';
+                errorEl.style.display = 'block';
+                document.getElementById('browsePinInput').value = '';
+                document.getElementById('browsePinInput').focus();
+            }
+        }
+        
+        function showCreatePinModalForSelection(playerId, playerName) {
+            const modal = document.createElement('div');
+            modal.id = 'createPinModalSelection';
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:12px;padding:30px;max-width:450px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                    <div style="text-align:center;margin-bottom:20px;">
+                        <div style="width:60px;height:60px;background:#37b24a;border-radius:50%;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-key" style="color:#fff;font-size:28px;"></i>
+                        </div>
+                        <h2 style="color:#37b24a;margin-bottom:10px;font-size:24px;">Create Your PIN</h2>
+                        <p style="color:#666;font-size:14px;line-height:1.5;">Hi ${playerName}! You were added by an admin. Please create a 4-digit PIN to access your profile.</p>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;font-weight:600;margin-bottom:8px;color:#333;">Choose a 4-digit PIN:</label>
+                        <input type="text" id="createPinInputSelection" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" 
+                               placeholder="••••" autocomplete="off" 
+                               style="width:100%;padding:15px;border:2px solid #ddd;border-radius:8px;font-size:20px;text-align:center;letter-spacing:8px;">
+                        <div style="margin-top:8px;font-size:12px;color:#888;">
+                            <i class="fas fa-info-circle"></i> Make it memorable - you'll need it to enter scores
+                        </div>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;font-weight:600;margin-bottom:8px;color:#333;">Confirm PIN:</label>
+                        <input type="text" id="confirmPinInputSelection" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" 
+                               placeholder="••••" autocomplete="off" 
+                               style="width:100%;padding:15px;border:2px solid #ddd;border-radius:8px;font-size:20px;text-align:center;letter-spacing:8px;">
+                    </div>
+                    <div id="createPinErrorSelection" style="display:none;color:#e74c3c;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:6px;text-align:center;"></div>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="saveNewPinForSelection('${playerId}')" style="flex:1;background:#37b24a;color:#fff;border:none;padding:15px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;">
+                            <i class="fas fa-check"></i> Create PIN
+                        </button>
+                        <button onclick="closeCreatePinModalSelection()" style="background:#6c757d;color:#fff;border:none;padding:15px 20px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            setTimeout(() => document.getElementById('createPinInputSelection').focus(), 100);
+        }
+        
+        function closeCreatePinModalSelection() {
+            const modal = document.getElementById('createPinModalSelection');
+            if (modal) modal.remove();
+        }
+        
+        function saveNewPinForSelection(playerId) {
+            const pin = document.getElementById('createPinInputSelection').value;
+            const confirmPin = document.getElementById('confirmPinInputSelection').value;
+            const errorEl = document.getElementById('createPinErrorSelection');
+            
+            // Validation
+            if (!pin || pin.length !== 4 || !/^[0-9]{4}$/.test(pin)) {
+                errorEl.textContent = '⚠️ PIN must be exactly 4 digits';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            if (pin !== confirmPin) {
+                errorEl.textContent = '⚠️ PINs do not match';
+                errorEl.style.display = 'block';
+                return;
+            }
+            // Save PIN to player
+            const player = league.players.find(p => p.id === playerId);
+            const playerIndex = league.players.findIndex(p => p.id === playerId);
+            if (playerIndex === -1) {
+                errorEl.textContent = 'Player not found. Please reload and try again.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            player.pin = pin;
+            
+            const updates = {};
+            updates[`players/${playerIndex}/pin`] = pin;
+            
+            ensureAuth().then(() => leagueRef.update(updates)).then(() => {
+                // Close modal
+                closeCreatePinModalSelection();
+                
+                // Show success message
+                const successModal = document.createElement('div');
+                successModal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:10000;';
+                successModal.innerHTML = `
+                    <div style="background:#fff;border-radius:12px;padding:40px;max-width:400px;text-align:center;">
+                        <div style="width:80px;height:80px;background:#37b24a;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-check" style="color:#fff;font-size:40px;"></i>
+                        </div>
+                        <h2 style="color:#37b24a;margin-bottom:15px;">PIN Created!</h2>
+                        <p style="color:#666;margin-bottom:10px;">Your PIN has been successfully created.</p>
+                        <div style="background:#f0f0f0;padding:15px;border-radius:8px;margin:20px 0;">
+                            <div style="font-size:13px;color:#888;margin-bottom:5px;">Your PIN</div>
+                            <div style="font-size:28px;font-weight:700;color:#37b24a;letter-spacing:8px;">${pin}</div>
+                        </div>
+                        <p style="color:#e74c3c;font-size:13px;font-weight:600;margin-bottom:20px;">
+                            <i class="fas fa-exclamation-triangle"></i> Save this PIN! You'll need it to enter scores in the future.
+                        </p>
+                        <button onclick="this.parentElement.parentElement.remove(); selectPlayer('${playerId}')" style="width:100%;background:#37b24a;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
+                            Continue to Score Entry
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(successModal);
+            }).catch((error) => {
+                console.error('Error saving PIN:', error);
+                if (error?.code === 'PERMISSION_DENIED') {
+                    errorEl.textContent = 'Access denied. Please contact an admin to adjust database permissions.';
+                } else {
+                    errorEl.textContent = '❌ Failed to save. Please check your connection and try again.';
+                }
+                errorEl.style.display = 'block';
+            });
         }
         
         function showRegistration() {
@@ -1374,14 +1531,6 @@
                 return;
             }
             
-            // Check if PIN is already taken
-            const existingPinPlayer = (league.players || []).find(p => p.pin === pin);
-            if (existingPinPlayer) {
-                errorEl.textContent = 'This PIN is already taken. Please choose a different one.';
-                errorEl.style.display = 'block';
-                return;
-            }
-            
             // Check for duplicate name
             const existingPlayer = (league.players || []).find(p => p.name.toLowerCase() === name.toLowerCase());
             if (existingPlayer) {
@@ -1423,7 +1572,7 @@
             };
             
             league.players.push(newPlayer);
-            leagueRef.set(league);
+            ensureAuth().then(() => leagueRef.set(league));
             
             // Show PIN to user before continuing
             showPinConfirmation(newPlayer);
@@ -1451,8 +1600,13 @@
         }
 
         function getScores() {
-            if (!playerId || !roundId) return {};
-            return league.scores?.[roundId]?.[playerId] || {};
+            if (!playerId || !roundId) {
+                console.log('getScores: Missing playerId or roundId', { playerId, roundId });
+                return {};
+            }
+            const scores = league.scores?.[roundId]?.[playerId] || {};
+            console.log('getScores result:', { playerId, roundId, scores, leagueScores: league.scores });
+            return scores;
         }
 
         function saveHole(hole, value) {
@@ -1468,7 +1622,28 @@
                 delete league.scores[roundId][playerId][hole];
             }
 
-            leagueRef.set(league);
+            // Set flag to prevent re-render during score entry
+            isEnteringScores = true;
+            
+            // Use update() instead of set() to avoid triggering full re-render
+            const updates = {};
+            updates[`scores/${roundId}/${playerId}/${hole}`] = score > 0 ? score : null;
+            ensureAuth().then(() => {
+                return leagueRef.update(updates).then(() => {
+                    // Reset flag after a short delay
+                    setTimeout(() => {
+                        isEnteringScores = false;
+                    }, 500);
+                });
+            }).catch(error => {
+                console.error('Error saving score:', error);
+                if (error?.code === 'PERMISSION_DENIED') {
+                    alert('Saving was blocked by database permissions. Please contact an admin.');
+                } else {
+                    alert('Could not save your score (auth or network issue). Please try again or contact admin.');
+                }
+                isEnteringScores = false;
+            });
             
             // Update input styling
             const input = document.getElementById('h' + hole);
@@ -1519,10 +1694,33 @@
 
         function submit() {
             const scores = getScores();
+            
+            // Count valid scores - check all properties, not just 1-18
             let filled = 0;
-            for (let h = 1; h <= league.course.holes; h++) {
-                if (scores[h]) filled++;
+            const validScores = [];
+            for (let key in scores) {
+                const score = scores[key];
+                // Skip metadata properties
+                if (key === 'submitted' || key === 'submittedAt') continue;
+                
+                // Parse the score value - might be string or number
+                const scoreValue = typeof score === 'string' ? parseInt(score) : score;
+                
+                // Count numeric scores > 0
+                if (scoreValue && !isNaN(scoreValue) && scoreValue > 0) {
+                    filled++;
+                    validScores.push({ hole: key, score: scoreValue });
+                }
             }
+
+            console.log('Score validation:', { 
+                rawScores: scores, 
+                validScores, 
+                filled, 
+                total: league.course.holes,
+                playerId,
+                roundId
+            });
 
             if (filled === 0) {
                 alert('Please enter at least one score before submitting.');
@@ -1535,15 +1733,145 @@
                 }
             }
 
+            // Check if player needs to create a PIN
+            const player = league.players.find(p => p.id === playerId);
+            if (!player.pin) {
+                showCreatePinModal();
+                return;
+            }
+
+            // Mark as submitted
+            if (!league.scores) league.scores = {};
+            if (!league.scores[roundId]) league.scores[roundId] = {};
+            if (!league.scores[roundId][playerId]) league.scores[roundId][playerId] = {};
+            
             league.scores[roundId][playerId].submitted = true;
             league.scores[roundId][playerId].submittedAt = new Date().toISOString();
-            leagueRef.set(league).then(() => {
+            
+            // Use update instead of set to avoid overwriting other data
+            const updates = {
+                [`scores/${roundId}/${playerId}/submitted`]: true,
+                [`scores/${roundId}/${playerId}/submittedAt`]: new Date().toISOString()
+            };
+            
+            ensureAuth().then(() => leagueRef.update(updates)).then(() => {
                 window.location.href = 'tournaments.html';
             }).catch((error) => {
                 console.error('Error submitting score:', error);
                 alert('Failed to submit score. Please check your connection and try again.');
                 league.scores[roundId][playerId].submitted = false;
                 delete league.scores[roundId][playerId].submittedAt;
+            });
+        }
+        
+        function showCreatePinModal() {
+            const player = league.players.find(p => p.id === playerId);
+            const modal = document.createElement('div');
+            modal.id = 'createPinModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:12px;padding:30px;max-width:450px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                    <div style="text-align:center;margin-bottom:20px;">
+                        <div style="width:60px;height:60px;background:#37b24a;border-radius:50%;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-key" style="color:#fff;font-size:28px;"></i>
+                        </div>
+                        <h2 style="color:#37b24a;margin-bottom:10px;font-size:24px;">Create Your PIN</h2>
+                        <p style="color:#666;font-size:14px;line-height:1.5;">Hi ${player.name}! Before submitting your score, please create a 4-digit PIN. You'll need this PIN to access your scores in the future.</p>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;font-weight:600;margin-bottom:8px;color:#333;">Choose a 4-digit PIN:</label>
+                        <input type="text" id="createPinInput" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" 
+                               placeholder="••••" autocomplete="off" 
+                               style="width:100%;padding:15px;border:2px solid #ddd;border-radius:8px;font-size:20px;text-align:center;letter-spacing:8px;">
+                        <div style="margin-top:8px;font-size:12px;color:#888;">
+                            <i class="fas fa-info-circle"></i> Make it memorable - you'll need it to enter scores later
+                        </div>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;font-weight:600;margin-bottom:8px;color:#333;">Confirm PIN:</label>
+                        <input type="text" id="confirmPinInput" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" 
+                               placeholder="••••" autocomplete="off" 
+                               style="width:100%;padding:15px;border:2px solid #ddd;border-radius:8px;font-size:20px;text-align:center;letter-spacing:8px;">
+                    </div>
+                    <div id="createPinError" style="display:none;color:#e74c3c;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:6px;text-align:center;"></div>
+                    <button onclick="saveNewPin()" style="width:100%;background:#37b24a;color:#fff;border:none;padding:15px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;">
+                        <i class="fas fa-check"></i> Create PIN & Submit Score
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            setTimeout(() => document.getElementById('createPinInput').focus(), 100);
+        }
+        
+        function saveNewPin() {
+            const pin = document.getElementById('createPinInput').value;
+            const confirmPin = document.getElementById('confirmPinInput').value;
+            const errorEl = document.getElementById('createPinError');
+            
+            // Validation
+            if (!pin || pin.length !== 4 || !/^[0-9]{4}$/.test(pin)) {
+                errorEl.textContent = '⚠️ PIN must be exactly 4 digits';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            if (pin !== confirmPin) {
+                errorEl.textContent = '⚠️ PINs do not match';
+                errorEl.style.display = 'block';
+                return;
+            }
+            // Save PIN to player
+            const player = league.players.find(p => p.id === playerId);
+            const playerIndex = league.players.findIndex(p => p.id === playerId);
+            player.pin = pin;
+            
+            // Submit score
+            if (!league.scores) league.scores = {};
+            if (!league.scores[roundId]) league.scores[roundId] = {};
+            if (!league.scores[roundId][playerId]) league.scores[roundId][playerId] = {};
+            
+            league.scores[roundId][playerId].submitted = true;
+            league.scores[roundId][playerId].submittedAt = new Date().toISOString();
+            
+            // Use update instead of set to avoid overwriting other data
+            const updates = {
+                [`players/${playerIndex}/pin`]: pin,
+                [`scores/${roundId}/${playerId}/submitted`]: true,
+                [`scores/${roundId}/${playerId}/submittedAt`]: new Date().toISOString()
+            };
+            
+            ensureAuth().then(() => leagueRef.update(updates)).then(() => {
+                // Close modal
+                const modal = document.getElementById('createPinModal');
+                if (modal) modal.remove();
+                
+                // Show success message
+                const successModal = document.createElement('div');
+                successModal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:10000;';
+                successModal.innerHTML = `
+                    <div style="background:#fff;border-radius:12px;padding:40px;max-width:400px;text-align:center;">
+                        <div style="width:80px;height:80px;background:#37b24a;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-check" style="color:#fff;font-size:40px;"></i>
+                        </div>
+                        <h2 style="color:#37b24a;margin-bottom:15px;">Success!</h2>
+                        <p style="color:#666;margin-bottom:10px;">Your PIN has been created and your score has been submitted.</p>
+                        <div style="background:#f0f0f0;padding:15px;border-radius:8px;margin:20px 0;">
+                            <div style="font-size:13px;color:#888;margin-bottom:5px;">Your PIN</div>
+                            <div style="font-size:28px;font-weight:700;color:#37b24a;letter-spacing:8px;">${pin}</div>
+                        </div>
+                        <p style="color:#e74c3c;font-size:13px;font-weight:600;margin-bottom:20px;">
+                            <i class="fas fa-exclamation-triangle"></i> Save this PIN! You'll need it to enter scores in the future.
+                        </p>
+                        <button onclick="this.parentElement.parentElement.remove(); selectPlayer('${playerId}'); render();" style="width:100%;background:#37b24a;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
+                            Back to Scorecard
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(successModal);
+            }).catch((error) => {
+                console.error('Error saving PIN and submitting score:', error);
+                errorEl.textContent = '❌ Failed to save. Please check your connection and try again.';
+                errorEl.style.display = 'block';
             });
         }
 
