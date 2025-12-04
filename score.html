@@ -17,36 +17,86 @@
             padding: 0;
             box-sizing: border-box;
         }
+        html, body {
+            width: 100%;
+            overflow-x: hidden;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #ffffff;
+            background: #2f3439;
             min-height: 100vh;
+            color: #e9ecef;
         }
+        
+        /* Top Bar */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #24282d;
+            padding: 10px 14px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+        }
+        .brand img {
+            height: 42px;
+        }
+        .menu-btn {
+            width: 44px;
+            height: 44px;
+            background: #10a0b6;
+            border: none;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+        }
+        .menu-btn span {
+            display: block;
+            width: 18px;
+            height: 2px;
+            background: #fff;
+            border-radius: 2px;
+        }
+        
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            top: 64px;
+            right: 12px;
+            left: 12px;
+            background: #24282d;
+            border: 1px solid #1fa34a;
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+            padding: 12px;
+            z-index: 1800;
+        }
+        .mobile-nav.open { display: block; }
+        .mobile-nav a {
+            display: block;
+            padding: 12px 10px;
+            color: #e9ecef;
+            text-decoration: none;
+            font-weight: 700;
+            border-radius: 8px;
+        }
+        .mobile-nav a:hover { background: rgba(16,160,182,0.15); }
         
         /* Header */
         .header {
-            background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
+            background: #2d3137;
             color: #fff;
-            padding: 25px 20px;
+            padding: 16px 16px 10px;
             text-align: center;
-            position: relative;
-            overflow: hidden;
         }
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
-            animation: shimmer 3s infinite;
-        }
-        @keyframes shimmer {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(180deg); }
-        }
-        .header a { position: relative; z-index: 1; }
+        .header a { position: relative; z-index: 1; display: inline-block; }
         .header h1 {
             font-size: 22px;
             margin-bottom: 4px;
@@ -56,15 +106,15 @@
         }
         .header p {
             font-size: 14px;
-            opacity: 0.9;
+            opacity: 0.8;
             position: relative;
             z-index: 1;
         }
         
         .container {
-            max-width: 420px;
+            max-width: 480px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 16px;
             padding-bottom: 40px;
         }
         
@@ -140,6 +190,47 @@
             background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
             color: #666;
             box-shadow: none;
+        }
+        /* Hero summary */
+        .hero-card {
+            background: #3c4146;
+            color: #fff;
+            border-radius: 18px;
+            padding: 22px 18px 18px;
+            text-align: center;
+            box-shadow: 0 14px 30px rgba(0,0,0,0.35);
+            border: 1px solid #1fa34a;
+            margin-bottom: 18px;
+        }
+        .hero-title {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.15;
+        }
+        .hero-subtitle {
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 8px;
+            margin-bottom: 6px;
+        }
+        .hero-meta {
+            font-size: 15px;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+        .hero-date {
+            font-size: 13px;
+            color: #9ca3af;
+        }
+        .hero-switch {
+            margin-top: 10px;
+            width: 100%;
+            background: #10a0b6;
+            color: #fff;
+            border: none;
+        }
+        .hero-switch:hover {
+            background: #0c90a5;
         }
         .option-text { flex: 1; }
         .option-title {
@@ -230,83 +321,61 @@
         
         /* Scores Card */
         .scores-card {
-            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            background: #343a40;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.35);
             overflow: hidden;
+            border: 1px solid #1fa34a;
+            margin-top: 16px;
+            padding-bottom: 10px;
         }
         .section-header {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: #16a34a;
             color: #fff;
-            padding: 16px 20px;
-            font-size: 14px;
-            font-weight: 700;
+            padding: 14px 18px;
+            font-size: 16px;
+            font-weight: 800;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            letter-spacing: 0.5px;
+            gap: 8px;
+            letter-spacing: 0.2px;
         }
-        .section-header .subtotal {
-            background: rgba(55,178,74,0.2);
-            padding: 6px 12px;
-            border-radius: 20px;
+        .section-header .section-subtitle {
+            font-weight: 700;
             font-size: 13px;
-            color: #37b24a;
+            opacity: 0.95;
         }
-        .hole-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 20px;
-            border-bottom: 1px solid #f0f0f0;
-            transition: background 0.2s;
-        }
-        .hole-row:hover {
-            background: #fafffe;
-        }
-        .hole-row:last-of-type {
-            border-bottom: none;
-        }
-        .hole-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .hole-number {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+        .section-header .subtotal { display: none; }
+        .hole-card {
+            background: #2d3137;
+            border: 1px solid #1fa34a;
             border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
-            color: #555;
+            overflow: hidden;
+            margin: 12px 14px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.35);
         }
-        .hole-details {
-            display: flex;
-            flex-direction: column;
+        .hole-title {
+            background: #12a7bf;
+            color: #fff;
+            text-align: center;
+            padding: 12px;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
         }
-        .hole-label {
-            font-size: 15px;
-            font-weight: 600;
-            color: #333;
-        }
-        .hole-par {
-            font-size: 12px;
-            color: #888;
-            margin-top: 2px;
+        .hole-input-wrap {
+            background: #f7f9fc;
+            padding: 12px;
         }
         .score-input {
-            width: 65px;
-            height: 50px;
+            width: 100%;
+            height: 52px;
             padding: 0;
             font-size: 22px;
-            font-weight: 700;
+            font-weight: 800;
             text-align: center;
-            border: 3px solid #e0e0e0;
-            border-radius: 12px;
+            border: 2px solid #d9e2ec;
+            border-radius: 8px;
             background: #fff;
             transition: all 0.2s;
             -webkit-appearance: none;
@@ -322,6 +391,28 @@
             outline: none;
             box-shadow: 0 0 0 4px rgba(55,178,74,0.15);
             transform: scale(1.05);
+        }
+        
+        /* Responsive tweaks */
+        @media (max-width: 520px) {
+            .container { padding: 12px; }
+            .hero-card { padding: 18px 14px 14px; }
+            .hero-title { font-size: 26px; }
+            .hero-subtitle { font-size: 16px; }
+            .hero-meta { font-size: 14px; }
+            .hero-date { font-size: 12px; }
+            .scores-card { margin-top: 12px; border-radius: 12px; }
+            .section-header { padding: 12px 14px; font-size: 14px; }
+            .hole-card { margin: 10px 10px; }
+            .hole-title { font-size: 16px; padding: 10px; }
+            .hole-input-wrap { padding: 10px; }
+            .score-input { height: 48px; font-size: 20px; }
+        }
+
+        @media (max-width: 380px) {
+            .hero-title { font-size: 22px; }
+            .hero-subtitle { font-size: 15px; }
+            .hole-title { font-size: 15px; }
         }
         .score-input.under-par {
             border-color: #37b24a;
@@ -815,6 +906,19 @@
     </style>
 </head>
 <body>
+    <div class="topbar">
+        <a href="index.html" class="brand"><img src="images/golfCoveLogo6.png" alt="Golf Cove"></a>
+        <button class="menu-btn" type="button" aria-label="Menu" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+    <div id="mobileNav" class="mobile-nav">
+        <a href="index.html">Home</a>
+        <a href="tournaments.html">Leaderboard</a>
+        <a href="score.html">Enter Score</a>
+        <a href="league-admin.html">Admin</a>
+    </div>
+
     <div class="header">
         <a href="index.html" style="display: inline-block; margin-bottom: 10px;">
             <img src="images/golfCoveLogo6.png" alt="Golf Cove" style="height: 60px;">
@@ -871,6 +975,22 @@
         function saveProfile(id) {
             localStorage.setItem('golfcove_profile', JSON.stringify({ playerId: id }));
         }
+        
+        function toggleMenu() {
+            const nav = document.getElementById('mobileNav');
+            nav.classList.toggle('open');
+        }
+
+        // Close mobile nav when clicking outside
+        document.addEventListener('click', (e) => {
+            const nav = document.getElementById('mobileNav');
+            const btn = document.querySelector('.menu-btn');
+            if (!nav || !btn) return;
+            if (!nav.classList.contains('open')) return;
+            if (!nav.contains(e.target) && !btn.contains(e.target)) {
+                nav.classList.remove('open');
+            }
+        });
         
         function clearProfile() {
             localStorage.removeItem('golfcove_profile');
@@ -960,27 +1080,33 @@
             const scores = getScores();
             const submitted = scores.submitted;
             const currentPlayer = league.players.find(p => p.id === playerId);
-            
-            // Show profile header if player is selected
-            let profileHeader = '';
-            if (currentPlayer) {
-                const team = (league.teams || []).find(t => t.id === currentPlayer.teamId);
-                profileHeader = `
-                    <div class="profile-card">
-                        <div class="profile-info">
-                            <div class="profile-avatar"><i class="fas fa-user-circle"></i></div>
-                            <div class="profile-details">
-                                <div class="profile-name">${currentPlayer.name}</div>
-                                <div class="profile-meta">
-                                    ${team ? `<span><i class="fas fa-users"></i> ${team.name}</span>` : ''}
-                                    <span><i class="fas fa-golf-ball"></i> HCP ${currentPlayer.handicap || 0}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="switch-btn" onclick="showPlayerSelect()"><i class="fas fa-exchange-alt"></i> Switch</button>
-                    </div>
-                `;
+            const team = currentPlayer ? (league.teams || []).find(t => t.id === currentPlayer.teamId) : null;
+            const holes = league.course?.holes || 18;
+            const pars = league.course?.pars || Array(holes).fill(4);
+            const totalPar = pars.reduce((a, b) => a + (parseInt(b) || 0), 0) || holes * 4;
+            const round = league.rounds.find(r => r.id === roundId) || league.rounds[league.rounds.length - 1] || null;
+            let roundDate = '';
+            if (round?.startDate && round?.endDate) {
+                const start = new Date(round.startDate).toLocaleDateString();
+                const end = new Date(round.endDate).toLocaleDateString();
+                roundDate = `${start} - ${end}`;
+            } else if (round?.date) {
+                roundDate = new Date(round.date).toLocaleDateString();
             }
+            
+            // Hero summary
+            const playerMeta = currentPlayer 
+                ? `<div class="hero-meta">Player: ${currentPlayer.name}${team ? ' • ' + team.name : ''} • HCP ${currentPlayer.handicap || 0}</div>
+                   <button class="switch-btn hero-switch" onclick="showPlayerSelect()"><i class="fas fa-exchange-alt"></i> Switch Player</button>`
+                : '';
+            let profileHeader = `
+                <div class="hero-card">
+                    <div class="hero-title">${league.name || 'League'}</div>
+                    <div class="hero-subtitle">${league.course?.name || ''} &nbsp; Holes:${holes} &nbsp; PAR:${totalPar}</div>
+                    <div class="hero-date">${round ? round.name : ''}${roundDate ? ' • ' + roundDate : ''}</div>
+                    ${playerMeta}
+                </div>
+            `;
 
             // Build player selection / registration
             let html = '';
@@ -1070,21 +1196,15 @@
             html += `<div class="scores-card">`;
             
             // Front 9 section
-            if (has18) {
-                html += `<div class="section-header"><span>Front 9</span><span class="subtotal" id="outTotal">OUT: -</span></div>`;
-            } else {
-                html += `<div class="section-header"><span>Scores</span></div>`;
-            }
+            html += `<div class="section-header"><span>Score Card</span><span class="section-subtitle">click hole to edit score</span><span class="subtotal" id="outTotal">OUT: -</span></div>`;
             
             let total = 0;
             let out = 0;
             let inScore = 0;
-            let totalPar = 0;
             
             for (let h = 1; h <= frontNine; h++) {
                 const val = scores[h] || '';
                 const par = league.course.pars?.[h-1] || 4;
-                totalPar += par;
                 if (val) {
                     total += val;
                     out += val;
@@ -1098,18 +1218,14 @@
                 }
                 
                 html += `
-                    <div class="hole-row">
-                        <div class="hole-info">
-                            <div class="hole-number">${h}</div>
-                            <div class="hole-details">
-                                <span class="hole-label">Hole ${h}</span>
-                                <span class="hole-par">Par ${par}</span>
-                            </div>
+                    <div class="hole-card">
+                        <div class="hole-title">Hole ${h} - PAR ${par}</div>
+                        <div class="hole-input-wrap">
+                            <input type="number" class="score-input ${inputClass}" id="h${h}" 
+                                   value="${val}" min="1" max="15" inputmode="numeric"
+                                   data-par="${par}" data-section="front"
+                                   onchange="saveHole(${h}, this.value)" onfocus="this.select()">
                         </div>
-                        <input type="number" class="score-input ${inputClass}" id="h${h}" 
-                               value="${val}" min="1" max="15" inputmode="numeric"
-                               data-par="${par}" data-section="front"
-                               onchange="saveHole(${h}, this.value)" onfocus="this.select()">
                     </div>
                 `;
             }
@@ -1121,7 +1237,6 @@
                 for (let h = frontNine + 1; h <= league.course.holes; h++) {
                     const val = scores[h] || '';
                     const par = league.course.pars?.[h-1] || 4;
-                    totalPar += par;
                     if (val) {
                         total += val;
                         inScore += val;
@@ -1135,18 +1250,14 @@
                     }
                     
                     html += `
-                        <div class="hole-row">
-                            <div class="hole-info">
-                                <div class="hole-number">${h}</div>
-                                <div class="hole-details">
-                                    <span class="hole-label">Hole ${h}</span>
-                                    <span class="hole-par">Par ${par}</span>
-                                </div>
+                        <div class="hole-card">
+                            <div class="hole-title">Hole ${h} - PAR ${par}</div>
+                            <div class="hole-input-wrap">
+                                <input type="number" class="score-input ${inputClass}" id="h${h}" 
+                                       value="${val}" min="1" max="15" inputmode="numeric"
+                                       data-par="${par}" data-section="back"
+                                       onchange="saveHole(${h}, this.value)" onfocus="this.select()">
                             </div>
-                            <input type="number" class="score-input ${inputClass}" id="h${h}" 
-                                   value="${val}" min="1" max="15" inputmode="numeric"
-                                   data-par="${par}" data-section="back"
-                                   onchange="saveHole(${h}, this.value)" onfocus="this.select()">
                         </div>
                     `;
                 }
@@ -1212,17 +1323,57 @@
         function loginWithPin(e) {
             e.preventDefault();
             const pin = document.getElementById('pinInput').value;
-            const player = league.players.find(p => p.pin === pin);
+            const matches = (league.players || []).filter(p => p.pin === pin);
             
-            if (player) {
-                selectPlayer(player.id);
-            } else {
-                const errorEl = document.getElementById('pinError');
-                errorEl.textContent = 'PIN not found. If you were added by an admin, try "Browse Players" instead.';
-                errorEl.style.display = 'block';
-                document.getElementById('pinInput').value = '';
-                document.getElementById('pinInput').focus();
+            if (matches.length === 1) {
+                selectPlayer(matches[0].id);
+                return;
             }
+            
+            if (matches.length > 1) {
+                showPinSelectionModal(pin, matches);
+                return;
+            }
+            
+            const errorEl = document.getElementById('pinError');
+            errorEl.textContent = 'PIN not found. If you were added by an admin, try "Browse Players" instead.';
+            errorEl.style.display = 'block';
+            document.getElementById('pinInput').value = '';
+            document.getElementById('pinInput').focus();
+        }
+
+        function showPinSelectionModal(pin, matches) {
+            const modal = document.createElement('div');
+            modal.id = 'pinSelectionModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:12px;padding:25px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.35);">
+                    <h2 style="margin-bottom:10px;color:#1a1a2e;font-size:20px;"><i class="fas fa-users"></i> Who are you?</h2>
+                    <p style="color:#555;margin-bottom:16px;font-size:14px;">PIN ${pin} matches multiple profiles. Pick your name:</p>
+                    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+                        ${matches.map(p => `
+                            <button onclick="selectPlayerFromPinModal('${p.id}')" style="display:flex;justify-content:space-between;align-items:center;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;background:#f9fafb;cursor:pointer;font-weight:600;color:#1f2937;">
+                                <span>${p.name}</span>
+                                <span style="font-size:12px;color:#666;">HCP ${p.handicap || 0}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <button onclick="closePinSelectionModal()" style="width:100%;background:#6c757d;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:600;cursor:pointer;">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function closePinSelectionModal() {
+            const modal = document.getElementById('pinSelectionModal');
+            if (modal) modal.remove();
+        }
+
+        function selectPlayerFromPinModal(playerId) {
+            closePinSelectionModal();
+            selectPlayer(playerId);
         }
         
         function showBrowsePlayers() {
@@ -1514,13 +1665,23 @@
             return pin;
         }
         
-        function registerPlayer(e) {
+        async function registerPlayer(e) {
             e.preventDefault();
             const name = document.getElementById('regName').value.trim();
             const handicap = parseInt(document.getElementById('regHandicap').value) || 0;
             let teamId = document.getElementById('regTeam').value || null;
             const pin = document.getElementById('regPin').value.trim();
             const errorEl = document.getElementById('regError');
+            const submitBtn = e.target?.querySelector('.submit-btn');
+            
+            errorEl.style.display = 'none';
+            errorEl.textContent = '';
+            
+            if (!league) {
+                errorEl.textContent = 'League data is still loading. Please try again.';
+                errorEl.style.display = 'block';
+                return;
+            }
             
             if (!name) return;
             
@@ -1531,7 +1692,7 @@
                 return;
             }
             
-            // Check for duplicate name
+            // Check for duplicate name (client-side) before hitting the DB
             const existingPlayer = (league.players || []).find(p => p.name.toLowerCase() === name.toLowerCase());
             if (existingPlayer) {
                 errorEl.innerHTML = `A player named "${existingPlayer.name}" already exists. If that's you, use "I have a PIN" to reconnect.`;
@@ -1539,43 +1700,71 @@
                 return;
             }
             
-            // Create new team if requested
-            if (teamId === '__new__') {
-                const newTeamName = document.getElementById('newTeamName').value.trim();
-                if (!newTeamName) {
-                    errorEl.textContent = 'Please enter a team name';
-                    errorEl.style.display = 'block';
-                    return;
+            try {
+                submitBtn && (submitBtn.disabled = true);
+                await ensureAuth();
+                
+                // Create new team if requested (transaction to avoid overwriting other sign-ups)
+                if (teamId === '__new__') {
+                    const newTeamName = document.getElementById('newTeamName').value.trim();
+                    if (!newTeamName) {
+                        throw new Error('Please enter a team name');
+                    }
+                    
+                    const newTeam = {
+                        id: 't' + Date.now() + Math.random().toString(36).substr(2, 5),
+                        name: newTeamName
+                    };
+                    
+                    const teamResult = await leagueRef.child('teams').transaction((teams) => {
+                        const list = teams || [];
+                        // Prevent duplicates if two people pick the same name at once
+                        if (list.some(t => t.name && t.name.toLowerCase() === newTeamName.toLowerCase())) {
+                            return; // abort transaction
+                        }
+                        return [...list, newTeam];
+                    });
+                    
+                    if (!teamResult.committed) {
+                        throw new Error(`Team "${newTeamName}" already exists. Select it from the dropdown.`);
+                    }
+                    
+                    league.teams = teamResult.snapshot.val() || [];
+                    teamId = newTeam.id;
                 }
-                // Check for duplicate team name
-                const existingTeam = (league.teams || []).find(t => t.name.toLowerCase() === newTeamName.toLowerCase());
-                if (existingTeam) {
-                    errorEl.textContent = `Team "${existingTeam.name}" already exists. Select it from the dropdown.`;
-                    errorEl.style.display = 'block';
-                    return;
-                }
-                const newTeam = {
-                    id: 't' + Date.now() + Math.random().toString(36).substr(2, 5),
-                    name: newTeamName
+                
+                const newPlayer = {
+                    id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
+                    name,
+                    handicap,
+                    teamId,
+                    pin
                 };
-                league.teams = league.teams || [];
-                league.teams.push(newTeam);
-                teamId = newTeam.id;
+                
+                // Transaction keeps other players intact and avoids overwriting scores/teams
+                const playerResult = await leagueRef.child('players').transaction((players) => {
+                    const list = players || [];
+                    if (list.some(p => p.name && p.name.toLowerCase() === name.toLowerCase())) {
+                        return; // abort if duplicate shows up during race
+                    }
+                    return [...list, newPlayer];
+                });
+                
+                if (!playerResult.committed) {
+                    throw new Error(`A player named "${name}" already exists. If that's you, use "I have a PIN" to reconnect.`);
+                }
+                
+                league.players = playerResult.snapshot.val() || [];
+                
+                // Show PIN to user before continuing
+                showPinConfirmation(newPlayer);
+            } catch (err) {
+                console.error('Registration failed:', err);
+                errorEl.textContent = err.message || 'Could not create your profile. Please try again.';
+                errorEl.style.display = 'block';
+            } finally {
+                submitBtn && (submitBtn.disabled = false);
             }
-            
-            const newPlayer = {
-                id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
-                name,
-                handicap,
-                teamId,
-                pin
-            };
-            
-            league.players.push(newPlayer);
-            ensureAuth().then(() => leagueRef.set(league));
-            
-            // Show PIN to user before continuing
-            showPinConfirmation(newPlayer);
         }
         
         function showPinConfirmation(player) {
