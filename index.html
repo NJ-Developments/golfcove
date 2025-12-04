@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Golf Cove - Your Premier Indoor Golf and MultiSport Destination | North Haven, CT</title>
+    <title>Golf Cove - New Haven</title>
     <meta name="description" content="Golf Cove is North Haven's premier indoor golf simulator and multi-sport entertainment destination. Experience year-round golf with state-of-the-art TrackMan technology. Book your bay today!">
     <meta name="keywords" content="indoor golf, golf simulator, North Haven CT, TrackMan, golf lessons, golf leagues, multi-sport, entertainment, private events">
     <meta name="author" content="Golf Cove">
@@ -321,6 +321,16 @@
             var fallback = document.querySelector('.hero-fallback');
             
             if (video) {
+                // Ensure autoplay on mute for all devices/browsers
+                video.muted = true;
+                video.playsInline = true;
+                video.autoplay = true;
+                video.setAttribute('muted', 'muted');
+                video.setAttribute('playsinline', 'true');
+                video.play().catch(() => {
+                    // Ignore autoplay rejection; user interaction will start it
+                });
+
                 video.addEventListener('loadeddata', function() {
                     if (fallback) fallback.style.opacity = '0';
                 });
@@ -334,4 +344,6 @@
     </script>
 </body>
 </html>
+
+
 

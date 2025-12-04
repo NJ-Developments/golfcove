@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="robots" content="noindex, nofollow">
-    <title>Enter Score - Golf Cove</title>
+    <title>Golf Cove - New Haven</title>
     <link rel="icon" type="image/png" href="images/golfcovelogo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Firebase SDK -->
@@ -17,105 +17,85 @@
             padding: 0;
             box-sizing: border-box;
         }
-        html, body {
-            width: 100%;
-            overflow-x: hidden;
-        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #2f3439;
+            color: #e9ecef;
             min-height: 100vh;
-            color: #e9ecef;
         }
-        
-        /* Top Bar */
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #24282d;
-            padding: 10px 14px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.35);
-        }
-        .brand img {
-            height: 42px;
-        }
-        .menu-btn {
-            width: 44px;
-            height: 44px;
-            background: #10a0b6;
-            border: none;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            cursor: pointer;
-            box-shadow: 0 6px 14px rgba(0,0,0,0.25);
-        }
-        .menu-btn span {
-            display: block;
-            width: 18px;
-            height: 2px;
-            background: #fff;
-            border-radius: 2px;
-        }
-        
-        .mobile-nav {
-            display: none;
-            position: fixed;
-            top: 64px;
-            right: 12px;
-            left: 12px;
-            background: #24282d;
-            border: 1px solid #1fa34a;
-            border-radius: 12px;
-            box-shadow: 0 12px 32px rgba(0,0,0,0.4);
-            padding: 12px;
-            z-index: 1800;
-        }
-        .mobile-nav.open { display: block; }
-        .mobile-nav a {
-            display: block;
-            padding: 12px 10px;
-            color: #e9ecef;
-            text-decoration: none;
-            font-weight: 700;
-            border-radius: 8px;
-        }
-        .mobile-nav a:hover { background: rgba(16,160,182,0.15); }
         
         /* Header */
         .header {
-            background: #2d3137;
-            color: #fff;
-            padding: 16px 16px 10px;
+            background: #ffffff;
+            color: #222;
+            padding: 18px 16px 8px;
             text-align: center;
+            border-bottom: 1px solid #e5e5e5;
         }
         .header a { position: relative; z-index: 1; display: inline-block; }
         .header h1 {
-            font-size: 22px;
+            font-size: 20px;
             margin-bottom: 4px;
             font-weight: 700;
             position: relative;
             z-index: 1;
+            color: #2f3439;
         }
         .header p {
-            font-size: 14px;
+            font-size: 13px;
             opacity: 0.8;
             position: relative;
             z-index: 1;
+            color: #2f3439;
         }
         
         .container {
-            max-width: 480px;
+            max-width: 520px;
             margin: 0 auto;
             padding: 16px;
             padding-bottom: 40px;
+        }
+
+        /* Hero summary */
+        .hero-card {
+            background: #3c4146;
+            color: #fff;
+            border-radius: 18px;
+            padding: 22px 18px 18px;
+            text-align: center;
+            box-shadow: 0 14px 30px rgba(0,0,0,0.35);
+            border: 1px solid #1fa34a;
+            margin-bottom: 18px;
+        }
+        .hero-title {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.15;
+        }
+        .hero-subtitle {
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 8px;
+            margin-bottom: 6px;
+        }
+        .hero-meta {
+            font-size: 15px;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+        .hero-date {
+            font-size: 13px;
+            color: #9ca3af;
+        }
+        .hero-switch {
+            margin-top: 10px;
+            width: 100%;
+            background: #10a0b6;
+            color: #fff;
+            border: none;
+        }
+        .hero-switch:hover {
+            background: #0c90a5;
         }
         
         /* Welcome Screen */
@@ -190,47 +170,6 @@
             background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
             color: #666;
             box-shadow: none;
-        }
-        /* Hero summary */
-        .hero-card {
-            background: #3c4146;
-            color: #fff;
-            border-radius: 18px;
-            padding: 22px 18px 18px;
-            text-align: center;
-            box-shadow: 0 14px 30px rgba(0,0,0,0.35);
-            border: 1px solid #1fa34a;
-            margin-bottom: 18px;
-        }
-        .hero-title {
-            font-size: 32px;
-            font-weight: 800;
-            line-height: 1.15;
-        }
-        .hero-subtitle {
-            font-size: 18px;
-            font-weight: 700;
-            margin-top: 8px;
-            margin-bottom: 6px;
-        }
-        .hero-meta {
-            font-size: 15px;
-            color: #cbd5e1;
-            margin-bottom: 6px;
-        }
-        .hero-date {
-            font-size: 13px;
-            color: #9ca3af;
-        }
-        .hero-switch {
-            margin-top: 10px;
-            width: 100%;
-            background: #10a0b6;
-            color: #fff;
-            border: none;
-        }
-        .hero-switch:hover {
-            background: #0c90a5;
         }
         .option-text { flex: 1; }
         .option-title {
@@ -321,13 +260,12 @@
         
         /* Scores Card */
         .scores-card {
-            background: #343a40;
-            border-radius: 14px;
+            background: #2d3137;
+            border-radius: 16px;
             box-shadow: 0 12px 32px rgba(0,0,0,0.35);
             overflow: hidden;
-            border: 1px solid #1fa34a;
-            margin-top: 16px;
-            padding-bottom: 10px;
+            border: 2px solid #1fa34a;
+            margin-top: 12px;
         }
         .section-header {
             background: #16a34a;
@@ -340,12 +278,10 @@
             gap: 8px;
             letter-spacing: 0.2px;
         }
-        .section-header .section-subtitle {
-            font-weight: 700;
-            font-size: 13px;
-            opacity: 0.95;
+        .section-header .section-subtitle { font-weight: 700; font-size: 13px; opacity: 0.95; }
+        .section-header .subtotal {
+            display: none;
         }
-        .section-header .subtotal { display: none; }
         .hole-card {
             background: #2d3137;
             border: 1px solid #1fa34a;
@@ -906,19 +842,6 @@
     </style>
 </head>
 <body>
-    <div class="topbar">
-        <a href="index.html" class="brand"><img src="images/golfCoveLogo6.png" alt="Golf Cove"></a>
-        <button class="menu-btn" type="button" aria-label="Menu" onclick="toggleMenu()">
-            <span></span><span></span><span></span>
-        </button>
-    </div>
-    <div id="mobileNav" class="mobile-nav">
-        <a href="index.html">Home</a>
-        <a href="tournaments.html">Leaderboard</a>
-        <a href="score.html">Enter Score</a>
-        <a href="league-admin.html">Admin</a>
-    </div>
-
     <div class="header">
         <a href="index.html" style="display: inline-block; margin-bottom: 10px;">
             <img src="images/golfCoveLogo6.png" alt="Golf Cove" style="height: 60px;">
@@ -1080,33 +1003,36 @@
             const scores = getScores();
             const submitted = scores.submitted;
             const currentPlayer = league.players.find(p => p.id === playerId);
-            const team = currentPlayer ? (league.teams || []).find(t => t.id === currentPlayer.teamId) : null;
-            const holes = league.course?.holes || 18;
-            const pars = league.course?.pars || Array(holes).fill(4);
-            const totalPar = pars.reduce((a, b) => a + (parseInt(b) || 0), 0) || holes * 4;
-            const round = league.rounds.find(r => r.id === roundId) || league.rounds[league.rounds.length - 1] || null;
-            let roundDate = '';
-            if (round?.startDate && round?.endDate) {
-                const start = new Date(round.startDate).toLocaleDateString();
-                const end = new Date(round.endDate).toLocaleDateString();
-                roundDate = `${start} - ${end}`;
-            } else if (round?.date) {
-                roundDate = new Date(round.date).toLocaleDateString();
-            }
             
             // Hero summary
-            const playerMeta = currentPlayer 
-                ? `<div class="hero-meta">Player: ${currentPlayer.name}${team ? ' • ' + team.name : ''} • HCP ${currentPlayer.handicap || 0}</div>
-                   <button class="switch-btn hero-switch" onclick="showPlayerSelect()"><i class="fas fa-exchange-alt"></i> Switch Player</button>`
-                : '';
-            let profileHeader = `
-                <div class="hero-card">
-                    <div class="hero-title">${league.name || 'League'}</div>
-                    <div class="hero-subtitle">${league.course?.name || ''} &nbsp; Holes:${holes} &nbsp; PAR:${totalPar}</div>
-                    <div class="hero-date">${round ? round.name : ''}${roundDate ? ' • ' + roundDate : ''}</div>
-                    ${playerMeta}
-                </div>
-            `;
+            let profileHeader = '';
+            if (league) {
+                const holes = league.course?.holes || 18;
+                const pars = league.course?.pars || Array(holes).fill(4);
+                const totalPar = pars.reduce((a, b) => a + (parseInt(b) || 0), 0) || holes * 4;
+                const round = league.rounds.find(r => r.id === roundId) || league.rounds[league.rounds.length - 1] || null;
+                let roundDate = '';
+                if (round?.startDate && round?.endDate) {
+                    const start = new Date(round.startDate).toLocaleDateString();
+                    const end = new Date(round.endDate).toLocaleDateString();
+                    roundDate = `${start} - ${end}`;
+                } else if (round?.date) {
+                    roundDate = new Date(round.date).toLocaleDateString();
+                }
+                const team = currentPlayer ? (league.teams || []).find(t => t.id === currentPlayer.teamId) : null;
+                const playerMeta = currentPlayer 
+                    ? `<div class="hero-meta">Player: ${currentPlayer.name}${team ? ' • ' + team.name : ''} • HCP ${currentPlayer.handicap || 0}</div>
+                       <button class="switch-btn hero-switch" onclick="showPlayerSelect()"><i class="fas fa-exchange-alt"></i> Switch Player</button>`
+                    : '';
+                profileHeader = `
+                    <div class="hero-card">
+                        <div class="hero-title">${league.name || 'League'}</div>
+                        <div class="hero-subtitle">${league.course?.name || ''} &nbsp; Holes:${holes} &nbsp; PAR:${totalPar}</div>
+                        <div class="hero-date">${round ? round.name : ''}${roundDate ? ' • ' + roundDate : ''}</div>
+                        ${playerMeta}
+                    </div>
+                `;
+            }
 
             // Build player selection / registration
             let html = '';
@@ -2068,3 +1994,5 @@
     </script>
 </body>
 </html>
+
+

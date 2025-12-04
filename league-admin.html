@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>League Admin - Golf Cove</title>
+    <title>Golf Cove - New Haven</title>
     <link rel="icon" type="image/png" href="images/golfcovelogo.png">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -1139,6 +1139,7 @@
         
         let league = null;
         let currentUser = null;
+        let leagueListener = null;
         
         // Rate limiting
         const rateLimits = {
@@ -1258,6 +1259,8 @@
                 initAdmin();
             } else {
                 currentUser = null;
+                detachLeagueListener();
+                league = null;
                 document.getElementById('loginContainer').style.display = 'flex';
                 document.getElementById('desktopLogoutBtn').style.display = 'none';
                 setTimeout(() => {
@@ -1269,10 +1272,19 @@
         function init() {
             // Auth state handled by onAuthStateChanged listener
         }
+
+        function detachLeagueListener() {
+            if (leagueListener) {
+                leagueRef.off('value', leagueListener);
+                leagueListener = null;
+            }
+        }
         
         function initAdmin() {
-            // Listen for real-time updates from Firebase
-            leagueRef.on('value', (snapshot) => {
+            // Avoid stacking listeners on re-login
+            detachLeagueListener();
+            
+            leagueListener = (snapshot) => {
                 league = snapshot.val();
                 
                 // Ensure arrays exist (Firebase returns undefined for empty arrays)
@@ -1309,7 +1321,9 @@
                     document.getElementById('adminWrapper').style.display = 'none';
                     document.getElementById('mobileAdminToggle').style.display = 'none';
                 }
-            });
+            };
+
+            leagueRef.on('value', leagueListener);
         }
         
         function toggleMobileSidebar() {
@@ -1466,39 +1480,9 @@
                 }, 100);
             }
             
-            // Build scorecard preview HTML
-            let frontPars = '', backPars = '', frontTotal = 0, backTotal = 0;
-            
-            if (isBlank) {
-                // For blank scorecards, show empty par cells
-                for (let h = 0; h < frontNine; h++) { 
-                    frontPars += `<td></td>`; 
-                }
-                if (has18) {
-                    for (let h = 9; h < holes; h++) { 
-                        backPars += `<td></td>`; 
-                    }
-                }
-                frontTotal = '';
-                backTotal = '';
-            } else {
-                // For team scorecards, show actual pars
-                for (let h = 0; h < frontNine; h++) { 
-                    frontPars += `<td>${pars[h]}</td>`; 
-                    frontTotal += pars[h]; 
-                }
-                if (has18) {
-                    for (let h = 9; h < holes; h++) { 
-                        backPars += `<td>${pars[h]}</td>`; 
-                        backTotal += pars[h]; 
-                    }
-                }
-            }
-            
             const logoPath = 'images/golfcovelogo.png';
             const teamInfo = isBlank ? '' : `<div class="team-info">${team.name}</div>`;
             const qrSection = !isBlank ? `<div class="qr-container"><div class="qr-placeholder">QR</div></div>` : '';
-            const totalPar = isBlank ? '' : (frontTotal + backTotal);
             
             previewContainer.innerHTML = `
                 <style>
@@ -1597,10 +1581,6 @@
                         font-weight: bold;
                         font-size: 9px;
                         background: #f5f5f5;
-                    }
-                    #scorecardPreviewContainer .par-row td {
-                        background: #f5f5f5;
-                        font-weight: 600;
                     }
                     #scorecardPreviewContainer .player-row td {
                         height: 22px;
@@ -1713,16 +1693,6 @@
                         font-size: 9px;
                         letter-spacing: 0.5px;
                     }
-                    #scorecardPreviewContainer .par-row td {
-                        background: #f5f5f5;
-                        font-weight: 600;
-                        color: #000;
-                        font-size: 11px;
-                    }
-                    #scorecardPreviewContainer .par-row .row-label {
-                        background: #666 !important;
-                        color: #fff !important;
-                    }
                     #scorecardPreviewContainer .score-row td {
                         background: #fff;
                         height: 30px;
@@ -1782,27 +1752,17 @@
                             <td class="name-cell">NAME</td>
                             ${Array.from({length:frontNine},(_,i)=>`<td>${i+1}</td>`).join('')}
                             <td class="total-cell">OUT</td>
-                            ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
-                            ${has18?'<td class="total-cell">IN</td>':''}
-                            <td class="total-cell">TOT</td>
-                            <td class="total-cell">HCP</td>
-                            <td class="total-cell">NET</td>
-                        </tr>
-                        <tr class="par-row">
-                            <td class="label-cell" style="background:#666;text-align:center;">PAR</td>
-                            ${frontPars}
-                            <td class="total-cell">${frontTotal}</td>
-                            ${has18?backPars:''}
-                            ${has18?`<td class="total-cell">${backTotal}</td>`:''}
-                            <td class="total-cell">${totalPar}</td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                        ${Array.from({length:6},()=>`
-                        <tr class="player-row">
-                            <td class="name-cell"></td>
-                            ${Array.from({length:frontNine},()=>'<td></td>').join('')}
-                            <td class="total-cell"></td>
+                        ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
+                        ${has18?'<td class="total-cell">IN</td>':''}
+                        <td class="total-cell">TOT</td>
+                        <td class="total-cell">HCP</td>
+                        <td class="total-cell">NET</td>
+                    </tr>
+                    ${Array.from({length:6},()=>`
+                    <tr class="player-row">
+                        <td class="name-cell"></td>
+                        ${Array.from({length:frontNine},()=>'<td></td>').join('')}
+                        <td class="total-cell"></td>
                             ${has18?Array.from({length:holes-9},()=>'<td></td>').join(''):''}
                             ${has18?'<td class="total-cell"></td>':''}
                             <td class="total-cell"></td>
@@ -2099,11 +2059,6 @@
                 alert('PIN must be exactly 4 digits.');
                 return;
             }
-            const duplicate = league.players.find(p => p.pin === pin && p.id !== playerId);
-            if (duplicate) {
-                alert(`That PIN is already used by ${duplicate.name}. Choose a different PIN.`);
-                return;
-            }
             const player = league.players.find(p => p.id === playerId);
             const idx = league.players.findIndex(p => p.id === playerId);
             if (!player || idx === -1) return;
@@ -2258,7 +2213,7 @@
             
             const w = window.open('', '_blank');
             w.document.write(`
-                <!DOCTYPE html><html><head><title>QR Code</title>
+                <!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>
                 <style>body{font-family:Arial;text-align:center;padding:40px;}h1{color:#37b24a;}</style>
                 </head><body>
                 <h1>⛳ ${league.name}</h1>
@@ -2277,7 +2232,7 @@
             if (league.players.length === 0) { alert('No players'); return; }
             const w = window.open('', '_blank');
             w.document.write(`
-                <!DOCTYPE html><html><head><title>Player PINs</title>
+                <!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>
                 <style>body{font-family:Arial;padding:30px;}h1{color:#37b24a;}table{width:100%;border-collapse:collapse;}th,td{padding:10px 15px;text-align:left;border-bottom:1px solid #ddd;}th{background:#f5f5f5;}.pin{font-family:monospace;font-size:18px;font-weight:bold;}</style>
                 </head><body>
                 <h1>⛳ ${league.name}</h1>
@@ -2383,7 +2338,7 @@
             const w = window.open('', '_blank');
             const title = isBlank ? 'Blank Scorecards' : `Blank Scorecards - ${team.name}`;
             w.document.write(`
-                <!DOCTYPE html><html><head><title>${title}</title>
+                <!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>
                 <style>
                     @page { size: landscape; margin: 0.5cm; }
                     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -2578,4 +2533,6 @@
     <script src="js/main.js"></script>
 </body>
 </html>
+
+
 

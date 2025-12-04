@@ -72,12 +72,34 @@
             this.contactForm = document.querySelector('.contact-form form');
             this.galleryItems = document.querySelectorAll('.gallery-item');
             this.testimonialItems = document.querySelectorAll('.testimonial-item');
+            this.mobileActions = document.querySelector('.mobile-actions');
         },
 
         bindEvents: function() {
             // Mobile Menu
             if (this.mobileMenuToggle && this.mainNav) {
                 this.mobileMenuToggle.addEventListener('click', this.toggleMobileMenu.bind(this));
+                
+                // Ensure a mobile actions wrapper with a call button exists
+                if (!this.mobileActions) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'mobile-actions';
+                    const headerMain = this.mobileMenuToggle.parentElement;
+                    if (headerMain) {
+                        headerMain.appendChild(wrapper);
+                        this.mobileActions = wrapper;
+                    }
+                }
+                if (this.mobileActions && !this.mobileActions.querySelector('.mobile-call')) {
+                    const callLink = document.createElement('a');
+                    callLink.href = 'tel:2033905994';
+                    callLink.className = 'mobile-call';
+                    callLink.setAttribute('aria-label', 'Call Golf Cove');
+                    callLink.innerHTML = '<i class="fas fa-phone"></i>';
+                    this.mobileActions.appendChild(callLink);
+                    this.mobileActions.appendChild(this.mobileMenuToggle);
+                }
+
                 document.addEventListener('click', this.closeMobileMenuOnOutsideClick.bind(this));
             }
 
