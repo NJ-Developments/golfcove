@@ -1042,6 +1042,7 @@
             }
             
             let roundInfoHTML = '';
+            const seasonBadge = league.season ? `<div class="season-badge"><i class="fas fa-calendar-alt"></i> ${league.season}</div>` : '';
             
             if (currentRound) {
                 const startDate = currentRound.startDate ? new Date(currentRound.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
@@ -1049,17 +1050,20 @@
                 const dateDisplay = startDate && endDate ? `${startDate} - ${endDate}` : '';
                 
                 roundInfoHTML = `
-                    <div class="hero-subtitle">${currentRound.name}</div>
+                    <div class="hero-subtitle">${currentRound.name}${currentRound.course ? ' • ' + currentRound.course : ''}</div>
                     ${dateDisplay ? `<div class="hero-dates">${dateDisplay}</div>` : ''}
-                    <a href="schedule.html" class="view-schedule-btn"><i class="fas fa-calendar"></i> View Full Schedule</a>
                 `;
             }
 
             app.innerHTML = `
                 <div class="league-hero">
                     <h1> ${league.name}</h1>
+                    ${seasonBadge}
                     ${roundInfoHTML}
-                    <a href="schedule.html" class="join-league-btn"><i class="fas fa-calendar-alt"></i> View Schedule</a>
+                    <div class="hero-actions" style="display:flex; flex-direction:column; gap:10px; align-items:center; max-width:320px; margin: 0 auto;">
+                        <a href="score.html" class="join-league-btn" style="width:100%; text-align:center;"><i class="fas fa-user-plus"></i> Join League / Enter Score</a>
+                        <a href="schedule.html" class="view-schedule-btn" style="width:100%; text-align:center;"><i class="fas fa-calendar-alt"></i> View Schedule</a>
+                    </div>
                     <div class="stats-grid">
                         <div class="stat" style="border-left: 4px solid #37b24a; padding-left: 20px;">
                             <div class="stat-num" style="color: #37b24a;">${league.teams?.length || 0}</div>
