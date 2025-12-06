@@ -816,6 +816,25 @@
             .round-chip { padding: 12px 15px; }
             .league-btn { width: 100%; justify-content: center; }
         }
+        @media (max-width: 600px) {
+            .controls-panel { padding: 16px; }
+            .controls-row { width: 100%; }
+            .filter-group,
+            .view-toggle,
+            .export-btn { width: 100%; }
+            .view-toggle { flex-wrap: wrap; }
+            .view-btn { flex: 1 1 calc(50% - 8px); min-width: 140px; }
+        }
+        /* Prevent leaderboard from being clipped on small screens */
+        #standingsContent {
+            overflow-x: auto;
+        }
+        .standings-table {
+            min-width: 720px;
+        }
+        @media (max-width: 600px) {
+            .standings-table { min-width: 620px; }
+        }
     </style>
 </head>
 <body>

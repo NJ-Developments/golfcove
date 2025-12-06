@@ -1560,8 +1560,8 @@
                         font-size: 10px;
                     }
                     #scorecardPreviewContainer .name-cell {
-                        background: #333;
-                        color: #fff;
+                        background: #fff;
+                        color: #000;
                         font-weight: bold;
                         font-size: 9px;
                         text-transform: uppercase;
@@ -1749,7 +1749,7 @@
                     </div>
                     <table class="score-grid">
                         <tr class="holes-row">
-                            <td class="name-cell">NAME</td>
+                            <td class="name-cell">HOLE</td>
                             ${Array.from({length:frontNine},(_,i)=>`<td>${i+1}</td>`).join('')}
                             <td class="total-cell">OUT</td>
                         ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
@@ -2271,10 +2271,6 @@
             const cardCount = isBlank ? 5 : Math.max(players.length, 5);
             
             const buildCard = () => {
-                let frontPars = '', backPars = '', frontTotal = 0, backTotal = 0;
-                for (let h = 0; h < frontNine; h++) { frontPars += `<td>${pars[h]}</td>`; frontTotal += pars[h]; }
-                if (has18) for (let h = 9; h < holes; h++) { backPars += `<td>${pars[h]}</td>`; backTotal += pars[h]; }
-                
                 const logoPath = window.location.origin + window.location.pathname.replace('league-admin.html', '') + 'images/golfcovelogo.png';
                 
                 const teamInfo = isBlank ? '' : `<div class="team-info">${team.name}</div>`;
@@ -2294,7 +2290,7 @@
                         
                         <table class="score-grid">
                             <tr class="holes-row">
-                                <td class="name-cell">NAME</td>
+                                <td class="name-cell">HOLE</td>
                                 ${Array.from({length:frontNine},(_,i)=>`<td>${i+1}</td>`).join('')}
                                 <td class="total-cell">OUT</td>
                                 ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
@@ -2302,16 +2298,6 @@
                                 <td class="total-cell">TOT</td>
                                 <td class="total-cell">HCP</td>
                                 <td class="total-cell">NET</td>
-                            </tr>
-                            <tr class="par-row">
-                                <td class="label-cell" style="background:#666;text-align:center;">PAR</td>
-                                ${frontPars}
-                                <td class="total-cell">${frontTotal}</td>
-                                ${has18?backPars:''}
-                                ${has18?`<td class="total-cell">${backTotal}</td>`:''}
-                                <td class="total-cell">${frontTotal+backTotal}</td>
-                                <td></td>
-                                <td></td>
                             </tr>
                             ${Array.from({length:6},()=>`
                             <tr class="player-row">
@@ -2416,8 +2402,8 @@
                         font-size: 10px;
                     }
                     .name-cell {
-                        background: #333;
-                        color: #fff;
+                        background: #fff;
+                        color: #000;
                         font-weight: bold;
                         font-size: 9px;
                         text-transform: uppercase;

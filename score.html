@@ -871,18 +871,12 @@
         const db = firebase.database();
         const leagueRef = db.ref('league');
         const auth = firebase.auth();
+        let authPromise = null;
 
-        // Ensure we have an authenticated session (anonymous is fine) for write access
+        // Auth is disabled for demo; bypass sign-in so the app runs without Anonymous Auth
         function ensureAuth() {
-            if (auth.currentUser) return Promise.resolve(auth.currentUser);
-            return auth.signInAnonymously().catch(err => {
-                console.error('Anonymous auth failed:', err);
-                throw err;
-            });
+            return Promise.resolve(auth.currentUser || null);
         }
-
-        // Kick off auth immediately
-        ensureAuth();
         
         let league = null;
         let roundId = null;
@@ -921,10 +915,7 @@
             render();
         }
 
-        function init() {
-            // Ensure auth (needed for write access under secured rules)
-            ensureAuth();
-
+        async function init() {
             // Listen for real-time updates from Firebase
             leagueRef.on('value', (snapshot) => {
                 league = snapshot.val();

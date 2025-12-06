@@ -1,41 +1,6 @@
 {
   "rules": {
     ".read": true,
-    ".write": true,
-    "league": {
-      ".read": true,
-      ".write": true,
-      "players": {
-        ".write": true,               // allow anonymous to create/update their player
-        "$idx": {
-          ".validate": true
-        }
-      },
-      "scores": {
-        ".write": true,               // allow anonymous to submit scores
-        "$round": {
-          "$player": {
-            "$field": {
-              ".validate": true
-            }
-          }
-        }
-      },
-      "teams": {
-        ".write": true                // allow players to create/select teams
-      },
-      "rounds": {
-        ".write": true
-      },
-      "course": {
-        ".write": true
-      },
-      "name": {
-        ".write": true
-      },
-      "season": {
-        ".write": true
-      }
-    }
+    ".write": true
   }
 }

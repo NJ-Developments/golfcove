@@ -3,20 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Golf Cove - New Haven</title>
-    <meta name="description" content="View the complete schedule for the Golf Cove indoor golf league.">
+    <title>Golf Cove - League Schedule</title>
+    <meta name="description" content="Golf Cove 2 Man Scramble League Fall 2025 schedule.">
     <link rel="icon" type="image/png" href="images/golfcovelogo.png">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
-        /* Hero Banner */
+        body {
+            background: #f7f7f7;
+        }
         .schedule-hero {
-            background: linear-gradient(135deg, rgba(26,26,26,0.92) 0%, rgba(55,178,74,0.88) 100%), 
-                        url('images/gallery-1.jpg') center/cover;
-            padding: 80px 20px 60px;
+            background: linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(55,178,74,0.9) 100%);
+            padding: 70px 20px 60px;
             text-align: center;
             color: #fff;
             position: relative;
@@ -28,317 +26,107 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 80px;
-            background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
+            height: 60px;
+            background: linear-gradient(to top, rgba(0,0,0,0.2), transparent);
         }
         .schedule-hero h1 {
             font-size: 42px;
             font-weight: 800;
             margin-bottom: 10px;
-            text-shadow: 0 4px 12px rgba(0,0,0,0.5);
             position: relative;
             z-index: 1;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.35);
+            color: #fff;
         }
         .schedule-hero .subtitle {
             font-size: 18px;
+            opacity: 0.92;
+            position: relative;
+            z-index: 1;
+            margin-bottom: 6px;
+        }
+        .schedule-hero .format-note {
+            font-size: 14px;
             opacity: 0.9;
             position: relative;
             z-index: 1;
-            margin-bottom: 25px;
         }
-        .schedule-hero .nav-links {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            position: relative;
-            z-index: 1;
-        }
-        .schedule-hero .nav-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 24px;
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(10px);
-            color: #fff;
-            text-decoration: none;
-            border-radius: 25px;
-            font-size: 14px;
-            font-weight: 600;
-            border: 1px solid rgba(255,255,255,0.3);
-            transition: all 0.3s;
-        }
-        .schedule-hero .nav-link:hover {
-            background: rgba(255,255,255,0.25);
-            transform: translateY(-2px);
-        }
-        .schedule-hero .nav-link.primary {
-            background: #fff;
-            color: #37b24a;
-            border-color: #fff;
-        }
-        .schedule-hero .nav-link.primary:hover {
-            background: #f5f5f5;
-        }
-
-        /* Main Container */
         .schedule-container {
-            max-width: 900px;
-            margin: -30px auto 60px;
+            max-width: 960px;
+            margin: -20px auto 70px;
             padding: 0 20px;
             position: relative;
             z-index: 2;
         }
-
-        /* Schedule Card */
         .schedule-card {
             background: #fff;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
             overflow: hidden;
         }
-        .schedule-header {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-            padding: 25px 30px;
-            color: #fff;
-        }
-        .schedule-header h2 {
+        .poster-wrap {
+            position: relative;
+            background: #fff;
+            aspect-ratio: 8.5 / 11;
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0;
-        }
-        .schedule-header .icon {
-            font-size: 28px;
-        }
-
-        /* Week Items */
-        .schedule-list {
-            padding: 0;
-        }
-        .week-item {
+            justify-content: center;
+            padding: 16px;
             border-bottom: 1px solid #f0f0f0;
-            padding: 25px 30px;
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
         }
-        .week-item:last-child {
-            border-bottom: none;
+        .poster-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #fff;
+            border-radius: 6px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
         }
-        .week-item.current {
-            background: linear-gradient(135deg, rgba(55,178,74,0.08) 0%, rgba(55,178,74,0.04) 100%);
-            border-left: 4px solid #37b24a;
+        .card-body {
+            padding: 16px 18px 20px;
+            border-top: 1px solid #f0f0f0;
         }
-        .week-item.completed {
-            opacity: 0.7;
-        }
-        .week-item.completed::before {
-            content: '✓';
-            position: absolute;
-            right: 30px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 32px;
-            color: #37b24a;
-            opacity: 0.2;
-        }
-        .week-item:hover {
-            background: #fafafa;
-        }
-        .week-header {
+        .card-actions {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
             flex-wrap: wrap;
             gap: 10px;
         }
-        .week-name {
-            font-size: 20px;
-            font-weight: 700;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .week-badge {
+        .btn {
             display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .week-badge.current {
-            background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
-            color: #fff;
-            box-shadow: 0 2px 8px rgba(55,178,74,0.3);
-        }
-        .week-badge.upcoming {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-        .week-badge.completed {
-            background: #f5f5f5;
-            color: #999;
-        }
-        .week-dates {
-            font-size: 15px;
-            color: #666;
-            display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 8px;
-        }
-        .week-dates i {
-            color: #37b24a;
-            font-size: 14px;
-        }
-        .week-info {
-            font-size: 13px;
-            color: #888;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .week-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-        .week-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            background: #fff;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #666;
+            padding: 10px 16px;
+            border-radius: 10px;
             text-decoration: none;
-            transition: all 0.3s;
-            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            border: 1px solid #e0e0e0;
+            color: #333;
+            background: #fff;
+            transition: all 0.2s ease;
         }
-        .week-btn:hover {
+        .btn:hover {
             border-color: #37b24a;
             color: #37b24a;
             transform: translateY(-1px);
         }
-        .week-btn.primary {
+        .btn.primary {
             background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);
-            color: #fff;
             border-color: #37b24a;
+            color: #fff;
         }
-        .week-btn.primary:hover {
+        .btn.primary:hover {
             background: linear-gradient(135deg, #2d9440 0%, #25803a 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(55,178,74,0.3);
+            color: #fff;
         }
-
-        /* Empty State */
-        .empty-schedule {
-            text-align: center;
-            padding: 60px 30px;
-            color: #999;
-        }
-        .empty-schedule i {
-            font-size: 48px;
-            margin-bottom: 20px;
-            opacity: 0.3;
-        }
-        .empty-schedule h3 {
-            font-size: 20px;
-            color: #666;
-            margin-bottom: 10px;
-        }
-        .empty-schedule p {
-            font-size: 14px;
-            margin-bottom: 25px;
-        }
-
-        /* Legend */
-        .schedule-legend {
-            padding: 20px 30px;
-            background: #fafafa;
-            border-top: 1px solid #f0f0f0;
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            flex-wrap: wrap;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .card-note {
+            margin-top: 10px;
             font-size: 13px;
-            color: #666;
+            color: #555;
         }
-        .legend-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-        .legend-dot.current {
-            background: #37b24a;
-        }
-        .legend-dot.upcoming {
-            background: #1976d2;
-        }
-        .legend-dot.completed {
-            background: #999;
-        }
-
-        /* Loading State */
-        .loading {
-            text-align: center;
-            padding: 60px 30px;
-        }
-        .loading i {
-            font-size: 32px;
-            color: #37b24a;
-            margin-bottom: 15px;
-        }
-        .loading p {
-            color: #666;
-            font-size: 14px;
-        }
-
-        /* Responsive */
         @media (max-width: 768px) {
-            .schedule-hero h1 {
-                font-size: 32px;
-            }
-            .schedule-hero .subtitle {
-                font-size: 16px;
-            }
-            .schedule-container {
-                margin-top: -20px;
-            }
-            .week-item {
-                padding: 20px;
-            }
-            .week-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .week-name {
-                font-size: 18px;
-            }
-            .schedule-legend {
-                flex-direction: column;
-                align-items: center;
-                gap: 12px;
-            }
+            .schedule-hero h1 { font-size: 32px; }
+            .schedule-hero .subtitle { font-size: 16px; }
         }
     </style>
 </head>
@@ -385,36 +173,26 @@
     <!-- Hero Section -->
     <div class="schedule-hero">
         <h1><i class="fas fa-calendar-alt"></i> League Schedule</h1>
-        <p class="subtitle" id="leagueTitle">Loading schedule...</p>
-        <div class="nav-links">
-            <a href="tournaments.html" class="nav-link"><i class="fas fa-trophy"></i> View Standings</a>
-            <a href="score.html" class="nav-link primary"><i class="fas fa-plus-circle"></i> Enter Score</a>
-        </div>
+        <p class="subtitle">Golf Cove 2 Man Scramble League - Fall 2025</p>
+        <p class="format-note">Format: 2-man scramble (two players share one scorecard)</p>
     </div>
 
     <!-- Main Content -->
     <div class="schedule-container">
-        <div class="schedule-card">
-            <div class="schedule-header">
-                <h2><i class="fas fa-list icon"></i> All Weeks</h2>
+        <div class="schedule-card" aria-label="Golf Cove 2 Man Scramble League schedule PDF">
+            <div class="poster-wrap">
+                <img src="GolfCoveSchedule.png" alt="Golf Cove 2 Man Scramble League Fall 2025 schedule poster">
             </div>
-            <div id="scheduleContent" class="loading">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>Loading schedule...</p>
-            </div>
-            <div class="schedule-legend">
-                <div class="legend-item">
-                    <div class="legend-dot current"></div>
-                    <span>Current Week</span>
+            <div class="card-body">
+                <div class="card-actions">
+                    <a class="btn primary" href="Golf%20Cove%20Fall%20League%2025.pdf" download>
+                        <i class="fas fa-file-download"></i> Download PDF schedule
+                    </a>
+                    <a class="btn" href="Golf%20Cove%20Fall%20League%2025.pdf" target="_blank" rel="noopener">
+                        <i class="fas fa-external-link-alt"></i> View PDF
+                    </a>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-dot upcoming"></div>
-                    <span>Upcoming</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot completed"></div>
-                    <span>Completed</span>
-                </div>
+                <p class="card-note">Full schedule details are in the PDF.</p>
             </div>
         </div>
     </div>
@@ -441,168 +219,10 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p class="footer-copyright">© 2025 Golf Cove | <a href="contact.html">Contact Us</a> | <a href="sitemap.html">Site Map</a></p>
+            <p class="footer-copyright">Ac 2025 Golf Cove | <a href="contact.html">Contact Us</a> | <a href="sitemap.html">Site Map</a></p>
         </div>
     </footer>
 
     <script src="js/main.js"></script>
-    <script>
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyB8SH5Eh7OhIFLUkL2hjZS23uXkCsDJXGc",
-            authDomain: "golfcove.firebaseapp.com",
-            databaseURL: "https://golfcove-default-rtdb.firebaseio.com",
-            projectId: "golfcove",
-            storageBucket: "golfcove.firebasestorage.app",
-            messagingSenderId: "284762891644",
-            appId: "1:284762891644:web:424223b102f08a230f70f9"
-        };
-        
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const leagueRef = db.ref('league');
-        
-        function init() {
-            // Listen for real-time updates
-            leagueRef.on('value', (snapshot) => {
-                const league = snapshot.val();
-                
-                if (!league) {
-                    renderEmpty();
-                    return;
-                }
-                
-                renderSchedule(league);
-            }, (error) => {
-                console.error('Firebase error:', error);
-                renderEmpty();
-            });
-        }
-        
-        function renderSchedule(league) {
-            // Update header
-            document.getElementById('leagueTitle').textContent = `${league.name} - ${league.season}`;
-            
-            const rounds = league.rounds || [];
-            const content = document.getElementById('scheduleContent');
-            
-            if (rounds.length === 0) {
-                renderEmpty();
-                return;
-            }
-            
-            // Get today's date for comparison
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            // Calculate status for each round
-            const roundsWithStatus = rounds.map(round => {
-                const startDate = round.startDate ? new Date(round.startDate) : null;
-                const endDate = round.endDate ? new Date(round.endDate) : null;
-                
-                if (startDate && endDate) {
-                    startDate.setHours(0, 0, 0, 0);
-                    endDate.setHours(23, 59, 59, 999);
-                    
-                    if (today >= startDate && today <= endDate) {
-                        return { ...round, status: 'current' };
-                    } else if (today > endDate) {
-                        return { ...round, status: 'completed' };
-                    } else {
-                        return { ...round, status: 'upcoming' };
-                    }
-                }
-                
-                return { ...round, status: 'upcoming' };
-            });
-            
-            // Sort rounds by start date (earliest first)
-            roundsWithStatus.sort((a, b) => {
-                const dateA = a.startDate ? new Date(a.startDate) : new Date();
-                const dateB = b.startDate ? new Date(b.startDate) : new Date();
-                return dateA - dateB;
-            });
-            
-            // Get scores data
-            const scores = league.scores || {};
-            
-            // Render schedule list
-            content.innerHTML = `
-                <div class="schedule-list">
-                    ${roundsWithStatus.map(round => {
-                        const startDate = round.startDate ? new Date(round.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'TBD';
-                        const endDate = round.endDate ? new Date(round.endDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD';
-                        
-                        // Count submitted scores for this round
-                        const roundScores = scores[round.id] || {};
-                        const submittedCount = Object.values(roundScores).filter(s => s.submitted).length;
-                        const totalPlayers = (league.players || []).length;
-                        
-                        let badgeHTML = '';
-                        if (round.status === 'current') {
-                            badgeHTML = '<span class="week-badge current"><i class="fas fa-circle"></i> Current</span>';
-                        } else if (round.status === 'completed') {
-                            badgeHTML = '<span class="week-badge completed"><i class="fas fa-check"></i> Completed</span>';
-                        } else {
-                            badgeHTML = '<span class="week-badge upcoming"><i class="fas fa-clock"></i> Upcoming</span>';
-                        }
-                        
-                        return `
-                            <div class="week-item ${round.status}">
-                                <div class="week-header">
-                                    <div class="week-name">
-                                        ${round.name}
-                                    </div>
-                                    ${badgeHTML}
-                                </div>
-                                <div class="week-dates">
-                                    <i class="fas fa-calendar"></i>
-                                    <span>${startDate} - ${endDate}</span>
-                                </div>
-                                ${round.status !== 'upcoming' ? `
-                                    <div class="week-info">
-                                        <i class="fas fa-users"></i>
-                                        <span>${submittedCount} of ${totalPlayers} scores submitted</span>
-                                    </div>
-                                ` : ''}
-                                <div class="week-actions">
-                                    ${round.status === 'current' ? `
-                                        <a href="score.html?r=${round.id}" class="week-btn primary">
-                                            <i class="fas fa-plus-circle"></i> Enter Score
-                                        </a>
-                                    ` : ''}
-                                    ${round.status === 'completed' || (round.status === 'current' && submittedCount > 0) ? `
-                                        <a href="tournaments.html" class="week-btn">
-                                            <i class="fas fa-trophy"></i> View Results
-                                        </a>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
-        }
-        
-        function renderEmpty() {
-            const content = document.getElementById('scheduleContent');
-            content.innerHTML = `
-                <div class="empty-schedule">
-                    <i class="fas fa-calendar-times"></i>
-                    <h3>No Schedule Yet</h3>
-                    <p>The league schedule will appear here once rounds are created.</p>
-                    <a href="tournaments.html" class="week-btn">
-                        <i class="fas fa-arrow-left"></i> Back to Standings
-                    </a>
-                </div>
-            `;
-        }
-        
-        // Initialize on page load
-        init();
-    </script>
 </body>
 </html>
-
-
