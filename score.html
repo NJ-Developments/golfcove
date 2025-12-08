@@ -1020,8 +1020,26 @@
                     roundDate = new Date(round.date).toLocaleDateString();
                 }
                 const team = currentPlayer ? (league.teams || []).find(t => t.id === currentPlayer.teamId) : null;
+                
+                // Scramble format: show teammate info
+                let teammateInfo = '';
+                let teamHandicap = currentPlayer?.handicap || 0;
+                if (team) {
+                    const teammates = league.players.filter(p => p.teamId === team.id);
+                    const otherPlayer = teammates.find(p => p.id !== currentPlayer.id);
+                    if (otherPlayer) {
+                        teammateInfo = `<div style="font-size:13px;color:#cbd5e1;margin-top:4px;">Partner: ${otherPlayer.name} (HCP ${otherPlayer.handicap || 0})</div>`;
+                    }
+                    // Calculate team handicap (average)
+                    if (teammates.length > 1) {
+                        const totalHcp = teammates.reduce((sum, p) => sum + (p.handicap || 0), 0);
+                        teamHandicap = Math.round(totalHcp / teammates.length);
+                    }
+                }
+                
                 const playerMeta = currentPlayer 
-                    ? `<div class="hero-meta">Player: ${currentPlayer.name}${team ? ' • ' + team.name : ''} • HCP ${currentPlayer.handicap || 0}</div>
+                    ? `<div class="hero-meta">Player: ${currentPlayer.name}${team ? ' • ' + team.name : ''} • Team HCP ${teamHandicap}</div>
+                       ${teammateInfo}
                        <button class="switch-btn hero-switch" onclick="showPlayerSelect()"><i class="fas fa-exchange-alt"></i> Switch Player</button>`
                     : '';
                 profileHeader = `
@@ -1090,8 +1108,16 @@
                 }
                 total = out + inScore;
                 
+                // Scramble format: use team handicap
                 const player = league.players.find(p => p.id === playerId);
-                const handicap = player?.handicap || 0;
+                let handicap = player?.handicap || 0;
+                if (player?.teamId) {
+                    const teammates = league.players.filter(p => p.teamId === player.teamId);
+                    if (teammates.length > 1) {
+                        const totalHcp = teammates.reduce((sum, p) => sum + (p.handicap || 0), 0);
+                        handicap = Math.round(totalHcp / teammates.length);
+                    }
+                }
                 const net = total - handicap;
                 const has18 = league.course.holes >= 18;
                 
@@ -1189,8 +1215,16 @@
                 }
             }
             
+            // Scramble format: use team handicap (average of both teammates)
             const player = league.players.find(p => p.id === playerId);
-            const handicap = player?.handicap || 0;
+            let handicap = player?.handicap || 0;
+            if (player?.teamId) {
+                const teammates = league.players.filter(p => p.teamId === player.teamId);
+                if (teammates.length > 1) {
+                    const totalHcp = teammates.reduce((sum, p) => sum + (p.handicap || 0), 0);
+                    handicap = Math.round(totalHcp / teammates.length);
+                }
+            }
             const net = total - handicap;
             
             // Score summary matching Excel format: OUT | IN | TOT | HCP | NET
@@ -1719,22 +1753,29 @@
                 console.log('getScores: Missing playerId or roundId', { playerId, roundId });
                 return {};
             }
-            const scores = league.scores?.[roundId]?.[playerId] || {};
-            console.log('getScores result:', { playerId, roundId, scores, leagueScores: league.scores });
+            // Scramble format: scores are stored by team ID, not player ID
+            const currentPlayer = league.players.find(p => p.id === playerId);
+            const scoreKey = currentPlayer?.teamId || playerId; // Use teamId if available, otherwise playerId
+            const scores = league.scores?.[roundId]?.[scoreKey] || {};
+            console.log('getScores result (scramble):', { playerId, teamId: currentPlayer?.teamId, scoreKey, roundId, scores });
             return scores;
         }
 
         function saveHole(hole, value) {
             const score = parseInt(value) || 0;
             
+            // Scramble format: save by team ID, not player ID
+            const currentPlayer = league.players.find(p => p.id === playerId);
+            const scoreKey = currentPlayer?.teamId || playerId;
+            
             if (!league.scores) league.scores = {};
             if (!league.scores[roundId]) league.scores[roundId] = {};
-            if (!league.scores[roundId][playerId]) league.scores[roundId][playerId] = {};
+            if (!league.scores[roundId][scoreKey]) league.scores[roundId][scoreKey] = {};
 
             if (score > 0) {
-                league.scores[roundId][playerId][hole] = score;
+                league.scores[roundId][scoreKey][hole] = score;
             } else {
-                delete league.scores[roundId][playerId][hole];
+                delete league.scores[roundId][scoreKey][hole];
             }
 
             // Set flag to prevent re-render during score entry
@@ -1742,7 +1783,7 @@
             
             // Use update() instead of set() to avoid triggering full re-render
             const updates = {};
-            updates[`scores/${roundId}/${playerId}/${hole}`] = score > 0 ? score : null;
+            updates[`scores/${roundId}/${scoreKey}/${hole}`] = score > 0 ? score : null;
             ensureAuth().then(() => {
                 return leagueRef.update(updates).then(() => {
                     // Reset flag after a short delay
@@ -1792,8 +1833,19 @@
             
             total = out + inScore;
             
-            const player = league.players.find(p => p.id === playerId);
-            const handicap = player?.handicap || 0;
+            // Scramble format: use team combined handicap (average of both players)
+            const currentPlayer = league.players.find(p => p.id === playerId);
+            let handicap = currentPlayer?.handicap || 0;
+            
+            // If on a team, calculate team handicap (average of both teammates)
+            if (currentPlayer?.teamId) {
+                const teammates = league.players.filter(p => p.teamId === currentPlayer.teamId);
+                if (teammates.length > 1) {
+                    const totalHcp = teammates.reduce((sum, p) => sum + (p.handicap || 0), 0);
+                    handicap = Math.round(totalHcp / teammates.length);
+                }
+            }
+            
             const net = total - handicap;
             
             // Update displays
@@ -1855,18 +1907,21 @@
                 return;
             }
 
+            // Scramble format: use team ID for score storage
+            const scoreKey = player?.teamId || playerId;
+            
             // Mark as submitted
             if (!league.scores) league.scores = {};
             if (!league.scores[roundId]) league.scores[roundId] = {};
-            if (!league.scores[roundId][playerId]) league.scores[roundId][playerId] = {};
+            if (!league.scores[roundId][scoreKey]) league.scores[roundId][scoreKey] = {};
             
-            league.scores[roundId][playerId].submitted = true;
-            league.scores[roundId][playerId].submittedAt = new Date().toISOString();
+            league.scores[roundId][scoreKey].submitted = true;
+            league.scores[roundId][scoreKey].submittedAt = new Date().toISOString();
             
             // Use update instead of set to avoid overwriting other data
             const updates = {
-                [`scores/${roundId}/${playerId}/submitted`]: true,
-                [`scores/${roundId}/${playerId}/submittedAt`]: new Date().toISOString()
+                [`scores/${roundId}/${scoreKey}/submitted`]: true,
+                [`scores/${roundId}/${scoreKey}/submittedAt`]: new Date().toISOString()
             };
             
             ensureAuth().then(() => leagueRef.update(updates)).then(() => {
@@ -1874,8 +1929,8 @@
             }).catch((error) => {
                 console.error('Error submitting score:', error);
                 alert('Failed to submit score. Please check your connection and try again.');
-                league.scores[roundId][playerId].submitted = false;
-                delete league.scores[roundId][playerId].submittedAt;
+                league.scores[roundId][scoreKey].submitted = false;
+                delete league.scores[roundId][scoreKey].submittedAt;
             });
         }
         

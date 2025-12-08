@@ -41,16 +41,6 @@
             z-index: 1;
             color: #fff !important;
         }
-        .league-hero .season-badge {
-            display: inline-block;
-            background: rgba(255,255,255,0.2);
-            backdrop-filter: blur(10px);
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 25px;
-        }
         .hero-subtitle {
             font-size: 20px;
             font-weight: 700;
@@ -858,10 +848,11 @@
                     <li><a href="pricing.html">Pricing</a></li>
                     <li><a href="memberships.html">Memberships</a></li>
                     <li class="dropdown">
-                        <a href="lessons-leagues.html">Lessons & Leagues <i class="fas fa-chevron-down"></i></a>
+                        <a href="lessons-leagues.html" class="active">Lessons & Leagues <i class="fas fa-chevron-down"></i></a>
                         <ul class="dropdown-menu">
                             <li><a href="lessons-leagues.html">Lessons & Leagues</a></li>
                             <li><a href="pinseeker.html">PinSeeker at Golf Cove</a></li>
+                            <li><a href="tournaments.html">League Standings</a></li>
                         </ul>
                     </li>
                     <li class="dropdown">
@@ -873,7 +864,6 @@
                     </li>
                     <li><a href="multisport.html">MultiSport Arcade</a></li>
                     <li><a href="gift-cards.html">Gift Cards</a></li>
-                    <li><a href="tournaments.html" class="active">Tournaments</a></li>
                     <li><a href="menu.html">Menu</a></li>
                     <li><a href="contact.html">Contact</a></li>
                     <li><a href="https://918booking.com/emb-bookings?course=7" class="btn-book" target="_blank">RESERVE A ROOM</a></li>
@@ -930,7 +920,6 @@
         // Default demo league shown when no league exists
         const defaultLeague = {
             name: 'Golf Cove League',
-            season: 'Winter 2025',
             course: { name: 'Golf Cove', holes: 18, pars: Array(18).fill(4) },
             teams: [{ id: 't1', name: 'Demo Team' }],
             players: [
@@ -1051,7 +1040,6 @@
             app.innerHTML = `
                 <div class="league-hero">
                     <h1> ${league.name}</h1>
-                    <div class="season-badge"><i class="fas fa-calendar-alt"></i> ${league.season}</div>
                     ${roundInfoHTML}
                     <a href="score.html" class="join-league-btn"><i class="fas fa-user-plus"></i> Join League / Enter Score</a>
                     <div class="stats-grid">
@@ -1335,7 +1323,7 @@
                 };
             } else if (view === 'recent-form') {
                 // Show last 3 rounds with detailed analysis
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>Last 3 Scores</th><th>Recent Avg</th><th>Season Avg</th><th>Momentum</th><th class="highlight">3-Round Total</th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>Last 3 Scores</th><th>Recent Avg</th><th>Overall Avg</th><th>Momentum</th><th class="highlight">3-Round Total</th>`;
                 renderRow = (s, posDisplay, posNum) => {
                     const recentRounds = s.roundDetails.slice(-3);
                     const recentCount = recentRounds.length;
@@ -1354,12 +1342,12 @@
                     // Show individual scores for last 3 rounds
                     const scoresList = recentRounds.map(r => r.net).join(', ');
                     
-                    // Calculate momentum: recent avg vs season avg
-                    const seasonAvg = s.avgNet;
+                    // Calculate momentum: recent avg vs overall avg
+                    const overallAvg = s.avgNet;
                     let momentum = '';
                     let momentumClass = '';
-                    if (seasonAvg !== null && recentCount >= 2) {
-                        const diff = seasonAvg - recentAvg;
+                    if (overallAvg !== null && recentCount >= 2) {
+                        const diff = overallAvg - recentAvg;
                         if (diff > 0.5) {
                             momentum = `↑ ${Math.abs(diff).toFixed(1)}`;
                             momentumClass = 'style="color:#27ae60;font-weight:700;"';
@@ -1379,7 +1367,7 @@
                         <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                         <td style="font-size:12px;color:#666;">${scoresList}</td>
                         <td style="font-weight:600;">${recentAvg}</td>
-                        <td>${seasonAvg !== null ? seasonAvg : '-'}</td>
+                        <td>${overallAvg !== null ? overallAvg : '-'}</td>
                         <td ${momentumClass}>${momentum}</td>
                         <td><span class="score-cell net" style="font-size:16px;font-weight:700;">${recentTotal}</span></td>
                     `;
@@ -1659,7 +1647,7 @@
                 return isTied ? `T${pos}` : pos;
             };
             
-            let csv = [`${league.name} - ${league.season}`, `Exported: ${new Date().toLocaleDateString()}`, ''];
+            let csv = [`${league.name}`, `Exported: ${new Date().toLocaleDateString()}`, ''];
             csv.push(['Pos', 'Player', 'Team', 'HCP', 'Rounds', 'Gross', 'Net'].join(','));
             
             standings.forEach((s, i) => {
