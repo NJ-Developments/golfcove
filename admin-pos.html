@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://js.stripe.com/terminal/v1/"></script>
+    <script src="js/membership-system.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; }
@@ -849,6 +850,8 @@
         let selectedDate = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD format
         let cart = [];
         let currentDiscount = 0;
+        let currentCartCustomer = null;  // Track customer for member discount
+        let memberDiscountApplied = false; // Track if auto-discount was applied
         let selectedBookingId = null;
         let selectedTabId = null;
         let bookings = JSON.parse(localStorage.getItem('gc_bookings') || '[]');
@@ -1263,6 +1266,12 @@
             const existing = cart.find(i => i.name === name);
             if (existing) existing.qty++;
             else cart.push({ name, price, qty: 1 });
+            
+            // Reapply member discount if customer is a member
+            if (memberDiscountApplied && currentCartCustomer) {
+                applyMemberDiscount();
+            }
+            
             renderCart();
             showToast(`Added: ${name}`);
         }
@@ -1270,6 +1279,14 @@
         function removeFromCart(index) {
             const item = cart[index];
             cart.splice(index, 1);
+            
+            // Reapply member discount for remaining items
+            if (memberDiscountApplied && currentCartCustomer && cart.length > 0) {
+                applyMemberDiscount();
+            } else if (cart.length === 0) {
+                currentDiscount = 0;
+            }
+            
             renderCart();
             if (item) showToast(`Removed: ${item.name}`);
         }
@@ -1278,6 +1295,10 @@
             if (cart.length === 0) return;
             cart = [];
             currentDiscount = 0;
+            currentCartCustomer = null;
+            memberDiscountApplied = false;
+            updateCartMemberBadge(false);
+            document.getElementById('customerSearch').value = '';
             renderCart();
             showToast('Cart cleared');
         }
@@ -1287,8 +1308,11 @@
             if (cart[index].qty <= 0) {
                 cart.splice(index, 1);
             }
-            // Reset discount if cart is now empty or discount exceeds new subtotal
-            if (cart.length === 0) {
+            
+            // Reapply member discount when quantity changes
+            if (memberDiscountApplied && currentCartCustomer && cart.length > 0) {
+                applyMemberDiscount();
+            } else if (cart.length === 0) {
                 currentDiscount = 0;
             } else {
                 const newSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -1760,6 +1784,9 @@
             transactions.unshift({
                 id: 26763 + transactions.length,
                 customer: document.getElementById('customerSearch').value || 'Walk-In',
+                customerId: currentCartCustomer ? currentCartCustomer.id : null,
+                isMember: currentCartCustomer ? GolfCoveMembership.isActiveMember(currentCartCustomer) : false,
+                memberType: currentCartCustomer ? currentCartCustomer.memberType : null,
                 amount: currentPayTotal,
                 subtotal: discountedSubtotal,
                 tax: tax,
@@ -1771,9 +1798,11 @@
                 time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
                 date: new Date().toISOString(),
                 discount: currentDiscount,
+                discountType: memberDiscountApplied ? 'member' : (currentDiscount > 0 ? 'manual' : null),
                 isReturn: false,
                 register: localStorage.getItem('gc_register_id') || 'POS-1',
-                giftCardCode: currentPayMethod === 'giftcard' ? document.getElementById('giftCardNumber').value.trim() : null
+                giftCardCode: currentPayMethod === 'giftcard' ? document.getElementById('giftCardNumber').value.trim() : null,
+                employee: currentEmployee ? currentEmployee.name : null
             });
             localStorage.setItem('gc_transactions', JSON.stringify(transactions));
             
@@ -1791,6 +1820,10 @@
             hideModal('payment');
             cart = [];
             currentDiscount = 0;
+            currentCartCustomer = null;
+            memberDiscountApplied = false;
+            updateCartMemberBadge(false);
+            document.getElementById('customerSearch').value = '';
             renderCart();
             renderRecentTrans();
             showToast(`Payment of $${currentPayTotal.toFixed(2)} processed via ${methodNames[currentPayMethod] || currentPayMethod}!`, 'success');
@@ -1845,7 +1878,12 @@
             const discountedSubtotal = subtotal - discount;
             const tax = discountedSubtotal * 0.0635;
             
-            const discountHtml = discount > 0 ? '<div style="color:green;"><span>Discount:</span><span>-$' + discount.toFixed(2) + '</span></div>' : '';
+            // Show discount with type (member vs manual)
+            const discountLabel = transaction.discountType === 'member' ? 'Member Discount:' : 'Discount:';
+            const discountHtml = discount > 0 ? '<div style="color:green;"><span>' + discountLabel + '</span><span>-$' + discount.toFixed(2) + '</span></div>' : '';
+            
+            // Show member badge if applicable
+            const memberBadge = transaction.isMember ? '<span style="background:#f1c40f;color:#333;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;">MEMBER</span>' : '';
             
             const receiptHtml = '<!DOCTYPE html><html><head><title>Receipt #' + transaction.id + '</title>' +
                 '<style>body { font-family: "Courier New", monospace; padding: 20px; max-width: 300px; margin: 0 auto; font-size: 12px; }' +
@@ -1856,14 +1894,16 @@
                 '.footer { text-align: center; margin-top: 20px; font-size: 11px; color: #666; }' +
                 '@media print { body { padding: 0; } }</style></head><body>' +
                 '<div class="header"><h1>GOLF COVE</h1><p>Indoor Golf & Bar</p><p>' + dateStr + ' ' + transaction.time + '</p><p>Receipt #' + transaction.id + '</p></div>' +
-                '<div class="divider"></div><p><strong>Customer:</strong> ' + transaction.customer + '</p><div class="divider"></div>' +
+                '<div class="divider"></div><p><strong>Customer:</strong> ' + transaction.customer + ' ' + memberBadge + '</p>' +
+                (transaction.employee ? '<p style="color:#666;font-size:10px;">Served by: ' + transaction.employee + '</p>' : '') +
+                '<div class="divider"></div>' +
                 '<table><thead><tr><th style="text-align:left;">Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Price</th></tr></thead>' +
                 '<tbody>' + itemsHtml + '</tbody></table><div class="divider"></div>' +
                 '<div class="totals"><div><span>Subtotal:</span><span>$' + subtotal.toFixed(2) + '</span></div>' + discountHtml +
                 '<div><span>Tax (6.35%):</span><span>$' + tax.toFixed(2) + '</span></div>' +
                 '<div class="total"><span>TOTAL:</span><span>$' + transaction.amount.toFixed(2) + '</span></div>' +
-                '<div><span>Method:</span><span>' + (transaction.method || 'Card') + '</span></div></div>' +
-                '<div class="divider"></div><div class="footer"><p>Thank you for visiting Golf Cove!</p><p>www.golfcove.com</p></div>' +
+                '<div><span>Method:</span><span>' + (transaction.methodDisplay || transaction.method || 'Card') + '</span></div></div>' +
+                '<div class="divider"></div><div class="footer"><p>Thank you for visiting Golf Cove!</p><p>336 State Street, North Haven, CT</p><p>www.golfcovect.com</p></div>' +
                 '<scr' + 'ipt>window.print(); setTimeout(function() { window.close(); }, 500);</scr' + 'ipt>' +
                 '</bo' + 'dy></ht' + 'ml>';
             
@@ -2507,8 +2547,64 @@
         function selectCustomerFromSearch(name, isMember) {
             customerSearch.value = name;
             autocompleteDiv.style.display = 'none';
-            if (isMember) {
+            
+            // Find full customer record using membership system
+            if (typeof GolfCoveMembership !== 'undefined') {
+                currentCartCustomer = GolfCoveMembership.findCustomerByName(name);
+                
+                if (currentCartCustomer && GolfCoveMembership.isActiveMember(currentCartCustomer)) {
+                    const tier = GolfCoveMembership.getMemberTier(currentCartCustomer);
+                    const tierName = tier ? tier.name : 'Member';
+                    const discountPct = tier && tier.benefits ? tier.benefits.discountPercent : 10;
+                    
+                    showToast(`${tierName}: ${name} - ${discountPct}% discount on F&B!`, 'success');
+                    
+                    // Show member indicator in cart header
+                    updateCartMemberBadge(true, tierName, discountPct);
+                    
+                    // Auto-apply member discount if cart has items
+                    if (cart.length > 0) {
+                        applyMemberDiscount();
+                    }
+                    memberDiscountApplied = true;
+                } else {
+                    updateCartMemberBadge(false);
+                    memberDiscountApplied = false;
+                }
+            } else if (isMember) {
                 showToast(`Member: ${name}`, 'success');
+            }
+        }
+        
+        // Apply automatic member discount
+        function applyMemberDiscount() {
+            if (!currentCartCustomer || typeof GolfCoveMembership === 'undefined') return;
+            if (!GolfCoveMembership.isActiveMember(currentCartCustomer)) return;
+            
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const discount = GolfCoveMembership.calculateDiscount(currentCartCustomer, subtotal, 'fnb');
+            
+            if (discount > 0) {
+                currentDiscount = discount;
+                updateTotals();
+            }
+        }
+        
+        // Update cart header to show member badge
+        function updateCartMemberBadge(isMember, tierName = '', discountPct = 0) {
+            const cartHeader = document.querySelector('.cart-panel h3');
+            if (!cartHeader) return;
+            
+            // Remove existing badge
+            const existingBadge = cartHeader.querySelector('.cart-member-badge');
+            if (existingBadge) existingBadge.remove();
+            
+            if (isMember && tierName) {
+                const badge = document.createElement('span');
+                badge.className = 'cart-member-badge';
+                badge.style.cssText = 'background:linear-gradient(135deg,#f1c40f,#e67e22);color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;margin-left:10px;font-weight:600;';
+                badge.textContent = `${tierName} (-${discountPct}%)`;
+                cartHeader.appendChild(badge);
             }
         }
         
