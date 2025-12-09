@@ -5,7 +5,50 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "public/**"
+      "public/**",
+      "functions/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/api/createPaymentIntent",
+        "function": "createPaymentIntent"
+      },
+      {
+        "source": "/api/capturePayment",
+        "function": "capturePayment"
+      },
+      {
+        "source": "/api/cancelPayment",
+        "function": "cancelPayment"
+      },
+      {
+        "source": "/api/createConnectionToken",
+        "function": "createConnectionToken"
+      },
+      {
+        "source": "/api/registerReader",
+        "function": "registerReader"
+      },
+      {
+        "source": "/api/listReaders",
+        "function": "listReaders"
+      },
+      {
+        "source": "/api/processPaymentOnReader",
+        "function": "processPaymentOnReader"
+      },
+      {
+        "source": "/api/createRefund",
+        "function": "createRefund"
+      },
+      {
+        "source": "/api/getPaymentStatus",
+        "function": "getPaymentStatus"
+      }
     ]
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
   }
 }

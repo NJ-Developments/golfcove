@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://js.stripe.com/terminal/v1/"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; }
@@ -320,6 +321,7 @@
             <div class="header-stat"><div class="value" id="statRevenue">$485.00</div><div class="label">Revenue</div></div>
         </div>
         <div class="header-right">
+            <button onclick="showReaderSetup()" id="readerStatusBtn" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:5px;" title="Card Reader"><i class="fas fa-credit-card"></i> <span id="readerStatusText">Reader</span></button>
             <button onclick="showSettings()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:5px;" title="Settings"><i class="fas fa-cog"></i></button>
             <button onclick="showMigrationWizard()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:10px;" title="Setup & Migration"><i class="fas fa-magic"></i> Setup</button>
             <div class="current-time" id="currentTime">--:-- --</div>
@@ -707,13 +709,49 @@
             </div>
             <div style="margin:20px 0;">
                 <label style="display:block;margin-bottom:8px;font-weight:600;font-size:13px;">Payment Method</label>
-                <div style="display:flex;gap:10px;">
-                    <button type="button" class="pay-method-btn active" onclick="selectPayMethod('card', this)" style="flex:1;padding:15px;border:2px solid #4a90a4;background:#4a90a4;color:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">
-                        <i class="fas fa-credit-card"></i> Card
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button type="button" class="pay-method-btn active" onclick="selectPayMethod('card', this)" style="flex:1;min-width:calc(50% - 5px);padding:15px 10px;border:2px solid #4a90a4;background:#4a90a4;color:#fff;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">
+                        <i class="fas fa-credit-card"></i> Card<br><span style="font-size:10px;opacity:0.8;font-weight:400;">(External Terminal)</span>
                     </button>
-                    <button type="button" class="pay-method-btn" onclick="selectPayMethod('cash', this)" style="flex:1;padding:15px;border:2px solid #ddd;background:#fff;color:#333;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">
+                    <button type="button" class="pay-method-btn" onclick="selectPayMethod('cash', this)" style="flex:1;min-width:calc(50% - 5px);padding:15px 10px;border:2px solid #ddd;background:#fff;color:#333;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">
                         <i class="fas fa-money-bill-wave"></i> Cash
                     </button>
+                    <button type="button" class="pay-method-btn" onclick="selectPayMethod('giftcard', this)" style="flex:1;min-width:calc(50% - 5px);padding:15px 10px;border:2px solid #ddd;background:#fff;color:#333;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">
+                        <i class="fas fa-gift"></i> Gift Card
+                    </button>
+                    <button type="button" class="pay-method-btn" onclick="selectPayMethod('tab', this)" style="flex:1;min-width:calc(50% - 5px);padding:15px 10px;border:2px solid #ddd;background:#fff;color:#333;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">
+                        <i class="fas fa-receipt"></i> Add to Tab
+                    </button>
+                </div>
+            </div>
+            <div id="cardSection" style="display:block;margin:15px 0;padding:15px;background:#e3f2fd;border-radius:8px;">
+                <div style="display:flex;align-items:center;gap:10px;color:#1565c0;">
+                    <i class="fas fa-info-circle" style="font-size:18px;"></i>
+                    <div>
+                        <div style="font-weight:600;font-size:13px;" id="cardSectionTitle">Process on External Terminal</div>
+                        <div style="font-size:12px;opacity:0.8;" id="cardSectionDesc">Complete the card payment on your card reader, then click "Complete Payment" to record the transaction.</div>
+                    </div>
+                </div>
+                <div id="stripeTerminalActions" style="display:none;margin-top:10px;">
+                    <button type="button" onclick="initiateStripePayment()" id="stripePayBtn" style="width:100%;padding:12px;background:#635bff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;">
+                        <i class="fas fa-credit-card"></i> Charge Card on Reader
+                    </button>
+                    <div id="stripePaymentStatus" style="display:none;margin-top:10px;padding:12px;border-radius:6px;text-align:center;"></div>
+                </div>
+            </div>
+            <div id="giftcardSection" style="display:none;margin:15px 0;padding:15px;background:#fff3e0;border-radius:8px;">
+                <label style="display:block;margin-bottom:8px;font-weight:600;font-size:13px;">Gift Card Number</label>
+                <input type="text" id="giftCardNumber" placeholder="Enter gift card code" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:6px;font-size:14px;text-transform:uppercase;" oninput="this.value = this.value.toUpperCase()">
+                <button type="button" onclick="lookupGiftCard()" style="margin-top:10px;width:100%;padding:10px;background:#f57c00;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-search"></i> Check Balance</button>
+                <div id="giftCardInfo" style="display:none;margin-top:10px;padding:10px;background:#e8f5e9;border-radius:6px;"></div>
+            </div>
+            <div id="tabSection" style="display:none;margin:15px 0;padding:15px;background:#f3e5f5;border-radius:8px;">
+                <div style="display:flex;align-items:center;gap:10px;color:#7b1fa2;">
+                    <i class="fas fa-info-circle" style="font-size:18px;"></i>
+                    <div>
+                        <div style="font-weight:600;font-size:13px;">Add to Customer Tab</div>
+                        <div style="font-size:12px;opacity:0.8;">This will add the items to the customer's open tab for payment later.</div>
+                    </div>
                 </div>
             </div>
             <div id="cashSection" style="display:none;margin:15px 0;padding:15px;background:#f8f9fa;border-radius:8px;">
@@ -1252,8 +1290,13 @@
             // Reset payment modal state
             currentPayMethod = 'card';
             document.getElementById('cashSection').style.display = 'none';
+            document.getElementById('cardSection').style.display = 'block';
+            document.getElementById('giftcardSection').style.display = 'none';
+            document.getElementById('tabSection').style.display = 'none';
             document.getElementById('cashTendered').value = '';
             document.getElementById('changeSection').style.display = 'none';
+            document.getElementById('giftCardNumber').value = '';
+            document.getElementById('giftCardInfo').style.display = 'none';
             
             // Reset button states
             document.querySelectorAll('.pay-method-btn').forEach(btn => {
@@ -1286,7 +1329,185 @@
             btn.style.color = '#fff';
             btn.style.borderColor = '#4a90a4';
             
-            document.getElementById('cashSection').style.display = method === 'cash' ? 'block' : 'none';
+            // Hide all payment sections
+            document.getElementById('cashSection').style.display = 'none';
+            document.getElementById('cardSection').style.display = 'none';
+            document.getElementById('giftcardSection').style.display = 'none';
+            document.getElementById('tabSection').style.display = 'none';
+            
+            // Show relevant section
+            if (method === 'cash') {
+                document.getElementById('cashSection').style.display = 'block';
+            } else if (method === 'card') {
+                document.getElementById('cardSection').style.display = 'block';
+                updateCardSectionUI();
+            } else if (method === 'giftcard') {
+                document.getElementById('giftcardSection').style.display = 'block';
+            } else if (method === 'tab') {
+                document.getElementById('tabSection').style.display = 'block';
+            }
+        }
+        
+        // Update card section based on Stripe Terminal connection status
+        function updateCardSectionUI() {
+            const titleEl = document.getElementById('cardSectionTitle');
+            const descEl = document.getElementById('cardSectionDesc');
+            const actionsEl = document.getElementById('stripeTerminalActions');
+            const cardSection = document.getElementById('cardSection');
+            
+            if (connectedReader) {
+                // Stripe Terminal connected
+                titleEl.textContent = 'Stripe Terminal Connected';
+                descEl.textContent = 'Click the button below to charge the card on your reader.';
+                cardSection.style.background = '#ede7f6';
+                cardSection.querySelector('i').style.color = '#635bff';
+                actionsEl.style.display = 'block';
+            } else if (localStorage.getItem('gc_stripe_pk')) {
+                // Stripe configured but no reader connected
+                titleEl.textContent = 'No Card Reader Connected';
+                descEl.innerHTML = 'Connect a Stripe Terminal reader or process payment on your external terminal. <a href="#" onclick="showReaderSetup(); return false;" style="color:#1565c0;">Connect Reader</a>';
+                cardSection.style.background = '#fff3e0';
+                actionsEl.style.display = 'none';
+            } else {
+                // No Stripe configured - external terminal mode
+                titleEl.textContent = 'Process on External Terminal';
+                descEl.textContent = 'Complete the card payment on your card reader, then click "Complete Payment" to record the transaction.';
+                cardSection.style.background = '#e3f2fd';
+                actionsEl.style.display = 'none';
+            }
+        }
+        
+        // Initiate payment on Stripe Terminal
+        let stripePaymentInProgress = false;
+        
+        async function initiateStripePayment() {
+            if (stripePaymentInProgress) return;
+            
+            const btn = document.getElementById('stripePayBtn');
+            const statusEl = document.getElementById('stripePaymentStatus');
+            
+            stripePaymentInProgress = true;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Waiting for card...';
+            statusEl.style.display = 'block';
+            statusEl.style.background = '#fff3e0';
+            statusEl.innerHTML = '<i class="fas fa-hand-pointer"></i> Present card on reader...';
+            
+            const amountCents = Math.round(currentPayTotal * 100);
+            const description = `Golf Cove POS - ${document.getElementById('customerSearch').value || 'Walk-In'}`;
+            
+            const result = await processStripeTerminalPayment(amountCents, description);
+            
+            if (result.success) {
+                statusEl.style.background = '#e8f5e9';
+                statusEl.innerHTML = '<i class="fas fa-check-circle" style="color:#27ae60;"></i> Payment successful!';
+                btn.innerHTML = '<i class="fas fa-check"></i> Card Charged';
+                btn.style.background = '#27ae60';
+                
+                // Auto-complete the payment
+                setTimeout(() => {
+                    completePaymentWithStripe(result.paymentIntentId);
+                }, 1000);
+            } else if (result.fallback) {
+                // No reader - fall back to manual mode
+                statusEl.style.display = 'none';
+                btn.innerHTML = '<i class="fas fa-credit-card"></i> Charge Card on Reader';
+                btn.disabled = false;
+                stripePaymentInProgress = false;
+                showToast('No reader connected. Process on external terminal.', 'info');
+            } else {
+                statusEl.style.background = '#ffebee';
+                statusEl.innerHTML = '<i class="fas fa-times-circle" style="color:#e74c3c;"></i> ' + (result.error || 'Payment failed');
+                btn.innerHTML = '<i class="fas fa-redo"></i> Try Again';
+                btn.disabled = false;
+                stripePaymentInProgress = false;
+            }
+        }
+        
+        // Complete payment after successful Stripe charge
+        function completePaymentWithStripe(paymentIntentId) {
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const discountedSubtotal = subtotal - currentDiscount;
+            const tax = discountedSubtotal * 0.0635;
+            
+            const cartItems = [...cart];
+            transactions.unshift({
+                id: 26763 + transactions.length,
+                customer: document.getElementById('customerSearch').value || 'Walk-In',
+                amount: currentPayTotal,
+                subtotal: discountedSubtotal,
+                tax: tax,
+                items: cartItems,
+                itemDetails: cartItems.map(i => ({ name: i.name, qty: i.qty, price: i.price, discount: i.discount || 0 })),
+                itemCount: cart.reduce((sum, item) => sum + item.qty, 0),
+                method: 'stripe',
+                methodDisplay: 'Stripe Terminal',
+                stripePaymentIntentId: paymentIntentId,
+                time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                date: new Date().toISOString(),
+                discount: currentDiscount,
+                isReturn: false,
+                register: localStorage.getItem('gc_register_id') || 'POS-1'
+            });
+            localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+            
+            // Update customer stats
+            const customerName = document.getElementById('customerSearch').value;
+            if (customerName) {
+                updateCustomerStats(customerName, currentPayTotal);
+            }
+            
+            // Ask to print receipt
+            if (confirm('Print receipt?')) {
+                printReceipt(transactions[0]);
+            }
+            
+            hideModal('payment');
+            cart = [];
+            currentDiscount = 0;
+            stripePaymentInProgress = false;
+            
+            // Reset button state
+            const btn = document.getElementById('stripePayBtn');
+            btn.innerHTML = '<i class="fas fa-credit-card"></i> Charge Card on Reader';
+            btn.style.background = '#635bff';
+            btn.disabled = false;
+            document.getElementById('stripePaymentStatus').style.display = 'none';
+            
+            renderCart();
+            renderRecentTrans();
+            showToast(`Payment of $${currentPayTotal.toFixed(2)} processed via Stripe Terminal!`, 'success');
+        }
+        
+        function lookupGiftCard() {
+            const code = document.getElementById('giftCardNumber').value.trim();
+            if (!code) {
+                showToast('Please enter a gift card code', 'error');
+                return;
+            }
+            
+            // Look up gift card from local storage
+            const giftCards = JSON.parse(localStorage.getItem('gc_gift_cards') || '[]');
+            const card = giftCards.find(gc => gc.code.toUpperCase() === code.toUpperCase());
+            
+            const infoDiv = document.getElementById('giftCardInfo');
+            if (card) {
+                if (card.balance <= 0) {
+                    infoDiv.innerHTML = `<div style="color:#e74c3c;"><i class="fas fa-times-circle"></i> This gift card has no remaining balance.</div>`;
+                } else if (card.balance < currentPayTotal) {
+                    infoDiv.innerHTML = `
+                        <div style="color:#f57c00;">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Balance: $${card.balance.toFixed(2)}</strong><br>
+                            <span style="font-size:12px;">This will cover $${card.balance.toFixed(2)} of the $${currentPayTotal.toFixed(2)} total. Remaining $${(currentPayTotal - card.balance).toFixed(2)} will need another payment method.</span>
+                        </div>`;
+                } else {
+                    infoDiv.innerHTML = `<div style="color:#27ae60;"><i class="fas fa-check-circle"></i> <strong>Balance: $${card.balance.toFixed(2)}</strong> - Sufficient for this purchase!</div>`;
+                }
+                infoDiv.style.display = 'block';
+            } else {
+                infoDiv.innerHTML = `<div style="color:#e74c3c;"><i class="fas fa-times-circle"></i> Gift card not found. Please check the code.</div>`;
+                infoDiv.style.display = 'block';
+            }
         }
         
         function quickCash(amount) {
@@ -1312,6 +1533,7 @@
         }
         
         function completePayment() {
+            // Validate based on payment method
             if (currentPayMethod === 'cash') {
                 const tendered = parseFloat(document.getElementById('cashTendered').value) || 0;
                 if (tendered < currentPayTotal) {
@@ -1319,9 +1541,53 @@
                 }
             }
             
+            if (currentPayMethod === 'giftcard') {
+                const code = document.getElementById('giftCardNumber').value.trim();
+                if (!code) {
+                    return showToast('Please enter a gift card code', 'error');
+                }
+                // Process gift card payment
+                const giftCards = JSON.parse(localStorage.getItem('gc_gift_cards') || '[]');
+                const cardIndex = giftCards.findIndex(gc => gc.code.toUpperCase() === code.toUpperCase());
+                if (cardIndex === -1) {
+                    return showToast('Gift card not found', 'error');
+                }
+                if (giftCards[cardIndex].balance <= 0) {
+                    return showToast('Gift card has no balance', 'error');
+                }
+                // Deduct from gift card balance
+                const amountToDeduct = Math.min(giftCards[cardIndex].balance, currentPayTotal);
+                giftCards[cardIndex].balance -= amountToDeduct;
+                giftCards[cardIndex].lastUsed = new Date().toISOString();
+                localStorage.setItem('gc_gift_cards', JSON.stringify(giftCards));
+                
+                if (amountToDeduct < currentPayTotal) {
+                    showToast(`Gift card covered $${amountToDeduct.toFixed(2)}. Remaining $${(currentPayTotal - amountToDeduct).toFixed(2)} needed.`, 'warning');
+                }
+            }
+            
+            if (currentPayMethod === 'tab') {
+                // Add to customer's tab instead of completing payment
+                const customerName = document.getElementById('customerSearch').value;
+                if (!customerName) {
+                    return showToast('Please select a customer to add to tab', 'error');
+                }
+                addToTabFromCart(customerName);
+                hideModal('payment');
+                return;
+            }
+            
             const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
             const discountedSubtotal = subtotal - currentDiscount;
             const tax = discountedSubtotal * 0.0635;
+            
+            // Friendly method names for display
+            const methodNames = {
+                'card': 'Card (External Terminal)',
+                'cash': 'Cash',
+                'giftcard': 'Gift Card',
+                'tab': 'Tab'
+            };
             
             const cartItems = [...cart];
             transactions.unshift({
@@ -1334,11 +1600,13 @@
                 itemDetails: cartItems.map(i => ({ name: i.name, qty: i.qty, price: i.price, discount: i.discount || 0 })),
                 itemCount: cart.reduce((sum, item) => sum + item.qty, 0),
                 method: currentPayMethod,
+                methodDisplay: methodNames[currentPayMethod] || currentPayMethod,
                 time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
                 date: new Date().toISOString(),
                 discount: currentDiscount,
                 isReturn: false,
-                register: localStorage.getItem('gc_register_id') || 'POS-1'
+                register: localStorage.getItem('gc_register_id') || 'POS-1',
+                giftCardCode: currentPayMethod === 'giftcard' ? document.getElementById('giftCardNumber').value.trim() : null
             });
             localStorage.setItem('gc_transactions', JSON.stringify(transactions));
             
@@ -1358,7 +1626,42 @@
             currentDiscount = 0;
             renderCart();
             renderRecentTrans();
-            showToast(`Payment of $${currentPayTotal.toFixed(2)} processed via ${currentPayMethod}!`, 'success');
+            showToast(`Payment of $${currentPayTotal.toFixed(2)} processed via ${methodNames[currentPayMethod] || currentPayMethod}!`, 'success');
+        }
+        
+        function addToTabFromCart(customerName) {
+            // Find or create tab for customer
+            let tab = openTabs.find(t => t.customer.toLowerCase() === customerName.toLowerCase());
+            if (!tab) {
+                tab = {
+                    id: Date.now(),
+                    customer: customerName,
+                    items: [],
+                    total: 0,
+                    created: new Date().toISOString()
+                };
+                openTabs.push(tab);
+            }
+            
+            // Add cart items to tab
+            cart.forEach(item => {
+                const existingItem = tab.items.find(i => i.name === item.name && i.price === item.price);
+                if (existingItem) {
+                    existingItem.qty += item.qty;
+                } else {
+                    tab.items.push({...item});
+                }
+            });
+            
+            // Recalculate tab total
+            tab.total = tab.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
+            
+            cart = [];
+            currentDiscount = 0;
+            renderCart();
+            renderTabs();
+            showToast(`Items added to ${customerName}'s tab!`, 'success');
         }
         
         function printReceipt(transaction) {
@@ -3503,6 +3806,31 @@
                             </div>
                         </div>
                         
+                        <!-- Stripe / Payment Settings -->
+                        <div style="background:#f3e5f5;padding:20px;border-radius:10px;margin-bottom:20px;">
+                            <h4 style="margin:0 0 15px;color:#7b1fa2;"><i class="fab fa-stripe"></i> Stripe Payment Settings</h4>
+                            <p style="font-size:12px;color:#666;margin-bottom:15px;">Configure Stripe for online gift card purchases and website payments. In-person card payments use your external terminal.</p>
+                            <div style="display:grid;grid-template-columns:1fr;gap:15px;">
+                                <div>
+                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Publishable Key <span style="font-weight:400;color:#999;">(starts with pk_)</span></label>
+                                    <input type="text" id="settingStripePK" value="${localStorage.getItem('gc_stripe_pk') || ''}" placeholder="pk_live_... or pk_test_..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:12px;">
+                                </div>
+                                <div>
+                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Secret Key <span style="font-weight:400;color:#999;">(starts with sk_ - keep private!)</span></label>
+                                    <input type="password" id="settingStripeSK" value="${localStorage.getItem('gc_stripe_sk') || ''}" placeholder="sk_live_... or sk_test_..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:12px;">
+                                    <p style="font-size:11px;color:#e74c3c;margin-top:5px;"><i class="fas fa-exclamation-triangle"></i> Never share your secret key. It's stored locally on this device only.</p>
+                                </div>
+                            </div>
+                            <div style="margin-top:15px;padding:12px;background:#fff;border-radius:6px;border:1px solid #e1bee7;">
+                                <div style="font-size:12px;color:#666;">
+                                    <strong>Where to find your keys:</strong><br>
+                                    1. Go to <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:#7b1fa2;">Stripe Dashboard → Developers → API Keys</a><br>
+                                    2. Copy your Publishable key and Secret key<br>
+                                    3. Use test keys (pk_test_, sk_test_) for testing before going live
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Data Management -->
                         <div style="background:#fff3e0;padding:20px;border-radius:10px;margin-bottom:20px;">
                             <h4 style="margin:0 0 15px;color:#e65100;"><i class="fas fa-database"></i> Data Management</h4>
@@ -3539,6 +3867,12 @@
             localStorage.setItem('gc_tax_rate', document.getElementById('settingTaxRate').value);
             localStorage.setItem('gc_time_format', document.getElementById('settingTimeFormat').value);
             localStorage.setItem('gc_date_format', document.getElementById('settingDateFormat').value);
+            
+            // Save Stripe settings
+            const stripePK = document.getElementById('settingStripePK').value.trim();
+            const stripeSK = document.getElementById('settingStripeSK').value.trim();
+            if (stripePK) localStorage.setItem('gc_stripe_pk', stripePK);
+            if (stripeSK) localStorage.setItem('gc_stripe_sk', stripeSK);
             
             closeSettings();
             showToast('Settings saved successfully!', 'success');
@@ -3607,6 +3941,308 @@
             };
             input.click();
         }
+        
+        // ============ STRIPE TERMINAL INTEGRATION ============
+        let stripeTerminal = null;
+        let connectedReader = null;
+        let currentPaymentIntent = null;
+        
+        // Initialize Stripe Terminal
+        async function initStripeTerminal() {
+            const stripePK = localStorage.getItem('gc_stripe_pk');
+            if (!stripePK) {
+                console.log('Stripe not configured - using external terminal mode');
+                return false;
+            }
+            
+            try {
+                stripeTerminal = StripeTerminal.create({
+                    onFetchConnectionToken: async () => {
+                        const response = await fetch('/api/createConnectionToken', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const data = await response.json();
+                        if (data.error) throw new Error(data.error);
+                        return data.secret;
+                    },
+                    onUnexpectedReaderDisconnect: () => {
+                        showToast('Card reader disconnected!', 'error');
+                        connectedReader = null;
+                        updateReaderStatus();
+                    }
+                });
+                
+                console.log('Stripe Terminal initialized');
+                updateReaderStatus();
+                return true;
+            } catch (error) {
+                console.error('Failed to initialize Stripe Terminal:', error);
+                return false;
+            }
+        }
+        
+        // Discover available readers
+        async function discoverReaders() {
+            if (!stripeTerminal) {
+                showToast('Stripe Terminal not initialized. Configure Stripe keys in Settings.', 'error');
+                return [];
+            }
+            
+            try {
+                const config = { simulated: false };
+                const discoverResult = await stripeTerminal.discoverReaders(config);
+                
+                if (discoverResult.error) {
+                    showToast('Error discovering readers: ' + discoverResult.error.message, 'error');
+                    return [];
+                }
+                
+                return discoverResult.discoveredReaders;
+            } catch (error) {
+                showToast('Failed to discover readers', 'error');
+                return [];
+            }
+        }
+        
+        // Connect to a reader
+        async function connectToReader(reader) {
+            if (!stripeTerminal) return false;
+            
+            try {
+                const connectResult = await stripeTerminal.connectReader(reader);
+                
+                if (connectResult.error) {
+                    showToast('Failed to connect: ' + connectResult.error.message, 'error');
+                    return false;
+                }
+                
+                connectedReader = connectResult.reader;
+                localStorage.setItem('gc_connected_reader', JSON.stringify({
+                    id: reader.id,
+                    label: reader.label
+                }));
+                
+                showToast('Connected to ' + (reader.label || 'Card Reader'), 'success');
+                updateReaderStatus();
+                return true;
+            } catch (error) {
+                showToast('Connection error: ' + error.message, 'error');
+                return false;
+            }
+        }
+        
+        // Update reader status in UI
+        function updateReaderStatus() {
+            const statusEl = document.getElementById('readerStatus');
+            if (statusEl) {
+                if (connectedReader) {
+                    statusEl.innerHTML = '<i class="fas fa-check-circle" style="color:#27ae60;"></i> ' + (connectedReader.label || 'Reader Connected');
+                } else {
+                    statusEl.innerHTML = '<i class="fas fa-times-circle" style="color:#e74c3c;"></i> No Reader Connected';
+                }
+            }
+        }
+        
+        // Process card payment through Stripe Terminal
+        async function processStripeTerminalPayment(amountCents, description) {
+            if (!stripeTerminal || !connectedReader) {
+                // Fall back to external terminal mode
+                return { success: false, fallback: true };
+            }
+            
+            try {
+                // Create payment intent on server
+                const response = await fetch('/api/createPaymentIntent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount: amountCents,
+                        description: description,
+                        metadata: {
+                            register: localStorage.getItem('gc_register_id') || 'POS-1'
+                        }
+                    })
+                });
+                
+                const { clientSecret, paymentIntentId, error } = await response.json();
+                if (error) throw new Error(error);
+                
+                currentPaymentIntent = paymentIntentId;
+                
+                // Collect payment method from reader
+                showToast('Present card on reader...', 'info');
+                const collectResult = await stripeTerminal.collectPaymentMethod(clientSecret);
+                
+                if (collectResult.error) {
+                    throw new Error(collectResult.error.message);
+                }
+                
+                // Confirm the payment
+                showToast('Processing payment...', 'info');
+                const confirmResult = await stripeTerminal.processPayment(collectResult.paymentIntent);
+                
+                if (confirmResult.error) {
+                    throw new Error(confirmResult.error.message);
+                }
+                
+                if (confirmResult.paymentIntent.status === 'succeeded') {
+                    return { 
+                        success: true, 
+                        paymentIntentId: confirmResult.paymentIntent.id,
+                        amount: confirmResult.paymentIntent.amount
+                    };
+                } else {
+                    throw new Error('Payment not completed: ' + confirmResult.paymentIntent.status);
+                }
+                
+            } catch (error) {
+                showToast('Payment failed: ' + error.message, 'error');
+                currentPaymentIntent = null;
+                return { success: false, error: error.message };
+            }
+        }
+        
+        // Cancel current payment
+        async function cancelStripePayment() {
+            if (stripeTerminal && currentPaymentIntent) {
+                try {
+                    await stripeTerminal.cancelCollectPaymentMethod();
+                    await fetch('/api/cancelPayment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ paymentIntentId: currentPaymentIntent })
+                    });
+                } catch (e) {
+                    console.log('Cancel cleanup:', e);
+                }
+                currentPaymentIntent = null;
+            }
+        }
+        
+        // Show reader setup modal
+        function showReaderSetup() {
+            const isConfigured = !!localStorage.getItem('gc_stripe_pk');
+            const savedReader = JSON.parse(localStorage.getItem('gc_connected_reader') || 'null');
+            
+            const html = `
+                <div id="readerSetupModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">
+                    <div style="background:#fff;padding:25px;border-radius:12px;max-width:500px;width:95%;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h2 style="margin:0;color:#4a90a4;"><i class="fab fa-stripe"></i> Card Reader Setup</h2>
+                            <button onclick="closeReaderSetup()" style="background:none;border:none;font-size:24px;cursor:pointer;">&times;</button>
+                        </div>
+                        
+                        ${!isConfigured ? `
+                            <div style="background:#fff3e0;padding:15px;border-radius:8px;margin-bottom:20px;">
+                                <i class="fas fa-exclamation-triangle" style="color:#f57c00;"></i>
+                                <strong>Stripe Not Configured</strong>
+                                <p style="margin:5px 0 0;font-size:13px;">Add your Stripe API keys in Settings first.</p>
+                                <button onclick="closeReaderSetup(); showSettingsModal();" style="margin-top:10px;padding:8px 15px;background:#4a90a4;color:#fff;border:none;border-radius:6px;cursor:pointer;">Open Settings</button>
+                            </div>
+                        ` : `
+                            <div style="margin-bottom:20px;">
+                                <div id="readerStatus" style="padding:15px;background:#f8f9fa;border-radius:8px;text-align:center;font-size:14px;">
+                                    ${connectedReader ? 
+                                        `<i class="fas fa-check-circle" style="color:#27ae60;"></i> Connected: ${connectedReader.label || 'Card Reader'}` : 
+                                        `<i class="fas fa-times-circle" style="color:#e74c3c;"></i> No Reader Connected`}
+                                </div>
+                            </div>
+                            
+                            <div style="display:flex;flex-direction:column;gap:10px;">
+                                <button onclick="scanForReaders()" style="padding:12px;background:#3498db;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">
+                                    <i class="fas fa-search"></i> Scan for Readers
+                                </button>
+                                
+                                <div id="readerList" style="display:none;margin:10px 0;"></div>
+                                
+                                ${savedReader ? `
+                                    <button onclick="reconnectSavedReader()" style="padding:12px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">
+                                        <i class="fas fa-plug"></i> Reconnect to ${savedReader.label || 'Saved Reader'}
+                                    </button>
+                                ` : ''}
+                                
+                                <button onclick="useSimulatedReader()" style="padding:12px;background:#95a5a6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">
+                                    <i class="fas fa-laptop"></i> Use Simulated Reader (Testing)
+                                </button>
+                            </div>
+                            
+                            <div style="margin-top:20px;padding:15px;background:#e3f2fd;border-radius:8px;font-size:12px;color:#1565c0;">
+                                <strong>Need a card reader?</strong><br>
+                                Purchase Stripe Terminal hardware at <a href="https://stripe.com/terminal" target="_blank" style="color:#1565c0;">stripe.com/terminal</a>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function closeReaderSetup() {
+            const modal = document.getElementById('readerSetupModal');
+            if (modal) modal.remove();
+        }
+        
+        async function scanForReaders() {
+            const listEl = document.getElementById('readerList');
+            listEl.innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Scanning...</div>';
+            listEl.style.display = 'block';
+            
+            const readers = await discoverReaders();
+            
+            if (readers.length === 0) {
+                listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">No readers found. Make sure your reader is powered on and connected to the same network.</div>';
+            } else {
+                listEl.innerHTML = readers.map(r => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#f8f9fa;border-radius:6px;margin-bottom:8px;">
+                        <div>
+                            <strong>${r.label || r.id}</strong>
+                            <div style="font-size:11px;color:#666;">${r.device_type} • ${r.status}</div>
+                        </div>
+                        <button onclick="selectReader('${r.id}')" style="padding:8px 15px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;">Connect</button>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        async function selectReader(readerId) {
+            const readers = await discoverReaders();
+            const reader = readers.find(r => r.id === readerId);
+            if (reader) {
+                const success = await connectToReader(reader);
+                if (success) closeReaderSetup();
+            }
+        }
+        
+        async function useSimulatedReader() {
+            if (!stripeTerminal) {
+                await initStripeTerminal();
+            }
+            
+            try {
+                const discoverResult = await stripeTerminal.discoverReaders({ simulated: true });
+                if (discoverResult.discoveredReaders.length > 0) {
+                    const reader = discoverResult.discoveredReaders[0];
+                    const connectResult = await stripeTerminal.connectReader(reader);
+                    if (!connectResult.error) {
+                        connectedReader = connectResult.reader;
+                        showToast('Simulated reader connected (for testing)', 'success');
+                        updateReaderStatus();
+                        closeReaderSetup();
+                    }
+                }
+            } catch (error) {
+                showToast('Failed to connect simulated reader', 'error');
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Try to initialize Stripe Terminal
+            setTimeout(() => {
+                initStripeTerminal();
+            }, 1000);
+        });
     </script>
 </body>
 </html>

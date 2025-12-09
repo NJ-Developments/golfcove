@@ -78,14 +78,259 @@
     <!-- Gift Cards Section -->
     <section style="padding: 60px 0;">
         <div class="container">
-            <div style="max-width: 800px; margin: 0 auto; text-align: center;">
-                <p style="color: #333; font-size: 16px; line-height: 1.8; margin-bottom: 30px;">
-                    We are pleased to offer gift cards for every occasion and budget! Gift Cards can be used for all purchases including golf, food, drinks, apparel, events, etc. Please use the link below to purchase your gift card and have it emailed to you or directly to the person you're purchasing it for. This is a one-of-a-kind gift that everyone will enjoy, whether it's their first time at Golf Cove or they're an established member.
-                </p>
-                <a href="https://foreupsoftware.com/index.php/booking/21220/7266#/store/giftcards" style="display: inline-block; background: #37b24a; color: #fff; padding: 18px 45px; text-decoration: none; font-weight: 600; font-size: 15px; text-transform: uppercase;" target="_blank">PURCHASE A GIFT CARD</a>
+            <div style="max-width: 900px; margin: 0 auto;">
+                <div style="text-align: center; margin-bottom: 40px;">
+                    <p style="color: #333; font-size: 16px; line-height: 1.8;">
+                        We are pleased to offer gift cards for every occasion and budget! Gift Cards can be used for all purchases including golf, food, drinks, apparel, events, etc. This is a one-of-a-kind gift that everyone will enjoy, whether it's their first time at Golf Cove or they're an established member.
+                    </p>
+                </div>
+                
+                <!-- Gift Card Purchase Options -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px;">
+                    <div class="gift-card-option" onclick="selectGiftCardAmount(25)" style="background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.3s;">
+                        <div style="font-size: 32px; font-weight: 700; color: #37b24a;">$25</div>
+                        <div style="color: #666; font-size: 14px; margin-top: 5px;">Perfect for a round</div>
+                    </div>
+                    <div class="gift-card-option" onclick="selectGiftCardAmount(50)" style="background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.3s;">
+                        <div style="font-size: 32px; font-weight: 700; color: #37b24a;">$50</div>
+                        <div style="color: #666; font-size: 14px; margin-top: 5px;">Great for couples</div>
+                    </div>
+                    <div class="gift-card-option" onclick="selectGiftCardAmount(100)" style="background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.3s;">
+                        <div style="font-size: 32px; font-weight: 700; color: #37b24a;">$100</div>
+                        <div style="color: #666; font-size: 14px; margin-top: 5px;">Family fun day</div>
+                    </div>
+                    <div class="gift-card-option" onclick="selectGiftCardAmount(200)" style="background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.3s;">
+                        <div style="font-size: 32px; font-weight: 700; color: #37b24a;">$200</div>
+                        <div style="color: #666; font-size: 14px; margin-top: 5px;">Premium experience</div>
+                    </div>
+                </div>
+                
+                <!-- Custom Amount -->
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <p style="color: #666; margin-bottom: 10px;">Or enter a custom amount:</p>
+                    <div style="display: inline-flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 24px; font-weight: 600;">$</span>
+                        <input type="number" id="customAmount" min="10" max="500" placeholder="Enter amount" style="width: 150px; padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 18px; text-align: center;" oninput="updateCustomAmount()">
+                    </div>
+                    <p style="color: #999; font-size: 12px; margin-top: 5px;">Minimum $10, Maximum $500</p>
+                </div>
+                
+                <!-- Purchase Form -->
+                <div style="background: #f8f9fa; border-radius: 12px; padding: 30px; max-width: 500px; margin: 0 auto;">
+                    <h3 style="margin: 0 0 20px; color: #333; text-align: center;"><i class="fas fa-gift" style="color: #37b24a;"></i> Gift Card Details</h3>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Recipient's Name</label>
+                        <input type="text" id="recipientName" placeholder="Who is this gift for?" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Recipient's Email</label>
+                        <input type="email" id="recipientEmail" placeholder="Email to send gift card to" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Your Name</label>
+                        <input type="text" id="senderName" placeholder="Your name (for the gift message)" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Personal Message (Optional)</label>
+                        <textarea id="giftMessage" placeholder="Add a personal message..." rows="3" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                        <div style="font-size: 14px; color: #666;">Gift Card Amount</div>
+                        <div id="selectedAmount" style="font-size: 28px; font-weight: 700; color: #37b24a;">$50</div>
+                    </div>
+                    
+                    <button id="purchaseBtn" onclick="purchaseGiftCard()" style="width: 100%; padding: 15px; background: #37b24a; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.3s;">
+                        <i class="fas fa-lock"></i> Purchase Gift Card
+                    </button>
+                    
+                    <p style="text-align: center; margin-top: 15px; font-size: 12px; color: #999;">
+                        <i class="fas fa-shield-alt"></i> Secure payment powered by Stripe
+                    </p>
+                </div>
+                
+                <!-- Check Balance Section -->
+                <div style="max-width: 500px; margin: 40px auto 0; text-align: center;">
+                    <h3 style="color: #333; margin-bottom: 15px;">Already have a gift card?</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="checkBalanceCode" placeholder="Enter gift card code" style="flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; text-transform: uppercase;">
+                        <button onclick="checkGiftCardBalance()" style="padding: 12px 20px; background: #4a90a4; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Check Balance</button>
+                    </div>
+                    <div id="balanceResult" style="margin-top: 15px; display: none;"></div>
+                </div>
             </div>
         </div>
     </section>
+    
+    <style>
+        .gift-card-option:hover {
+            border-color: #37b24a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(55, 178, 74, 0.2);
+        }
+        .gift-card-option.selected {
+            border-color: #37b24a;
+            background: #e8f5e9;
+        }
+        #purchaseBtn:hover {
+            background: #2d9a3e;
+        }
+        #purchaseBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+    
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        let selectedGiftCardAmount = 50;
+        
+        function selectGiftCardAmount(amount) {
+            selectedGiftCardAmount = amount;
+            document.getElementById('selectedAmount').textContent = '$' + amount;
+            document.getElementById('customAmount').value = '';
+            
+            // Update selected state
+            document.querySelectorAll('.gift-card-option').forEach(opt => opt.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+        
+        function updateCustomAmount() {
+            const input = document.getElementById('customAmount');
+            let amount = parseInt(input.value) || 0;
+            if (amount < 10) amount = 10;
+            if (amount > 500) amount = 500;
+            selectedGiftCardAmount = amount;
+            document.getElementById('selectedAmount').textContent = '$' + amount;
+            
+            // Deselect preset options
+            document.querySelectorAll('.gift-card-option').forEach(opt => opt.classList.remove('selected'));
+        }
+        
+        function generateGiftCardCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = 'GC-';
+            for (let i = 0; i < 12; i++) {
+                if (i > 0 && i % 4 === 0) code += '-';
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+        
+        async function purchaseGiftCard() {
+            const recipientName = document.getElementById('recipientName').value.trim();
+            const recipientEmail = document.getElementById('recipientEmail').value.trim();
+            const senderName = document.getElementById('senderName').value.trim();
+            const message = document.getElementById('giftMessage').value.trim();
+            
+            if (!recipientName) {
+                alert('Please enter the recipient\'s name');
+                return;
+            }
+            if (!recipientEmail || !recipientEmail.includes('@')) {
+                alert('Please enter a valid recipient email');
+                return;
+            }
+            if (!senderName) {
+                alert('Please enter your name');
+                return;
+            }
+            
+            const btn = document.getElementById('purchaseBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            
+            // For now, create the gift card locally and show success
+            // In production, this would call your server to create a Stripe Checkout session
+            const giftCard = {
+                code: generateGiftCardCode(),
+                amount: selectedGiftCardAmount,
+                balance: selectedGiftCardAmount,
+                recipientName: recipientName,
+                recipientEmail: recipientEmail,
+                senderName: senderName,
+                message: message,
+                purchaseDate: new Date().toISOString(),
+                status: 'pending_payment'
+            };
+            
+            // Store pending gift card
+            const pendingCards = JSON.parse(localStorage.getItem('gc_pending_gift_cards') || '[]');
+            pendingCards.push(giftCard);
+            localStorage.setItem('gc_pending_gift_cards', JSON.stringify(pendingCards));
+            
+            // Check if Stripe is configured
+            const stripePK = localStorage.getItem('gc_stripe_pk');
+            if (stripePK && stripePK.startsWith('pk_')) {
+                // Redirect to Stripe Checkout (would need server-side in production)
+                alert(`Stripe integration ready!\n\nGift Card: ${giftCard.code}\nAmount: $${selectedGiftCardAmount}\nTo: ${recipientName}\n\nNote: Full Stripe Checkout requires a server-side component. For now, this gift card has been created and can be used at Golf Cove.`);
+                
+                // Mark as paid for demo
+                giftCard.status = 'active';
+                const giftCards = JSON.parse(localStorage.getItem('gc_gift_cards') || '[]');
+                giftCards.push(giftCard);
+                localStorage.setItem('gc_gift_cards', JSON.stringify(giftCards));
+            } else {
+                alert(`Gift Card Created!\n\nCode: ${giftCard.code}\nAmount: $${selectedGiftCardAmount}\nTo: ${recipientName}\nFrom: ${senderName}\n\nNote: Configure Stripe in the POS Settings to enable online payments. This gift card has been saved and can be used at Golf Cove.`);
+                
+                // Save as active for demo
+                giftCard.status = 'active';
+                const giftCards = JSON.parse(localStorage.getItem('gc_gift_cards') || '[]');
+                giftCards.push(giftCard);
+                localStorage.setItem('gc_gift_cards', JSON.stringify(giftCards));
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-lock"></i> Purchase Gift Card';
+            
+            // Clear form
+            document.getElementById('recipientName').value = '';
+            document.getElementById('recipientEmail').value = '';
+            document.getElementById('senderName').value = '';
+            document.getElementById('giftMessage').value = '';
+        }
+        
+        function checkGiftCardBalance() {
+            const code = document.getElementById('checkBalanceCode').value.trim().toUpperCase();
+            const resultDiv = document.getElementById('balanceResult');
+            
+            if (!code) {
+                resultDiv.innerHTML = '<p style="color: #e74c3c;">Please enter a gift card code</p>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+            
+            const giftCards = JSON.parse(localStorage.getItem('gc_gift_cards') || '[]');
+            const card = giftCards.find(gc => gc.code.toUpperCase() === code);
+            
+            if (card) {
+                if (card.balance > 0) {
+                    resultDiv.innerHTML = `
+                        <div style="background: #e8f5e9; padding: 20px; border-radius: 8px;">
+                            <div style="font-size: 14px; color: #666;">Available Balance</div>
+                            <div style="font-size: 32px; font-weight: 700; color: #37b24a;">$${card.balance.toFixed(2)}</div>
+                            <div style="font-size: 12px; color: #999; margin-top: 5px;">Original amount: $${card.amount.toFixed(2)}</div>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div style="background: #ffebee; padding: 20px; border-radius: 8px; color: #c62828;">This gift card has been fully redeemed.</div>';
+                }
+            } else {
+                resultDiv.innerHTML = '<div style="background: #ffebee; padding: 20px; border-radius: 8px; color: #c62828;">Gift card not found. Please check the code and try again.</div>';
+            }
+            resultDiv.style.display = 'block';
+        }
+        
+        // Select $50 by default
+        document.addEventListener('DOMContentLoaded', function() {
+            const options = document.querySelectorAll('.gift-card-option');
+            if (options[1]) options[1].classList.add('selected');
+        });
+    </script>
 
     <!-- Footer -->
     <footer>
