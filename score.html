@@ -1055,23 +1055,18 @@
                         <h2>Welcome to ${league.name}</h2>
                         <p class="welcome-desc">2-Man Scramble - One Scorecard Per Team</p>
                         
-                        <div class="option-card" onclick="showTeamScorecard()">
+                        <div class="option-card" onclick="showExistingTeams()">
                             <div class="option-icon"><i class="fas fa-users"></i></div>
                             <div class="option-text">
-                                <div class="option-title">Start Team Scorecard</div>
-                                <div class="option-desc">Enter both player names to begin</div>
+                                <div class="option-title">Select Your Team</div>
+                                <div class="option-desc">Login to enter scores for your team</div>
                             </div>
                             <i class="fas fa-chevron-right"></i>
                         </div>
                         
-                        <div class="option-card secondary" onclick="showExistingTeams()">
-                            <div class="option-icon"><i class="fas fa-list"></i></div>
-                            <div class="option-text">
-                                <div class="option-title">Continue Existing Scorecard</div>
-                                <div class="option-desc">Resume a scorecard already in progress</div>
-                            </div>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
+                        <p style="text-align: center; color: #888; font-size: 13px; margin-top: 20px;">
+                            <i class="fas fa-info-circle"></i> Don't see your team? Contact an admin to create one.
+                        </p>
                     </div>
                 `;
                 container.innerHTML = html;
@@ -1543,7 +1538,25 @@
             });
         }
         
+        // Team creation is admin-only - show message to users
         function showTeamScorecard() {
+            const container = document.getElementById('content');
+            container.innerHTML = `
+                <div class="registration-form" style="text-align: center;">
+                    <div style="width: 70px; height: 70px; background: #f59e0b; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-lock" style="color: #fff; font-size: 30px;"></i>
+                    </div>
+                    <h2 style="color: #1a1a2e;"><i class="fas fa-shield-alt" style="color: #f59e0b;"></i> Admin Only</h2>
+                    <p class="form-desc">Team creation is restricted to administrators.</p>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Please contact a Golf Cove admin to create your team, then come back here to enter your scores.</p>
+                    <button type="button" class="submit-btn" onclick="showExistingTeams()"><i class="fas fa-users"></i> View Existing Teams</button>
+                    <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
+                </div>
+            `;
+        }
+        
+        // Legacy function - team creation is admin-only now
+        function showTeamScorecardLegacy() {
             const container = document.getElementById('content');
             container.innerHTML = `
                 <div class="registration-form">
@@ -1597,7 +1610,7 @@
             
             let teamsHtml = '';
             if (teamsWithPlayers.length === 0) {
-                teamsHtml = `<div class="empty-state"><i class="fas fa-users-slash"></i><p>No teams yet. Start a new scorecard!</p></div>`;
+                teamsHtml = `<div class="empty-state"><i class="fas fa-users-slash"></i><p>No teams available yet.</p><p style="font-size: 13px; color: #888; margin-top: 10px;">Contact an admin to create your team.</p></div>`;
             } else {
                 teamsWithPlayers.forEach(team => {
                     const playerNames = team.players.map(p => p.name).join(' & ');
@@ -1642,8 +1655,99 @@
             const team = (league.teams || []).find(t => t.id === teamId);
             const players = (league.players || []).filter(p => p.teamId === teamId);
             if (players.length > 0) {
-                // Select the first player of the team - scores will apply to both
-                selectPlayer(players[0].id);
+                // Require PIN verification before accessing team scorecard
+                const playerNames = players.map(p => p.name).join(' & ');
+                promptTeamPin(teamId, team.name, playerNames, players);
+            }
+        }
+        
+        function promptTeamPin(teamId, teamName, playerNames, players) {
+            const modal = document.createElement('div');
+            modal.id = 'teamPinModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:16px;padding:30px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                    <div style="text-align:center;margin-bottom:20px;">
+                        <div style="width:60px;height:60px;background:linear-gradient(135deg, #37b24a 0%, #2d9440 100%);border-radius:50%;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(55,178,74,0.3);">
+                            <i class="fas fa-key" style="color:#fff;font-size:26px;"></i>
+                        </div>
+                        <h2 style="color:#1a1a2e;margin-bottom:8px;font-size:22px;">Enter Team PIN</h2>
+                        <p style="color:#37b24a;font-weight:600;font-size:16px;margin-bottom:4px;">${teamName}</p>
+                        <p style="color:#666;font-size:14px;">${playerNames}</p>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <input type="text" id="teamPinInput" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" 
+                               placeholder="••••" autocomplete="off" 
+                               style="width:100%;padding:18px;border:3px solid #e0e0e0;border-radius:12px;font-size:28px;text-align:center;letter-spacing:12px;font-weight:700;transition:all 0.2s;"
+                               onkeyup="if(this.value.length===4) verifyTeamPin('${teamId}')">
+                        <p style="text-align:center;font-size:12px;color:#888;margin-top:10px;">
+                            <i class="fas fa-info-circle"></i> Enter your 4-digit team PIN
+                        </p>
+                    </div>
+                    <div id="teamPinError" style="display:none;color:#e74c3c;font-size:13px;margin-bottom:15px;padding:12px;background:#ffebee;border-radius:8px;text-align:center;border-left:4px solid #f44336;"></div>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="verifyTeamPin('${teamId}')" style="flex:1;background:linear-gradient(135deg, #37b24a 0%, #2d9440 100%);color:#fff;border:none;padding:14px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(55,178,74,0.3);">
+                            <i class="fas fa-sign-in-alt"></i> Enter Scorecard
+                        </button>
+                        <button onclick="closeTeamPinModal()" style="background:#f5f5f5;color:#666;border:none;padding:14px 20px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Store players data for verification
+            modal.dataset.players = JSON.stringify(players.map(p => ({ id: p.id, pin: p.pin })));
+            
+            setTimeout(() => {
+                const input = document.getElementById('teamPinInput');
+                input.focus();
+                input.addEventListener('focus', function() {
+                    this.style.borderColor = '#37b24a';
+                    this.style.boxShadow = '0 0 0 4px rgba(55,178,74,0.15)';
+                });
+                input.addEventListener('blur', function() {
+                    this.style.borderColor = '#e0e0e0';
+                    this.style.boxShadow = 'none';
+                });
+            }, 100);
+        }
+        
+        function closeTeamPinModal() {
+            const modal = document.getElementById('teamPinModal');
+            if (modal) modal.remove();
+        }
+        
+        function verifyTeamPin(teamId) {
+            const modal = document.getElementById('teamPinModal');
+            const pin = document.getElementById('teamPinInput').value;
+            const errorEl = document.getElementById('teamPinError');
+            
+            if (!pin || pin.length !== 4) {
+                errorEl.textContent = '⚠️ Please enter a 4-digit PIN';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            // Get players from modal data
+            const players = JSON.parse(modal.dataset.players || '[]');
+            
+            // Check if PIN matches any player in the team
+            const matchingPlayer = players.find(p => p.pin === pin);
+            
+            if (matchingPlayer) {
+                closeTeamPinModal();
+                // Select the first player - scores apply to team
+                const teamPlayers = (league.players || []).filter(p => p.teamId === teamId);
+                if (teamPlayers.length > 0) {
+                    selectPlayer(teamPlayers[0].id);
+                }
+            } else {
+                errorEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Incorrect PIN. Please try again.';
+                errorEl.style.display = 'block';
+                document.getElementById('teamPinInput').value = '';
+                document.getElementById('teamPinInput').focus();
             }
         }
         
