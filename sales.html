@@ -698,7 +698,6 @@
             </a>
             <nav class="header-nav">
                 <a href="admin-pos.html"><i class="fas fa-calendar-alt"></i> Tee Sheet</a>
-                <a href="admin-pos.html#fnb"><i class="fas fa-utensils"></i> Food & Beverage</a>
                 <a href="sales.html" class="active"><i class="fas fa-cash-register"></i> Sales</a>
                 <a href="customers.html"><i class="fas fa-users"></i> Customers</a>
             </nav>
@@ -1345,7 +1344,7 @@
             document.getElementById('modalTitle').textContent = title;
             const grid = document.getElementById('itemsGrid');
             grid.innerHTML = itemList.map(item => `
-                <div class="item-card ${item.category}" onclick="addItem('${item.name}', ${item.price})">
+                <div class="item-card ${item.category}" onclick="showItemOptions('${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.category}')">
                     <i class="fas ${item.icon}"></i>
                     <div class="item-name">${item.name}</div>
                     <div class="item-price">$${item.price.toFixed(2)}</div>
@@ -1364,6 +1363,68 @@
             if (filtered.length > 0) {
                 showItemsModal('Search Results', filtered);
             }
+        }
+        
+        // Show item options: Add to Sale or Add to Tab
+        function showItemOptions(name, price, category) {
+            const tabs = TabsSync.getAllTabs();
+            
+            // If no open tabs, just add to current sale
+            if (tabs.length === 0) {
+                addItem(name, price);
+                return;
+            }
+            
+            let html = '<div style="padding:20px;">';
+            html += '<div style="margin-bottom:15px;padding:12px;background:#f5f5f5;border-radius:8px;text-align:center;">';
+            html += `<strong style="font-size:16px;">${name}</strong><br><span style="color:#27ae60;font-weight:600;">$${price.toFixed(2)}</span>`;
+            html += '</div>';
+            
+            html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+            html += `<button onclick="addItemAndClose('${name.replace(/'/g, "\\'")}', ${price})" style="padding:14px;background:#4a9eb4;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">`;
+            html += '<i class="fas fa-shopping-cart"></i> Add to Current Sale</button>';
+            
+            html += '<div style="text-align:center;color:#888;font-size:12px;margin:5px 0;">or add to an open tab:</div>';
+            
+            tabs.forEach(tab => {
+                const itemCount = tab.items?.length || 0;
+                html += `<button onclick="addToTabDirect('${tab.id}', '${name.replace(/'/g, "\\'")}', ${price}, '${category}')" style="padding:12px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">`;
+                html += `<span><i class="fas fa-receipt"></i> ${tab.customer}</span>`;
+                html += `<span>$${(tab.total||0).toFixed(2)} (${itemCount} items)</span></button>`;
+            });
+            
+            html += '</div>';
+            html += '<button onclick="closeItemOptionsModal()" style="width:100%;padding:12px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;margin-top:15px;font-size:13px;">Cancel</button>';
+            html += '</div>';
+            
+            const modal = document.createElement('div');
+            modal.id = 'itemOptionsModal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1001;';
+            modal.innerHTML = `<div style="background:#fff;border-radius:12px;width:90%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,0.3);">${html}</div>`;
+            document.body.appendChild(modal);
+        }
+        
+        function closeItemOptionsModal() {
+            const modal = document.getElementById('itemOptionsModal');
+            if (modal) modal.remove();
+        }
+        
+        function addItemAndClose(name, price) {
+            closeItemOptionsModal();
+            addItem(name, price);
+        }
+        
+        async function addToTabDirect(tabId, name, price, category) {
+            closeItemOptionsModal();
+            closeItemsModal();
+            
+            const item = { name, price, qty: 1, category };
+            const employeeName = getCurrentUserName();
+            
+            await TabsSync.addItemsToTab(tabId, [item], employeeName);
+            const tab = TabsSync.getTab(tabId);
+            showToast(`Added ${name} to ${tab?.customer}'s tab`, 'success');
+            renderOpenTabs();
         }
         
         // ============ SALE ITEMS ============

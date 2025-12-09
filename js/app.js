@@ -28,7 +28,7 @@ const GolfCoveApp = (function() {
     
     // ============ INITIALIZATION ============
     function init() {
-        console.log('🏌️ Golf Cove POS Initializing...');
+        console.log('Golf Cove POS Initializing...');
         
         // Initialize PIN lock
         if (typeof GolfCovePIN !== 'undefined') {
@@ -39,7 +39,7 @@ const GolfCoveApp = (function() {
     }
     
     function onAuthenticated(employee) {
-        console.log(`✅ Authenticated as ${employee.name}`);
+        console.log('Authenticated as ' + employee.name);
         
         // Initialize date picker
         initDatePicker();
