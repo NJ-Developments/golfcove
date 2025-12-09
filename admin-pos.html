@@ -1073,6 +1073,8 @@
         // ============ RENDER FUNCTIONS ============
         function renderTeeSheet() {
             const container = document.getElementById('roomsContainer');
+            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            
             container.innerHTML = rooms.map(room => {
                 // Calculate room status
                 const roomBookings = bookings.filter(b => b.room === room.id);
@@ -1092,13 +1094,31 @@
                     <div class="room-slots">
                         ${timeSlots.map(time => {
                             const booking = bookings.find(b => b.room === room.id && b.time === time);
+                            
+                            // Check if customer is a member
+                            let memberBadge = '';
+                            let isVIP = false;
+                            if (booking) {
+                                const customer = allCustomers.find(c => 
+                                    `${c.firstName} ${c.lastName}`.toLowerCase() === booking.customer.toLowerCase()
+                                );
+                                if (customer && customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > new Date()) {
+                                    isVIP = customer.memberType && (customer.memberType.includes('eagle') || customer.memberType.includes('birdie'));
+                                    if (isVIP) {
+                                        memberBadge = '<span style="background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;margin-left:4px;">⭐ VIP</span>';
+                                    } else if (customer.memberType) {
+                                        memberBadge = '<span style="background:#27ae60;color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;margin-left:4px;">M</span>';
+                                    }
+                                }
+                            }
+                            
                             return `
                                 <div class="time-slot">
                                     <div class="time-label">${time}</div>
-                                    <div class="slot-content ${booking ? (booking.checkedIn ? 'booked checked-in' : 'booked') : 'available'}" onclick="${booking ? `selectBooking(${booking.id})` : `quickBook(${room.id}, '${time}')`}">
+                                    <div class="slot-content ${booking ? (booking.checkedIn ? 'booked checked-in' : 'booked') : 'available'}${isVIP ? ' vip-booking' : ''}" onclick="${booking ? `selectBooking(${booking.id})` : `quickBook(${room.id}, '${time}')`}" style="${isVIP ? 'background:linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);box-shadow:0 2px 8px rgba(155,89,182,0.4);' : ''}">
                                         ${booking ? `
                                             <div class="booking-info">
-                                                <span class="customer-name">${booking.customer}${booking.checkedIn ? ' <i class="fas fa-check-circle" style="color:#27ae60;"></i>' : ''}</span>
+                                                <span class="customer-name">${booking.customer}${memberBadge}${booking.checkedIn ? ' <i class="fas fa-check-circle" style="color:#27ae60;"></i>' : ''}</span>
                                                 <span class="booking-details">${booking.duration}hr</span>
                                             </div>
                                             <span class="player-count">${booking.players}<i class="fas fa-user" style="margin-left:3px;font-size:10px;"></i></span>
@@ -2560,21 +2580,42 @@
             
             autocompleteDiv.innerHTML = matches.map(c => {
                 const isMember = c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date();
+                const tierColors = {
+                    'eagle': 'linear-gradient(135deg, #9b59b6, #8e44ad)',
+                    'family_eagle': 'linear-gradient(135deg, #9b59b6, #8e44ad)',
+                    'birdie': 'linear-gradient(135deg, #f1c40f, #e67e22)',
+                    'family_birdie': 'linear-gradient(135deg, #f1c40f, #e67e22)',
+                    'par': 'linear-gradient(135deg, #27ae60, #1e8449)',
+                    'family_par': 'linear-gradient(135deg, #27ae60, #1e8449)'
+                };
+                const tierNames = {
+                    'eagle': '⭐ EAGLE',
+                    'family_eagle': '⭐ EAGLE',
+                    'birdie': '🏆 BIRDIE',
+                    'family_birdie': '🏆 BIRDIE',
+                    'par': 'PAR',
+                    'family_par': 'PAR'
+                };
+                const tierBg = isMember ? (tierColors[c.memberType] || '#27ae60') : '#4a90a4';
+                const tierName = isMember ? (tierNames[c.memberType] || 'MEMBER') : '';
+                const isVIP = c.memberType && (c.memberType.includes('eagle') || c.memberType.includes('birdie'));
+                
                 return `
-                    <div style="padding:10px 15px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;" 
-                         onmouseover="this.style.background='#f5f6fa'" 
-                         onmouseout="this.style.background='#fff'"
-                         onclick="selectCustomerFromSearch('${c.firstName} ${c.lastName}', ${c.isMember})">
-                        <div style="width:32px;height:32px;border-radius:50%;background:${isMember ? 'linear-gradient(135deg, #f1c40f, #e67e22)' : '#4a90a4'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;">
+                    <div style="padding:10px 15px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;${isVIP ? 'background:#fffdf5;' : ''}" 
+                         onmouseover="this.style.background='${isVIP ? '#fff9e6' : '#f5f6fa'}'" 
+                         onmouseout="this.style.background='${isVIP ? '#fffdf5' : '#fff'}'"
+                         onclick="selectCustomerFromSearch('${c.firstName} ${c.lastName}', ${c.isMember}, '${c.memberType || ''}')">
+                        <div style="width:32px;height:32px;border-radius:50%;background:${tierBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;">
                             ${(c.firstName[0] || '') + (c.lastName[0] || '')}
                         </div>
                         <div style="flex:1;">
                             <div style="font-weight:600;color:#333;display:flex;align-items:center;gap:6px;">
                                 ${c.firstName} ${c.lastName}
-                                ${isMember ? '<span style="background:linear-gradient(135deg,#f1c40f,#e67e22);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;">MEMBER</span>' : ''}
+                                ${isMember ? `<span style="background:${tierBg};color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700;">${tierName}</span>` : ''}
                             </div>
-                            <div style="font-size:12px;color:#999;">${c.email || c.phone || 'No contact'}</div>
+                            <div style="font-size:12px;color:#999;">${c.phone || c.email || 'No contact'}</div>
                         </div>
+                        ${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;"></i>' : ''}
                     </div>
                 `;
             }).join('');
@@ -2585,7 +2626,7 @@
             setTimeout(() => { autocompleteDiv.style.display = 'none'; }, 200);
         });
         
-        function selectCustomerFromSearch(name, isMember) {
+        function selectCustomerFromSearch(name, isMember, tierType) {
             customerSearch.value = name;
             autocompleteDiv.style.display = 'none';
             
@@ -2673,20 +2714,42 @@
             
             bookingAutocomplete.innerHTML = matches.map(c => {
                 const isMember = c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date();
+                const tierColors = {
+                    'eagle': 'linear-gradient(135deg, #9b59b6, #8e44ad)',
+                    'family_eagle': 'linear-gradient(135deg, #9b59b6, #8e44ad)',
+                    'birdie': 'linear-gradient(135deg, #f1c40f, #e67e22)',
+                    'family_birdie': 'linear-gradient(135deg, #f1c40f, #e67e22)',
+                    'par': 'linear-gradient(135deg, #27ae60, #1e8449)',
+                    'family_par': 'linear-gradient(135deg, #27ae60, #1e8449)'
+                };
+                const tierNames = {
+                    'eagle': '⭐ EAGLE',
+                    'family_eagle': '⭐ EAGLE FAMILY',
+                    'birdie': '🏆 BIRDIE',
+                    'family_birdie': '🏆 BIRDIE FAMILY',
+                    'par': 'PAR',
+                    'family_par': 'PAR FAMILY'
+                };
+                const tierBg = isMember ? (tierColors[c.memberType] || 'linear-gradient(135deg, #27ae60, #1e8449)') : '#4a90a4';
+                const tierName = isMember ? (tierNames[c.memberType] || 'MEMBER') : '';
+                const isVIP = c.memberType && (c.memberType.includes('eagle') || c.memberType.includes('birdie'));
+                
                 return `
-                    <div style="padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;" 
-                         onmouseover="this.style.background='#f5f6fa'" 
-                         onmouseout="this.style.background='#fff'"
-                         onclick="selectBookingCustomer('${c.firstName} ${c.lastName}', ${isMember})">
-                        <div style="width:28px;height:28px;border-radius:50%;background:${isMember ? 'linear-gradient(135deg, #f1c40f, #e67e22)' : '#4a90a4'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11px;">
+                    <div style="padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;${isVIP ? 'background:#fffdf5;' : ''}" 
+                         onmouseover="this.style.background='${isVIP ? '#fff9e6' : '#f5f6fa'}'" 
+                         onmouseout="this.style.background='${isVIP ? '#fffdf5' : '#fff'}'"
+                         onclick="selectBookingCustomer('${c.firstName} ${c.lastName}', ${isMember}, '${c.memberType || ''}')">
+                        <div style="width:32px;height:32px;border-radius:50%;background:${tierBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11px;${isVIP ? 'box-shadow:0 2px 8px rgba(0,0,0,0.2);' : ''}">
                             ${(c.firstName[0] || '') + (c.lastName[0] || '')}
                         </div>
                         <div style="flex:1;">
                             <div style="font-weight:600;color:#333;font-size:13px;display:flex;align-items:center;gap:6px;">
                                 ${c.firstName} ${c.lastName}
-                                ${isMember ? '<span style="background:linear-gradient(135deg,#f1c40f,#e67e22);color:#fff;font-size:9px;padding:2px 5px;border-radius:8px;font-weight:700;">MEMBER</span>' : ''}
+                                ${isMember ? `<span style="background:${tierBg};color:#fff;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:700;">${tierName}</span>` : ''}
                             </div>
+                            ${c.phone ? `<div style="font-size:11px;color:#666;">${c.phone}</div>` : ''}
                         </div>
+                        ${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;font-size:16px;"></i>' : ''}
                     </div>
                 `;
             }).join('');
@@ -2697,11 +2760,30 @@
             setTimeout(() => { bookingAutocomplete.style.display = 'none'; }, 200);
         });
         
-        function selectBookingCustomer(name, isMember) {
+        let selectedBookingCustomerTier = null;
+        
+        function selectBookingCustomer(name, isMember, tierType) {
             bookingCustomerInput.value = name;
             bookingAutocomplete.style.display = 'none';
+            selectedBookingCustomerTier = tierType;
+            
             if (isMember) {
-                showToast(`Member selected: ${name}`, 'success');
+                const isVIP = tierType && (tierType.includes('eagle') || tierType.includes('birdie'));
+                const tierDisplay = {
+                    'eagle': 'Eagle Member',
+                    'family_eagle': 'Eagle Family Member',
+                    'birdie': 'Birdie Member',
+                    'family_birdie': 'Birdie Family Member',
+                    'par': 'Par Member',
+                    'family_par': 'Par Family Member'
+                };
+                const displayName = tierDisplay[tierType] || 'Member';
+                
+                if (isVIP) {
+                    showToast(`⭐ VIP ${displayName}: ${name} - Priority booking!`, 'success');
+                } else {
+                    showToast(`${displayName} selected: ${name}`, 'success');
+                }
             }
         }
 
