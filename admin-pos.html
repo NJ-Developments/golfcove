@@ -296,9 +296,55 @@
         /* Better Table Active State */
         .table-item.has-tab { background: #e74c3c !important; border-color: #c0392b !important; color: #fff !important; }
         .table-item.has-tab.diamond { background: #e74c3c !important; }
+        
+        /* PIN Shake Animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+        
+        /* PIN Button Hover */
+        .pin-btn:hover { background: #e9ecef !important; }
+        .pin-btn:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
+    <!-- PIN Lock Screen -->
+    <div id="lockScreen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg, #2c3e50 0%, #4a90a4 100%);display:flex;align-items:center;justify-content:center;z-index:99999;">
+        <div style="background:#fff;border-radius:16px;padding:40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-width:400px;width:90%;">
+            <img src="images/golfCoveLogo6.png" alt="Golf Cove" style="height:60px;margin-bottom:20px;">
+            <h2 style="margin:0 0 5px;color:#2c3e50;">Golf Cove POS</h2>
+            <p style="color:#666;margin:0 0 25px;font-size:14px;">Enter your PIN to unlock</p>
+            
+            <div id="pinDisplay" style="display:flex;justify-content:center;gap:10px;margin-bottom:20px;">
+                <div class="pin-dot" style="width:16px;height:16px;border-radius:50%;border:2px solid #4a90a4;background:#fff;"></div>
+                <div class="pin-dot" style="width:16px;height:16px;border-radius:50%;border:2px solid #4a90a4;background:#fff;"></div>
+                <div class="pin-dot" style="width:16px;height:16px;border-radius:50%;border:2px solid #4a90a4;background:#fff;"></div>
+                <div class="pin-dot" style="width:16px;height:16px;border-radius:50%;border:2px solid #4a90a4;background:#fff;"></div>
+            </div>
+            
+            <div id="pinError" style="color:#e74c3c;font-size:13px;margin-bottom:15px;display:none;">Incorrect PIN. Try again.</div>
+            
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto;">
+                <button onclick="enterPin(1)" class="pin-btn" style="padding:20px;font-size:24px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer;">1</button>
+                <button onclick="enterPin(2)" class="pin-btn" style="padding:20px;font-size:24px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer;">2</button>
+                <button onclick="enterPin(3)" class="pin-btn" style="padding:20px;font-size:24px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer;">3</button>
+                <button onclick="enterPin(4)" class="pin-btn" style="padding:20px;font-size:24px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer;">4</button>
+                <button onclick="enterPin(5)" class="pin-btn" style="padding:20px;font-size:24px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer;">5</button>
+                <button onclick="enterPin(6)" class="pin-btn" style="padding:20px;font-size:24px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer;">6</button>
+                <button onclick="enterPin(7)" class="pin-btn" style="padding:20px;font-size:24px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer;">7</button>
+                <button onclick="enterPin(8)" class="pin-btn" style="padding:20px;font-size:24px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer;">8</button>
+                <button onclick="enterPin(9)" class="pin-btn" style="padding:20px;font-size:24px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer;">9</button>
+                <button onclick="clearPin()" class="pin-btn" style="padding:20px;font-size:16px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#fff3e0;cursor:pointer;color:#f57c00;"><i class="fas fa-backspace"></i></button>
+                <button onclick="enterPin(0)" class="pin-btn" style="padding:20px;font-size:24px;font-weight:600;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer;">0</button>
+                <button onclick="submitPin()" class="pin-btn" style="padding:20px;font-size:16px;font-weight:600;border:1px solid #27ae60;border-radius:10px;background:#27ae60;color:#fff;cursor:pointer;"><i class="fas fa-check"></i></button>
+            </div>
+            
+            <p style="color:#999;font-size:11px;margin-top:20px;">Contact manager if you forgot your PIN</p>
+        </div>
+    </div>
+    
     <!-- Header -->
     <header class="header">
         <div class="header-left">
@@ -321,13 +367,14 @@
             <div class="header-stat"><div class="value" id="statRevenue">$485.00</div><div class="label">Revenue</div></div>
         </div>
         <div class="header-right">
+            <button onclick="lockPOS()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:5px;" title="Lock POS"><i class="fas fa-lock"></i></button>
             <button onclick="showReaderSetup()" id="readerStatusBtn" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:5px;" title="Card Reader"><i class="fas fa-credit-card"></i> <span id="readerStatusText">Reader</span></button>
             <button onclick="showSettings()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:5px;" title="Settings"><i class="fas fa-cog"></i></button>
             <button onclick="showMigrationWizard()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:10px;" title="Setup & Migration"><i class="fas fa-magic"></i> Setup</button>
             <div class="current-time" id="currentTime">--:-- --</div>
-            <div class="header-user">
+            <div class="header-user" id="currentUserDisplay">
                 <i class="fas fa-user-circle" style="font-size: 24px;"></i>
-                <span>EJ Sattelberger</span>
+                <span id="currentUserName">EJ Sattelberger</span>
             </div>
         </div>
     </header>
@@ -807,6 +854,126 @@
         let bookings = JSON.parse(localStorage.getItem('gc_bookings') || '[]');
         let transactions = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
         let openTabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+        
+        // ============ PIN LOCK SYSTEM ============
+        let currentPin = '';
+        let currentEmployee = null;
+        let isLocked = true;
+        
+        // Default employees with PINs - stored in localStorage
+        const defaultEmployees = [
+            { id: 1, name: 'EJ Sattelberger', pin: '1234', role: 'manager' },
+            { id: 2, name: 'Manager', pin: '0000', role: 'manager' },
+            { id: 3, name: 'Bartender 1', pin: '1111', role: 'staff' },
+            { id: 4, name: 'Bartender 2', pin: '2222', role: 'staff' },
+        ];
+        
+        // Initialize employees from localStorage or use defaults
+        let employees = JSON.parse(localStorage.getItem('gc_employees') || 'null') || defaultEmployees;
+        localStorage.setItem('gc_employees', JSON.stringify(employees));
+        
+        function enterPin(num) {
+            if (currentPin.length < 4) {
+                currentPin += num.toString();
+                updatePinDisplay();
+            }
+        }
+        
+        function clearPin() {
+            if (currentPin.length > 0) {
+                currentPin = currentPin.slice(0, -1);
+                updatePinDisplay();
+            }
+        }
+        
+        function updatePinDisplay() {
+            const dots = document.querySelectorAll('#pinDisplay .pin-dot');
+            dots.forEach((dot, i) => {
+                if (i < currentPin.length) {
+                    dot.style.background = '#4a90a4';
+                } else {
+                    dot.style.background = '#fff';
+                }
+            });
+            document.getElementById('pinError').style.display = 'none';
+        }
+        
+        function submitPin() {
+            const employee = employees.find(e => e.pin === currentPin);
+            
+            if (employee) {
+                currentEmployee = employee;
+                isLocked = false;
+                document.getElementById('lockScreen').style.display = 'none';
+                document.getElementById('currentUserName').textContent = employee.name;
+                showToast(`Welcome, ${employee.name}!`, 'success');
+                
+                // Log the clock-in
+                const clockIns = JSON.parse(localStorage.getItem('gc_clock_ins') || '[]');
+                clockIns.push({
+                    employee: employee.name,
+                    employeeId: employee.id,
+                    action: 'clock_in',
+                    time: new Date().toISOString()
+                });
+                localStorage.setItem('gc_clock_ins', JSON.stringify(clockIns));
+            } else {
+                document.getElementById('pinError').style.display = 'block';
+                currentPin = '';
+                updatePinDisplay();
+                
+                // Shake animation
+                const pinDisplay = document.getElementById('pinDisplay');
+                pinDisplay.style.animation = 'shake 0.3s';
+                setTimeout(() => pinDisplay.style.animation = '', 300);
+            }
+        }
+        
+        function lockPOS() {
+            isLocked = true;
+            currentPin = '';
+            updatePinDisplay();
+            document.getElementById('lockScreen').style.display = 'flex';
+            document.getElementById('pinError').style.display = 'none';
+            
+            if (currentEmployee) {
+                // Log the clock-out
+                const clockIns = JSON.parse(localStorage.getItem('gc_clock_ins') || '[]');
+                clockIns.push({
+                    employee: currentEmployee.name,
+                    employeeId: currentEmployee.id,
+                    action: 'lock',
+                    time: new Date().toISOString()
+                });
+                localStorage.setItem('gc_clock_ins', JSON.stringify(clockIns));
+            }
+        }
+        
+        // Handle keyboard input for PIN
+        document.addEventListener('keydown', function(e) {
+            if (!isLocked) return;
+            
+            if (e.key >= '0' && e.key <= '9') {
+                enterPin(parseInt(e.key));
+            } else if (e.key === 'Backspace') {
+                clearPin();
+            } else if (e.key === 'Enter') {
+                submitPin();
+            }
+        });
+        
+        // Add shake animation style
+        const shakeStyle = document.createElement('style');
+        shakeStyle.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-10px); }
+                75% { transform: translateX(10px); }
+            }
+            .pin-btn:hover { background: #e9ecef !important; }
+            .pin-btn:active { transform: scale(0.95); }
+        `;
+        document.head.appendChild(shakeStyle);
 
         const rooms = [
             { id: 1, name: 'Room 1' },
@@ -3831,6 +3998,30 @@
                             </div>
                         </div>
                         
+                        <!-- Employee PINs -->
+                        <div style="background:#e8f5e9;padding:20px;border-radius:10px;margin-bottom:20px;">
+                            <h4 style="margin:0 0 15px;color:#2e7d32;"><i class="fas fa-users"></i> Employee PINs</h4>
+                            <p style="font-size:12px;color:#666;margin-bottom:15px;">Manage employee access to the POS system.</p>
+                            <div id="employeeList" style="margin-bottom:15px;">
+                                ${employees.map((emp, i) => `
+                                    <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#fff;border-radius:6px;margin-bottom:8px;">
+                                        <div style="flex:1;">
+                                            <input type="text" value="${emp.name}" onchange="updateEmployee(${i}, 'name', this.value)" style="border:none;font-weight:600;font-size:14px;width:100%;" placeholder="Employee name">
+                                        </div>
+                                        <div style="width:80px;">
+                                            <input type="text" value="${emp.pin}" onchange="updateEmployee(${i}, 'pin', this.value)" maxlength="4" style="border:1px solid #ddd;border-radius:4px;padding:5px;text-align:center;font-family:monospace;width:100%;" placeholder="PIN">
+                                        </div>
+                                        <select onchange="updateEmployee(${i}, 'role', this.value)" style="border:1px solid #ddd;border-radius:4px;padding:5px;">
+                                            <option value="staff" ${emp.role === 'staff' ? 'selected' : ''}>Staff</option>
+                                            <option value="manager" ${emp.role === 'manager' ? 'selected' : ''}>Manager</option>
+                                        </select>
+                                        <button onclick="removeEmployee(${i})" style="background:#e74c3c;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;" ${employees.length <= 1 ? 'disabled' : ''}><i class="fas fa-trash"></i></button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button onclick="addEmployee()" style="width:100%;padding:10px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-plus"></i> Add Employee</button>
+                        </div>
+                        
                         <!-- Data Management -->
                         <div style="background:#fff3e0;padding:20px;border-radius:10px;margin-bottom:20px;">
                             <h4 style="margin:0 0 15px;color:#e65100;"><i class="fas fa-database"></i> Data Management</h4>
@@ -3849,6 +4040,7 @@
                 </div>
             `;
             document.body.insertAdjacentHTML('beforeend', html);
+            loadEmployeeList();
         }
         
         function closeSettings() {
@@ -3876,6 +4068,215 @@
             
             closeSettings();
             showToast('Settings saved successfully!', 'success');
+        }
+        
+        // Employee Management Functions
+        function loadEmployeeList() {
+            const container = document.getElementById('employeeList');
+            if (!container) return;
+            
+            if (employees.length === 0) {
+                container.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-style: italic;">No employees added yet</p>';
+                return;
+            }
+            
+            container.innerHTML = employees.map((emp, index) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px;">
+                    <div>
+                        <strong>${emp.name}</strong>
+                        <span style="color: rgba(255,255,255,0.5); margin-left: 10px;">PIN: ****</span>
+                        ${emp.isManager ? '<span style="background: #f59e0b; color: black; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 10px;">Manager</span>' : ''}
+                    </div>
+                    <div>
+                        <button onclick="editEmployee(${index})" style="background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px;">Edit</button>
+                        <button onclick="deleteEmployee(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function showAddEmployeeModal() {
+            const name = prompt('Enter employee name:');
+            if (!name) return;
+            
+            const pin = prompt('Enter 4-digit PIN for this employee:');
+            if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+                showToast('PIN must be exactly 4 digits', 'error');
+                return;
+            }
+            
+            // Check for duplicate PIN
+            if (employees.some(emp => emp.pin === pin)) {
+                showToast('This PIN is already in use', 'error');
+                return;
+            }
+            
+            const isManager = confirm('Is this employee a manager? (Managers can access settings and reports)');
+            
+            employees.push({ name, pin, isManager, clockedIn: false });
+            localStorage.setItem('gc_employees', JSON.stringify(employees));
+            
+            loadEmployeeList();
+            updatePinEmployeeButtons();
+            showToast(`Employee "${name}" added successfully!`, 'success');
+        }
+        
+        function editEmployee(index) {
+            const emp = employees[index];
+            if (!emp) return;
+            
+            const name = prompt('Enter new name:', emp.name);
+            if (!name) return;
+            
+            const changePin = confirm('Do you want to change the PIN?');
+            let pin = emp.pin;
+            
+            if (changePin) {
+                pin = prompt('Enter new 4-digit PIN:');
+                if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+                    showToast('PIN must be exactly 4 digits', 'error');
+                    return;
+                }
+                
+                // Check for duplicate PIN (excluding current employee)
+                if (employees.some((e, i) => i !== index && e.pin === pin)) {
+                    showToast('This PIN is already in use', 'error');
+                    return;
+                }
+            }
+            
+            const isManager = confirm('Is this employee a manager?');
+            
+            employees[index] = { ...emp, name, pin, isManager };
+            localStorage.setItem('gc_employees', JSON.stringify(employees));
+            
+            loadEmployeeList();
+            updatePinEmployeeButtons();
+            showToast(`Employee "${name}" updated successfully!`, 'success');
+        }
+        
+        function deleteEmployee(index) {
+            const emp = employees[index];
+            if (!emp) return;
+            
+            if (!confirm(`Are you sure you want to delete "${emp.name}"?`)) return;
+            
+            employees.splice(index, 1);
+            localStorage.setItem('gc_employees', JSON.stringify(employees));
+            
+            loadEmployeeList();
+            updatePinEmployeeButtons();
+            showToast(`Employee deleted`, 'success');
+        }
+        
+        function updatePinEmployeeButtons() {
+            const container = document.getElementById('pinEmployeeButtons');
+            if (!container) return;
+            
+            if (employees.length === 0) {
+                container.innerHTML = '<p style="color: rgba(255,255,255,0.5);">No employees. Add employees in Settings.</p>';
+                return;
+            }
+            
+            container.innerHTML = employees.map(emp => `
+                <button onclick="selectPinEmployee('${emp.name}')" style="padding: 15px 25px; font-size: 16px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    ${emp.name}
+                </button>
+            `).join('');
+        }
+        
+        function selectPinEmployee(name) {
+            selectedPinEmployee = name;
+            document.getElementById('pinEmployeeSelect').style.display = 'none';
+            document.getElementById('pinEntrySection').style.display = 'block';
+            document.getElementById('pinEmployeeName').textContent = name;
+            currentPin = '';
+            updatePinDisplay();
+        }
+        
+        function backToEmployeeSelect() {
+            selectedPinEmployee = null;
+            currentPin = '';
+            document.getElementById('pinEmployeeSelect').style.display = 'block';
+            document.getElementById('pinEntrySection').style.display = 'none';
+        }
+        
+        // PIN Entry Functions
+        function enterPin(digit) {
+            if (currentPin.length < 4) {
+                currentPin += digit.toString();
+                updatePinDisplay();
+                
+                // Auto-submit when 4 digits entered
+                if (currentPin.length === 4) {
+                    setTimeout(submitPin, 200);
+                }
+            }
+        }
+        
+        function clearPin() {
+            if (currentPin.length > 0) {
+                currentPin = currentPin.slice(0, -1);
+                updatePinDisplay();
+            }
+        }
+        
+        function updatePinDisplay() {
+            const dots = document.querySelectorAll('#pinDisplay .pin-dot');
+            dots.forEach((dot, index) => {
+                if (index < currentPin.length) {
+                    dot.style.background = '#4a90a4';
+                } else {
+                    dot.style.background = '#fff';
+                }
+            });
+        }
+        
+        function submitPin() {
+            const employee = employees.find(emp => emp.pin === currentPin);
+            
+            if (employee) {
+                // Successful login
+                currentEmployee = employee;
+                isLocked = false;
+                document.getElementById('lockScreen').style.display = 'none';
+                document.getElementById('currentUserName').textContent = employee.name;
+                document.getElementById('pinError').style.display = 'none';
+                showToast(`Welcome, ${employee.name}!`, 'success');
+            } else {
+                // Failed login
+                document.getElementById('pinError').style.display = 'block';
+                currentPin = '';
+                updatePinDisplay();
+                
+                // Shake animation
+                const pinDisplay = document.getElementById('pinDisplay');
+                pinDisplay.style.animation = 'shake 0.5s';
+                setTimeout(() => pinDisplay.style.animation = '', 500);
+            }
+        }
+        
+        function lockPOS() {
+            if (employees.length === 0) {
+                showToast('Add employees in Settings first to enable PIN lock', 'warning');
+                return;
+            }
+            
+            isLocked = true;
+            currentEmployee = null;
+            currentPin = '';
+            updatePinDisplay();
+            document.getElementById('lockScreen').style.display = 'flex';
+            document.getElementById('pinError').style.display = 'none';
+            document.getElementById('currentUserName').textContent = 'Locked';
+        }
+        
+        // Override openSettings to load employee list
+        const originalOpenSettings = typeof openSettings === 'function' ? openSettings : null;
+        function openSettingsWithEmployees() {
+            if (originalOpenSettings) originalOpenSettings();
+            else document.getElementById('settingsModal').classList.add('active');
+            setTimeout(() => loadEmployeeList(), 100);
         }
         
         function exportAllData() {
@@ -4238,6 +4639,16 @@
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize PIN lock screen
+            if (employees.length > 0) {
+                // Show the lock screen if there are employees
+                document.getElementById('lockScreen').style.display = 'flex';
+            } else {
+                // No employees yet, skip the lock screen
+                isLocked = false;
+                document.getElementById('lockScreen').style.display = 'none';
+            }
+            
             // Try to initialize Stripe Terminal
             setTimeout(() => {
                 initStripeTerminal();
