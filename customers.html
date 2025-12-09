@@ -439,9 +439,19 @@
                         <label>Add as Member?</label>
                         <select id="newMemberType">
                             <option value="">No - Regular Customer</option>
-                            <option value="monthly">Monthly Member ($99/mo)</option>
-                            <option value="annual">Annual Member ($999/yr)</option>
-                            <option value="vip">VIP Member ($1999/yr)</option>
+                            <optgroup label="Golf Memberships">
+                                <option value="par">Par Member - $99/mo</option>
+                                <option value="birdie">Birdie Member - $149/mo (Unlimited)</option>
+                                <option value="eagle">Eagle Member - $199/mo (Premium)</option>
+                            </optgroup>
+                            <optgroup label="Family Memberships">
+                                <option value="family-par">Family Par - $149/mo</option>
+                                <option value="family-birdie">Family Birdie - $199/mo</option>
+                                <option value="family-eagle">Family Eagle - $249/mo</option>
+                            </optgroup>
+                            <optgroup label="Corporate">
+                                <option value="corporate">Corporate Member</option>
+                            </optgroup>
                         </select>
                     </div>
                 </div>
@@ -466,9 +476,19 @@
                         <label>Membership Type *</label>
                         <select id="membershipTypeSelect" required>
                             <option value="">Select Type...</option>
-                            <option value="monthly">Monthly Member - $99/month</option>
-                            <option value="annual">Annual Member - $999/year</option>
-                            <option value="vip">VIP Member - $1999/year</option>
+                            <optgroup label="Golf Memberships">
+                                <option value="par">Par Member - $99/mo (10% off F&B)</option>
+                                <option value="birdie">Birdie Member - $149/mo (Unlimited Play)</option>
+                                <option value="eagle">Eagle Member - $199/mo (Premium + 15% off)</option>
+                            </optgroup>
+                            <optgroup label="Family Memberships">
+                                <option value="family-par">Family Par - $149/mo</option>
+                                <option value="family-birdie">Family Birdie - $199/mo</option>
+                                <option value="family-eagle">Family Eagle - $249/mo</option>
+                            </optgroup>
+                            <optgroup label="Corporate">
+                                <option value="corporate">Corporate Member - Custom Pricing</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="form-group">
@@ -759,7 +779,23 @@
         
         // ============ HELPERS ============
         function getMembershipTypeName(type) {
-            const types = { monthly: 'Monthly Member', annual: 'Annual Member', vip: 'VIP Member' };
+            // Use GolfCoveMembership system if available
+            if (typeof GolfCoveMembership !== 'undefined' && GolfCoveMembership.tiers[type]) {
+                return GolfCoveMembership.tiers[type].name;
+            }
+            // Fallback for legacy types
+            const types = { 
+                'par': 'Par Member',
+                'birdie': 'Birdie Member',
+                'eagle': 'Eagle Member',
+                'family-par': 'Family Par',
+                'family-birdie': 'Family Birdie',
+                'family-eagle': 'Family Eagle',
+                'corporate': 'Corporate Member',
+                'monthly': 'Monthly Member', 
+                'annual': 'Annual Member', 
+                'vip': 'VIP Member' 
+            };
             return types[type] || 'Member';
         }
         

@@ -396,10 +396,6 @@
         </div>
         <div class="sub-header-right">
             <button onclick="showModal('booking')"><i class="fas fa-plus"></i> New Booking</button>
-            <button onclick="showBulkBooking()" style="background:#e8f5e9;"><i class="fas fa-calendar-plus"></i> Bulk Book</button>
-            <button onclick="showWaitlist()" style="background:#fff3e0;"><i class="fas fa-clock"></i> Waitlist</button>
-            <button onclick="showAnalytics()" style="background:#e3f2fd;"><i class="fas fa-chart-bar"></i> Analytics</button>
-            <button onclick="showDataImportModal()"><i class="fas fa-database"></i> Import</button>
             <button onclick="window.print()"><i class="fas fa-print"></i> Print</button>
         </div>
     </div>
@@ -415,7 +411,7 @@
 
             <div class="sidebar-section">
                 <button class="sidebar-btn" onclick="showModal('booking')"><i class="fas fa-plus"></i> New Booking</button>
-                <button class="sidebar-btn"><i class="fas fa-list"></i> Standby List</button>
+                <button class="sidebar-btn" onclick="showModal('newTab')"><i class="fas fa-receipt"></i> New Tab</button>
             </div>
             
             <div class="sidebar-section">
@@ -443,17 +439,6 @@
                     <div class="calendar-grid" id="calendarGrid"></div>
                 </div>
             </div>
-
-            <div class="sidebar-section">
-                <div class="sidebar-title">Weather</div>
-                <div style="display:flex; gap:10px; font-size:12px;">
-                    <div style="text-align:center;"><div>Mon</div><i class="fas fa-cloud-sun"></i><div>23°</div></div>
-                    <div style="text-align:center;"><div>Tue</div><i class="fas fa-cloud"></i><div>28°</div></div>
-                    <div style="text-align:center;"><div>Wed</div><i class="fas fa-sun"></i><div>32°</div></div>
-                    <div style="text-align:center;"><div>Thu</div><i class="fas fa-cloud-rain"></i><div>35°</div></div>
-                    <div style="text-align:center;"><div>Fri</div><i class="fas fa-snowflake"></i><div>25°</div></div>
-                </div>
-            </div>
         </aside>
 
         <!-- Content Area -->
@@ -466,22 +451,15 @@
             <!-- Food & Beverage Page -->
             <div id="page-fnb" class="page-content" style="display:none;">
                 <div class="fnb-container">
-                    <div class="fnb-tabs">
-                        <button class="fnb-tab active" onclick="switchFnbTab('lounge', this)">Golf Cove Lounge</button>
-                        <button class="fnb-tab" onclick="switchFnbTab('rooms', this)">Golf Cove Rooms</button>
-                    </div>
-                    
                     <div class="tabs-list">
                         <h3><i class="fas fa-receipt"></i> Open Tabs <button onclick="showModal('newTab')" style="margin-left:auto;padding:5px 10px;background:#4a90a4;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">+ New Tab</button></h3>
                         <table class="tabs-table">
                             <thead>
-                                <tr><th>TABLE</th><th>CUSTOMER NAME</th><th>EMPLOYEE</th><th>AMOUNT</th></tr>
+                                <tr><th>LOCATION</th><th>CUSTOMER</th><th>AMOUNT</th><th>ACTION</th></tr>
                             </thead>
                             <tbody id="openTabsBody"></tbody>
                         </table>
                     </div>
-
-                    <div class="floor-plan" id="floorPlan"></div>
                 </div>
             </div>
         </main>
@@ -498,6 +476,10 @@
                 <button class="cat-btn rental" onclick="filterItems('rental', this)">Rentals</button>
                 <button class="cat-btn food" onclick="filterItems('food', this)">Food</button>
                 <button class="cat-btn beer" onclick="filterItems('beer', this)">Beer</button>
+                <button class="cat-btn wine" onclick="filterItems('wine', this)">Wine</button>
+                <button class="cat-btn cocktails" onclick="filterItems('cocktails', this)">Cocktails</button>
+                <button class="cat-btn beverage" onclick="filterItems('beverage', this)">N/A Drinks</button>
+                <button class="cat-btn merch" onclick="filterItems('merch', this)">Merch</button>
             </div>
             
             <div class="pos-items-mini" id="salesItems"></div>
@@ -817,7 +799,7 @@
                 </div>
             </div>
             <div class="modal-buttons">
-                <button type="button" class="btn-cancel" onclick="hideModal('payment')">Cancel</button>
+                <button type="button" class="btn-cancel" onclick="cancelPayment()">Cancel</button>
                 <button type="button" class="btn-save" id="completePayBtn" onclick="completePayment()"><i class="fas fa-check"></i> Complete Payment</button>
             </div>
         </div>
@@ -1132,31 +1114,32 @@
         }
 
         function renderFloorPlan() {
-            const container = document.getElementById('floorPlan');
-            // Add floor labels
-            let html = `
-                <div class="floor-label" style="top: 10px; left: 10px;">Lounge Area</div>
-                <div class="floor-label" style="top: 130px; left: 280px;">VIP Section</div>
-                <div class="floor-label" style="top: 320px; left: 10px;">Bar Area</div>
-                <div class="floor-label" style="top: 320px; left: 380px;">Window Seating</div>
-            `;
-            html += floorPlanTables.map(table => {
-                const hasTab = openTabs.some(t => t.table === `Table ${table.id}`);
-                const tabAmount = openTabs.find(t => t.table === `Table ${table.id}`)?.amount || 0;
-                return `<div class="table-item ${table.type} ${hasTab ? 'has-tab' : ''}" style="left:${table.x}px;top:${table.y}px;" onclick="selectTable(${table.id})" title="${hasTab ? '$' + tabAmount.toFixed(2) : 'Available'}"><span>${table.id}</span></div>`;
-            }).join('');
-            container.innerHTML = html;
+            // Floor plan removed for simplicity - function kept for compatibility
+            return;
         }
 
         function renderOpenTabs() {
-            document.getElementById('openTabsBody').innerHTML = openTabs.map(tab => `
-                <tr class="tab-row" onclick="selectTab(${tab.id})">
-                    <td>Tab ${tab.id}</td>
-                    <td>${tab.customer}</td>
-                    <td>${tab.employee}</td>
-                    <td>$${tab.amount.toFixed(2)}</td>
-                </tr>
-            `).join('');
+            const tbody = document.getElementById('openTabsBody');
+            if (!tbody) return;
+            
+            if (openTabs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;padding:20px;">No open tabs</td></tr>';
+            } else {
+                tbody.innerHTML = openTabs.map(tab => `
+                    <tr class="tab-row">
+                        <td>${tab.table || 'Tab'}</td>
+                        <td>${tab.customer}</td>
+                        <td style="font-weight:600;color:#27ae60;">$${tab.amount.toFixed(2)}</td>
+                        <td>
+                            <button onclick="selectTab(${tab.id})" style="background:#4a90a4;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-right:5px;"><i class="fas fa-eye"></i> View</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            
+            // Update sidebar summary
+            const openTabsCount = document.getElementById('summaryOpenTabs');
+            if (openTabsCount) openTabsCount.textContent = openTabs.length;
         }
 
         function renderCart() {
@@ -1456,6 +1439,25 @@
 
         let currentPayMethod = 'card';
         let currentPayTotal = 0;
+        let payingTabId = null; // Track if we're paying a tab
+        
+        function cancelPayment() {
+            // If we were paying a tab, restore the tab (don't close it)
+            if (payingTabId) {
+                // Clear the cart since we loaded tab items into it
+                cart = [];
+                currentDiscount = 0;
+                currentCartCustomer = null;
+                currentCartCustomerIsMember = false;
+                memberDiscountApplied = false;
+                updateCartMemberBadge(false);
+                document.getElementById('customerSearch').value = '';
+                renderCart();
+                payingTabId = null;
+                showToast('Payment cancelled - tab kept open', 'info');
+            }
+            hideModal('payment');
+        }
         
         function processPayment(method) {
             if (cart.length === 0) return showToast('Cart is empty', 'error');
@@ -1488,6 +1490,12 @@
             document.getElementById('changeSection').style.display = 'none';
             document.getElementById('giftCardNumber').value = '';
             document.getElementById('giftCardInfo').style.display = 'none';
+            
+            // Hide Tab button if we're paying a tab (can't add tab to tab)
+            const tabPayBtn = document.querySelector('.pay-method-btn[onclick*="tab"]');
+            if (tabPayBtn) {
+                tabPayBtn.style.display = payingTabId ? 'none' : 'flex';
+            }
             
             // Reset button states
             document.querySelectorAll('.pay-method-btn').forEach(btn => {
@@ -1648,6 +1656,13 @@
                 updateCustomerStats(customerName, currentPayTotal);
             }
             
+            // If we were paying a tab, finalize the tab close
+            if (payingTabId) {
+                finalizeTabClose(payingTabId, 'stripe');
+                payingTabId = null;
+                selectedTabId = null;
+            }
+            
             // Ask to print receipt
             if (confirm('Print receipt?')) {
                 printReceipt(transactions[0]);
@@ -1656,6 +1671,9 @@
             hideModal('payment');
             cart = [];
             currentDiscount = 0;
+            currentCartCustomer = null;
+            currentCartCustomerIsMember = false;
+            memberDiscountApplied = false;
             stripePaymentInProgress = false;
             
             // Reset button state
@@ -1665,6 +1683,7 @@
             btn.disabled = false;
             document.getElementById('stripePaymentStatus').style.display = 'none';
             
+            document.getElementById('customerSearch').value = '';
             renderCart();
             renderRecentTrans();
             showToast(`Payment of $${currentPayTotal.toFixed(2)} processed via Stripe Terminal!`, 'success');
@@ -1812,6 +1831,13 @@
                 updateCustomerStats(customerName, currentPayTotal);
             }
             
+            // If we were paying a tab, finalize the tab close
+            if (payingTabId) {
+                finalizeTabClose(payingTabId, currentPayMethod);
+                payingTabId = null;
+                selectedTabId = null;
+            }
+            
             // Ask to print receipt
             if (confirm('Print receipt?')) {
                 printReceipt(transactions[0]);
@@ -1821,6 +1847,7 @@
             cart = [];
             currentDiscount = 0;
             currentCartCustomer = null;
+            currentCartCustomerIsMember = false;
             memberDiscountApplied = false;
             updateCartMemberBadge(false);
             document.getElementById('customerSearch').value = '';
@@ -1860,7 +1887,7 @@
             cart = [];
             currentDiscount = 0;
             renderCart();
-            renderTabs();
+            renderOpenTabs();
             showToast(`Items added to ${customerName}'s tab!`, 'success');
         }
         
@@ -2224,43 +2251,57 @@
         function closeTab() {
             if (!selectedTabId) return;
             const tab = openTabs.find(t => t.id === selectedTabId);
-            if (tab && tab.amount > 0) {
-                const subtotal = tab.subtotal || (tab.amount / 1.0635);
-                const tax = tab.amount - subtotal;
-                const tabItems = tab.items || [];
-                // Add to transactions
-                transactions.unshift({
-                    id: 26763 + transactions.length,
-                    customer: tab.customer,
-                    amount: tab.amount,
-                    subtotal: subtotal,
-                    tax: tax,
-                    items: tabItems,
-                    itemDetails: tabItems.map(i => ({ name: i.name, qty: i.qty, price: i.price, discount: i.discount || 0 })),
-                    itemCount: tabItems.reduce((sum, i) => sum + i.qty, 0),
-                    method: 'tab',
-                    time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-                    date: new Date().toISOString(),
-                    discount: 0,
-                    isReturn: false,
-                    register: localStorage.getItem('gc_register_id') || 'POS-1'
-                });
-                localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+            if (!tab) return;
+            
+            if (tab.amount > 0 || (tab.items && tab.items.length > 0)) {
+                // Load tab items into cart and open payment modal
+                cart = tab.items ? tab.items.map(i => ({...i})) : [];
+                currentDiscount = 0;
+                payingTabId = tab.id; // Track that we're paying this tab
                 
-                // Update customer stats
-                updateCustomerStats(tab.customer, tab.amount);
+                // Set customer
+                document.getElementById('customerSearch').value = tab.customer;
                 
-                showToast(`Tab closed - $${tab.amount.toFixed(2)} charged`, 'success');
+                // Check if customer is a member and apply discount
+                if (typeof GolfCoveMembership !== 'undefined') {
+                    const customer = GolfCoveMembership.findCustomerByName(tab.customer);
+                    if (customer && GolfCoveMembership.isActiveMember(customer)) {
+                        currentCartCustomer = customer;
+                        currentCartCustomerIsMember = true;
+                        const discountResult = GolfCoveMembership.calculateDiscount(cart, customer);
+                        if (discountResult.totalDiscount > 0) {
+                            currentDiscount = discountResult.totalDiscount;
+                            memberDiscountApplied = true;
+                        }
+                    }
+                }
+                
+                renderCart();
+                hideModal('tabDetail');
+                
+                // Process payment - this will open the payment modal
+                processPayment('card');
             } else {
+                // No charges - just close the tab
+                openTabs = openTabs.filter(t => t.id !== selectedTabId);
+                localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
+                hideModal('tabDetail');
+                renderOpenTabs();
+                renderFloorPlan();
                 showToast('Tab closed (no charges)', 'success');
+                selectedTabId = null;
             }
-            openTabs = openTabs.filter(t => t.id !== selectedTabId);
-            localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
-            hideModal('tabDetail');
-            renderOpenTabs();
-            renderFloorPlan(); // Update floor plan to show table is now available
-            renderRecentTrans();
-            selectedTabId = null;
+        }
+        
+        // Called after payment is completed to finalize tab closing
+        function finalizeTabClose(tabId, paymentMethod) {
+            const tab = openTabs.find(t => t.id === tabId);
+            if (tab) {
+                openTabs = openTabs.filter(t => t.id !== tabId);
+                localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
+                renderOpenTabs();
+                renderFloorPlan();
+            }
         }
         
         function addToTabFromCurrent() {
