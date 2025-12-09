@@ -1580,16 +1580,49 @@
     
     <!-- Add Team Modal -->
     <div class="modal" id="addTeamModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
-                <h3>Create New Team</h3>
+                <h3><i class="fas fa-users" style="color: #37b24a;"></i> Create New Team</h3>
                 <button class="close" onclick="closeModal('addTeamModal')">&times;</button>
             </div>
             <form onsubmit="addTeam(event)">
                 <div class="form-group">
                     <label>Team Name</label>
-                    <input type="text" id="newTeamName" required placeholder="Team Alpha">
+                    <input type="text" id="newTeamName" required placeholder="The Eagles">
                 </div>
+                
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                    <div style="font-weight: 600; color: #37b24a; margin-bottom: 12px; font-size: 14px;"><i class="fas fa-user"></i> Player 1</div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label>Name</label>
+                        <input type="text" id="newTeamPlayer1Name" required placeholder="John Smith">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Handicap</label>
+                        <input type="number" id="newTeamPlayer1Hcp" value="0" min="0" max="54">
+                    </div>
+                </div>
+                
+                <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                    <div style="font-weight: 600; color: #0ea5e9; margin-bottom: 12px; font-size: 14px;"><i class="fas fa-user"></i> Player 2</div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label>Name</label>
+                        <input type="text" id="newTeamPlayer2Name" required placeholder="Jane Doe">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Handicap</label>
+                        <input type="number" id="newTeamPlayer2Hcp" value="0" min="0" max="54">
+                    </div>
+                </div>
+                
+                <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+                    <div style="font-weight: 600; color: #ca8a04; margin-bottom: 8px; font-size: 14px;"><i class="fas fa-key"></i> Team PIN</div>
+                    <p style="font-size: 12px; color: #666; margin-bottom: 10px;">This 4-digit PIN is required to access the team scorecard.</p>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="text" id="newTeamPin" required placeholder="1234" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" style="text-align: center; font-size: 20px; letter-spacing: 8px; font-weight: 700;">
+                    </div>
+                </div>
+                
                 <button type="submit" class="btn btn-block"><i class="fas fa-plus"></i> Create Team</button>
             </form>
         </div>
@@ -2284,11 +2317,17 @@
             
             let html = league.teams.map(team => {
                 const players = league.players.filter(p => p.teamId === team.id);
+                const teamPin = team.pin || (players.length > 0 && players[0].pin) || 'No PIN';
+                const canAddPlayer = players.length < 2;
                 return `
                     <div class="team-card">
                         <div class="team-header">
                             <span class="team-name">${team.name}</span>
                             <button class="delete-btn" onclick="deleteTeam('${team.id}')"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 12px; color: #ca8a04; font-weight: 600;"><i class="fas fa-key"></i> Team PIN</span>
+                            <span style="font-family: monospace; font-size: 16px; font-weight: 700; color: #333; letter-spacing: 3px;">${teamPin}</span>
                         </div>
                         ${players.length === 0 ? '<p style="color: #999; font-size: 13px;">No players yet</p>' : 
                             players.map(p => `
@@ -2296,15 +2335,18 @@
                                     <span class="player-name">${p.name}</span>
                                     <div class="player-meta">
                                         <span class="hcp">HCP ${p.handicap}</span>
-                                        <span class="pin">${p.pin}</span>
                                         <button class="delete-btn" onclick="deletePlayer('${p.id}')"><i class="fas fa-times"></i></button>
                                     </div>
                                 </div>
                             `).join('')
                         }
+                        ${canAddPlayer ? `
                         <button class="add-player-btn" onclick="openAddPlayerModal('${team.id}', '${team.name.replace(/'/g, "\\'")}')">
-                            <i class="fas fa-plus"></i> Add Player
-                        </button>
+                            <i class="fas fa-plus"></i> Add Player ${players.length === 1 ? '(1/2)' : ''}
+                        </button>` : `
+                        <div style="text-align: center; padding: 10px; color: #888; font-size: 12px; background: #f5f5f5; border-radius: 8px; margin-top: 12px;">
+                            <i class="fas fa-check-circle" style="color: #37b24a;"></i> Team Complete (2 players)
+                        </div>`}
                     </div>
                 `;
             }).join('');
@@ -2480,10 +2522,56 @@
         function addTeam(e) {
             e.preventDefault();
             const name = document.getElementById('newTeamName').value.trim();
-            if (!name) return;
+            const player1Name = document.getElementById('newTeamPlayer1Name').value.trim();
+            const player1Hcp = parseInt(document.getElementById('newTeamPlayer1Hcp').value) || 0;
+            const player2Name = document.getElementById('newTeamPlayer2Name').value.trim();
+            const player2Hcp = parseInt(document.getElementById('newTeamPlayer2Hcp').value) || 0;
+            const pin = document.getElementById('newTeamPin').value.trim();
             
-            league.teams.push({ id: 't' + Date.now() + Math.random().toString(36).substr(2, 5), name });
+            if (!name || !player1Name || !player2Name) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            if (!pin || pin.length !== 4 || !/^[0-9]{4}$/.test(pin)) {
+                alert('Please enter a valid 4-digit PIN');
+                return;
+            }
+            
+            if (player1Name.toLowerCase() === player2Name.toLowerCase()) {
+                alert('Player names must be different');
+                return;
+            }
+            
+            // Create team with PIN
+            const teamId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
+            league.teams.push({ id: teamId, name, pin });
+            
+            // Create both players with the same PIN
+            league.players.push({
+                id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
+                name: player1Name,
+                teamId,
+                handicap: player1Hcp,
+                pin: pin
+            });
+            
+            league.players.push({
+                id: 'p' + (Date.now() + 1) + Math.random().toString(36).substr(2, 5),
+                name: player2Name,
+                teamId,
+                handicap: player2Hcp,
+                pin: pin
+            });
+            
+            // Clear form
             document.getElementById('newTeamName').value = '';
+            document.getElementById('newTeamPlayer1Name').value = '';
+            document.getElementById('newTeamPlayer1Hcp').value = '0';
+            document.getElementById('newTeamPlayer2Name').value = '';
+            document.getElementById('newTeamPlayer2Hcp').value = '0';
+            document.getElementById('newTeamPin').value = '';
+            
             save();
             closeModal('addTeamModal');
             renderAll();
@@ -2514,10 +2602,21 @@
             
             if (!name) return;
             
+            // Check if team already has 2 players
+            const existingPlayers = league.players.filter(p => p.teamId === teamId);
+            if (existingPlayers.length >= 2) {
+                alert('This team already has 2 players. Remove a player first to add a new one.');
+                return;
+            }
+            
+            // Get team PIN for the new player
+            const team = league.teams.find(t => t.id === teamId);
+            const teamPin = team?.pin || (existingPlayers.length > 0 ? existingPlayers[0].pin : null);
+            
             league.players.push({
                 id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
                 name, teamId, handicap,
-                pin: null  // No PIN until first score submission
+                pin: teamPin  // Use team PIN
             });
             save();
             closeModal('addPlayerModal');
