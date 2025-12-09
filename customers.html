@@ -1,0 +1,2262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Cove - Customers</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f6fa; min-height: 100vh; }
+        
+        /* Header - matches other Golf Cove pages */
+        .header { background: #4a90a4; color: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header-left { display: flex; align-items: center; gap: 30px; }
+        .header-logo { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; font-weight: 700; }
+        .header-logo img { height: 35px; }
+        .header-nav { display: flex; gap: 5px; }
+        .header-nav a { color: rgba(255,255,255,0.85); text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 14px; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+        .header-nav a:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .header-nav a.active { background: rgba(255,255,255,0.2); color: #fff; }
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        .header-user { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .current-time { font-size: 14px; font-weight: 600; opacity: 0.9; }
+        
+        /* Main Layout */
+        .main-container { display: flex; height: calc(100vh - 60px); }
+        
+        /* Sidebar */
+        .sidebar { width: 280px; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid #eee; }
+        .sidebar-header h2 { font-size: 1.1rem; color: #333; margin-bottom: 15px; }
+        .search-box { position: relative; }
+        .search-box input { width: 100%; padding: 10px 15px 10px 40px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; }
+        .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #999; }
+        .sidebar-filters { padding: 15px 20px; border-bottom: 1px solid #eee; }
+        .filter-group { margin-bottom: 10px; }
+        .filter-group label { font-size: 0.8rem; color: #666; display: block; margin-bottom: 5px; }
+        .filter-group select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+        .sidebar-stats { padding: 15px 20px; background: #f8f9fa; }
+        .stat-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.9rem; }
+        .stat-row span:last-child { font-weight: 600; color: #4a90a4; }
+        .customer-list { flex: 1; overflow-y: auto; }
+        .customer-item { padding: 15px 20px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 12px; }
+        .customer-item:hover { background: #f5f6fa; }
+        .customer-item.active { background: #e8f4f8; border-left: 3px solid #4a90a4; }
+        .customer-avatar { width: 40px; height: 40px; border-radius: 50%; background: #4a90a4; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; }
+        .customer-avatar.member { background: linear-gradient(135deg, #f1c40f 0%, #e67e22 100%); }
+        .customer-info { flex: 1; }
+        .customer-name { font-weight: 600; color: #333; display: flex; align-items: center; gap: 8px; }
+        .member-badge { background: linear-gradient(135deg, #f1c40f 0%, #e67e22 100%); color: #fff; font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; font-weight: 700; }
+        .customer-meta { font-size: 0.8rem; color: #999; margin-top: 2px; }
+        
+        /* Content Area */
+        .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-header { padding: 20px 25px; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .content-header h2 { font-size: 1.3rem; color: #333; }
+        .header-actions { display: flex; gap: 10px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+        .btn-primary { background: #4a90a4; color: #fff; }
+        .btn-primary:hover { background: #3d7a8c; }
+        .btn-success { background: #27ae60; color: #fff; }
+        .btn-success:hover { background: #219a52; }
+        .btn-warning { background: #f39c12; color: #fff; }
+        .btn-warning:hover { background: #d68910; }
+        .btn-danger { background: #e74c3c; color: #fff; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-secondary { background: #95a5a6; color: #fff; }
+        .btn-secondary:hover { background: #7f8c8d; }
+        
+        /* Tabs */
+        .content-tabs { display: flex; background: #fff; border-bottom: 1px solid #eee; padding: 0 25px; }
+        .tab-btn { padding: 15px 25px; border: none; background: none; cursor: pointer; font-size: 0.95rem; color: #666; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .tab-btn:hover { color: #333; }
+        .tab-btn.active { color: #4a90a4; border-bottom-color: #4a90a4; font-weight: 600; }
+        
+        /* Tab Content */
+        .tab-content { flex: 1; overflow-y: auto; padding: 25px; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        
+        /* Customer Detail Card */
+        .detail-card { background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .detail-card h3 { font-size: 1rem; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
+        .detail-card h3 i { color: #4a90a4; }
+        .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .detail-item { margin-bottom: 0; }
+        .detail-item label { font-size: 0.8rem; color: #999; display: block; margin-bottom: 4px; }
+        .detail-item .value { font-size: 1rem; color: #333; font-weight: 500; }
+        .detail-item input, .detail-item select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; }
+        
+        /* Membership Card */
+        .membership-card { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: #fff; border-radius: 12px; padding: 25px; margin-bottom: 20px; position: relative; overflow: hidden; }
+        .membership-card.active-member { background: linear-gradient(135deg, #f1c40f 0%, #e67e22 100%); }
+        .membership-card.expired { background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%); }
+        .membership-card::before { content: ''; position: absolute; top: -50%; right: -50%; width: 100%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%); }
+        .membership-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; position: relative; }
+        .membership-header h3 { font-size: 1.2rem; }
+        .membership-status { background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; }
+        .membership-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; position: relative; }
+        .membership-details .item label { font-size: 0.75rem; opacity: 0.8; display: block; }
+        .membership-details .item .value { font-size: 1.1rem; font-weight: 600; }
+        
+        /* Pass List */
+        .pass-list { margin-bottom: 0; }
+        .pass-item { background: #f8f9fa; border-radius: 10px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .pass-item.active { border-left: 4px solid #27ae60; }
+        .pass-item.expired { border-left: 4px solid #e74c3c; opacity: 0.7; }
+        .pass-info h4 { font-size: 0.95rem; color: #333; margin-bottom: 5px; }
+        .pass-info p { font-size: 0.8rem; color: #666; }
+        .pass-meta { text-align: right; }
+        .pass-meta .uses { font-size: 1.2rem; font-weight: 700; color: #4a90a4; }
+        .pass-meta .expiry { font-size: 0.75rem; color: #999; }
+        
+        /* Transaction History */
+        .transaction-table { width: 100%; border-collapse: collapse; }
+        .transaction-table th { text-align: left; padding: 12px; background: #f8f9fa; font-size: 0.85rem; color: #666; font-weight: 600; }
+        .transaction-table td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .transaction-table tr:hover { background: #f8f9fa; }
+        .amount-positive { color: #27ae60; font-weight: 600; }
+        .amount-negative { color: #e74c3c; font-weight: 600; }
+        
+        /* Empty State */
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+        .empty-state i { font-size: 4rem; margin-bottom: 15px; opacity: 0.3; }
+        .empty-state p { font-size: 1rem; }
+        
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal { background: #fff; border-radius: 16px; width: 90%; max-width: 500px; max-height: 90vh; overflow: hidden; transform: scale(0.9); transition: transform 0.3s; }
+        .modal-overlay.active .modal { transform: scale(1); }
+        .modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 1.2rem; color: #333; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+        .modal-body { padding: 20px; max-height: 60vh; overflow-y: auto; }
+        .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; }
+        .form-group input:focus, .form-group select:focus { border-color: #4a90a4; outline: none; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        /* Toast */
+        .toast { position: fixed; bottom: 20px; right: 20px; padding: 15px 25px; background: #333; color: #fff; border-radius: 8px; font-size: 0.9rem; opacity: 0; transform: translateY(20px); transition: all 0.3s; z-index: 9999; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.success { background: #27ae60; }
+        .toast.error { background: #e74c3c; }
+        .toast.warning { background: #f39c12; }
+        
+        /* Expiring Soon Badge */
+        .expiring-badge { background: #f39c12; color: #fff; font-size: 0.6rem; padding: 2px 5px; border-radius: 8px; font-weight: 700; margin-left: 5px; }
+        .expired-badge { background: #e74c3c; color: #fff; font-size: 0.6rem; padding: 2px 5px; border-radius: 8px; font-weight: 700; margin-left: 5px; }
+        
+        /* Quick Action Bar */
+        .quick-actions { display: flex; gap: 8px; padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #eee; }
+        .quick-action-btn { padding: 8px 12px; border: 1px solid #ddd; background: #fff; border-radius: 6px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px; transition: all 0.2s; }
+        .quick-action-btn:hover { background: #4a90a4; color: #fff; border-color: #4a90a4; }
+        
+        /* Print Styles */
+        @media print {
+            .header, .sidebar, .content-tabs, .header-actions, .quick-actions { display: none !important; }
+            .content-area { margin: 0; }
+            .detail-card { box-shadow: none; border: 1px solid #ddd; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <a href="index.html" class="header-logo" style="text-decoration:none; color:#fff;">
+                <img src="images/golfCoveLogo6.png" alt="Golf Cove">
+                <span>Golf Cove</span>
+            </a>
+            <nav class="header-nav">
+                <a href="admin-pos.html"><i class="fas fa-calendar-alt"></i> Tee Sheet</a>
+                <a href="admin-pos.html" onclick="localStorage.setItem('gc_page','fnb')"><i class="fas fa-utensils"></i> F&B</a>
+                <a href="sales.html"><i class="fas fa-cash-register"></i> Sales</a>
+                <a href="customers.html" class="active"><i class="fas fa-users"></i> Customers</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <span class="current-time" id="currentTime">--:--</span>
+            <div class="header-user">
+                <i class="fas fa-user-circle" style="font-size: 24px;"></i>
+                <span>EJ Sattelberger</span>
+            </div>
+        </div>
+    </header>
+    
+    <div class="main-container">
+        <!-- Sidebar: Customer List -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-users"></i> Customers</h2>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="customerSearch" placeholder="Search customers...">
+                </div>
+            </div>
+            <div class="sidebar-filters">
+                <div class="filter-group">
+                    <label>Filter by Type</label>
+                    <select id="filterType" onchange="filterCustomers()">
+                        <option value="all">All Customers</option>
+                        <option value="member">Members Only</option>
+                        <option value="non-member">Non-Members</option>
+                        <option value="expiring">Expiring Soon (30 days)</option>
+                        <option value="expired">Expired Memberships</option>
+                    </select>
+                </div>
+            </div>
+            <div class="sidebar-stats">
+                <div class="stat-row"><span>Total Customers</span><span id="statTotal">0</span></div>
+                <div class="stat-row"><span>Active Members</span><span id="statMembers">0</span></div>
+                <div class="stat-row"><span>Expiring Soon</span><span id="statExpiring">0</span></div>
+            </div>
+            <div class="customer-list" id="customerList">
+                <!-- Customer items rendered here -->
+            </div>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="content-area">
+            <div class="content-header">
+                <h2 id="customerTitle">Select a Customer</h2>
+                <div class="header-actions">
+                    <button class="btn btn-warning" onclick="showRenewalAlerts()" title="Membership Renewals"><i class="fas fa-bell"></i> Renewals</button>
+                    <button class="btn btn-secondary" onclick="showCustomerStats()" title="Statistics"><i class="fas fa-chart-pie"></i> Stats</button>
+                    <button class="btn btn-secondary" onclick="showEmailComposer()" title="Bulk Email"><i class="fas fa-envelope"></i> Email</button>
+                    <button class="btn btn-secondary" onclick="showBatchOperations()" title="Batch Operations"><i class="fas fa-tasks"></i> Batch</button>
+                    <button class="btn btn-secondary" onclick="showImportModal()" title="Import from CSV/JSON"><i class="fas fa-upload"></i> Import</button>
+                    <button class="btn btn-secondary" onclick="exportCustomers()" title="Export to CSV"><i class="fas fa-download"></i> Export</button>
+                    <button class="btn btn-primary" onclick="showModal('newCustomer')"><i class="fas fa-plus"></i> New Customer</button>
+                </div>
+            </div>
+            <div class="quick-actions" id="quickActions" style="display:none;">
+                <button class="quick-action-btn" onclick="quickEmail()"><i class="fas fa-envelope"></i> Email</button>
+                <button class="quick-action-btn" onclick="quickSMS()"><i class="fas fa-sms"></i> SMS</button>
+                <button class="quick-action-btn" onclick="quickBooking()"><i class="fas fa-calendar-plus"></i> New Booking</button>
+                <button class="quick-action-btn" onclick="printCustomerCard()"><i class="fas fa-print"></i> Print Card</button>
+            </div>
+            
+            <div class="content-tabs">
+                <button class="tab-btn active" onclick="switchTab('info', this)">Info</button>
+                <button class="tab-btn" onclick="switchTab('membership', this)">Membership</button>
+                <button class="tab-btn" onclick="switchTab('passes', this)">Passes</button>
+                <button class="tab-btn" onclick="switchTab('history', this)">History</button>
+            </div>
+            
+            <div class="tab-content">
+                <!-- Info Tab -->
+                <div class="tab-panel active" id="tab-info">
+                    <div id="noCustomerSelected" class="empty-state">
+                        <i class="fas fa-user"></i>
+                        <p>Select a customer from the list to view details</p>
+                    </div>
+                    <div id="customerDetails" style="display:none;">
+                        <div class="detail-card">
+                            <h3><i class="fas fa-user"></i> Basic Information</h3>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <label>First Name</label>
+                                    <input type="text" id="editFirstName">
+                                </div>
+                                <div class="detail-item">
+                                    <label>Last Name</label>
+                                    <input type="text" id="editLastName">
+                                </div>
+                                <div class="detail-item">
+                                    <label>Email</label>
+                                    <input type="email" id="editEmail">
+                                </div>
+                                <div class="detail-item">
+                                    <label>Phone</label>
+                                    <input type="tel" id="editPhone">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <h3><i class="fas fa-map-marker-alt"></i> Address</h3>
+                            <div class="detail-grid">
+                                <div class="detail-item" style="grid-column: span 2;">
+                                    <label>Street Address</label>
+                                    <input type="text" id="editAddress">
+                                </div>
+                                <div class="detail-item">
+                                    <label>City</label>
+                                    <input type="text" id="editCity">
+                                </div>
+                                <div class="detail-item">
+                                    <label>State / Zip</label>
+                                    <div style="display:flex;gap:10px;">
+                                        <input type="text" id="editState" placeholder="CT" style="width:60px;">
+                                        <input type="text" id="editZip" placeholder="06XXX" style="flex:1;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <h3><i class="fas fa-chart-bar"></i> Customer Stats</h3>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <label>Total Visits</label>
+                                    <div class="value" id="statVisits">0</div>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Total Spent</label>
+                                    <div class="value" id="statTotalSpent">$0.00</div>
+                                </div>
+                                <div class="detail-item">
+                                    <label>No Shows</label>
+                                    <div class="value" id="statNoShows" style="color:#e74c3c;">0</div>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Last Visit</label>
+                                    <div class="value" id="statLastVisit">Never</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <h3><i class="fas fa-sticky-note"></i> Notes</h3>
+                            <textarea id="editNotes" rows="3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;resize:vertical;" placeholder="Customer preferences, allergies, special requests..."></textarea>
+                            <div style="margin-top:10px;">
+                                <button class="btn btn-secondary" onclick="addTimestampNote()" style="font-size:0.8rem;padding:6px 12px;"><i class="fas fa-clock"></i> Add Timestamped Note</button>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:10px;justify-content:flex-end;">
+                            <button class="btn btn-danger" onclick="deleteCustomer()"><i class="fas fa-trash"></i> Delete</button>
+                            <button class="btn btn-success" onclick="saveCustomerChanges()"><i class="fas fa-save"></i> Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Membership Tab -->
+                <div class="tab-panel" id="tab-membership">
+                    <div id="membershipContent">
+                        <div id="membershipCard" class="membership-card">
+                            <div class="membership-header">
+                                <div>
+                                    <h3 id="membershipType">Non-Member</h3>
+                                    <p style="opacity:0.8;font-size:0.85rem;" id="memberSince">-</p>
+                                </div>
+                                <span class="membership-status" id="membershipStatus">No Membership</span>
+                            </div>
+                            <div class="membership-details">
+                                <div class="item">
+                                    <label>Member Since</label>
+                                    <div class="value" id="memberStartDate">-</div>
+                                </div>
+                                <div class="item">
+                                    <label>Expires</label>
+                                    <div class="value" id="memberExpireDate">-</div>
+                                </div>
+                                <div class="item">
+                                    <label>Price Class</label>
+                                    <div class="value" id="memberPriceClass">Regular</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:10px;margin-bottom:20px;">
+                            <button class="btn btn-success" onclick="showModal('addMembership')"><i class="fas fa-crown"></i> Add/Renew Membership</button>
+                            <button class="btn btn-warning" onclick="showModal('editMembership')"><i class="fas fa-edit"></i> Edit Membership</button>
+                        </div>
+                        <div class="detail-card">
+                            <h3><i class="fas fa-history"></i> Membership History</h3>
+                            <div id="membershipHistory">
+                                <p style="color:#999;text-align:center;padding:20px;">No membership history</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Passes Tab -->
+                <div class="tab-panel" id="tab-passes">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h3 style="font-size:1rem;color:#333;">Active Passes</h3>
+                        <button class="btn btn-primary" onclick="showModal('addPass')"><i class="fas fa-plus"></i> Add Pass</button>
+                    </div>
+                    <div id="passList" class="pass-list">
+                        <p style="color:#999;text-align:center;padding:40px;">No passes assigned</p>
+                    </div>
+                </div>
+                
+                <!-- History Tab -->
+                <div class="tab-panel" id="tab-history">
+                    <div class="detail-card">
+                        <h3><i class="fas fa-receipt"></i> Transaction History</h3>
+                        <table class="transaction-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionHistory">
+                                <tr><td colspan="4" style="text-align:center;color:#999;padding:40px;">No transactions found</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- New Customer Modal -->
+    <div class="modal-overlay" id="modal-newCustomer">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-plus"></i> New Customer</h3>
+                <button class="modal-close" onclick="hideModal('newCustomer')">&times;</button>
+            </div>
+            <form onsubmit="createCustomer(event)">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name *</label>
+                            <input type="text" id="newFirstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name *</label>
+                            <input type="text" id="newLastName" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="newEmail">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" id="newPhone" oninput="formatPhoneNumber(this)">
+                    </div>
+                    <div class="form-group">
+                        <label>Add as Member?</label>
+                        <select id="newMemberType">
+                            <option value="">No - Regular Customer</option>
+                            <option value="monthly">Monthly Member ($99/mo)</option>
+                            <option value="annual">Annual Member ($999/yr)</option>
+                            <option value="vip">VIP Member ($1999/yr)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('newCustomer')">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Create Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add Membership Modal -->
+    <div class="modal-overlay" id="modal-addMembership">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-crown"></i> Add Membership</h3>
+                <button class="modal-close" onclick="hideModal('addMembership')">&times;</button>
+            </div>
+            <form onsubmit="addMembership(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Membership Type *</label>
+                        <select id="membershipTypeSelect" required>
+                            <option value="">Select Type...</option>
+                            <option value="monthly">Monthly Member - $99/month</option>
+                            <option value="annual">Annual Member - $999/year</option>
+                            <option value="vip">VIP Member - $1999/year</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" id="membershipStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Duration</label>
+                        <select id="membershipDuration">
+                            <option value="1">1 Month</option>
+                            <option value="3">3 Months</option>
+                            <option value="6">6 Months</option>
+                            <option value="12" selected>12 Months</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="membershipNotes" rows="2" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addMembership')">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-crown"></i> Activate Membership</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add Pass Modal -->
+    <div class="modal-overlay" id="modal-addPass">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-ticket-alt"></i> Add Pass</h3>
+                <button class="modal-close" onclick="hideModal('addPass')">&times;</button>
+            </div>
+            <form onsubmit="addPass(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Pass Type *</label>
+                        <select id="passType" required>
+                            <option value="">Select Pass...</option>
+                            <option value="10-round">10 Round Pass - $400</option>
+                            <option value="20-round">20 Round Pass - $700</option>
+                            <option value="unlimited-month">Unlimited Month Pass - $299</option>
+                            <option value="day-pass">Day Pass - $50</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Valid Until</label>
+                        <input type="date" id="passExpiry">
+                    </div>
+                    <div class="form-group">
+                        <label>Uses Included</label>
+                        <input type="number" id="passUses" value="10" min="1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addPass')">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add Pass</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ============ DATA ============
+        let customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+        let selectedCustomerId = null;
+        
+        // Migrate legacy customers with single 'name' field to firstName/lastName
+        let needsMigration = false;
+        customers = customers.map(c => {
+            if (c.name && !c.firstName) {
+                needsMigration = true;
+                const nameParts = c.name.trim().split(/\s+/);
+                return {
+                    ...c,
+                    firstName: nameParts[0] || '',
+                    lastName: nameParts.slice(1).join(' ') || '',
+                    name: undefined // remove old field
+                };
+            }
+            return c;
+        });
+        if (needsMigration) {
+            localStorage.setItem('gc_customers', JSON.stringify(customers));
+        }
+        
+        // Initialize with sample data if empty
+        if (customers.length === 0) {
+            customers = [
+                { id: 1, firstName: 'Alex', lastName: 'Qi', email: 'otherkyd@gmail.com', phone: '(203) 543-7199', isMember: true, memberType: 'monthly', memberSince: '2025-10-22', memberExpires: '2026-01-22', priceClass: 'Member', passes: [], transactions: [] },
+                { id: 2, firstName: 'Paul', lastName: 'Cicarella', email: '', phone: '', isMember: true, memberType: 'annual', memberSince: '2024-02-07', memberExpires: '2025-12-14', priceClass: 'Member', passes: [{ type: '10-round', remaining: 8, expires: '2025-12-30' }], transactions: [] },
+                { id: 3, firstName: 'Ernest', lastName: 'Santoro', email: '', phone: '', isMember: true, memberType: 'annual', memberSince: '2024-03-29', memberExpires: '2025-12-30', priceClass: 'Member', passes: [], transactions: [] },
+                { id: 4, firstName: 'Grant', lastName: 'Schoenfeldt', email: '', phone: '', isMember: true, memberType: 'monthly', memberSince: '2024-05-01', memberExpires: '2026-01-03', priceClass: 'Member', passes: [], transactions: [] },
+                { id: 5, firstName: 'Steve', lastName: 'Denaro', email: '', phone: '', isMember: true, memberType: 'monthly', memberSince: '2024-04-28', memberExpires: '2025-12-13', priceClass: 'Member', passes: [], transactions: [] },
+                { id: 6, firstName: 'Jack', lastName: 'Norton', email: '', phone: '', isMember: true, memberType: 'monthly', memberSince: '2024-06-15', memberExpires: '2026-01-15', priceClass: 'Member', passes: [], transactions: [] },
+                { id: 7, firstName: 'Chi', lastName: 'Gargano', email: '', phone: '', isMember: true, memberType: 'monthly', memberSince: '2024-06-25', memberExpires: '2025-12-13', priceClass: 'Member', passes: [], transactions: [] },
+                { id: 8, firstName: 'Scott', lastName: 'David', email: '', phone: '', isMember: true, memberType: 'annual', memberSince: '2024-06-30', memberExpires: '2025-12-30', priceClass: 'Member', passes: [], transactions: [] },
+                { id: 9, firstName: 'Mike', lastName: 'Johnson', email: 'mike@email.com', phone: '(203) 555-1234', isMember: false, memberType: null, memberSince: null, memberExpires: null, priceClass: 'Regular', passes: [], transactions: [] },
+                { id: 10, firstName: 'Sarah', lastName: 'Wilson', email: 'sarah@email.com', phone: '(860) 555-5678', isMember: false, memberType: null, memberSince: null, memberExpires: null, priceClass: 'Regular', passes: [], transactions: [] },
+                { id: 11, firstName: 'EJ', lastName: 'Sattelberger', email: 'sattel.ej@gmail.com', phone: '', isMember: false, memberType: null, memberSince: null, memberExpires: null, priceClass: 'Staff', passes: [], transactions: [] },
+            ];
+            localStorage.setItem('gc_customers', JSON.stringify(customers));
+        }
+        
+        // ============ RENDER ============
+        function renderCustomerList() {
+            const list = document.getElementById('customerList');
+            const search = document.getElementById('customerSearch').value.toLowerCase();
+            const filter = document.getElementById('filterType').value;
+            
+            let filtered = customers.filter(c => {
+                const name = `${c.firstName} ${c.lastName}`.toLowerCase();
+                const matchesSearch = name.includes(search) || (c.email && c.email.toLowerCase().includes(search));
+                
+                if (filter === 'member') return matchesSearch && c.isMember && !isExpired(c);
+                if (filter === 'non-member') return matchesSearch && !c.isMember;
+                if (filter === 'expiring') return matchesSearch && isExpiringSoon(c);
+                if (filter === 'expired') return matchesSearch && c.isMember && isExpired(c);
+                return matchesSearch;
+            });
+            
+            // Sort: members first, then alphabetically
+            filtered.sort((a, b) => {
+                if (a.isMember && !b.isMember) return -1;
+                if (!a.isMember && b.isMember) return 1;
+                return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+            });
+            
+            list.innerHTML = filtered.map(c => {
+                const initials = ((c.firstName || '')[0] || '') + ((c.lastName || '')[0] || '');
+                const isActive = selectedCustomerId === c.id;
+                const expired = isExpired(c);
+                const expiringSoon = isExpiringSoon(c);
+                return `
+                    <div class="customer-item ${isActive ? 'active' : ''}" onclick="selectCustomer(${c.id})">
+                        <div class="customer-avatar ${c.isMember && !expired ? 'member' : ''}">${initials.toUpperCase()}</div>
+                        <div class="customer-info">
+                            <div class="customer-name">
+                                ${c.firstName} ${c.lastName}
+                                ${c.isMember ? `<span class="member-badge">${expired ? 'EXPIRED' : 'MEMBER'}</span>` : ''}
+                                ${expiringSoon ? '<span class="expiring-badge">EXPIRING</span>' : ''}
+                            </div>
+                            <div class="customer-meta">${c.email || c.phone || 'No contact info'}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            updateStats();
+        }
+        
+        function isExpired(customer) {
+            if (!customer.isMember || !customer.memberExpires) return false;
+            return new Date(customer.memberExpires) < new Date();
+        }
+        
+        function isExpiringSoon(customer) {
+            if (!customer.isMember || !customer.memberExpires) return false;
+            const expires = new Date(customer.memberExpires);
+            const soon = new Date();
+            soon.setDate(soon.getDate() + 30);
+            return expires <= soon && expires >= new Date();
+        }
+        
+        function updateStats() {
+            document.getElementById('statTotal').textContent = customers.length;
+            document.getElementById('statMembers').textContent = customers.filter(c => c.isMember && !isExpired(c)).length;
+            document.getElementById('statExpiring').textContent = customers.filter(c => isExpiringSoon(c)).length;
+        }
+        
+        function selectCustomer(id) {
+            selectedCustomerId = id;
+            const customer = customers.find(c => c.id === id);
+            
+            // Show quick actions bar
+            document.getElementById('quickActions').style.display = 'flex';
+            if (!customer) return;
+            
+            document.getElementById('noCustomerSelected').style.display = 'none';
+            document.getElementById('customerDetails').style.display = 'block';
+            document.getElementById('customerTitle').textContent = `${customer.firstName} ${customer.lastName}`;
+            
+            // Populate info fields
+            document.getElementById('editFirstName').value = customer.firstName || '';
+            document.getElementById('editLastName').value = customer.lastName || '';
+            document.getElementById('editEmail').value = customer.email || '';
+            document.getElementById('editPhone').value = customer.phone || '';
+            document.getElementById('editAddress').value = customer.address || '';
+            document.getElementById('editCity').value = customer.city || '';
+            document.getElementById('editState').value = customer.state || '';
+            document.getElementById('editZip').value = customer.zip || '';
+            document.getElementById('editNotes').value = customer.notes || '';
+            
+            // Update customer stats
+            const transactions = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
+            const customerTrans = transactions.filter(t => 
+                t.customer && t.customer.toLowerCase() === `${customer.firstName} ${customer.lastName}`.toLowerCase()
+            );
+            const totalSpent = customerTrans.filter(t => !t.isReturn).reduce((sum, t) => sum + t.amount, 0);
+            const visitCount = customer.visitCount || customerTrans.length;
+            const lastVisit = customer.lastVisit || (customerTrans.length > 0 ? customerTrans[0].time : null);
+            
+            document.getElementById('statVisits').textContent = visitCount;
+            document.getElementById('statTotalSpent').textContent = '$' + totalSpent.toFixed(2);
+            document.getElementById('statNoShows').textContent = customer.noShowCount || 0;
+            document.getElementById('statLastVisit').textContent = lastVisit ? formatDate(lastVisit) : 'Never';
+            
+            // Update membership card
+            const card = document.getElementById('membershipCard');
+            card.className = 'membership-card';
+            if (customer.isMember) {
+                if (isExpired(customer)) {
+                    card.classList.add('expired');
+                    document.getElementById('membershipStatus').textContent = 'Expired';
+                } else {
+                    card.classList.add('active-member');
+                    document.getElementById('membershipStatus').textContent = 'Active';
+                }
+                document.getElementById('membershipType').textContent = getMembershipTypeName(customer.memberType);
+                document.getElementById('memberStartDate').textContent = formatDate(customer.memberSince);
+                document.getElementById('memberExpireDate').textContent = formatDate(customer.memberExpires);
+                document.getElementById('memberPriceClass').textContent = customer.priceClass || 'Member';
+            } else {
+                document.getElementById('membershipType').textContent = 'Non-Member';
+                document.getElementById('membershipStatus').textContent = 'No Membership';
+                document.getElementById('memberStartDate').textContent = '-';
+                document.getElementById('memberExpireDate').textContent = '-';
+                document.getElementById('memberPriceClass').textContent = 'Regular';
+            }
+            
+            // Update passes
+            renderPasses(customer);
+            
+            // Update transaction history
+            renderTransactions(customer);
+            
+            renderCustomerList();
+        }
+        
+        function renderPasses(customer) {
+            const list = document.getElementById('passList');
+            if (!customer.passes || customer.passes.length === 0) {
+                list.innerHTML = '<p style="color:#999;text-align:center;padding:40px;">No passes assigned</p>';
+                return;
+            }
+            list.innerHTML = customer.passes.map((pass, i) => {
+                const expired = new Date(pass.expires) < new Date();
+                return `
+                    <div class="pass-item ${expired ? 'expired' : 'active'}">
+                        <div class="pass-info">
+                            <h4>${getPassTypeName(pass.type)}</h4>
+                            <p>Expires: ${formatDate(pass.expires)}</p>
+                        </div>
+                        <div class="pass-meta">
+                            <div class="uses">${pass.remaining} uses</div>
+                            <div class="expiry">${expired ? 'EXPIRED' : 'Active'}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderTransactions(customer) {
+            const tbody = document.getElementById('transactionHistory');
+            const transactions = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
+            const customerTrans = transactions.filter(t => 
+                t.customer && t.customer.toLowerCase() === `${customer.firstName} ${customer.lastName}`.toLowerCase()
+            );
+            
+            if (customerTrans.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;padding:40px;">No transactions found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = customerTrans.slice(0, 20).map(t => `
+                <tr>
+                    <td>${t.time || 'N/A'}</td>
+                    <td>${t.isReturn ? 'Return' : 'Sale'}</td>
+                    <td>Transaction #${t.id}</td>
+                    <td class="${t.isReturn ? 'amount-negative' : 'amount-positive'}">
+                        ${t.isReturn ? '-' : '+'}$${Math.abs(t.amount).toFixed(2)}
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // ============ HELPERS ============
+        function getMembershipTypeName(type) {
+            const types = { monthly: 'Monthly Member', annual: 'Annual Member', vip: 'VIP Member' };
+            return types[type] || 'Member';
+        }
+        
+        function getPassTypeName(type) {
+            const types = { '10-round': '10 Round Pass', '20-round': '20 Round Pass', 'unlimited-month': 'Unlimited Month', 'day-pass': 'Day Pass' };
+            return types[type] || type;
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        
+        function formatPhoneNumber(input) {
+            let value = input.value.replace(/\D/g, '');
+            if (value.length > 10) value = value.slice(0, 10);
+            if (value.length >= 6) {
+                input.value = `(${value.slice(0,3)}) ${value.slice(3,6)}-${value.slice(6)}`;
+            } else if (value.length >= 3) {
+                input.value = `(${value.slice(0,3)}) ${value.slice(3)}`;
+            }
+        }
+        
+        // ============ ACTIONS ============
+        function createCustomer(e) {
+            e.preventDefault();
+            const firstName = document.getElementById('newFirstName').value.trim();
+            const lastName = document.getElementById('newLastName').value.trim();
+            const email = document.getElementById('newEmail').value.trim();
+            const phone = document.getElementById('newPhone').value.trim();
+            const memberType = document.getElementById('newMemberType').value;
+            
+            const newCustomer = {
+                id: Date.now(),
+                firstName,
+                lastName,
+                email,
+                phone,
+                isMember: !!memberType,
+                memberType: memberType || null,
+                memberSince: memberType ? new Date().toISOString().split('T')[0] : null,
+                memberExpires: memberType ? getExpirationDate(memberType) : null,
+                priceClass: memberType ? 'Member' : 'Regular',
+                passes: [],
+                transactions: [],
+                createdAt: new Date().toISOString()
+            };
+            
+            customers.push(newCustomer);
+            localStorage.setItem('gc_customers', JSON.stringify(customers));
+            hideModal('newCustomer');
+            e.target.reset();
+            renderCustomerList();
+            selectCustomer(newCustomer.id);
+            showToast(`Customer "${firstName} ${lastName}" created!`);
+        }
+        
+        function getExpirationDate(memberType) {
+            const date = new Date();
+            if (memberType === 'monthly') date.setMonth(date.getMonth() + 1);
+            else date.setFullYear(date.getFullYear() + 1);
+            return date.toISOString().split('T')[0];
+        }
+        
+        function saveCustomerChanges() {
+            if (!selectedCustomerId) return;
+            const customer = customers.find(c => c.id === selectedCustomerId);
+            if (!customer) return;
+            
+            customer.firstName = document.getElementById('editFirstName').value.trim();
+            customer.lastName = document.getElementById('editLastName').value.trim();
+            customer.email = document.getElementById('editEmail').value.trim();
+            customer.phone = document.getElementById('editPhone').value.trim();
+            customer.address = document.getElementById('editAddress').value.trim();
+            customer.city = document.getElementById('editCity').value.trim();
+            customer.state = document.getElementById('editState').value.trim();
+            customer.zip = document.getElementById('editZip').value.trim();
+            customer.notes = document.getElementById('editNotes').value.trim();
+            
+            localStorage.setItem('gc_customers', JSON.stringify(customers));
+            renderCustomerList();
+            document.getElementById('customerTitle').textContent = `${customer.firstName} ${customer.lastName}`;
+            showToast('Customer updated!');
+        }
+        
+        function deleteCustomer() {
+            if (!selectedCustomerId) return;
+            if (!confirm('Are you sure you want to delete this customer?')) return;
+            
+            customers = customers.filter(c => c.id !== selectedCustomerId);
+            localStorage.setItem('gc_customers', JSON.stringify(customers));
+            selectedCustomerId = null;
+            document.getElementById('noCustomerSelected').style.display = 'block';
+            document.getElementById('customerDetails').style.display = 'none';
+            document.getElementById('customerTitle').textContent = 'Select a Customer';
+            renderCustomerList();
+            showToast('Customer deleted', 'error');
+        }
+        
+        function addMembership(e) {
+            e.preventDefault();
+            if (!selectedCustomerId) return;
+            const customer = customers.find(c => c.id === selectedCustomerId);
+            if (!customer) return;
+            
+            const type = document.getElementById('membershipTypeSelect').value;
+            const startDate = document.getElementById('membershipStartDate').value || new Date().toISOString().split('T')[0];
+            const duration = parseInt(document.getElementById('membershipDuration').value);
+            
+            const expireDate = new Date(startDate);
+            expireDate.setMonth(expireDate.getMonth() + duration);
+            
+            customer.isMember = true;
+            customer.memberType = type;
+            customer.memberSince = startDate;
+            customer.memberExpires = expireDate.toISOString().split('T')[0];
+            customer.priceClass = 'Member';
+            
+            localStorage.setItem('gc_customers', JSON.stringify(customers));
+            hideModal('addMembership');
+            selectCustomer(selectedCustomerId);
+            showToast('Membership activated!');
+        }
+        
+        function addPass(e) {
+            e.preventDefault();
+            if (!selectedCustomerId) return;
+            const customer = customers.find(c => c.id === selectedCustomerId);
+            if (!customer) return;
+            
+            const type = document.getElementById('passType').value;
+            const expiry = document.getElementById('passExpiry').value || getExpirationDate('annual');
+            const uses = parseInt(document.getElementById('passUses').value) || 10;
+            
+            if (!customer.passes) customer.passes = [];
+            customer.passes.push({ type, expires: expiry, remaining: uses });
+            
+            localStorage.setItem('gc_customers', JSON.stringify(customers));
+            hideModal('addPass');
+            selectCustomer(selectedCustomerId);
+            showToast('Pass added!');
+        }
+        
+        function addTimestampNote() {
+            if (!selectedCustomerId) return;
+            const notesField = document.getElementById('editNotes');
+            const timestamp = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+            const noteText = prompt('Enter note:');
+            if (!noteText) return;
+            
+            const newNote = `[${timestamp}] ${noteText}`;
+            notesField.value = notesField.value ? `${newNote}\\n${notesField.value}` : newNote;
+            showToast('Note added - remember to save!', 'warning');
+        }
+        
+        function filterCustomers() {
+            renderCustomerList();
+        }
+        
+        // ============ UI ============
+        function switchTab(tabName, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + tabName).classList.add('active');
+        }
+        
+        function showModal(name) {
+            document.getElementById('modal-' + name).classList.add('active');
+            if (name === 'addMembership') {
+                document.getElementById('membershipStartDate').valueAsDate = new Date();
+            }
+            if (name === 'addPass') {
+                const defaultExpiry = new Date();
+                defaultExpiry.setFullYear(defaultExpiry.getFullYear() + 1);
+                document.getElementById('passExpiry').valueAsDate = defaultExpiry;
+            }
+        }
+        
+        function hideModal(name) {
+            document.getElementById('modal-' + name).classList.remove('active');
+        }
+        
+        function showToast(message, type = 'success') {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+        
+        // Clock
+        function updateClock() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+        
+        // Search
+        document.getElementById('customerSearch').addEventListener('input', renderCustomerList);
+        
+        // ============ QUICK ACTIONS ============
+        function quickEmail() {
+            if (!selectedCustomerId) return;
+            const customer = customers.find(c => c.id === selectedCustomerId);
+            if (!customer || !customer.email) {
+                showToast('No email address on file', 'error');
+                return;
+            }
+            window.open(`mailto:${customer.email}?subject=Golf Cove`);
+        }
+        
+        function quickSMS() {
+            if (!selectedCustomerId) return;
+            const customer = customers.find(c => c.id === selectedCustomerId);
+            if (!customer || !customer.phone) {
+                showToast('No phone number on file', 'error');
+                return;
+            }
+            window.open(`sms:${customer.phone.replace(/\D/g, '')}`);
+        }
+        
+        function quickBooking() {
+            if (!selectedCustomerId) return;
+            const customer = customers.find(c => c.id === selectedCustomerId);
+            if (!customer) return;
+            localStorage.setItem('gc_quickbook_customer', JSON.stringify(customer));
+            window.location.href = 'admin-pos.html';
+        }
+        
+        function printCustomerCard() {
+            if (!selectedCustomerId) return;
+            const customer = customers.find(c => c.id === selectedCustomerId);
+            if (!customer) return;
+            
+            const w = window.open('', '_blank', 'width=400,height=300');
+            const isMemberActive = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > new Date();
+            var html = '<html><head><title>Member Card</title><style>';
+            html += 'body { font-family: Arial, sans-serif; padding: 20px; }';
+            html += '.card { border: 2px solid ' + (isMemberActive ? '#f1c40f' : '#4a90a4') + '; border-radius: 12px; padding: 20px; max-width: 350px; }';
+            html += '.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }';
+            html += '.logo { font-weight: bold; font-size: 18px; color: #4a90a4; }';
+            html += '.badge { background: ' + (isMemberActive ? 'linear-gradient(135deg, #f1c40f, #e67e22)' : '#4a90a4') + '; color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 11px; }';
+            html += '.name { font-size: 22px; font-weight: bold; margin-bottom: 10px; }';
+            html += '.info { font-size: 13px; color: #666; line-height: 1.6; }';
+            html += '</style></head><bo' + 'dy>';
+            html += '<div class="card">';
+            html += '<div class="header"><span class="logo">GOLF COVE</span><span class="badge">' + (isMemberActive ? (customer.memberType?.toUpperCase() || 'MEMBER') : 'CUSTOMER') + '</span></div>';
+            html += '<div class="name">' + customer.firstName + ' ' + customer.lastName + '</div>';
+            html += '<div class="info">';
+            if (customer.email) html += '<div>Email: ' + customer.email + '</div>';
+            if (customer.phone) html += '<div>Phone: ' + customer.phone + '</div>';
+            if (isMemberActive) html += '<div>Expires: ' + formatDate(customer.memberExpires) + '</div>';
+            html += '</div></div>';
+            html += '<scr' + 'ipt>window.print();setTimeout(()=>window.close(),500);</scr' + 'ipt>';
+            html += '</bo' + 'dy></ht' + 'ml>';
+            w.document.write(html);
+            w.document.close();
+        }
+        
+        function exportCustomers() {
+            const headers = ['ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Address', 'City', 'State', 'Zip', 'Member', 'Member Type', 'Member Since', 'Expires', 'Price Class', 'Notes', 'Visit Count', 'Total Spent', 'No Shows', 'Created'];
+            const rows = customers.map(c => [
+                c.id,
+                c.firstName,
+                c.lastName,
+                c.email || '',
+                c.phone || '',
+                c.address || '',
+                c.city || '',
+                c.state || '',
+                c.zip || '',
+                c.isMember ? 'Yes' : 'No',
+                c.memberType || '',
+                c.memberSince || '',
+                c.memberExpires || '',
+                c.priceClass || 'Regular',
+                (c.notes || '').replace(/"/g, '""'),
+                c.visitCount || 0,
+                c.totalSpent || 0,
+                c.noShowCount || 0,
+                c.createdAt || ''
+            ]);
+            
+            const csv = [headers.join(','), ...rows.map(r => r.map(cell => `"${cell}"`).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `golf-cove-customers-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`Exported ${customers.length} customers to CSV`);
+        }
+        
+        // ============ IMPORT FUNCTIONALITY ============
+        function showImportModal() {
+            var html = '<div class="modal-overlay active" id="importModal" onclick="if(event.target===this)this.remove()">';
+            html += '<div class="modal" style="max-width:700px;" onclick="event.stopPropagation()">';
+            html += '<h3><i class="fas fa-upload"></i> Import Customers</h3>';
+            
+            html += '<div style="margin-bottom:20px;"><div style="display:flex;gap:10px;margin-bottom:15px;">';
+            html += '<button class="btn ' + (importTab === 'csv' ? 'btn-primary' : 'btn-secondary') + '" onclick="setImportTab(\'csv\')">CSV File</button>';
+            html += '<button class="btn ' + (importTab === 'json' ? 'btn-primary' : 'btn-secondary') + '" onclick="setImportTab(\'json\')">JSON File</button>';
+            html += '<button class="btn ' + (importTab === 'paste' ? 'btn-primary' : 'btn-secondary') + '" onclick="setImportTab(\'paste\')">Paste Data</button>';
+            html += '<button class="btn ' + (importTab === 'foreup' ? 'btn-primary' : 'btn-secondary') + '" onclick="setImportTab(\'foreup\')">foreUP Export</button>';
+            html += '</div></div>';
+            
+            html += '<div id="importTabContent">' + getImportTabContent() + '</div>';
+            
+            html += '<div id="importPreview" style="display:none;margin-top:15px;">';
+            html += '<h4 style="margin-bottom:10px;">Preview (<span id="previewCount">0</span> records)</h4>';
+            html += '<div style="max-height:200px;overflow-y:auto;border:1px solid #ddd;border-radius:6px;">';
+            html += '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead id="previewHeader"></thead><tbody id="previewBody"></tbody></table>';
+            html += '</div></div>';
+            
+            html += '<div style="margin-top:15px;padding:12px;background:#e3f2fd;border-radius:8px;font-size:13px;" id="importInfo">';
+            html += '<i class="fas fa-info-circle" style="color:#1976d2;"></i> ';
+            html += '<strong>CSV Format:</strong> First Name, Last Name, Email, Phone, Member (Yes/No), Member Type, Expires (YYYY-MM-DD)</div>';
+            
+            html += '<div class="modal-buttons" style="margin-top:20px;">';
+            html += '<button class="btn-cancel" onclick="document.getElementById(\'importModal\').remove()">Cancel</button>';
+            html += '<button class="btn-save" id="importBtn" onclick="executeImport()" disabled><i class="fas fa-upload"></i> Import <span id="importCountBtn">0</span> Customers</button>';
+            html += '</div></div></div>';
+            
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+        
+        var importTab = 'csv';
+        var pendingImport = [];
+        
+        function setImportTab(tab) {
+            importTab = tab;
+            document.getElementById('importTabContent').innerHTML = getImportTabContent();
+            document.getElementById('importPreview').style.display = 'none';
+            pendingImport = [];
+            updateImportButton();
+        }
+        
+        function getImportTabContent() {
+            if (importTab === 'csv') {
+                return `
+                    <div>
+                        <input type="file" id="csvFileInput" accept=".csv" onchange="handleCSVFile(this.files[0])" style="display:none;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('csvFileInput').click()" style="width:100%;padding:30px;border:2px dashed #ddd;background:#f8f9fa;">
+                            <i class="fas fa-file-csv" style="font-size:40px;display:block;margin-bottom:10px;color:#27ae60;"></i>
+                            Click to select CSV file or drag & drop
+                        </button>
+                    </div>
+                `;
+            } else if (importTab === 'json') {
+                return `
+                    <div>
+                        <input type="file" id="jsonFileInput" accept=".json" onchange="handleJSONFile(this.files[0])" style="display:none;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('jsonFileInput').click()" style="width:100%;padding:30px;border:2px dashed #ddd;background:#f8f9fa;">
+                            <i class="fas fa-file-code" style="font-size:40px;display:block;margin-bottom:10px;color:#3498db;"></i>
+                            Click to select JSON file
+                        </button>
+                        <p style="font-size:12px;color:#888;margin-top:10px;">JSON should be an array of customer objects with firstName, lastName, email, phone fields</p>
+                    </div>
+                `;
+            } else if (importTab === 'paste') {
+                return `
+                    <div>
+                        <textarea id="pasteData" rows="8" placeholder="Paste CSV data here...&#10;&#10;Example:&#10;John,Doe,john@email.com,555-1234,Yes,Annual,2025-12-31&#10;Jane,Smith,jane@email.com,555-5678,No,," style="width:100%;padding:12px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:12px;"></textarea>
+                        <button class="btn btn-secondary" onclick="handlePastedData()" style="margin-top:10px;"><i class="fas fa-check"></i> Parse Data</button>
+                    </div>
+                `;
+            } else if (importTab === 'foreup') {
+                return `
+                    <div>
+                        <input type="file" id="foreupFileInput" accept=".csv,.xlsx" onchange="handleForeUPFile(this.files[0])" style="display:none;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('foreupFileInput').click()" style="width:100%;padding:30px;border:2px dashed #ddd;background:#f8f9fa;">
+                            <i class="fas fa-golf-ball" style="font-size:40px;display:block;margin-bottom:10px;color:#4a90a4;"></i>
+                            Select foreUP Customer Export
+                        </button>
+                        <div style="margin-top:15px;padding:12px;background:#fff3cd;border-radius:8px;font-size:12px;">
+                            <strong>foreUP Column Mapping:</strong><br>
+                            First Name → firstName | Last Name → lastName | Email → email<br>
+                            Phone → phone | Member Type → memberType | Expiration → memberExpires
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        function handleCSVFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => parseCSV(e.target.result);
+            reader.readAsText(file);
+        }
+        
+        function handleJSONFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    const arr = Array.isArray(data) ? data : (data.customers || data.data || [data]);
+                    pendingImport = arr.map(normalizeCustomer);
+                    showImportPreview();
+                } catch (err) {
+                    showToast('Invalid JSON file: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function handlePastedData() {
+            const data = document.getElementById('pasteData').value;
+            if (!data.trim()) return showToast('No data to parse', 'error');
+            parseCSV(data);
+        }
+        
+        function handleForeUPFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => parseCSV(e.target.result, true);
+            reader.readAsText(file);
+        }
+        
+        function parseCSV(csvText, isForeUP = false) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) return showToast('CSV must have header row and data', 'error');
+            
+            // Parse header
+            const header = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+            
+            // Map columns
+            const colMap = isForeUP ? getForeUPColumnMap(header) : getStandardColumnMap(header);
+            
+            // Parse rows
+            pendingImport = [];
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                const values = parseCSVLine(lines[i]);
+                const customer = mapRowToCustomer(values, colMap);
+                if (customer.firstName || customer.lastName || customer.email) {
+                    pendingImport.push(customer);
+                }
+            }
+            
+            if (pendingImport.length === 0) {
+                showToast('No valid customer records found', 'error');
+                return;
+            }
+            
+            showImportPreview();
+        }
+        
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+        
+        function getStandardColumnMap(header) {
+            const map = {};
+            const mappings = {
+                'first name': 'firstName', 'firstname': 'firstName', 'first': 'firstName', 'fname': 'firstName',
+                'last name': 'lastName', 'lastname': 'lastName', 'last': 'lastName', 'lname': 'lastName',
+                'email': 'email', 'email address': 'email', 'e-mail': 'email',
+                'phone': 'phone', 'telephone': 'phone', 'mobile': 'phone', 'cell': 'phone', 'phone number': 'phone',
+                'address': 'address', 'street': 'address', 'street address': 'address',
+                'city': 'city', 'town': 'city',
+                'state': 'state', 'province': 'state',
+                'zip': 'zip', 'zipcode': 'zip', 'zip code': 'zip', 'postal': 'zip', 'postal code': 'zip',
+                'member': 'isMember', 'is member': 'isMember', 'membership': 'isMember',
+                'member type': 'memberType', 'membertype': 'memberType', 'type': 'memberType',
+                'expires': 'memberExpires', 'expiration': 'memberExpires', 'expiry': 'memberExpires', 'member expires': 'memberExpires',
+                'member since': 'memberSince', 'membersince': 'memberSince', 'since': 'memberSince',
+                'notes': 'notes', 'note': 'notes', 'comments': 'notes',
+                'price class': 'priceClass', 'priceclass': 'priceClass', 'pricing': 'priceClass'
+            };
+            
+            header.forEach((col, idx) => {
+                const normalized = col.toLowerCase().trim();
+                if (mappings[normalized]) {
+                    map[mappings[normalized]] = idx;
+                }
+            });
+            
+            return map;
+        }
+        
+        function getForeUPColumnMap(header) {
+            const map = {};
+            const foreUPMappings = {
+                'first name': 'firstName', 'first': 'firstName',
+                'last name': 'lastName', 'last': 'lastName',
+                'email': 'email', 'primary email': 'email',
+                'phone': 'phone', 'mobile phone': 'phone', 'home phone': 'phone', 'primary phone': 'phone',
+                'address': 'address', 'address 1': 'address', 'street': 'address',
+                'city': 'city',
+                'state': 'state',
+                'zip': 'zip', 'postal code': 'zip',
+                'membership type': 'memberType', 'member type': 'memberType', 'membership': 'memberType',
+                'membership status': 'memberStatus',
+                'expiration date': 'memberExpires', 'membership expiration': 'memberExpires', 'expires': 'memberExpires',
+                'join date': 'memberSince', 'membership start': 'memberSince',
+                'notes': 'notes', 'customer notes': 'notes'
+            };
+            
+            header.forEach((col, idx) => {
+                const normalized = col.toLowerCase().trim();
+                if (foreUPMappings[normalized]) {
+                    map[foreUPMappings[normalized]] = idx;
+                }
+            });
+            
+            return map;
+        }
+        
+        function mapRowToCustomer(values, colMap) {
+            const customer = {
+                id: Date.now() + Math.random(),
+                firstName: values[colMap.firstName] || '',
+                lastName: values[colMap.lastName] || '',
+                email: values[colMap.email] || '',
+                phone: values[colMap.phone] || '',
+                address: values[colMap.address] || '',
+                city: values[colMap.city] || '',
+                state: values[colMap.state] || '',
+                zip: values[colMap.zip] || '',
+                notes: values[colMap.notes] || '',
+                priceClass: values[colMap.priceClass] || 'Regular',
+                memberType: values[colMap.memberType] || null,
+                memberSince: values[colMap.memberSince] || null,
+                memberExpires: values[colMap.memberExpires] || null,
+                isMember: false,
+                passes: [],
+                createdAt: new Date().toISOString(),
+                importedAt: new Date().toISOString(),
+                visitCount: 0,
+                totalSpent: 0,
+                noShowCount: 0
+            };
+            
+            // Determine membership status
+            const memberVal = values[colMap.isMember];
+            if (memberVal) {
+                customer.isMember = ['yes', 'true', '1', 'y', 'active'].includes(memberVal.toLowerCase());
+            } else if (customer.memberType || customer.memberExpires) {
+                customer.isMember = true;
+            }
+            
+            // Validate/format dates
+            if (customer.memberExpires) {
+                customer.memberExpires = normalizeDate(customer.memberExpires);
+            }
+            if (customer.memberSince) {
+                customer.memberSince = normalizeDate(customer.memberSince);
+            }
+            
+            return customer;
+        }
+        
+        function normalizeCustomer(obj) {
+            return {
+                id: obj.id || Date.now() + Math.random(),
+                firstName: obj.firstName || obj.first_name || obj.firstname || '',
+                lastName: obj.lastName || obj.last_name || obj.lastname || '',
+                email: obj.email || '',
+                phone: obj.phone || obj.telephone || obj.mobile || '',
+                address: obj.address || '',
+                city: obj.city || '',
+                state: obj.state || '',
+                zip: obj.zip || obj.zipcode || '',
+                notes: obj.notes || '',
+                priceClass: obj.priceClass || obj.price_class || 'Regular',
+                isMember: obj.isMember || obj.is_member || false,
+                memberType: obj.memberType || obj.member_type || null,
+                memberSince: obj.memberSince || obj.member_since || null,
+                memberExpires: obj.memberExpires || obj.member_expires || null,
+                passes: obj.passes || [],
+                createdAt: obj.createdAt || new Date().toISOString(),
+                importedAt: new Date().toISOString(),
+                visitCount: obj.visitCount || 0,
+                totalSpent: obj.totalSpent || 0,
+                noShowCount: obj.noShowCount || 0
+            };
+        }
+        
+        function normalizeDate(dateStr) {
+            if (!dateStr) return null;
+            // Try to parse various date formats
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                return d.toISOString().split('T')[0];
+            }
+            // Try MM/DD/YYYY
+            const parts = dateStr.split(/[\/\-]/);
+            if (parts.length === 3) {
+                const [a, b, c] = parts;
+                if (a.length === 4) return `${a}-${b.padStart(2,'0')}-${c.padStart(2,'0')}`;
+                if (c.length === 4) return `${c}-${a.padStart(2,'0')}-${b.padStart(2,'0')}`;
+            }
+            return dateStr;
+        }
+        
+        function showImportPreview() {
+            const previewDiv = document.getElementById('importPreview');
+            const headerRow = document.getElementById('previewHeader');
+            const bodyDiv = document.getElementById('previewBody');
+            
+            // Show first 5 records
+            const preview = pendingImport.slice(0, 5);
+            
+            headerRow.innerHTML = '<tr style="background:#f8f9fa;"><th style="padding:8px;border:1px solid #ddd;">Name</th><th style="padding:8px;border:1px solid #ddd;">Email</th><th style="padding:8px;border:1px solid #ddd;">Phone</th><th style="padding:8px;border:1px solid #ddd;">Member</th></tr>';
+            
+            bodyDiv.innerHTML = preview.map(c => `
+                <tr>
+                    <td style="padding:8px;border:1px solid #ddd;">${c.firstName} ${c.lastName}</td>
+                    <td style="padding:8px;border:1px solid #ddd;">${c.email || '-'}</td>
+                    <td style="padding:8px;border:1px solid #ddd;">${c.phone || '-'}</td>
+                    <td style="padding:8px;border:1px solid #ddd;">${c.isMember ? '<span style="color:#27ae60;">Yes</span>' : 'No'}</td>
+                </tr>
+            `).join('');
+            
+            if (pendingImport.length > 5) {
+                bodyDiv.innerHTML += `<tr><td colspan="4" style="padding:8px;text-align:center;color:#888;">... and ${pendingImport.length - 5} more records</td></tr>`;
+            }
+            
+            document.getElementById('previewCount').textContent = pendingImport.length;
+            previewDiv.style.display = 'block';
+            updateImportButton();
+        }
+        
+        function updateImportButton() {
+            const btn = document.getElementById('importBtn');
+            const countSpan = document.getElementById('importCountBtn');
+            btn.disabled = pendingImport.length === 0;
+            countSpan.textContent = pendingImport.length;
+        }
+        
+        function executeImport() {
+            if (pendingImport.length === 0) return;
+            
+            const mode = confirm('Merge with existing customers?\n\nOK = Merge (skip duplicates by email)\nCancel = Replace all existing data');
+            
+            if (mode) {
+                // Merge mode - check for duplicates by email
+                const existingEmails = new Set(customers.filter(c => c.email).map(c => c.email.toLowerCase()));
+                let added = 0, skipped = 0;
+                
+                pendingImport.forEach(c => {
+                    if (c.email && existingEmails.has(c.email.toLowerCase())) {
+                        skipped++;
+                    } else {
+                        c.id = Date.now() + Math.random(); // Ensure unique ID
+                        customers.push(c);
+                        if (c.email) existingEmails.add(c.email.toLowerCase());
+                        added++;
+                    }
+                });
+                
+                localStorage.setItem('gc_customers', JSON.stringify(customers));
+                renderCustomerList();
+                document.getElementById('importModal').remove();
+                showToast(`Imported ${added} customers (${skipped} duplicates skipped)`, 'success');
+            } else {
+                // Replace mode
+                if (!confirm('⚠️ This will DELETE all existing customers and replace with imported data. Are you sure?')) return;
+                
+                customers = pendingImport.map(c => ({ ...c, id: Date.now() + Math.random() }));
+                localStorage.setItem('gc_customers', JSON.stringify(customers));
+                renderCustomerList();
+                document.getElementById('importModal').remove();
+                showToast(`Replaced with ${customers.length} imported customers`, 'success');
+            }
+        }
+        
+        // ============ KEYBOARD SHORTCUTS ============
+        document.addEventListener('keydown', (e) => {
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+                const importModal = document.getElementById('importModal');
+                if (importModal) importModal.remove();
+            }
+            // Ctrl+N for new customer
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                showModal('newCustomer');
+            }
+            // Ctrl+F to focus search
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('customerSearch').focus();
+            }
+            // Ctrl+E to export
+            if (e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                exportCustomers();
+            }
+            // Ctrl+I to import
+            if (e.ctrlKey && e.key === 'i') {
+                e.preventDefault();
+                showImportModal();
+            }
+        });
+        
+        // ============ CHECK EXPIRING MEMBERSHIPS ============
+        function checkExpiringMemberships() {
+            const thirtyDaysFromNow = new Date();
+            thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+            
+            const expiringSoon = customers.filter(c => {
+                if (!c.isMember || !c.memberExpires) return false;
+                const expDate = new Date(c.memberExpires);
+                return expDate > new Date() && expDate <= thirtyDaysFromNow;
+            });
+            
+            if (expiringSoon.length > 0) {
+                setTimeout(() => {
+                    showToast(`${expiringSoon.length} membership(s) expiring within 30 days`, 'warning');
+                }, 1500);
+            }
+        }
+        
+        // Init
+        renderCustomerList();
+        checkExpiringMemberships();
+        
+        // Check for customer ID in URL params (from global search)
+        const urlParams = new URLSearchParams(window.location.search);
+        const customerId = urlParams.get('id');
+        if (customerId) {
+            const cid = parseInt(customerId);
+            if (customers.find(c => c.id === cid)) {
+                setTimeout(() => selectCustomer(cid), 100);
+            }
+        }
+        
+        // Modal close on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('active'); });
+        });
+        
+        // Helper to save customers
+        function saveCustomers() {
+            localStorage.setItem('gc_customers', JSON.stringify(customers));
+        }
+        
+        // ============ BATCH OPERATIONS ============
+        function showBatchOperations() {
+            var memberCount = customers.filter(function(c) { return c.isMember; }).length;
+            var expiredCount = customers.filter(function(c) { return c.isMember && c.memberExpires && new Date(c.memberExpires) < new Date(); }).length;
+            var dupeCount = findPotentialDuplicates().length;
+            
+            var html = '<div class="modal-overlay active" id="batchModal" onclick="if(event.target===this)this.remove()">';
+            html += '<div class="modal" style="max-width:700px;" onclick="event.stopPropagation()">';
+            html += '<h3><i class="fas fa-tasks"></i> Batch Operations</h3>';
+            
+            html += '<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:15px;margin-bottom:20px;">';
+            html += '<div onclick="batchExtendMemberships()" style="padding:20px;border:2px solid #ddd;border-radius:10px;cursor:pointer;text-align:center;transition:all 0.2s;" onmouseover="this.style.borderColor=\'#27ae60\'" onmouseout="this.style.borderColor=\'#ddd\'">';
+            html += '<i class="fas fa-calendar-plus" style="font-size:30px;color:#27ae60;display:block;margin-bottom:10px;"></i>';
+            html += '<strong>Extend Memberships</strong>';
+            html += '<div style="font-size:12px;color:#666;">Add time to all memberships</div></div>';
+            html += '<div onclick="batchAssignMembership()" style="padding:20px;border:2px solid #ddd;border-radius:10px;cursor:pointer;text-align:center;transition:all 0.2s;" onmouseover="this.style.borderColor=\'#3498db\'" onmouseout="this.style.borderColor=\'#ddd\'">';
+            html += '<i class="fas fa-id-card" style="font-size:30px;color:#3498db;display:block;margin-bottom:10px;"></i>';
+            html += '<strong>Assign Membership</strong>';
+            html += '<div style="font-size:12px;color:#666;">Make customers into members</div></div>';
+            html += '<div onclick="batchAddPasses()" style="padding:20px;border:2px solid #ddd;border-radius:10px;cursor:pointer;text-align:center;transition:all 0.2s;" onmouseover="this.style.borderColor=\'#9b59b6\'" onmouseout="this.style.borderColor=\'#ddd\'">';
+            html += '<i class="fas fa-ticket-alt" style="font-size:30px;color:#9b59b6;display:block;margin-bottom:10px;"></i>';
+            html += '<strong>Add Passes</strong>';
+            html += '<div style="font-size:12px;color:#666;">Add passes to customers</div></div>';
+            html += '<div onclick="batchClearExpired()" style="padding:20px;border:2px solid #ddd;border-radius:10px;cursor:pointer;text-align:center;transition:all 0.2s;" onmouseover="this.style.borderColor=\'#e74c3c\'" onmouseout="this.style.borderColor=\'#ddd\'">';
+            html += '<i class="fas fa-user-times" style="font-size:30px;color:#e74c3c;display:block;margin-bottom:10px;"></i>';
+            html += '<strong>Clear Expired (' + expiredCount + ')</strong>';
+            html += '<div style="font-size:12px;color:#666;">Remove expired member status</div></div>';
+            html += '<div onclick="showMergeDuplicates()" style="padding:20px;border:2px solid #ddd;border-radius:10px;cursor:pointer;text-align:center;transition:all 0.2s;" onmouseover="this.style.borderColor=\'#f39c12\'" onmouseout="this.style.borderColor=\'#ddd\'">';
+            html += '<i class="fas fa-object-group" style="font-size:30px;color:#f39c12;display:block;margin-bottom:10px;"></i>';
+            html += '<strong>Merge Duplicates (' + dupeCount + ')</strong>';
+            html += '<div style="font-size:12px;color:#666;">Find & merge duplicate records</div></div>';
+            html += '<div onclick="batchUpdatePriceClass()" style="padding:20px;border:2px solid #ddd;border-radius:10px;cursor:pointer;text-align:center;transition:all 0.2s;" onmouseover="this.style.borderColor=\'#1abc9c\'" onmouseout="this.style.borderColor=\'#ddd\'">';
+            html += '<i class="fas fa-tag" style="font-size:30px;color:#1abc9c;display:block;margin-bottom:10px;"></i>';
+            html += '<strong>Update Price Class</strong>';
+            html += '<div style="font-size:12px;color:#666;">Set pricing tier for groups</div></div></div>';
+            
+            html += '<div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px;">';
+            html += '<h4 style="margin:0 0 10px;font-size:14px;"><i class="fas fa-chart-bar"></i> Database Summary</h4>';
+            html += '<div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:10px;text-align:center;">';
+            html += '<div><div style="font-size:24px;font-weight:700;color:#333;">' + customers.length + '</div><div style="font-size:11px;color:#666;">Total</div></div>';
+            html += '<div><div style="font-size:24px;font-weight:700;color:#27ae60;">' + memberCount + '</div><div style="font-size:11px;color:#666;">Members</div></div>';
+            html += '<div><div style="font-size:24px;font-weight:700;color:#e74c3c;">' + expiredCount + '</div><div style="font-size:11px;color:#666;">Expired</div></div>';
+            html += '<div><div style="font-size:24px;font-weight:700;color:#f39c12;">' + dupeCount + '</div><div style="font-size:11px;color:#666;">Duplicates</div></div>';
+            html += '</div></div>';
+            
+            html += '<div style="display:flex;gap:10px;">';
+            html += '<button class="btn-save" onclick="exportCustomersJSON()" style="flex:1;"><i class="fas fa-file-code"></i> Export JSON</button>';
+            html += '<button class="btn-cancel" onclick="document.getElementById(\'batchModal\').remove()" style="flex:1;">Close</button>';
+            html += '</div></div></div>';
+            
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function batchExtendMemberships() {
+            const members = customers.filter(c => c.isMember);
+            if (members.length === 0) return showToast('No members to extend', 'error');
+            
+            const days = prompt(`Extend ${members.length} memberships by how many days?`, '30');
+            if (!days || isNaN(parseInt(days))) return;
+            
+            const daysToAdd = parseInt(days);
+            let extended = 0;
+            
+            members.forEach(c => {
+                const currentExpiry = c.memberExpires ? new Date(c.memberExpires) : new Date();
+                if (currentExpiry < new Date()) currentExpiry.setTime(Date.now()); // If expired, start from today
+                currentExpiry.setDate(currentExpiry.getDate() + daysToAdd);
+                c.memberExpires = currentExpiry.toISOString().split('T')[0];
+                extended++;
+            });
+            
+            saveCustomers();
+            renderCustomerList();
+            document.getElementById('batchModal').remove();
+            showToast(`Extended ${extended} memberships by ${daysToAdd} days`);
+        }
+        
+        function batchAssignMembership() {
+            const nonMembers = customers.filter(c => !c.isMember);
+            if (nonMembers.length === 0) return showToast('All customers are already members', 'info');
+            
+            const html = `
+                <div class="modal-overlay active" id="assignMemberModal" onclick="if(event.target===this)this.remove()">
+                    <div class="modal" style="max-width:500px;" onclick="event.stopPropagation()">
+                        <h3><i class="fas fa-id-card"></i> Assign Membership</h3>
+                        <p style="margin-bottom:15px;color:#666;">Convert ${nonMembers.length} non-members to members</p>
+                        
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block;margin-bottom:5px;font-weight:600;">Membership Type:</label>
+                            <select id="batchMemberType" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                                <option value="Annual">Annual</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Gold">Gold</option>
+                                <option value="Silver">Silver</option>
+                                <option value="Bronze">Bronze</option>
+                                <option value="Trial">Trial</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block;margin-bottom:5px;font-weight:600;">Duration (days from today):</label>
+                            <input type="number" id="batchMemberDays" value="365" min="1" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                        </div>
+                        
+                        <div class="modal-buttons">
+                            <button class="btn-cancel" onclick="document.getElementById('assignMemberModal').remove()">Cancel</button>
+                            <button class="btn-save" onclick="executeBatchAssignMembership()"><i class="fas fa-check"></i> Assign to All</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function executeBatchAssignMembership() {
+            const memberType = document.getElementById('batchMemberType').value;
+            const days = parseInt(document.getElementById('batchMemberDays').value) || 365;
+            
+            const nonMembers = customers.filter(c => !c.isMember);
+            const expires = new Date();
+            expires.setDate(expires.getDate() + days);
+            
+            nonMembers.forEach(c => {
+                c.isMember = true;
+                c.memberType = memberType;
+                c.memberSince = new Date().toISOString().split('T')[0];
+                c.memberExpires = expires.toISOString().split('T')[0];
+            });
+            
+            saveCustomers();
+            renderCustomerList();
+            document.getElementById('assignMemberModal').remove();
+            document.getElementById('batchModal').remove();
+            showToast(`${nonMembers.length} customers now have ${memberType} membership`);
+        }
+        
+        function batchAddPasses() {
+            const count = prompt('How many passes to add to EACH customer?', '10');
+            if (!count || isNaN(parseInt(count))) return;
+            
+            const passCount = parseInt(count);
+            const passType = prompt('Pass type name:', '9-Hole Pass');
+            if (!passType) return;
+            
+            customers.forEach(c => {
+                if (!c.passes) c.passes = [];
+                c.passes.push({
+                    type: passType,
+                    quantity: passCount,
+                    addedAt: new Date().toISOString()
+                });
+            });
+            
+            saveCustomers();
+            document.getElementById('batchModal').remove();
+            showToast(`Added ${passCount} "${passType}" passes to ${customers.length} customers`);
+        }
+        
+        function batchClearExpired() {
+            const expired = customers.filter(c => c.isMember && c.memberExpires && new Date(c.memberExpires) < new Date());
+            if (expired.length === 0) return showToast('No expired memberships', 'info');
+            
+            if (!confirm(`Clear membership status for ${expired.length} expired members?`)) return;
+            
+            expired.forEach(c => {
+                c.isMember = false;
+                c.memberType = null;
+            });
+            
+            saveCustomers();
+            renderCustomerList();
+            document.getElementById('batchModal').remove();
+            showToast(`Cleared ${expired.length} expired memberships`);
+        }
+        
+        function batchUpdatePriceClass() {
+            const priceClass = prompt('Set price class for all customers to:', 'Regular');
+            if (!priceClass) return;
+            
+            customers.forEach(c => c.priceClass = priceClass);
+            saveCustomers();
+            document.getElementById('batchModal').remove();
+            showToast(`Set price class to "${priceClass}" for ${customers.length} customers`);
+        }
+        
+        function findPotentialDuplicates() {
+            const duplicates = [];
+            const seen = new Map();
+            
+            customers.forEach(c => {
+                // Check by email
+                if (c.email) {
+                    const email = c.email.toLowerCase();
+                    if (seen.has(email)) {
+                        duplicates.push({ type: 'email', original: seen.get(email), duplicate: c });
+                    } else {
+                        seen.set(email, c);
+                    }
+                }
+                
+                // Check by name
+                const fullName = `${c.firstName} ${c.lastName}`.toLowerCase().trim();
+                if (fullName.length > 2) {
+                    if (seen.has(fullName)) {
+                        duplicates.push({ type: 'name', original: seen.get(fullName), duplicate: c });
+                    } else {
+                        seen.set(fullName, c);
+                    }
+                }
+            });
+            
+            return duplicates;
+        }
+        
+        function showMergeDuplicates() {
+            var duplicates = findPotentialDuplicates();
+            if (duplicates.length === 0) {
+                return showToast('No potential duplicates found', 'info');
+            }
+            
+            var html = '<div class="modal-overlay active" id="mergeModal" onclick="if(event.target===this)this.remove()">';
+            html += '<div class="modal" style="max-width:800px;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">';
+            html += '<h3><i class="fas fa-object-group"></i> Potential Duplicates (' + duplicates.length + ')</h3>';
+            html += '<p style="margin-bottom:15px;color:#666;">Review and merge duplicate customer records</p>';
+            html += '<div style="max-height:400px;overflow-y:auto;">';
+            
+            duplicates.slice(0, 20).forEach(function(d, idx) {
+                html += '<div style="border:1px solid #ddd;border-radius:8px;padding:15px;margin-bottom:10px;display:flex;gap:15px;align-items:center;">';
+                html += '<div style="flex:1;background:#f8f9fa;padding:10px;border-radius:6px;">';
+                html += '<strong>' + d.original.firstName + ' ' + d.original.lastName + '</strong><br>';
+                html += '<span style="font-size:12px;color:#666;">' + (d.original.email || 'No email') + ' · ' + (d.original.phone || 'No phone') + '</span></div>';
+                html += '<div style="text-align:center;color:#e74c3c;"><i class="fas fa-equals"></i><br>';
+                html += '<span style="font-size:10px;text-transform:uppercase;">' + d.type + '</span></div>';
+                html += '<div style="flex:1;background:#f8f9fa;padding:10px;border-radius:6px;">';
+                html += '<strong>' + d.duplicate.firstName + ' ' + d.duplicate.lastName + '</strong><br>';
+                html += '<span style="font-size:12px;color:#666;">' + (d.duplicate.email || 'No email') + ' · ' + (d.duplicate.phone || 'No phone') + '</span></div>';
+                html += '<button onclick="mergeDuplicates(' + d.original.id + ', ' + d.duplicate.id + ')" style="padding:8px 15px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">';
+                html += '<i class="fas fa-compress-arrows-alt"></i> Merge</button></div>';
+            });
+            
+            html += '</div>';
+            html += '<div class="modal-buttons" style="margin-top:15px;">';
+            html += '<button class="btn-cancel" onclick="document.getElementById(\'mergeModal\').remove()">Close</button>';
+            html += '</div></div></div>';
+            
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function mergeDuplicates(keepId, removeId) {
+            const keep = customers.find(c => c.id === keepId);
+            const remove = customers.find(c => c.id === removeId);
+            
+            if (!keep || !remove) return showToast('Customer not found', 'error');
+            
+            // Merge data - prefer non-empty values
+            if (!keep.email && remove.email) keep.email = remove.email;
+            if (!keep.phone && remove.phone) keep.phone = remove.phone;
+            if (!keep.address && remove.address) keep.address = remove.address;
+            if (!keep.city && remove.city) keep.city = remove.city;
+            if (!keep.state && remove.state) keep.state = remove.state;
+            if (!keep.zip && remove.zip) keep.zip = remove.zip;
+            if (!keep.isMember && remove.isMember) {
+                keep.isMember = true;
+                keep.memberType = remove.memberType;
+                keep.memberSince = remove.memberSince;
+                keep.memberExpires = remove.memberExpires;
+            }
+            if (remove.passes && remove.passes.length > 0) {
+                if (!keep.passes) keep.passes = [];
+                keep.passes = keep.passes.concat(remove.passes);
+            }
+            keep.visitCount = (keep.visitCount || 0) + (remove.visitCount || 0);
+            keep.totalSpent = (keep.totalSpent || 0) + (remove.totalSpent || 0);
+            if (keep.notes && remove.notes) {
+                keep.notes = keep.notes + '\n---\n' + remove.notes;
+            } else if (remove.notes) {
+                keep.notes = remove.notes;
+            }
+            
+            // Remove the duplicate
+            customers = customers.filter(c => c.id !== removeId);
+            saveCustomers();
+            renderCustomerList();
+            
+            // Refresh merge modal
+            document.getElementById('mergeModal').remove();
+            showMergeDuplicates();
+            showToast('Customers merged successfully');
+        }
+        
+        function exportCustomersJSON() {
+            const data = {
+                exportDate: new Date().toISOString(),
+                version: '1.0',
+                customerCount: customers.length,
+                customers: customers
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `golf-cove-customers-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`Exported ${customers.length} customers to JSON`);
+        }
+        
+        // ============ EMAIL / COMMUNICATION ============
+        function showEmailComposer(customer) {
+            var recipients = customer ? [customer] : customers.filter(function(c) { return c.email; });
+            
+            var recipientOptions = '';
+            recipients.forEach(function(c) {
+                recipientOptions += '<option value="' + c.email + '" selected>' + c.firstName + ' ' + c.lastName + ' (' + c.email + ')</option>';
+            });
+            
+            var html = '<div id="emailModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">';
+            html += '<div style="background:#fff;padding:25px;border-radius:12px;max-width:600px;width:95%;max-height:90vh;overflow:auto;">';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">';
+            html += '<h3 style="margin:0;color:#4a90a4;"><i class="fas fa-envelope"></i> Email Composer</h3>';
+            html += '<button onclick="closeEmailModal()" style="background:none;border:none;font-size:20px;cursor:pointer;">&times;</button></div>';
+            
+            html += '<div style="margin-bottom:15px;">';
+            html += '<label style="display:block;margin-bottom:5px;font-weight:600;">Recipients:</label>';
+            html += '<select id="emailRecipients" multiple style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;min-height:80px;">';
+            html += recipientOptions;
+            html += '</select>';
+            html += '<div style="font-size:12px;color:#666;margin-top:5px;">' + recipients.length + ' recipients selected</div></div>';
+            
+            html += '<div style="margin-bottom:15px;">';
+            html += '<label style="display:block;margin-bottom:5px;font-weight:600;">Quick Templates:</label>';
+            html += '<select id="emailTemplate" onchange="loadEmailTemplate()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">';
+            html += '<option value="">-- Select Template --</option>';
+            html += '<option value="membership_reminder">Membership Renewal Reminder</option>';
+            html += '<option value="pass_expiring">Passes Expiring Soon</option>';
+            html += '<option value="special_offer">Special Offer</option>';
+            html += '<option value="thank_you">Thank You</option>';
+            html += '<option value="newsletter">Newsletter</option>';
+            html += '</select></div>';
+            
+            html += '<div style="margin-bottom:15px;">';
+            html += '<label style="display:block;margin-bottom:5px;font-weight:600;">Subject:</label>';
+            html += '<input type="text" id="emailSubject" placeholder="Email subject" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;"></div>';
+            
+            html += '<div style="margin-bottom:15px;">';
+            html += '<label style="display:block;margin-bottom:5px;font-weight:600;">Message:</label>';
+            html += '<textarea id="emailBody" rows="10" placeholder="Your message here...\n\nUse {{first_name}}, {{last_name}}, {{member_type}}, {{expiry_date}} for personalization" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:inherit;"></textarea></div>';
+            
+            html += '<div style="display:flex;gap:10px;">';
+            html += '<button onclick="closeEmailModal()" style="flex:1;padding:12px;background:#95a5a6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Cancel</button>';
+            html += '<button onclick="previewEmail()" style="flex:1;padding:12px;background:#3498db;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-eye"></i> Preview</button>';
+            html += '<button onclick="generateMailtoLinks()" style="flex:1;padding:12px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-paper-plane"></i> Generate Links</button>';
+            html += '</div></div></div>';
+            
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function closeEmailModal() {
+            const modal = document.getElementById('emailModal');
+            if (modal) modal.remove();
+        }
+        
+        function loadEmailTemplate() {
+            const template = document.getElementById('emailTemplate').value;
+            let subject = '', body = '';
+            
+            switch (template) {
+                case 'membership_reminder':
+                    subject = 'Your Golf Cove Membership Renewal';
+                    body = `Dear {{first_name}},
+
+Your Golf Cove membership is coming up for renewal soon!
+
+Current Membership: {{member_type}}
+Expiration Date: {{expiry_date}}
+
+Renew today to continue enjoying:
+• 10% discount on all purchases
+• Priority tee time bookings
+• Exclusive member events
+
+Visit us or call (555) 123-4567 to renew.
+
+Best regards,
+The Golf Cove Team`;
+                    break;
+                case 'pass_expiring':
+                    subject = 'Your Golf Cove Passes';
+                    body = `Hi {{first_name}},
+
+This is a friendly reminder about your Golf Cove passes. Some may be expiring soon!
+
+Don't miss out - use them before they expire or stop by to purchase more.
+
+See you on the course!
+The Golf Cove Team`;
+                    break;
+                case 'special_offer':
+                    subject = 'Special Offer Just for You!';
+                    body = `Dear {{first_name}},
+
+As a valued Golf Cove customer, we have a special offer for you!
+
+[Add your offer details here]
+
+This offer is valid until [date].
+
+Visit us soon!
+The Golf Cove Team`;
+                    break;
+                case 'thank_you':
+                    subject = 'Thank You for Visiting Golf Cove!';
+                    body = `Dear {{first_name}},
+
+Thank you for your recent visit to Golf Cove! We truly appreciate your business.
+
+We hope you had a great time and look forward to seeing you again soon.
+
+Sincerely,
+The Golf Cove Team`;
+                    break;
+                case 'newsletter':
+                    subject = 'Golf Cove Newsletter';
+                    body = `Hi {{first_name}},
+
+Here's what's happening at Golf Cove:
+
+📅 UPCOMING EVENTS
+[Add events here]
+
+🏌️ TIPS & NEWS
+[Add content here]
+
+🎁 PROMOTIONS
+[Add promotions here]
+
+Thanks for being part of the Golf Cove family!`;
+                    break;
+            }
+            
+            document.getElementById('emailSubject').value = subject;
+            document.getElementById('emailBody').value = body;
+        }
+        
+        function previewEmail() {
+            const subject = document.getElementById('emailSubject').value;
+            let body = document.getElementById('emailBody').value;
+            
+            // Replace with sample data
+            body = body
+                .replace(/\{\{first_name\}\}/g, 'John')
+                .replace(/\{\{last_name\}\}/g, 'Smith')
+                .replace(/\{\{member_type\}\}/g, 'Gold')
+                .replace(/\{\{expiry_date\}\}/g, '2025-12-31');
+            
+            const preview = window.open('', '_blank', 'width=600,height=500');
+            var html = '<html><head><title>Email Preview</title><style>';
+            html += 'body { font-family: Arial, sans-serif; padding: 30px; max-width: 600px; margin: 0 auto; }';
+            html += 'h2 { color: #4a90a4; border-bottom: 2px solid #4a90a4; padding-bottom: 10px; }';
+            html += '.meta { color: #666; font-size: 14px; margin-bottom: 20px; }';
+            html += '</style></head><bo' + 'dy>';
+            html += '<div class="meta">From: Golf Cove &lt;noreply@golfcove.com&gt;</div>';
+            html += '<h2>' + subject + '</h2>';
+            html += '<div style="white-space:pre-wrap;line-height:1.6;">' + body + '</div>';
+            html += '</bo' + 'dy></ht' + 'ml>';
+            preview.document.write(html);
+            preview.document.close();
+        }
+        
+        function generateMailtoLinks() {
+            const select = document.getElementById('emailRecipients');
+            const emails = Array.from(select.selectedOptions).map(o => o.value);
+            const subject = encodeURIComponent(document.getElementById('emailSubject').value);
+            const body = document.getElementById('emailBody').value;
+            
+            if (emails.length === 0) return showToast('No recipients selected', 'error');
+            
+            // For bulk, generate BCC link (if supported)
+            if (emails.length <= 10) {
+                // Small batch - use BCC
+                const bcc = emails.join(',');
+                const mailto = `mailto:?bcc=${bcc}&subject=${subject}&body=${encodeURIComponent(body)}`;
+                window.location.href = mailto;
+                showToast('Opening email client...', 'success');
+            } else {
+                // Large batch - export as CSV for mail merge
+                let csv = 'Email,First Name,Last Name,Member Type,Expiry Date\n';
+                emails.forEach(email => {
+                    const c = customers.find(cust => cust.email === email);
+                    if (c) {
+                        csv += `${c.email},"${c.firstName}","${c.lastName}","${c.memberType || ''}","${c.memberExpires || ''}"\n`;
+                    }
+                });
+                
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'email_recipients.csv';
+                a.click();
+                showToast(`Exported ${emails.length} recipients for mail merge`, 'success');
+            }
+            
+            closeEmailModal();
+        }
+        
+        // ============ MEMBERSHIP RENEWAL ALERTS ============
+        function showRenewalAlerts() {
+            const today = new Date();
+            const thirtyDays = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+            
+            const expiringSoon = customers.filter(function(c) {
+                if (!c.isMember || !c.memberExpires) return false;
+                var expiry = new Date(c.memberExpires);
+                return expiry >= today && expiry <= thirtyDays;
+            }).sort(function(a, b) { return new Date(a.memberExpires) - new Date(b.memberExpires); });
+            
+            const alreadyExpired = customers.filter(function(c) {
+                if (!c.isMember || !c.memberExpires) return false;
+                var expiry = new Date(c.memberExpires);
+                return expiry < today;
+            });
+            
+            var html = '<div id="renewalModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">';
+            html += '<div style="background:#fff;padding:25px;border-radius:12px;max-width:700px;width:95%;max-height:85vh;overflow:auto;">';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">';
+            html += '<h3 style="margin:0;color:#e67e22;"><i class="fas fa-bell"></i> Membership Renewal Alerts</h3>';
+            html += '<button onclick="closeRenewalModal()" style="background:none;border:none;font-size:20px;cursor:pointer;">&times;</button>';
+            html += '</div>';
+            
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px;">';
+            html += '<div style="background:#fff3e0;padding:15px;border-radius:8px;text-align:center;">';
+            html += '<div style="font-size:28px;font-weight:700;color:#e67e22;">' + expiringSoon.length + '</div>';
+            html += '<div style="font-size:12px;color:#666;">Expiring in 30 days</div>';
+            html += '</div>';
+            html += '<div style="background:#ffebee;padding:15px;border-radius:8px;text-align:center;">';
+            html += '<div style="font-size:28px;font-weight:700;color:#e74c3c;">' + alreadyExpired.length + '</div>';
+            html += '<div style="font-size:12px;color:#666;">Already Expired</div>';
+            html += '</div>';
+            html += '</div>';
+            
+            if (expiringSoon.length > 0) {
+                html += '<h4 style="margin:15px 0 10px;color:#e67e22;"><i class="fas fa-exclamation-triangle"></i> Expiring Soon</h4>';
+                html += '<div style="max-height:200px;overflow:auto;border:1px solid #ddd;border-radius:8px;">';
+                html += '<table style="width:100%;border-collapse:collapse;">';
+                html += '<thead><tr style="background:#f8f9fa;">';
+                html += '<th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">Customer</th>';
+                html += '<th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">Type</th>';
+                html += '<th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">Expires</th>';
+                html += '<th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">Actions</th>';
+                html += '</tr></thead><tbody>';
+                expiringSoon.forEach(function(c) {
+                    var daysLeft = Math.ceil((new Date(c.memberExpires) - today) / (1000 * 60 * 60 * 24));
+                    var dayColor = daysLeft <= 7 ? '#e74c3c' : '#e67e22';
+                    html += '<tr>';
+                    html += '<td style="padding:10px;border-bottom:1px solid #eee;">' + c.firstName + ' ' + c.lastName + '</td>';
+                    html += '<td style="padding:10px;border-bottom:1px solid #eee;">' + (c.memberType || 'Standard') + '</td>';
+                    html += '<td style="padding:10px;border-bottom:1px solid #eee;"><span style="color:' + dayColor + ';">' + daysLeft + ' days</span></td>';
+                    html += '<td style="padding:10px;border-bottom:1px solid #eee;"><button onclick="closeRenewalModal();selectCustomer(' + c.id + ')" style="background:#4a90a4;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;">View</button></td>';
+                    html += '</tr>';
+                });
+                html += '</tbody></table></div>';
+            }
+            
+            if (alreadyExpired.length > 0) {
+                html += '<h4 style="margin:20px 0 10px;color:#e74c3c;"><i class="fas fa-times-circle"></i> Already Expired</h4>';
+                html += '<div style="max-height:150px;overflow:auto;border:1px solid #ddd;border-radius:8px;">';
+                html += '<table style="width:100%;border-collapse:collapse;">';
+                html += '<thead><tr style="background:#f8f9fa;">';
+                html += '<th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">Customer</th>';
+                html += '<th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">Type</th>';
+                html += '<th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">Expired On</th>';
+                html += '</tr></thead><tbody>';
+                var showExpired = alreadyExpired.slice(0, 10);
+                showExpired.forEach(function(c) {
+                    html += '<tr>';
+                    html += '<td style="padding:10px;border-bottom:1px solid #eee;">' + c.firstName + ' ' + c.lastName + '</td>';
+                    html += '<td style="padding:10px;border-bottom:1px solid #eee;">' + (c.memberType || 'Standard') + '</td>';
+                    html += '<td style="padding:10px;border-bottom:1px solid #eee;">' + c.memberExpires + '</td>';
+                    html += '</tr>';
+                });
+                if (alreadyExpired.length > 10) {
+                    html += '<tr><td colspan="3" style="padding:10px;text-align:center;color:#666;">...and ' + (alreadyExpired.length - 10) + ' more</td></tr>';
+                }
+                html += '</tbody></table></div>';
+            }
+            
+            html += '<div style="margin-top:20px;display:flex;gap:10px;">';
+            html += '<button onclick="emailExpiringMembers()" style="flex:1;padding:12px;background:#4a90a4;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-envelope"></i> Email Expiring Members</button>';
+            html += '<button onclick="exportRenewalList()" style="flex:1;padding:12px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-download"></i> Export List</button>';
+            html += '</div></div></div>';
+            
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function closeRenewalModal() {
+            const modal = document.getElementById('renewalModal');
+            if (modal) modal.remove();
+        }
+        
+        function emailExpiringMembers() {
+            const today = new Date();
+            const thirtyDays = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+            
+            const expiring = customers.filter(c => {
+                if (!c.isMember || !c.memberExpires || !c.email) return false;
+                const expiry = new Date(c.memberExpires);
+                return expiry >= today && expiry <= thirtyDays;
+            });
+            
+            closeRenewalModal();
+            showEmailComposer();
+            
+            // Pre-select expiring members
+            setTimeout(() => {
+                document.getElementById('emailTemplate').value = 'membership_reminder';
+                loadEmailTemplate();
+                
+                const select = document.getElementById('emailRecipients');
+                Array.from(select.options).forEach(opt => {
+                    opt.selected = expiring.some(c => c.email === opt.value);
+                });
+            }, 100);
+        }
+        
+        function exportRenewalList() {
+            const today = new Date();
+            const thirtyDays = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+            
+            const all = customers.filter(c => c.isMember && c.memberExpires);
+            
+            let csv = 'Name,Email,Phone,Member Type,Expiration Date,Status\n';
+            all.forEach(c => {
+                const expiry = new Date(c.memberExpires);
+                let status = 'Active';
+                if (expiry < today) status = 'Expired';
+                else if (expiry <= thirtyDays) status = 'Expiring Soon';
+                
+                csv += `"${c.firstName} ${c.lastName}","${c.email || ''}","${c.phone || ''}","${c.memberType || 'Standard'}","${c.memberExpires}","${status}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `membership_renewals_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            showToast('Renewal list exported');
+        }
+        
+        // ============ CUSTOMER STATISTICS ============
+        function showCustomerStats() {
+            var members = customers.filter(function(c) { return c.isMember; });
+            var withEmail = customers.filter(function(c) { return c.email; });
+            var withPhone = customers.filter(function(c) { return c.phone; });
+            var totalSpent = customers.reduce(function(sum, c) { return sum + (c.totalSpent || 0); }, 0);
+            var totalVisits = customers.reduce(function(sum, c) { return sum + (c.visitCount || 0); }, 0);
+            
+            // Member types breakdown
+            var memberTypes = {};
+            members.forEach(function(c) {
+                var type = c.memberType || 'Standard';
+                memberTypes[type] = (memberTypes[type] || 0) + 1;
+            });
+            
+            // Price classes breakdown
+            var priceClasses = {};
+            customers.forEach(function(c) {
+                var pc = c.priceClass || 'Regular';
+                priceClasses[pc] = (priceClasses[pc] || 0) + 1;
+            });
+            
+            var emailPct = customers.length > 0 ? Math.round(withEmail.length / customers.length * 100) : 0;
+            var phonePct = customers.length > 0 ? Math.round(withPhone.length / customers.length * 100) : 0;
+            var emailWidth = customers.length > 0 ? (withEmail.length / customers.length * 100) : 0;
+            var phoneWidth = customers.length > 0 ? (withPhone.length / customers.length * 100) : 0;
+            
+            var html = '<div id="statsModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">';
+            html += '<div style="background:#fff;padding:25px;border-radius:12px;max-width:700px;width:95%;">';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">';
+            html += '<h3 style="margin:0;color:#4a90a4;"><i class="fas fa-chart-pie"></i> Customer Statistics</h3>';
+            html += '<button onclick="document.getElementById(\'statsModal\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">&times;</button>';
+            html += '</div>';
+            
+            html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;">';
+            html += '<div style="background:#e3f2fd;padding:15px;border-radius:8px;text-align:center;">';
+            html += '<div style="font-size:24px;font-weight:700;color:#1976d2;">' + customers.length + '</div>';
+            html += '<div style="font-size:11px;color:#666;">Total Customers</div></div>';
+            html += '<div style="background:#fff3e0;padding:15px;border-radius:8px;text-align:center;">';
+            html += '<div style="font-size:24px;font-weight:700;color:#e67e22;">' + members.length + '</div>';
+            html += '<div style="font-size:11px;color:#666;">Members</div></div>';
+            html += '<div style="background:#e8f5e9;padding:15px;border-radius:8px;text-align:center;">';
+            html += '<div style="font-size:24px;font-weight:700;color:#27ae60;">$' + totalSpent.toFixed(0) + '</div>';
+            html += '<div style="font-size:11px;color:#666;">Total Revenue</div></div>';
+            html += '<div style="background:#f3e5f5;padding:15px;border-radius:8px;text-align:center;">';
+            html += '<div style="font-size:24px;font-weight:700;color:#9b59b6;">' + totalVisits + '</div>';
+            html += '<div style="font-size:11px;color:#666;">Total Visits</div></div>';
+            html += '</div>';
+            
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
+            html += '<div style="background:#f8f9fa;padding:15px;border-radius:8px;">';
+            html += '<h4 style="margin:0 0 10px;font-size:14px;color:#333;">Contact Info Coverage</h4>';
+            html += '<div style="margin-bottom:10px;">';
+            html += '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;">';
+            html += '<span>With Email</span><span>' + emailPct + '%</span></div>';
+            html += '<div style="background:#e0e0e0;border-radius:4px;height:8px;">';
+            html += '<div style="background:#4a90a4;height:100%;border-radius:4px;width:' + emailWidth + '%;"></div></div></div>';
+            html += '<div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;">';
+            html += '<span>With Phone</span><span>' + phonePct + '%</span></div>';
+            html += '<div style="background:#e0e0e0;border-radius:4px;height:8px;">';
+            html += '<div style="background:#27ae60;height:100%;border-radius:4px;width:' + phoneWidth + '%;"></div></div></div></div>';
+            
+            html += '<div style="background:#f8f9fa;padding:15px;border-radius:8px;">';
+            html += '<h4 style="margin:0 0 10px;font-size:14px;color:#333;">Member Types</h4>';
+            var memberTypeKeys = Object.keys(memberTypes);
+            if (memberTypeKeys.length > 0) {
+                memberTypeKeys.forEach(function(type) {
+                    html += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;font-size:13px;">';
+                    html += '<span>' + type + '</span><strong>' + memberTypes[type] + '</strong></div>';
+                });
+            } else {
+                html += '<p style="color:#666;font-size:13px;">No members yet</p>';
+            }
+            html += '</div></div>';
+            
+            html += '<div style="margin-top:20px;background:#f8f9fa;padding:15px;border-radius:8px;">';
+            html += '<h4 style="margin:0 0 10px;font-size:14px;color:#333;">Price Classes</h4>';
+            html += '<div style="display:flex;gap:15px;flex-wrap:wrap;">';
+            Object.keys(priceClasses).forEach(function(pc) {
+                html += '<div style="background:#fff;padding:10px 15px;border-radius:6px;border:1px solid #ddd;">';
+                html += '<div style="font-weight:600;">' + pc + '</div>';
+                html += '<div style="font-size:12px;color:#666;">' + priceClasses[pc] + ' customers</div></div>';
+            });
+            html += '</div></div></div></div>';
+            
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+    </script>
+</body>
+</html>

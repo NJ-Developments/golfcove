@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Golf Cove - New Haven</title>
+    <title>Golf Cove - Admin Panel</title>
     <link rel="icon" type="image/png" href="images/golfcovelogo.png">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -719,23 +719,65 @@
             margin-bottom: 15px;
         }
         
-        /* Setup Form */
+        /* Setup Form / Login Screen */
         .setup-container {
-            max-width: 500px;
-            margin: 60px auto;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
             padding: 20px;
+        }
+        .setup-container.active {
+            display: flex;
         }
         .setup-card {
             background: #fff;
             border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 420px;
         }
         .setup-card h1 {
             text-align: center;
             color: #37b24a;
             margin-bottom: 25px;
             font-size: 24px;
+        }
+        .setup-card .form-group {
+            margin-bottom: 18px;
+        }
+        .setup-card .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+        }
+        .setup-card .form-group input,
+        .setup-card .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        .setup-card .form-group input:focus,
+        .setup-card .form-group select:focus {
+            border-color: #37b24a;
+            outline: none;
+        }
+        .setup-card .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
         }
         
         /* Desktop/Mobile */
@@ -768,6 +810,261 @@
             .main-content {
                 padding: 20px;
             }
+        }
+
+        /* ============ NEW ADMIN SECTION STYLES ============ */
+        
+        /* Staff Grid */
+        .staff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .staff-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #ccc;
+        }
+        .staff-card.manager { border-left-color: #e74c3c; }
+        .staff-card.bartender { border-left-color: #3498db; }
+        .staff-card.server { border-left-color: #27ae60; }
+        .staff-card h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+        }
+        .staff-card .role-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .staff-card .role-badge.manager { background: #fde8e8; color: #e74c3c; }
+        .staff-card .role-badge.bartender { background: #e8f4fd; color: #3498db; }
+        .staff-card .role-badge.server { background: #e8fde8; color: #27ae60; }
+        .staff-card .pin-display {
+            font-family: monospace;
+            font-size: 16px;
+            color: #666;
+            margin: 10px 0;
+        }
+        .staff-card .permissions {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+        }
+        .staff-card .btn-group {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .staff-card .btn-group button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .staff-card .btn-edit { background: #3498db; color: white; }
+        .staff-card .btn-delete { background: #e74c3c; color: white; }
+
+        /* Stats Grid for Reports */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .stat-card .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #37b24a;
+        }
+        .stat-card .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .stat-card.blue .stat-value { color: #3498db; }
+        .stat-card.orange .stat-value { color: #e67e22; }
+        .stat-card.purple .stat-value { color: #9b59b6; }
+
+        /* Report Generator */
+        .report-generator {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .report-generator h3 {
+            margin: 0 0 20px;
+        }
+        .report-filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .report-filters .filter-group label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .report-filters input, .report-filters select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .report-output {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Time Clock Table */
+        .timeclock-table {
+            width: 100%;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .timeclock-table th, .timeclock-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .timeclock-table th {
+            background: #37b24a;
+            color: white;
+            font-weight: 600;
+        }
+        .timeclock-table tr:hover { background: #f8f9fa; }
+        .clock-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .clock-actions button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-clock-in { background: #27ae60; color: white; }
+        .btn-clock-out { background: #e74c3c; color: white; }
+
+        /* System Settings */
+        .settings-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .settings-section h3 {
+            margin: 0 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #37b24a;
+        }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .setting-row:last-child { border-bottom: none; }
+        .setting-label {
+            font-weight: 500;
+        }
+        .setting-label small {
+            display: block;
+            color: #888;
+            font-weight: normal;
+            margin-top: 3px;
+        }
+        .setting-input input, .setting-input select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 26px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #37b24a;
+        }
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        .danger-zone {
+            border: 2px solid #e74c3c;
+        }
+        .danger-zone h3 {
+            color: #e74c3c;
+            border-bottom-color: #e74c3c;
+        }
+        .danger-zone button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -840,6 +1137,20 @@
                 </div>
                 <div class="nav-item" data-section="pins" onclick="showSection('pins')">
                     <i class="fas fa-key"></i> PINs
+                </div>
+                <div class="nav-divider"></div>
+                <div style="padding:10px 20px;font-size:11px;color:#999;text-transform:uppercase;font-weight:700;">Business Admin</div>
+                <div class="nav-item" data-section="staff" onclick="showSection('staff')">
+                    <i class="fas fa-id-badge"></i> Staff Management
+                </div>
+                <div class="nav-item" data-section="timeclock" onclick="showSection('timeclock')">
+                    <i class="fas fa-clock"></i> Time Clock
+                </div>
+                <div class="nav-item" data-section="reports" onclick="showSection('reports')">
+                    <i class="fas fa-chart-bar"></i> Sales Reports
+                </div>
+                <div class="nav-item" data-section="inventory" onclick="showSection('inventory')">
+                    <i class="fas fa-boxes"></i> Inventory
                 </div>
                 <div class="nav-divider"></div>
                 <div class="nav-item" data-section="settings" onclick="showSection('settings')">
@@ -1051,6 +1362,126 @@
                 <button class="btn" onclick="savePars()" style="margin-top: 15px;"><i class="fas fa-check"></i> Save Pars</button>
             </div>
         </div>
+
+        <!-- Staff Management Section -->
+        <div class="page-section" id="section-staff">
+            <h1 class="page-title"><i class="fas fa-id-badge"></i> Staff Management</h1>
+            
+            <div class="card">
+                <h3><i class="fas fa-users-cog"></i> Staff Members</h3>
+                <div id="staffList"></div>
+                <button class="btn" onclick="showAddStaffModal()" style="margin-top: 15px;"><i class="fas fa-plus"></i> Add Staff Member</button>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-shield-alt"></i> Role Permissions</h3>
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <thead>
+                        <tr style="background:#f5f6f8;">
+                            <th style="padding:12px;text-align:left;">Permission</th>
+                            <th style="padding:12px;text-align:center;">Manager</th>
+                            <th style="padding:12px;text-align:center;">Bartender</th>
+                            <th style="padding:12px;text-align:center;">Server</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td style="padding:10px;border-bottom:1px solid #eee;">Apply Discounts</td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-check" style="color:#27ae60;"></i> 100%</td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-check" style="color:#f39c12;"></i> 20%</td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-times" style="color:#e74c3c;"></i></td></tr>
+                        <tr><td style="padding:10px;border-bottom:1px solid #eee;">Void Sales</td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-check" style="color:#27ae60;"></i></td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-check" style="color:#27ae60;"></i></td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-times" style="color:#e74c3c;"></i></td></tr>
+                        <tr><td style="padding:10px;border-bottom:1px solid #eee;">Process Refunds</td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-check" style="color:#27ae60;"></i></td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-times" style="color:#e74c3c;"></i></td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-times" style="color:#e74c3c;"></i></td></tr>
+                        <tr><td style="padding:10px;border-bottom:1px solid #eee;">Open Cash Drawer</td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-check" style="color:#27ae60;"></i></td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-check" style="color:#27ae60;"></i></td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-times" style="color:#e74c3c;"></i></td></tr>
+                        <tr><td style="padding:10px;border-bottom:1px solid #eee;">View Reports</td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-check" style="color:#27ae60;"></i></td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-times" style="color:#e74c3c;"></i></td><td style="text-align:center;border-bottom:1px solid #eee;"><i class="fas fa-times" style="color:#e74c3c;"></i></td></tr>
+                        <tr><td style="padding:10px;">Manage Staff</td><td style="text-align:center;"><i class="fas fa-check" style="color:#27ae60;"></i></td><td style="text-align:center;"><i class="fas fa-times" style="color:#e74c3c;"></i></td><td style="text-align:center;"><i class="fas fa-times" style="color:#e74c3c;"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Time Clock Section -->
+        <div class="page-section" id="section-timeclock">
+            <h1 class="page-title"><i class="fas fa-clock"></i> Time Clock</h1>
+            
+            <div class="card">
+                <h3><i class="fas fa-calendar-day"></i> Today's Activity</h3>
+                <div id="todayTimeclock"></div>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-history"></i> Time Clock History</h3>
+                <div style="display:flex;gap:10px;margin-bottom:15px;">
+                    <input type="date" id="timeclockStartDate" style="padding:8px;border:1px solid #ddd;border-radius:6px;">
+                    <input type="date" id="timeclockEndDate" style="padding:8px;border:1px solid #ddd;border-radius:6px;">
+                    <button class="btn btn-sm" onclick="filterTimeclock()"><i class="fas fa-filter"></i> Filter</button>
+                    <button class="btn btn-sm btn-secondary" onclick="exportTimeclock()"><i class="fas fa-download"></i> Export</button>
+                </div>
+                <div id="timeclockHistory"></div>
+            </div>
+        </div>
+
+        <!-- Sales Reports Section -->
+        <div class="page-section" id="section-reports">
+            <h1 class="page-title"><i class="fas fa-chart-bar"></i> Sales Reports</h1>
+            
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;">
+                <div class="card" style="text-align:center;margin-bottom:0;">
+                    <div style="font-size:28px;font-weight:700;color:#27ae60;" id="reportTodaySales">$0.00</div>
+                    <div style="font-size:12px;color:#888;">Today's Sales</div>
+                </div>
+                <div class="card" style="text-align:center;margin-bottom:0;">
+                    <div style="font-size:28px;font-weight:700;color:#3498db;" id="reportWeekSales">$0.00</div>
+                    <div style="font-size:12px;color:#888;">This Week</div>
+                </div>
+                <div class="card" style="text-align:center;margin-bottom:0;">
+                    <div style="font-size:28px;font-weight:700;color:#9b59b6;" id="reportMonthSales">$0.00</div>
+                    <div style="font-size:12px;color:#888;">This Month</div>
+                </div>
+                <div class="card" style="text-align:center;margin-bottom:0;">
+                    <div style="font-size:28px;font-weight:700;color:#e67e22;" id="reportTransCount">0</div>
+                    <div style="font-size:12px;color:#888;">Transactions</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-list"></i> Recent Transactions</h3>
+                <div id="recentTransactionsReport"></div>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-chart-pie"></i> Sales by Category</h3>
+                <div id="salesByCategory"></div>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-user-tie"></i> Sales by Employee</h3>
+                <div id="salesByEmployee"></div>
+            </div>
+        </div>
+
+        <!-- Inventory Section -->
+        <div class="page-section" id="section-inventory">
+            <h1 class="page-title"><i class="fas fa-boxes"></i> Inventory Management</h1>
+            
+            <div class="card">
+                <h3><i class="fas fa-exclamation-triangle" style="color:#e74c3c;"></i> Low Stock Alerts</h3>
+                <div id="lowStockAlerts"></div>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-warehouse"></i> All Inventory</h3>
+                <div style="display:flex;gap:10px;margin-bottom:15px;">
+                    <input type="text" id="inventorySearch" placeholder="Search items..." style="flex:1;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                    <select id="inventoryCategory" style="padding:10px;border:1px solid #ddd;border-radius:6px;">
+                        <option value="">All Categories</option>
+                        <option value="food">Food</option>
+                        <option value="beer">Beer</option>
+                        <option value="wine">Wine</option>
+                        <option value="cocktails">Cocktails</option>
+                        <option value="beverage">Beverages</option>
+                        <option value="merch">Merchandise</option>
+                    </select>
+                </div>
+                <div id="inventoryList"></div>
+            </div>
+        </div>
         
             </div><!-- end main-content -->
         </main>
@@ -1067,7 +1498,7 @@
     </button>
 
     <!-- Login Screen -->
-    <div class="setup-container" id="loginContainer">
+    <div class="setup-container active" id="loginContainer">
         <div class="setup-card" style="max-width: 400px;">
             <div style="text-align: center; margin-bottom: 25px;">
                 <img src="images/golfcovelogo.png" alt="Golf Cove" style="height: 50px; margin-bottom: 15px;">
@@ -1097,7 +1528,7 @@
     </div>
 
     <!-- Setup Form (shown when no league exists) -->
-    <div class="setup-container" id="setupContainer" style="display: none;">
+    <div class="setup-container" id="setupContainer">
         <div class="setup-card">
             <h1><i class="fas fa-trophy"></i> Create League</h1>
             <form onsubmit="createLeague(event)">
@@ -1298,7 +1729,7 @@
             if (confirm('Are you sure you want to sign out?')) {
                 try {
                     await auth.signOut();
-                    document.getElementById('loginContainer').style.display = 'flex';
+                    document.getElementById('loginContainer').classList.add('active');
                 } catch (error) {
                     console.error('Logout error:', error);
                     alert('Error signing out. Please try again.');
@@ -1310,15 +1741,18 @@
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
-                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('loginContainer').classList.remove('active');
                 document.getElementById('desktopLogoutBtn').style.display = 'block';
                 initAdmin();
             } else {
                 currentUser = null;
                 detachLeagueListener();
                 league = null;
-                document.getElementById('loginContainer').style.display = 'flex';
+                document.getElementById('loginContainer').classList.add('active');
+                document.getElementById('setupContainer').classList.remove('active');
+                document.getElementById('adminWrapper').style.display = 'none';
                 document.getElementById('desktopLogoutBtn').style.display = 'none';
+                document.getElementById('mobileAdminToggle').style.display = 'none';
                 setTimeout(() => {
                     document.getElementById('adminEmail')?.focus();
                 }, 100);
@@ -1368,12 +1802,14 @@
                 }
                 
                 if (league) {
-                    document.getElementById('setupContainer').style.display = 'none';
+                    document.getElementById('loginContainer').classList.remove('active');
+                    document.getElementById('setupContainer').classList.remove('active');
                     document.getElementById('adminWrapper').style.display = 'flex';
                     document.getElementById('mobileAdminToggle').style.display = '';
                     renderAll();
                 } else {
-                    document.getElementById('setupContainer').style.display = 'block';
+                    document.getElementById('loginContainer').classList.remove('active');
+                    document.getElementById('setupContainer').classList.add('active');
                     document.getElementById('adminWrapper').style.display = 'none';
                     document.getElementById('mobileAdminToggle').style.display = 'none';
                 }
@@ -1791,7 +2227,7 @@
                         color: #333;
                         border-bottom: 1px solid #000;
                     }
-                </style>
+                <\/style>
                 <div class="scorecard">
                     <div class="top-section">
                         <div class="center-header">
@@ -2032,6 +2468,12 @@
             // Close sidebar on mobile
             document.getElementById('adminSidebar').classList.remove('mobile-open');
             document.getElementById('mobileSidebarOverlay').classList.remove('open');
+            
+            // Render content for admin sections
+            if (section === 'staff') loadStaffList();
+            else if (section === 'reports') loadSalesReports();
+            else if (section === 'timeclock') loadTimeclock();
+            else if (section === 'inventory') loadInventory();
         }
         
         // Teams
@@ -2262,46 +2704,45 @@
         }
         
         function printQR() {
-            const round = league.rounds[league.rounds.length - 1];
-            const url = document.getElementById('scoringUrl').textContent;
-            const qrImg = document.querySelector('#qrcode img')?.src || '';
+            var round = league.rounds[league.rounds.length - 1];
+            var url = document.getElementById('scoringUrl').textContent;
+            var qrImg = document.querySelector('#qrcode img')?.src || '';
+            var roundDate = round.startDate ? new Date(round.startDate).toLocaleDateString() : (round.date ? new Date(round.date).toLocaleDateString() : 'TBD');
             
-            const w = window.open('', '_blank');
-            w.document.write(`
-                <!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>
-                <style>body{font-family:Arial;text-align:center;padding:40px;}h1{color:#37b24a;}</style>
-                </head><body>
-                <h1>⛳ ${league.name}</h1>
-                <h2>${round.name} - ${round.startDate ? new Date(round.startDate).toLocaleDateString() : (round.date ? new Date(round.date).toLocaleDateString() : 'TBD')}</h2>
-                <img src="${qrImg}" width="250" height="250" style="margin:30px;">
-                <p>Scan to enter your score</p>
-                <p style="font-family:monospace;background:#f5f5f5;padding:10px;border-radius:5px;">${url}</p>
-                </body></html>
-            `);
+            var w = window.open('', '_blank');
+            var html = '<!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>';
+            html += '<style>body{font-family:Arial;text-align:center;padding:40px;}h1{color:#37b24a;}<\/style>';
+            html += '</head><bo' + 'dy>';
+            html += '<h1>⛳ ' + league.name + '</h1>';
+            html += '<h2>' + round.name + ' - ' + roundDate + '</h2>';
+            html += '<img src="' + qrImg + '" width="250" height="250" style="margin:30px;">';
+            html += '<p>Scan to enter your score</p>';
+            html += '<p style="font-family:monospace;background:#f5f5f5;padding:10px;border-radius:5px;">' + url + '</p>';
+            html += '</bo' + 'dy></ht' + 'ml>';
+            w.document.write(html);
             w.document.close();
-            setTimeout(() => w.print(), 250);
+            setTimeout(function() { w.print(); }, 250);
         }
         
         // Print Functions
         function printPinSheet() {
             if (league.players.length === 0) { alert('No players'); return; }
-            const w = window.open('', '_blank');
-            w.document.write(`
-                <!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>
-                <style>body{font-family:Arial;padding:30px;}h1{color:#37b24a;}table{width:100%;border-collapse:collapse;}th,td{padding:10px 15px;text-align:left;border-bottom:1px solid #ddd;}th{background:#f5f5f5;}.pin{font-family:monospace;font-size:18px;font-weight:bold;}</style>
-                </head><body>
-                <h1>⛳ ${league.name}</h1>
-                <h2>Player PINs</h2>
-                <table><tr><th>Player</th><th>Team</th><th>PIN</th></tr>
-                ${league.players.map(p => {
-                    const team = league.teams.find(t => t.id === p.teamId);
-                    return `<tr><td>${p.name}</td><td>${team?.name || '-'}</td><td class="pin">${p.pin}</td></tr>`;
-                }).join('')}
-                </table>
-                </body></html>
-            `);
+            var w = window.open('', '_blank');
+            var html = '<!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>';
+            html += '<style>body{font-family:Arial;padding:30px;}h1{color:#37b24a;}table{width:100%;border-collapse:collapse;}th,td{padding:10px 15px;text-align:left;border-bottom:1px solid #ddd;}th{background:#f5f5f5;}.pin{font-family:monospace;font-size:18px;font-weight:bold;}<\/style>';
+            html += '</head><bo' + 'dy>';
+            html += '<h1>⛳ ' + league.name + '</h1>';
+            html += '<h2>Player PINs</h2>';
+            html += '<table><tr><th>Player</th><th>Team</th><th>PIN</th></tr>';
+            league.players.forEach(function(p) {
+                var team = league.teams.find(function(t) { return t.id === p.teamId; });
+                html += '<tr><td>' + p.name + '</td><td>' + (team?.name || '-') + '</td><td class="pin">' + p.pin + '</td></tr>';
+            });
+            html += '</table>';
+            html += '</bo' + 'dy></ht' + 'ml>';
+            w.document.write(html);
             w.document.close();
-            setTimeout(() => w.print(), 250);
+            setTimeout(function() { w.print(); }, 250);
         }
         
         function printScorecards() {
@@ -2517,7 +2958,7 @@
                         body { padding: 0; }
                         .scorecard { border-width: 1px; }
                     }
-                </style></head><body>${Array.from({length: cardCount}, () => buildCard()).join('')}</body></html>
+                <\/style><\/head><body>${Array.from({length: cardCount}, () => buildCard()).join('')}<\/body><\/html>
             `);
             w.document.close();
             setTimeout(() => w.print(), 300);
@@ -2566,6 +3007,402 @@
             } catch (error) {
                 console.error('Save error:', error);
                 alert('Error: ' + error.message);
+            }
+        }
+        
+        // ============ STAFF MANAGEMENT ============
+        const defaultStaffList = [
+            { id: 1, name: 'EJ Sattelberger', pin: '1234', role: 'manager', color: '#3498db', active: true },
+            { id: 2, name: 'Mike Johnson', pin: '5678', role: 'bartender', color: '#e67e22', active: true },
+            { id: 3, name: 'Sarah Williams', pin: '9012', role: 'bartender', color: '#9b59b6', active: true },
+            { id: 4, name: 'Chris Davis', pin: '3456', role: 'server', color: '#27ae60', active: true }
+        ];
+        
+        function loadStaffList() {
+            const staff = JSON.parse(localStorage.getItem('gc_staff') || 'null') || defaultStaffList;
+            const container = document.getElementById('staffList');
+            if (!container) return;
+            
+            if (staff.length === 0) {
+                container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No staff members yet</p>';
+                return;
+            }
+            
+            let html = '<table style="width:100%;border-collapse:collapse;">';
+            html += '<tr style="background:#f5f6f8;"><th style="padding:12px;text-align:left;">Name</th><th style="padding:12px;text-align:center;">Role</th><th style="padding:12px;text-align:center;">PIN</th><th style="padding:12px;text-align:center;">Status</th><th style="padding:12px;text-align:center;">Actions</th></tr>';
+            
+            staff.forEach(s => {
+                const initials = s.name.split(' ').map(n => n[0]).join('');
+                html += '<tr style="border-bottom:1px solid #eee;">';
+                html += '<td style="padding:12px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:50%;background:' + s.color + ';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">' + initials + '</div>' + s.name + '</div></td>';
+                html += '<td style="padding:12px;text-align:center;text-transform:capitalize;">' + s.role + '</td>';
+                html += '<td style="padding:12px;text-align:center;font-family:monospace;font-size:16px;">' + s.pin + '</td>';
+                html += '<td style="padding:12px;text-align:center;">' + (s.active !== false ? '<span style="color:#27ae60;"><i class="fas fa-check-circle"></i> Active</span>' : '<span style="color:#999;"><i class="fas fa-times-circle"></i> Inactive</span>') + '</td>';
+                html += '<td style="padding:12px;text-align:center;">';
+                html += '<button onclick="editStaffMember(' + s.id + ')" style="padding:6px 12px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:5px;"><i class="fas fa-edit"></i></button>';
+                html += '<button onclick="resetStaffPin(' + s.id + ')" style="padding:6px 12px;background:#f39c12;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:5px;"><i class="fas fa-key"></i></button>';
+                html += '<button onclick="toggleStaffActive(' + s.id + ')" style="padding:6px 12px;background:' + (s.active !== false ? '#e74c3c' : '#27ae60') + ';color:#fff;border:none;border-radius:4px;cursor:pointer;"><i class="fas fa-' + (s.active !== false ? 'ban' : 'check') + '"></i></button>';
+                html += '</td></tr>';
+            });
+            
+            html += '</table>';
+            container.innerHTML = html;
+        }
+        
+        function showAddStaffModal() {
+            const name = prompt('Enter staff member name:');
+            if (!name) return;
+            
+            const role = prompt('Enter role (manager, bartender, server):') || 'server';
+            const pin = prompt('Enter 4-digit PIN:');
+            
+            if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
+                alert('Invalid PIN - must be 4 digits');
+                return;
+            }
+            
+            const staff = JSON.parse(localStorage.getItem('gc_staff') || '[]');
+            const colors = ['#3498db', '#e67e22', '#9b59b6', '#27ae60', '#e74c3c', '#1abc9c', '#34495e'];
+            
+            staff.push({
+                id: Date.now(),
+                name: name,
+                pin: pin,
+                role: role.toLowerCase(),
+                color: colors[staff.length % colors.length],
+                active: true
+            });
+            
+            localStorage.setItem('gc_staff', JSON.stringify(staff));
+            loadStaffList();
+        }
+        
+        function editStaffMember(id) {
+            const staff = JSON.parse(localStorage.getItem('gc_staff') || '[]');
+            const member = staff.find(s => s.id === id);
+            if (!member) return;
+            
+            const newName = prompt('Edit name:', member.name);
+            if (newName) member.name = newName;
+            
+            const newRole = prompt('Edit role (manager, bartender, server):', member.role);
+            if (newRole) member.role = newRole.toLowerCase();
+            
+            localStorage.setItem('gc_staff', JSON.stringify(staff));
+            loadStaffList();
+        }
+        
+        function resetStaffPin(id) {
+            const staff = JSON.parse(localStorage.getItem('gc_staff') || '[]');
+            const member = staff.find(s => s.id === id);
+            if (!member) return;
+            
+            const newPin = prompt('Enter new 4-digit PIN:');
+            if (!newPin || newPin.length !== 4 || !/^\d+$/.test(newPin)) {
+                alert('Invalid PIN - must be 4 digits');
+                return;
+            }
+            
+            member.pin = newPin;
+            localStorage.setItem('gc_staff', JSON.stringify(staff));
+            loadStaffList();
+            alert('PIN updated successfully');
+        }
+        
+        function toggleStaffActive(id) {
+            const staff = JSON.parse(localStorage.getItem('gc_staff') || '[]');
+            const member = staff.find(s => s.id === id);
+            if (!member) return;
+            
+            member.active = member.active === false ? true : false;
+            localStorage.setItem('gc_staff', JSON.stringify(staff));
+            loadStaffList();
+        }
+        
+        // ============ TIME CLOCK ============
+        function loadTimeclock() {
+            const timelog = JSON.parse(localStorage.getItem('gc_timeclock') || '[]');
+            const today = new Date().toDateString();
+            
+            // Today's activity
+            const todayContainer = document.getElementById('todayTimeclock');
+            if (todayContainer) {
+                const todayLogs = timelog.filter(t => new Date(t.timestamp).toDateString() === today);
+                
+                if (todayLogs.length === 0) {
+                    todayContainer.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No clock activity today</p>';
+                } else {
+                    let html = '<table style="width:100%;border-collapse:collapse;">';
+                    html += '<tr style="background:#f5f6f8;"><th style="padding:10px;text-align:left;">Employee</th><th style="padding:10px;text-align:center;">Time</th><th style="padding:10px;text-align:center;">Action</th></tr>';
+                    
+                    todayLogs.reverse().forEach(log => {
+                        const time = new Date(log.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                        const isIn = log.type === 'clockIn';
+                        html += '<tr style="border-bottom:1px solid #eee;">';
+                        html += '<td style="padding:10px;">' + log.staffName + '</td>';
+                        html += '<td style="padding:10px;text-align:center;">' + time + '</td>';
+                        html += '<td style="padding:10px;text-align:center;"><span style="padding:4px 10px;border-radius:20px;font-size:12px;background:' + (isIn ? '#e8f5e9' : '#ffebee') + ';color:' + (isIn ? '#27ae60' : '#e74c3c') + ';">' + (isIn ? 'Clock In' : 'Clock Out') + '</span></td>';
+                        html += '</tr>';
+                    });
+                    
+                    html += '</table>';
+                    todayContainer.innerHTML = html;
+                }
+            }
+            
+            // History
+            loadTimeclockHistory();
+        }
+        
+        function loadTimeclockHistory() {
+            const timelog = JSON.parse(localStorage.getItem('gc_timeclock') || '[]');
+            const container = document.getElementById('timeclockHistory');
+            if (!container) return;
+            
+            if (timelog.length === 0) {
+                container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No time clock history</p>';
+                return;
+            }
+            
+            // Group by date
+            const byDate = {};
+            timelog.forEach(log => {
+                const date = new Date(log.timestamp).toDateString();
+                if (!byDate[date]) byDate[date] = [];
+                byDate[date].push(log);
+            });
+            
+            let html = '';
+            Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a)).slice(0, 7).forEach(date => {
+                html += '<div style="margin-bottom:15px;"><h4 style="font-size:14px;color:#666;margin-bottom:8px;">' + date + '</h4>';
+                html += '<div style="background:#f8f9fa;border-radius:8px;padding:10px;">';
+                byDate[date].forEach(log => {
+                    const time = new Date(log.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                    const isIn = log.type === 'clockIn';
+                    html += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;">';
+                    html += '<span>' + log.staffName + '</span>';
+                    html += '<span style="color:' + (isIn ? '#27ae60' : '#e74c3c') + ';">' + (isIn ? '▶ In' : '◼ Out') + ' ' + time + '</span>';
+                    html += '</div>';
+                });
+                html += '</div></div>';
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function filterTimeclock() {
+            alert('Filter functionality - would filter by date range');
+        }
+        
+        function exportTimeclock() {
+            const timelog = JSON.parse(localStorage.getItem('gc_timeclock') || '[]');
+            const csv = 'Employee,Action,Date,Time\n' + timelog.map(t => {
+                const d = new Date(t.timestamp);
+                return t.staffName + ',' + t.type + ',' + d.toLocaleDateString() + ',' + d.toLocaleTimeString();
+            }).join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'timeclock_export.csv';
+            a.click();
+        }
+        
+        // ============ SALES REPORTS ============
+        function loadSalesReports() {
+            const transactions = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
+            const now = new Date();
+            const today = now.toDateString();
+            const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+            const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+            
+            // Calculate totals
+            let todayTotal = 0, weekTotal = 0, monthTotal = 0;
+            transactions.forEach(t => {
+                const tDate = new Date(t.date);
+                const amt = Math.abs(t.amount || 0);
+                if (!t.isReturn) {
+                    if (tDate.toDateString() === today) todayTotal += amt;
+                    if (tDate >= weekAgo) weekTotal += amt;
+                    if (tDate >= monthAgo) monthTotal += amt;
+                }
+            });
+            
+            // Update stat cards
+            const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+            el('reportTodaySales', '$' + todayTotal.toFixed(2));
+            el('reportWeekSales', '$' + weekTotal.toFixed(2));
+            el('reportMonthSales', '$' + monthTotal.toFixed(2));
+            el('reportTransCount', transactions.length);
+            
+            // Recent transactions
+            const recentContainer = document.getElementById('recentTransactionsReport');
+            if (recentContainer) {
+                if (transactions.length === 0) {
+                    recentContainer.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No transactions yet</p>';
+                } else {
+                    let html = '<table style="width:100%;border-collapse:collapse;font-size:14px;">';
+                    html += '<tr style="background:#f5f6f8;"><th style="padding:10px;text-align:left;">ID</th><th style="padding:10px;text-align:left;">Customer</th><th style="padding:10px;text-align:left;">Employee</th><th style="padding:10px;text-align:center;">Method</th><th style="padding:10px;text-align:right;">Amount</th><th style="padding:10px;text-align:center;">Time</th></tr>';
+                    
+                    transactions.slice(0, 20).forEach(t => {
+                        html += '<tr style="border-bottom:1px solid #eee;">';
+                        html += '<td style="padding:10px;">#' + t.id + '</td>';
+                        html += '<td style="padding:10px;">' + (t.customer || 'Walk-in') + '</td>';
+                        html += '<td style="padding:10px;">' + (t.employee || 'Staff') + '</td>';
+                        html += '<td style="padding:10px;text-align:center;text-transform:capitalize;">' + (t.method || 'card') + '</td>';
+                        html += '<td style="padding:10px;text-align:right;color:' + (t.isReturn ? '#e74c3c' : '#27ae60') + ';font-weight:600;">' + (t.isReturn ? '-' : '') + '$' + Math.abs(t.amount).toFixed(2) + '</td>';
+                        html += '<td style="padding:10px;text-align:center;color:#888;">' + (t.time || '') + '</td>';
+                        html += '</tr>';
+                    });
+                    
+                    html += '</table>';
+                    recentContainer.innerHTML = html;
+                }
+            }
+            
+            // Sales by category
+            loadSalesByCategory(transactions);
+            
+            // Sales by employee
+            loadSalesByEmployee(transactions);
+        }
+        
+        function loadSalesByCategory(transactions) {
+            const container = document.getElementById('salesByCategory');
+            if (!container) return;
+            
+            const byCategory = {};
+            transactions.forEach(t => {
+                if (t.isReturn || !t.itemDetails) return;
+                t.itemDetails.forEach(item => {
+                    // Try to determine category from item name
+                    let cat = 'Other';
+                    const name = item.name.toLowerCase();
+                    if (name.includes('beer') || name.includes('bud') || name.includes('coors') || name.includes('miller') || name.includes('corona') || name.includes('heineken')) cat = 'Beer';
+                    else if (name.includes('wine') || name.includes('pinot') || name.includes('chardonnay') || name.includes('cabernet') || name.includes('merlot')) cat = 'Wine';
+                    else if (name.includes('cocktail') || name.includes('margarita') || name.includes('vodka') || name.includes('rum') || name.includes('whiskey') || name.includes('mojito')) cat = 'Cocktails';
+                    else if (name.includes('burger') || name.includes('hot dog') || name.includes('nachos') || name.includes('pizza') || name.includes('fries') || name.includes('wings') || name.includes('tenders')) cat = 'Food';
+                    else if (name.includes('soda') || name.includes('coffee') || name.includes('tea') || name.includes('water') || name.includes('lemonade')) cat = 'Beverages';
+                    else if (name.includes('room') || name.includes('rental') || name.includes('club')) cat = 'Rentals';
+                    else if (name.includes('gift')) cat = 'Gift Cards';
+                    else if (name.includes('hat') || name.includes('polo') || name.includes('shirt') || name.includes('glove') || name.includes('towel') || name.includes('ball')) cat = 'Merchandise';
+                    
+                    if (!byCategory[cat]) byCategory[cat] = 0;
+                    byCategory[cat] += (item.price * item.qty * (1 - (item.discount || 0) / 100));
+                });
+            });
+            
+            if (Object.keys(byCategory).length === 0) {
+                container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No category data yet</p>';
+                return;
+            }
+            
+            const total = Object.values(byCategory).reduce((a, b) => a + b, 0);
+            const colors = { 'Beer': '#f39c12', 'Wine': '#8e44ad', 'Cocktails': '#e74c3c', 'Food': '#e67e22', 'Beverages': '#3498db', 'Rentals': '#9b59b6', 'Gift Cards': '#1abc9c', 'Merchandise': '#27ae60', 'Other': '#95a5a6' };
+            
+            let html = '';
+            Object.entries(byCategory).sort((a, b) => b[1] - a[1]).forEach(([cat, amt]) => {
+                const pct = total > 0 ? (amt / total * 100) : 0;
+                html += '<div style="margin-bottom:12px;">';
+                html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-weight:600;">' + cat + '</span><span>$' + amt.toFixed(2) + ' (' + pct.toFixed(1) + '%)</span></div>';
+                html += '<div style="background:#eee;border-radius:4px;height:8px;overflow:hidden;"><div style="background:' + (colors[cat] || '#666') + ';height:100%;width:' + pct + '%;"></div></div>';
+                html += '</div>';
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function loadSalesByEmployee(transactions) {
+            const container = document.getElementById('salesByEmployee');
+            if (!container) return;
+            
+            const byEmployee = {};
+            transactions.forEach(t => {
+                if (t.isReturn) return;
+                const emp = t.employee || 'Unknown';
+                if (!byEmployee[emp]) byEmployee[emp] = { sales: 0, count: 0 };
+                byEmployee[emp].sales += Math.abs(t.amount || 0);
+                byEmployee[emp].count++;
+            });
+            
+            if (Object.keys(byEmployee).length === 0) {
+                container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No employee data yet</p>';
+                return;
+            }
+            
+            let html = '<table style="width:100%;border-collapse:collapse;">';
+            html += '<tr style="background:#f5f6f8;"><th style="padding:10px;text-align:left;">Employee</th><th style="padding:10px;text-align:center;">Transactions</th><th style="padding:10px;text-align:right;">Total Sales</th><th style="padding:10px;text-align:right;">Avg Sale</th></tr>';
+            
+            Object.entries(byEmployee).sort((a, b) => b[1].sales - a[1].sales).forEach(([emp, data]) => {
+                html += '<tr style="border-bottom:1px solid #eee;">';
+                html += '<td style="padding:10px;font-weight:600;">' + emp + '</td>';
+                html += '<td style="padding:10px;text-align:center;">' + data.count + '</td>';
+                html += '<td style="padding:10px;text-align:right;color:#27ae60;font-weight:600;">$' + data.sales.toFixed(2) + '</td>';
+                html += '<td style="padding:10px;text-align:right;color:#888;">$' + (data.sales / data.count).toFixed(2) + '</td>';
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            container.innerHTML = html;
+        }
+        
+        // ============ INVENTORY ============
+        function loadInventory() {
+            const items = JSON.parse(localStorage.getItem('gc_inventory') || 'null');
+            if (!items) return;
+            
+            // Low stock alerts
+            const lowStockContainer = document.getElementById('lowStockAlerts');
+            if (lowStockContainer) {
+                const lowStock = items.filter(i => i.trackInventory && i.stock !== undefined && i.stock <= 5);
+                
+                if (lowStock.length === 0) {
+                    lowStockContainer.innerHTML = '<p style="color:#27ae60;text-align:center;padding:20px;"><i class="fas fa-check-circle"></i> All inventory levels are healthy</p>';
+                } else {
+                    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">';
+                    lowStock.forEach(item => {
+                        const color = item.stock === 0 ? '#e74c3c' : '#f39c12';
+                        html += '<div style="background:#fff;border:2px solid ' + color + ';border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;">';
+                        html += '<span style="font-weight:600;">' + item.name + '</span>';
+                        html += '<span style="background:' + color + ';color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;">' + (item.stock || 0) + ' left</span>';
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                    lowStockContainer.innerHTML = html;
+                }
+            }
+            
+            // Full inventory list
+            const listContainer = document.getElementById('inventoryList');
+            if (listContainer) {
+                let html = '<table style="width:100%;border-collapse:collapse;font-size:14px;">';
+                html += '<tr style="background:#f5f6f8;"><th style="padding:10px;text-align:left;">Item</th><th style="padding:10px;text-align:center;">Category</th><th style="padding:10px;text-align:right;">Price</th><th style="padding:10px;text-align:center;">Stock</th><th style="padding:10px;text-align:center;">Actions</th></tr>';
+                
+                items.filter(i => i.trackInventory).forEach(item => {
+                    const stockColor = item.stock <= 0 ? '#e74c3c' : item.stock <= 5 ? '#f39c12' : '#27ae60';
+                    html += '<tr style="border-bottom:1px solid #eee;">';
+                    html += '<td style="padding:10px;font-weight:600;">' + item.name + '</td>';
+                    html += '<td style="padding:10px;text-align:center;text-transform:capitalize;">' + item.category + '</td>';
+                    html += '<td style="padding:10px;text-align:right;">$' + item.price.toFixed(2) + '</td>';
+                    html += '<td style="padding:10px;text-align:center;"><span style="color:' + stockColor + ';font-weight:600;">' + (item.stock || 0) + '</span></td>';
+                    html += '<td style="padding:10px;text-align:center;">';
+                    html += '<button onclick="adjustInventory(' + item.id + ', 1)" style="padding:4px 8px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:3px;">+</button>';
+                    html += '<button onclick="adjustInventory(' + item.id + ', -1)" style="padding:4px 8px;background:#e74c3c;color:#fff;border:none;border-radius:4px;cursor:pointer;">-</button>';
+                    html += '</td></tr>';
+                });
+                
+                html += '</table>';
+                listContainer.innerHTML = html;
+            }
+        }
+        
+        function adjustInventory(itemId, delta) {
+            const items = JSON.parse(localStorage.getItem('gc_inventory') || '[]');
+            const item = items.find(i => i.id === itemId);
+            if (item) {
+                item.stock = Math.max(0, (item.stock || 0) + delta);
+                localStorage.setItem('gc_inventory', JSON.stringify(items));
+                loadInventory();
             }
         }
         
