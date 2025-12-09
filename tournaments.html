@@ -870,6 +870,7 @@
                         <a href="lessons-leagues.html" class="active">Lessons & Leagues <i class="fas fa-chevron-down"></i></a>
                         <ul class="dropdown-menu">
                             <li><a href="lessons-leagues.html">Lessons & Leagues</a></li>
+                            <li><a href="tournaments.html">Tournaments</a></li>
                             <li><a href="pinseeker.html">PinSeeker at Golf Cove</a></li>
                         </ul>
                     </li>
@@ -928,8 +929,8 @@
         const db = firebase.database();
         const leagueRef = db.ref('league');
         
-        // Default to Net view; Teams still available in toggle
-        let currentView = 'cumulative-net';
+        // Default to Teams view for 2-man scramble format
+        let currentView = 'team-standings';
         let currentTeamFilter = '';
         let minRoundsFilter = 0;
         let cachedLeague = null;
@@ -1050,7 +1051,7 @@
                 const dateDisplay = startDate && endDate ? `${startDate} - ${endDate}` : '';
                 
                 roundInfoHTML = `
-                    <div class="hero-subtitle">${currentRound.name}${currentRound.course ? ' • ' + currentRound.course : ''}</div>
+                    <div class="hero-subtitle">${currentRound.name}${(currentRound.course || league.course?.name) ? ' &bull; ' + (currentRound.course || league.course?.name) : ''}</div>
                     ${dateDisplay ? `<div class="hero-dates">${dateDisplay}</div>` : ''}
                 `;
             }
@@ -1061,17 +1062,14 @@
                     ${seasonBadge}
                     ${roundInfoHTML}
                     <div class="hero-actions" style="display:flex; flex-direction:column; gap:10px; align-items:center; max-width:320px; margin: 0 auto;">
-                        <a href="score.html" class="join-league-btn" style="width:100%; text-align:center;"><i class="fas fa-user-plus"></i> Join League / Enter Score</a>
+                        <a href="score.html" class="join-league-btn" style="width:100%; text-align:center;"><i class="fas fa-users"></i> Enter Team Score</a>
                         <a href="schedule.html" class="view-schedule-btn" style="width:100%; text-align:center;"><i class="fas fa-calendar-alt"></i> View Schedule</a>
                     </div>
+                    <div style="font-size: 14px; color: rgba(255,255,255,0.85); margin-top: 15px; margin-bottom: 10px;"><i class="fas fa-golf-ball"></i> 2-Man Scramble Format</div>
                     <div class="stats-grid">
                         <div class="stat" style="border-left: 4px solid #37b24a; padding-left: 20px;">
                             <div class="stat-num" style="color: #37b24a;">${league.teams?.length || 0}</div>
                             <div class="stat-label"><i class="fas fa-users"></i> Teams</div>
-                        </div>
-                        <div class="stat" style="border-left: 4px solid #2196F3; padding-left: 20px;">
-                            <div class="stat-num" style="color: #2196F3;">${(league.players || []).length}</div>
-                            <div class="stat-label"><i class="fas fa-user"></i> Players</div>
                         </div>
                         <div class="stat" style="border-left: 4px solid #FF9800; padding-left: 20px;">
                             <div class="stat-num" style="color: #FF9800;">${(league.rounds || []).length}</div>
@@ -1090,28 +1088,18 @@
                         <div class="controls-panel">
                             <div class="controls-row">
                                 <div class="filter-group">
-                                    <label><i class="fas fa-filter"></i> Team:</label>
-                                    <select class="filter-select" id="teamFilter" onchange="filterByTeam(this.value)">
-                                        <option value="">All Players</option>
-                                        ${(league.teams || []).map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
-                                    </select>
-                                </div>
-                                <div class="filter-group">
-                                    <label><i class="fas fa-flag-checkered"></i> Min Rnds:</label>
+                                    <label><i class="fas fa-flag-checkered"></i> Min Rounds:</label>
                                     <select class="filter-select" id="roundFilter" onchange="filterByRounds(this.value)">
-                                        <option value="0">All</option>
-                                        <option value="1">1+</option>
-                                        <option value="3">3+</option>
-                                        <option value="5">5+</option>
+                                        <option value="0">All Teams</option>
+                                        <option value="1">1+ rounds</option>
+                                        <option value="3">3+ rounds</option>
+                                        <option value="5">5+ rounds</option>
                                     </select>
                                 </div>
                                 <div class="view-toggle">
-                                    <button class="view-btn ${currentView === 'cumulative-net' ? 'active' : ''}" data-view="cumulative-net" title="Individual cumulative net scores (handicap adjusted)"><i class="fas fa-trophy"></i> Net</button>
-                                    <button class="view-btn ${currentView === 'team-standings' ? 'active' : ''}" data-view="team-standings" title="Team competition - combined net scores for 2-person teams"><i class="fas fa-users"></i> Teams</button>
-                                    <button class="view-btn ${currentView === 'recent-form' ? 'active' : ''}" data-view="recent-form" title="Last 3 rounds - shows momentum & recent performance"><i class="fas fa-chart-line"></i> Recent Form</button>
-                                    <button class="view-btn ${currentView === 'average' ? 'active' : ''}" data-view="average" title="Average net per round - fairest for different round counts"><i class="fas fa-balance-scale"></i> Average</button>
-                                    <button class="view-btn ${currentView === 'cumulative-gross' ? 'active' : ''}" data-view="cumulative-gross" title="Individual gross scores without handicap adjustment"><i class="fas fa-golf-ball"></i> Gross</button>
+                                    <button class="view-btn ${currentView === 'team-standings' ? 'active' : ''}" data-view="team-standings" title="Team leaderboard - combined net scores for 2-person teams"><i class="fas fa-trophy"></i> Teams</button>
                                     <button class="view-btn ${currentView === 'by-round' ? 'active' : ''}" data-view="by-round" title="Week by week breakdown - see round-by-round performance"><i class="fas fa-calendar-week"></i> By Week</button>
+                                    <button class="view-btn ${currentView === 'cumulative-net' ? 'active' : ''}" data-view="cumulative-net" title="Individual player net scores"><i class="fas fa-user"></i> Players</button>
                                 </div>
                                 <button class="export-btn" onclick="exportToExcel()">
                                     <i class="fas fa-file-excel"></i> Export
@@ -1132,7 +1120,7 @@
                     </div>
 
                     <div class="action-row">
-                        <a href="score.html" class="league-btn"><i class="fas fa-pencil-alt"></i> Enter My Score</a>
+                        <a href="score.html" class="league-btn"><i class="fas fa-users"></i> Enter Team Score</a>
                         <a href="schedule.html" class="league-btn" style="background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);"><i class="fas fa-calendar-alt"></i> View Schedule</a>
                     </div>
 
