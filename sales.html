@@ -10,6 +10,7 @@
     <script src="js/firebase-sync.js"></script>
     <script src="js/pin-system.js"></script>
     <script src="js/membership-system.js"></script>
+    <script src="js/customers.js"></script>
     <script src="js/tabs-sync.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -397,9 +398,17 @@
             transition: all 0.15s;
         }
         .tab-item:hover { transform: translateX(-3px); box-shadow: 0 2px 8px rgba(39,174,96,0.3); }
-        .tab-customer { font-weight: 600; font-size: 13px; }
+        .tab-item.vip { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .tab-item.vip:hover { box-shadow: 0 2px 8px rgba(155,89,182,0.4); }
+        .tab-item.member { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .tab-item.member:hover { box-shadow: 0 2px 8px rgba(52,152,219,0.4); }
+        .tab-customer { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+        .tab-badge { font-size: 10px; background: rgba(255,255,255,0.25); padding: 2px 6px; border-radius: 10px; }
         .tab-info { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+        .tab-discount { font-size: 10px; opacity: 0.85; }
         .tab-total { font-weight: 700; font-size: 14px; }
+        .tab-left { flex: 1; }
+        .tab-right { text-align: right; }
         
         .suspended-item {
             background: linear-gradient(135deg, #e74c3c, #c0392b);
@@ -1388,8 +1397,22 @@
             
             tabs.forEach(tab => {
                 const itemCount = tab.items?.length || 0;
-                html += `<button onclick="addToTabDirect('${tab.id}', '${name.replace(/'/g, "\\'")}', ${price}, '${category}')" style="padding:12px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">`;
-                html += `<span><i class="fas fa-receipt"></i> ${tab.customer}</span>`;
+                // Set button style based on member status
+                let btnStyle = 'padding:12px;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;';
+                let badge = '';
+                
+                if (tab.isVIP) {
+                    btnStyle += 'background:linear-gradient(135deg,#9b59b6,#8e44ad);';
+                    badge = '<i class="fas fa-crown" style="margin-left:5px;"></i>';
+                } else if (tab.isMember) {
+                    btnStyle += 'background:linear-gradient(135deg,#3498db,#2980b9);';
+                    badge = '<i class="fas fa-star" style="margin-left:5px;"></i>';
+                } else {
+                    btnStyle += 'background:#27ae60;';
+                }
+                
+                html += `<button onclick="addToTabDirect('${tab.id}', '${name.replace(/'/g, "\\'")}', ${price}, '${category}')" style="${btnStyle}">`;
+                html += `<span><i class="fas fa-receipt"></i> ${tab.customer}${badge}</span>`;
                 html += `<span>$${(tab.total||0).toFixed(2)} (${itemCount} items)</span></button>`;
             });
             
@@ -2166,17 +2189,38 @@
                 return;
             }
             
-            container.innerHTML = tabs.map(t => `
-                <div class="tab-item" onclick="selectTab('${t.id}')">
+            container.innerHTML = tabs.map(t => {
+                // Determine tab class based on member status
+                let tabClass = 'tab-item';
+                let badge = '';
+                let discountInfo = '';
+                
+                if (t.isVIP) {
+                    tabClass += ' vip';
+                    badge = '<span class="tab-badge"><i class="fas fa-crown"></i> VIP</span>';
+                } else if (t.isMember) {
+                    tabClass += ' member';
+                    badge = '<span class="tab-badge"><i class="fas fa-star"></i> Member</span>';
+                }
+                
+                if (t.memberDiscount > 0) {
+                    discountInfo = `<div class="tab-discount">${Math.round(t.memberDiscount * 100)}% member discount</div>`;
+                }
+                
+                const bayInfo = t.bayNumber ? ` • Bay ${t.bayNumber}` : '';
+                
+                return `
+                <div class="${tabClass}" onclick="selectTab('${t.id}')">
                     <div class="tab-left">
-                        <div class="tab-customer">${t.customer}</div>
-                        <div class="tab-info">${t.items?.length || 0} items • ${t.openedBy || 'Staff'}</div>
+                        <div class="tab-customer">${t.customer} ${badge}</div>
+                        <div class="tab-info">${t.items?.length || 0} items${bayInfo}</div>
+                        ${discountInfo}
                     </div>
                     <div class="tab-right">
                         <div class="tab-total">$${(t.total || 0).toFixed(2)}</div>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
         
         // Select/View Tab

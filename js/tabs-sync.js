@@ -131,15 +131,62 @@ const TabsSync = (function() {
         );
     }
     
+    // Get tab by customer ID
+    function getTabByCustomerId(customerId) {
+        if (!customerId) return null;
+        return localTabs.find(t => 
+            (t.status === 'open' || !t.status) && 
+            t.customerId === customerId
+        );
+    }
+    
+    // Look up customer info for member status
+    function getCustomerInfo(customerName, customerId) {
+        if (typeof GolfCoveCustomers === 'undefined') return null;
+        
+        let customer = null;
+        if (customerId) {
+            customer = GolfCoveCustomers.get(customerId);
+        }
+        if (!customer && customerName) {
+            // Try to find by name
+            const parts = customerName.trim().split(' ');
+            if (parts.length >= 2) {
+                customer = GolfCoveCustomers.getByName(parts[0], parts.slice(1).join(' '));
+            }
+        }
+        return customer;
+    }
+    
     // Create new tab
     async function createTab(customerName, customerId = null, items = [], employeeName = 'Staff', options = {}) {
         const tabId = 'TAB-' + Date.now();
         const itemsTotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 1)), 0);
         
+        // Look up customer for member info
+        const customer = getCustomerInfo(customerName, customerId);
+        let isMember = false;
+        let isVIP = false;
+        let memberType = null;
+        let memberDiscount = 0;
+        
+        if (customer && typeof GolfCoveCustomers !== 'undefined') {
+            isMember = GolfCoveCustomers.isActiveMember(customer);
+            isVIP = GolfCoveCustomers.isVIP(customer);
+            memberType = customer.memberType;
+            memberDiscount = GolfCoveCustomers.getMemberDiscount(customer);
+        }
+        
         const newTab = {
             id: tabId,
-            customerId: customerId,
+            customerId: customerId || (customer ? customer.id : null),
             customer: customerName || 'Guest',
+            // Member info
+            isMember: isMember,
+            isVIP: isVIP,
+            memberType: memberType,
+            memberDiscount: memberDiscount,
+            // Items & totals
             items: items.map(item => ({
                 ...item,
                 addedAt: new Date().toISOString(),

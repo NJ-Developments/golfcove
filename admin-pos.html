@@ -11,6 +11,7 @@
     <script src="js/firebase-sync.js"></script>
     <script src="js/pin-system.js"></script>
     <script src="js/membership-system.js"></script>
+    <script src="js/customers.js"></script>
     <script src="js/booking-system.js"></script>
     <script src="js/tabs-sync.js"></script>
     <style>
@@ -2095,11 +2096,38 @@
             // Find or create tab for customer
             let tab = openTabs.find(t => t.customer.toLowerCase() === customerName.toLowerCase());
             if (!tab) {
+                // Look up customer for member info
+                let isMember = false;
+                let isVIP = false;
+                let memberType = null;
+                let memberDiscount = 0;
+                let customerId = null;
+                
+                if (typeof GolfCoveCustomers !== 'undefined') {
+                    const parts = customerName.trim().split(' ');
+                    if (parts.length >= 2) {
+                        const customer = GolfCoveCustomers.getByName(parts[0], parts.slice(1).join(' '));
+                        if (customer) {
+                            customerId = customer.id;
+                            isMember = GolfCoveCustomers.isActiveMember(customer);
+                            isVIP = GolfCoveCustomers.isVIP(customer);
+                            memberType = customer.memberType;
+                            memberDiscount = GolfCoveCustomers.getMemberDiscount(customer);
+                        }
+                    }
+                }
+                
                 tab = {
                     id: Date.now(),
                     customer: customerName,
+                    customerId: customerId,
                     items: [],
                     total: 0,
+                    amount: 0,
+                    isMember: isMember,
+                    isVIP: isVIP,
+                    memberType: memberType,
+                    memberDiscount: memberDiscount,
                     created: new Date().toISOString()
                 };
                 openTabs.push(tab);
