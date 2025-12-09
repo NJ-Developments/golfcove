@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Golf Cove - Point of Sale</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- POS Styles -->
+    <link rel="stylesheet" href="css/pos-modern.css">
+</head>
+<body>
+    <!-- Lock Screen -->
+    <div class="lock-screen" id="lockScreen">
+        <div class="lock-content">
+            <div class="lock-logo">
+                <i class="fas fa-golf-ball-tee"></i>
+            </div>
+            <h1 class="lock-title">Golf Cove POS</h1>
+            
+            <!-- Employee Selection -->
+            <div id="employeeSelect">
+                <div class="employee-select" id="employeeButtons">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <!-- PIN Entry -->
+            <div class="pin-entry" id="pinEntry">
+                <div class="pin-user">
+                    <div class="avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="name" id="selectedEmployeeName">Employee</div>
+                </div>
+                
+                <div class="pin-dots">
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                </div>
+                
+                <div class="pin-pad">
+                    <button class="pin-btn" onclick="POS.enterPin('1')">1</button>
+                    <button class="pin-btn" onclick="POS.enterPin('2')">2</button>
+                    <button class="pin-btn" onclick="POS.enterPin('3')">3</button>
+                    <button class="pin-btn" onclick="POS.enterPin('4')">4</button>
+                    <button class="pin-btn" onclick="POS.enterPin('5')">5</button>
+                    <button class="pin-btn" onclick="POS.enterPin('6')">6</button>
+                    <button class="pin-btn" onclick="POS.enterPin('7')">7</button>
+                    <button class="pin-btn" onclick="POS.enterPin('8')">8</button>
+                    <button class="pin-btn" onclick="POS.enterPin('9')">9</button>
+                    <button class="pin-btn back" onclick="POS.backToEmployees()"><i class="fas fa-arrow-left"></i></button>
+                    <button class="pin-btn" onclick="POS.enterPin('0')">0</button>
+                    <button class="pin-btn clear" onclick="POS.clearPin()">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="pos-header">
+        <div class="header-left">
+            <div class="brand">
+                <i class="fas fa-golf-ball-tee"></i>
+                <span>Golf Cove</span>
+            </div>
+            
+            <div class="date-nav">
+                <button onclick="POS.changeDate(-1)"><i class="fas fa-chevron-left"></i></button>
+                <span class="date-display" id="currentDateDisplay">Mon, Jan 1</span>
+                <button onclick="POS.goToToday()"><i class="fas fa-calendar-day"></i></button>
+                <button onclick="POS.changeDate(1)"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+        
+        <div class="header-center">
+            <button class="view-btn active" id="viewSales" onclick="switchView('sales')">
+                <i class="fas fa-cash-register"></i>
+                <span>Sales</span>
+            </button>
+            <button class="view-btn" id="viewTeeSheet" onclick="switchView('teesheet')">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Tee Sheet</span>
+            </button>
+            <button class="view-btn" id="viewTabs" onclick="switchView('tabs')">
+                <i class="fas fa-receipt"></i>
+                <span>Tabs</span>
+                <span class="badge" id="tabsBadge" style="display: none;">0</span>
+            </button>
+        </div>
+        
+        <div class="header-right">
+            <span class="header-time" id="currentTime">12:00 PM</span>
+            
+            <!-- Profile Dropdown -->
+            <div class="profile-wrapper">
+                <button class="profile-btn" onclick="ProfileMenu.toggle()">
+                    <div class="profile-avatar">
+                        <span id="currentUserInitials">EJ</span>
+                    </div>
+                    <span class="profile-name" id="currentUserName">Employee</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="dropdown-header">
+                        <div class="avatar-lg">
+                            <span id="dropdownInitials">EJ</span>
+                        </div>
+                        <div class="name" id="dropdownName">Employee</div>
+                        <div class="role" id="dropdownRole">Staff</div>
+                    </div>
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item" onclick="ProfileMenu.switchUser()">
+                            <i class="fas fa-user-switch"></i>
+                            <span>Switch User</span>
+                        </button>
+                        <button class="dropdown-item" onclick="ProfileMenu.clockOut()">
+                            <i class="fas fa-clock"></i>
+                            <span>Clock Out</span>
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" onclick="ProfileMenu.openSettings()">
+                            <i class="fas fa-cog"></i>
+                            <span>Quick Settings</span>
+                        </button>
+                        <button class="dropdown-item" onclick="ProfileMenu.openAdmin()">
+                            <i class="fas fa-user-shield"></i>
+                            <span>Admin Panel</span>
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item danger" onclick="POS.lock()">
+                            <i class="fas fa-lock"></i>
+                            <span>Lock POS</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pos-main">
+        <!-- Sales View (Menu/Products) -->
+        <div class="pos-menu" id="salesView">
+            <!-- Category Tabs -->
+            <div class="category-tabs" id="menuCategories">
+                <!-- Populated by JS -->
+            </div>
+            
+            <!-- Products Grid -->
+            <div class="products-area">
+                <div class="products-grid" id="menuProducts">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tee Sheet View -->
+        <div class="teesheet-container" id="teeSheetView">
+            <div class="tee-grid" id="teeSheetGrid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+        
+        <!-- Tabs View -->
+        <div class="tabs-container" id="tabsView">
+            <div class="tabs-grid" id="tabsList">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+        
+        <!-- Cart Sidebar -->
+        <aside class="pos-cart">
+            <div class="cart-header">
+                <div id="selectedCustomer">
+                    <!-- Customer selection rendered here -->
+                </div>
+            </div>
+            
+            <div class="cart-items" id="cartItems">
+                <!-- Cart items rendered here -->
+            </div>
+            
+            <div class="cart-footer">
+                <div class="cart-totals">
+                    <div class="cart-row">
+                        <span>Subtotal</span>
+                        <span id="cartSubtotal">$0.00</span>
+                    </div>
+                    <div class="cart-row">
+                        <span>Tax</span>
+                        <span id="cartTax">$0.00</span>
+                    </div>
+                    <div class="cart-row total">
+                        <span>Total</span>
+                        <span id="cartTotal">$0.00</span>
+                    </div>
+                </div>
+                
+                <div class="cart-actions">
+                    <button class="cart-btn cart-btn-secondary" onclick="Cart.clear()">
+                        <i class="fas fa-trash"></i>
+                        Clear
+                    </button>
+                    <button class="cart-btn cart-btn-secondary" onclick="showHoldModal()">
+                        <i class="fas fa-pause"></i>
+                        Hold
+                    </button>
+                    <button class="cart-btn cart-btn-primary" onclick="Payment.open()" id="payBtn">
+                        <i class="fas fa-credit-card"></i>
+                        Pay <span id="cartCount">0</span> Items
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Payment Modal -->
+    <div class="modal" id="paymentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Payment</h2>
+                <button class="modal-close" onclick="Payment.close()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="payment-total" id="paymentTotal">$0.00</div>
+                
+                <div class="payment-methods">
+                    <button class="payment-method-btn" data-method="card" onclick="Payment.selectMethod('card')">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Card</span>
+                    </button>
+                    <button class="payment-method-btn" data-method="cash" onclick="Payment.selectMethod('cash')">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>Cash</span>
+                    </button>
+                    <button class="payment-method-btn" data-method="tab" onclick="Payment.selectMethod('tab')">
+                        <i class="fas fa-user-tag"></i>
+                        <span>Tab/Room</span>
+                    </button>
+                    <button class="payment-method-btn" data-method="giftcard" onclick="Payment.selectMethod('giftcard')">
+                        <i class="fas fa-gift"></i>
+                        <span>Gift Card</span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="Payment.close()">Cancel</button>
+                <button class="btn-primary" id="processPaymentBtn" onclick="Payment.process()" disabled>
+                    <i class="fas fa-check"></i> Process Payment
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cash Payment Modal -->
+    <div class="modal" id="cashModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Cash Payment</h2>
+                <button class="modal-close" onclick="cancelCashPayment()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Amount Due</label>
+                    <div class="payment-total" id="cashAmountDue">$0.00</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Amount Tendered</label>
+                    <input type="number" id="cashTendered" step="0.01" oninput="calculateChange()" placeholder="0.00">
+                </div>
+                
+                <div class="quick-amounts">
+                    <button class="quick-amount-btn" onclick="setQuickAmount(1)">$1</button>
+                    <button class="quick-amount-btn" onclick="setQuickAmount(5)">$5</button>
+                    <button class="quick-amount-btn" onclick="setQuickAmount(10)">$10</button>
+                    <button class="quick-amount-btn" onclick="setQuickAmount(20)">$20</button>
+                    <button class="quick-amount-btn" onclick="setQuickAmount(50)">$50</button>
+                    <button class="quick-amount-btn" onclick="setQuickAmount(100)">$100</button>
+                    <button class="quick-amount-btn" onclick="setQuickAmount(Cart.getTotal())">Exact</button>
+                    <button class="quick-amount-btn" onclick="document.getElementById('cashTendered').value=''">Clear</button>
+                </div>
+                
+                <div class="cash-change">
+                    <span>Change Due</span>
+                    <span id="cashChange">$0.00</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="cancelCashPayment()">Cancel</button>
+                <button class="btn-primary" onclick="completeCashPayment()">
+                    <i class="fas fa-check"></i> Complete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gift Card Payment Modal -->
+    <div class="modal" id="giftCardPayModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Gift Card Payment</h2>
+                <button class="modal-close" onclick="cancelGiftCardPayment()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Amount Due</label>
+                    <div class="payment-total" id="gcPayAmount">$0.00</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Gift Card Number</label>
+                    <input type="text" id="gcPayNumber" placeholder="Enter card number or scan">
+                </div>
+                
+                <div class="form-group">
+                    <label>Card Balance</label>
+                    <div id="gcPayBalance" style="font-size: 1.5rem; font-weight: 600;">--</div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="cancelGiftCardPayment()">Cancel</button>
+                <button class="btn-primary" onclick="processGiftCardPayment()">
+                    <i class="fas fa-check"></i> Apply Gift Card
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div class="modal" id="receiptModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Receipt</h2>
+                <button class="modal-close" onclick="document.getElementById('receiptModal').style.display='none'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="receiptContent">
+                <!-- Receipt rendered here -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="document.getElementById('receiptModal').style.display='none'">Close</button>
+                <button class="btn-primary" onclick="printReceipt()">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hold Modal -->
+    <div class="modal" id="holdModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Hold Cart</h2>
+                <button class="modal-close" onclick="document.getElementById('holdModal').style.display='none'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Tab Name</label>
+                    <input type="text" id="holdTabName" placeholder="Customer name or table number">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="document.getElementById('holdModal').style.display='none'">Cancel</button>
+                <button class="btn-primary" onclick="holdCart()">
+                    <i class="fas fa-pause"></i> Hold Cart
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Search Modal -->
+    <div class="modal" id="customerSearchModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Find Customer</h2>
+                <button class="modal-close" onclick="Customers.closeSearch()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="customer-search-input">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="customerSearchInput" placeholder="Search by name, phone, or email..." 
+                           oninput="Customers.handleSearch(this.value)">
+                </div>
+                <div id="customerSearchResults">
+                    <!-- Results rendered here -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="Customers.closeSearch()">Cancel</button>
+                <button class="btn-primary" onclick="Customers.showNewCustomerForm()">
+                    <i class="fas fa-plus"></i> New Customer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Customer Modal -->
+    <div class="modal" id="newCustomerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New Customer</h2>
+                <button class="modal-close" onclick="document.getElementById('newCustomerModal').style.display='none'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="newCustomerName" placeholder="Full name">
+                </div>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="tel" id="newCustomerPhone" placeholder="(555) 555-5555">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="newCustomerEmail" placeholder="email@example.com">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="document.getElementById('newCustomerModal').style.display='none'">Cancel</button>
+                <button class="btn-primary" onclick="Customers.saveNewCustomer()">
+                    <i class="fas fa-check"></i> Save Customer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div class="modal" id="bookingModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New Booking</h2>
+                <button class="modal-close" onclick="document.getElementById('bookingModal').style.display='none'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="font-size: 1.5rem; font-weight: 600;" id="bookingTime">10:00 AM</div>
+                    <div style="color: var(--text-muted);" id="bookingDate">Monday, January 1</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Customer Name</label>
+                    <input type="text" id="bookingCustomerName" placeholder="Name (or Walk-in)">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Players</label>
+                        <select id="bookingPlayers">
+                            <option value="1">1 Player</option>
+                            <option value="2">2 Players</option>
+                            <option value="3">3 Players</option>
+                            <option value="4">4 Players</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Holes</label>
+                        <select id="bookingHoles">
+                            <option value="9">9 Holes</option>
+                            <option value="18">18 Holes</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="tel" id="bookingPhone" placeholder="(555) 555-5555">
+                </div>
+                
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="bookingEmail" placeholder="email@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="bookingNotes" rows="2" placeholder="Special requests..."></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="document.getElementById('bookingModal').style.display='none'">Cancel</button>
+                <button class="btn-primary" onclick="TeeSheet.saveBooking()">
+                    <i class="fas fa-check"></i> Book Tee Time
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Details Modal -->
+    <div class="modal" id="bookingDetailsModal">
+        <!-- Content rendered dynamically -->
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Quick Settings</h2>
+                <button class="modal-close" onclick="document.getElementById('settingsModal').style.display='none'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Tax Rate (%)</label>
+                    <input type="number" id="settingsTaxRate" step="0.01" value="6.35">
+                </div>
+                <div class="form-group">
+                    <label>Register ID</label>
+                    <input type="text" id="settingsRegisterId" value="POS-1">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="document.getElementById('settingsModal').style.display='none'">Cancel</button>
+                <button class="btn-primary" onclick="saveSettings()">
+                    <i class="fas fa-check"></i> Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POS Module Scripts -->
+    <script src="js/pos-core.js"></script>
+    <script src="js/pos-cart.js"></script>
+    <script src="js/pos-menu.js"></script>
+    <script src="js/pos-teesheet.js"></script>
+    <script src="js/pos-customers.js"></script>
+    
+    <!-- Additional Functions -->
+    <script>
+        // View Switching
+        function switchView(view) {
+            // Update buttons
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('view' + view.charAt(0).toUpperCase() + view.slice(1)).classList.add('active');
+            
+            // Update views
+            document.getElementById('salesView').style.display = view === 'sales' ? 'flex' : 'none';
+            document.getElementById('teeSheetView').classList.toggle('active', view === 'teesheet');
+            document.getElementById('tabsView').classList.toggle('active', view === 'tabs');
+            
+            // Render content
+            if (view === 'teesheet') TeeSheet.render();
+            if (view === 'tabs') Tabs.render();
+            
+            POS.state.activeView = view;
+        }
+        
+        // Hold modal
+        function showHoldModal() {
+            if (Cart.items.length === 0) {
+                POS.toast('Cart is empty', 'error');
+                return;
+            }
+            document.getElementById('holdTabName').value = POS.state.selectedCustomer?.name || '';
+            document.getElementById('holdModal').style.display = 'flex';
+        }
+        
+        function holdCart() {
+            const name = document.getElementById('holdTabName').value.trim();
+            Cart.hold(name);
+            document.getElementById('holdModal').style.display = 'none';
+        }
+        
+        // Settings
+        function showSettings() {
+            document.getElementById('settingsTaxRate').value = POS.config.taxRate;
+            document.getElementById('settingsRegisterId').value = POS.config.registerId;
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+        
+        function saveSettings() {
+            POS.config.taxRate = parseFloat(document.getElementById('settingsTaxRate').value) || 6.35;
+            POS.config.registerId = document.getElementById('settingsRegisterId').value || 'POS-1';
+            
+            localStorage.setItem('gc_tax_rate', POS.config.taxRate);
+            localStorage.setItem('gc_register_id', POS.config.registerId);
+            
+            document.getElementById('settingsModal').style.display = 'none';
+            Cart.render(); // Recalculate totals
+            POS.toast('Settings saved', 'success');
+        }
+        
+        // Print receipt
+        function printReceipt() {
+            window.print();
+        }
+        
+        // Update profile dropdown info when user changes
+        const originalUnlock = POS.unlock;
+        POS.unlock = function(employee) {
+            originalUnlock.call(this, employee);
+            
+            // Update profile dropdown
+            const initials = employee.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            document.getElementById('currentUserInitials').textContent = initials;
+            document.getElementById('dropdownInitials').textContent = initials;
+            document.getElementById('dropdownName').textContent = employee.name;
+            document.getElementById('dropdownRole').textContent = employee.role || 'Staff';
+        };
+        
+        // Update tabs badge
+        function updateTabsBadge() {
+            const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+            const badge = document.getElementById('tabsBadge');
+            if (tabs.length > 0) {
+                badge.textContent = tabs.length;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        // Initial badge update
+        updateTabsBadge();
+    </script>
+</body>
+</html>

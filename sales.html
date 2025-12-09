@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
     <script src="js/membership-system.js"></script>
+    <script src="js/tabs-sync.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; }
@@ -379,6 +380,24 @@
         .trans-item.return .trans-amount { color: #e74c3c; }
         
         .empty-list { text-align: center; padding: 20px; color: #999; font-size: 12px; }
+        
+        /* Open Tabs */
+        .tab-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: linear-gradient(135deg, #27ae60, #219a52);
+            color: #fff;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .tab-item:hover { transform: translateX(-3px); box-shadow: 0 2px 8px rgba(39,174,96,0.3); }
+        .tab-customer { font-weight: 600; font-size: 13px; }
+        .tab-info { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+        .tab-total { font-weight: 700; font-size: 14px; }
         
         .suspended-item {
             background: linear-gradient(135deg, #e74c3c, #c0392b);
@@ -809,6 +828,10 @@
                 <span class="register-name">Bar</span>
                 <span class="user-name" id="panelUserName"><i class="fas fa-user-circle"></i> Staff ▾</span>
             </div>
+            <div class="panel-section" style="max-height:200px;overflow-y:auto;">
+                <h4><i class="fas fa-folder-open"></i> Open Tabs <span id="tabCount" style="background:#27ae60;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:5px;">0</span></h4>
+                <div id="openTabsList"></div>
+            </div>
             <div class="panel-section" style="flex:1; overflow-y:auto;">
                 <h4><i class="fas fa-history"></i> Recent Transactions</h4>
                 <div id="recentTrans"></div>
@@ -834,10 +857,10 @@
     <script>
         // ============ STAFF MANAGEMENT ============
         const defaultStaff = [
-            { id: 1, name: 'EJ Sattelberger', pin: '1234', role: 'manager', color: '#3498db' },
-            { id: 2, name: 'Mike Johnson', pin: '5678', role: 'bartender', color: '#e67e22' },
-            { id: 3, name: 'Sarah Williams', pin: '9012', role: 'bartender', color: '#9b59b6' },
-            { id: 4, name: 'Chris Davis', pin: '3456', role: 'server', color: '#27ae60' }
+            { id: 1, name: 'EJ Sattelberger', pin: '9999', role: 'manager', color: '#3498db' },
+            { id: 2, name: 'Manager', pin: '9999', role: 'manager', color: '#e67e22' },
+            { id: 3, name: 'Bartender', pin: '9999', role: 'bartender', color: '#9b59b6' },
+            { id: 4, name: 'Staff', pin: '9999', role: 'server', color: '#27ae60' }
         ];
         
         // Permissions by role
@@ -874,7 +897,15 @@
             }
         };
         
-        let staff = JSON.parse(localStorage.getItem('gc_staff') || 'null') || defaultStaff;
+        let staff = JSON.parse(localStorage.getItem('gc_employees') || 'null') || defaultStaff;
+        // Ensure staff has required properties
+        staff = staff.map((s, i) => ({
+            id: s.id || i + 1,
+            name: s.name || s.firstName + ' ' + (s.lastName || ''),
+            pin: s.pin || '9999',
+            role: s.role || 'staff',
+            color: s.color || ['#3498db', '#e67e22', '#9b59b6', '#27ae60'][i % 4]
+        }));
         let currentUser = JSON.parse(sessionStorage.getItem('gc_currentUser') || 'null');
         let enteredPin = '';
         let selectedStaffId = null;
@@ -1218,10 +1249,46 @@
         
         // ============ INIT ============
         document.addEventListener('DOMContentLoaded', () => {
+            // Migrate old insecure PINs (1234, 0000, etc.) to 9999
+            migrateOldPins();
+            
             checkLogin();
             renderTransactions();
             renderSuspended();
+            renderOpenTabs();
+            updateTabCount();
+            
+            // Listen for tab changes from other pages
+            TabsSync.addListener((event, data, allTabs) => {
+                renderOpenTabs();
+                updateTabCount();
+            });
         });
+        
+        // Migrate old/insecure PINs to new secure default
+        function migrateOldPins() {
+            const insecurePins = ['1234', '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888'];
+            const employees = JSON.parse(localStorage.getItem('gc_employees') || '[]');
+            let updated = false;
+            
+            employees.forEach(emp => {
+                if (insecurePins.includes(emp.pin)) {
+                    emp.pin = '9999';
+                    updated = true;
+                }
+            });
+            
+            if (updated) {
+                localStorage.setItem('gc_employees', JSON.stringify(employees));
+                console.log('Migrated insecure PINs to 9999');
+            }
+        }
+        
+        function updateTabCount() {
+            const count = TabsSync.getAllTabs().length;
+            const el = document.getElementById('tabCount');
+            if (el) el.textContent = count;
+        }
         
         // ============ CATEGORY & ITEMS ============
         function selectCategory(category, btn) {
@@ -1881,30 +1948,175 @@
         }
         
         // ============ TAB ============
-        function startTab() {
+        async function startTab() {
             if (saleItems.length === 0) return showToast('Add items first', 'error');
             
             const customer = document.getElementById('customerName').value || prompt('Customer name for tab:');
             if (!customer) return;
             
-            const subtotal = saleItems.reduce((sum, item) => sum + (item.price * item.qty * (1 - item.discount / 100)), 0);
-            const total = subtotal * 1.0635;
+            // Format items for TabsSync
+            const items = saleItems.map(item => ({
+                name: item.name,
+                price: item.price * (1 - item.discount / 100),
+                qty: item.qty,
+                category: item.category
+            }));
             
-            // Save to tabs (shared with admin-pos)
-            const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
-            tabs.push({
-                id: Date.now(),
-                table: 'Tab ' + (tabs.length + 1),
-                customer: customer,
-                employee: getCurrentUserName(),
-                amount: total
-            });
-            localStorage.setItem('gc_tabs', JSON.stringify(tabs));
+            // Use TabsSync for global tab management
+            const employeeName = getCurrentUserName();
+            const existingTab = TabsSync.getTabByCustomer(customer);
+            
+            if (existingTab) {
+                // Add to existing tab
+                await TabsSync.addItemsToTab(existingTab.id, items, employeeName);
+                showToast(`Added ${items.length} item(s) to ${customer}'s tab`);
+            } else {
+                // Create new tab
+                await TabsSync.createTab(customer, null, items, employeeName);
+                showToast(`Tab started for ${customer}`);
+            }
             
             saleItems = [];
             document.getElementById('customerName').value = '';
             renderSaleItems();
-            showToast(`Tab started for ${customer}`);
+            renderOpenTabs();
+        }
+        
+        // Quick Add to Tab (for single item)
+        async function quickAddToTab(itemName, itemPrice, category) {
+            // Show tab selector modal
+            const tabs = TabsSync.getAllTabs();
+            
+            let html = '<div style="padding:20px;">';
+            html += '<h3 style="margin-bottom:15px;">Add to Tab</h3>';
+            html += '<div style="margin-bottom:15px;padding:10px;background:#f5f5f5;border-radius:8px;">';
+            html += `<strong>${itemName}</strong> - $${itemPrice.toFixed(2)}`;
+            html += '</div>';
+            
+            if (tabs.length > 0) {
+                html += '<div style="margin-bottom:15px;">';
+                html += '<label style="font-size:13px;color:#666;">Select Tab:</label>';
+                html += '<select id="tabSelect" style="width:100%;padding:10px;margin-top:5px;border:1px solid #ddd;border-radius:6px;font-size:14px;">';
+                tabs.forEach(t => {
+                    html += `<option value="${t.id}">${t.customer} - $${(t.total||0).toFixed(2)} (${t.items?.length||0} items)</option>`;
+                });
+                html += '<option value="new">+ New Tab</option>';
+                html += '</select></div>';
+            }
+            
+            html += '<div style="margin-bottom:15px;" id="newTabNameDiv"' + (tabs.length > 0 ? ' style="display:none;"' : '') + '>';
+            html += '<label style="font-size:13px;color:#666;">Customer Name:</label>';
+            html += '<input type="text" id="newTabName" placeholder="Customer name" style="width:100%;padding:10px;margin-top:5px;border:1px solid #ddd;border-radius:6px;font-size:14px;">';
+            html += '</div>';
+            
+            html += '<div style="display:flex;gap:10px;">';
+            html += '<button onclick="closeQuickTabModal()" style="flex:1;padding:12px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;">Cancel</button>';
+            html += `<button onclick="confirmAddToTab('${itemName}', ${itemPrice}, '${category}')" style="flex:1;padding:12px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;">Add to Tab</button>`;
+            html += '</div></div>';
+            
+            // Create modal
+            const modal = document.createElement('div');
+            modal.id = 'quickTabModal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+            modal.innerHTML = `<div style="background:#fff;border-radius:12px;width:90%;max-width:400px;">${html}</div>`;
+            document.body.appendChild(modal);
+            
+            // Handle select change
+            const select = document.getElementById('tabSelect');
+            if (select) {
+                select.onchange = () => {
+                    document.getElementById('newTabNameDiv').style.display = select.value === 'new' ? 'block' : 'none';
+                };
+            }
+        }
+        
+        function closeQuickTabModal() {
+            const modal = document.getElementById('quickTabModal');
+            if (modal) modal.remove();
+        }
+        
+        async function confirmAddToTab(itemName, itemPrice, category) {
+            const select = document.getElementById('tabSelect');
+            const tabId = select ? select.value : 'new';
+            const item = { name: itemName, price: itemPrice, qty: 1, category: category };
+            const employeeName = getCurrentUserName();
+            
+            if (tabId === 'new') {
+                const customerName = document.getElementById('newTabName').value.trim();
+                if (!customerName) return showToast('Enter customer name', 'error');
+                await TabsSync.createTab(customerName, null, [item], employeeName);
+                showToast(`Tab started for ${customerName}`);
+            } else {
+                await TabsSync.addItemsToTab(tabId, [item], employeeName);
+                const tab = TabsSync.getTab(tabId);
+                showToast(`Added to ${tab?.customer}'s tab`);
+            }
+            
+            closeQuickTabModal();
+            renderOpenTabs();
+        }
+        
+        // Render Open Tabs
+        function renderOpenTabs() {
+            const container = document.getElementById('openTabsList');
+            if (!container) return;
+            
+            const tabs = TabsSync.getAllTabs();
+            
+            if (tabs.length === 0) {
+                container.innerHTML = '<div class="empty-list">No open tabs</div>';
+                return;
+            }
+            
+            container.innerHTML = tabs.map(t => `
+                <div class="tab-item" onclick="selectTab('${t.id}')">
+                    <div class="tab-left">
+                        <div class="tab-customer">${t.customer}</div>
+                        <div class="tab-info">${t.items?.length || 0} items • ${t.openedBy || 'Staff'}</div>
+                    </div>
+                    <div class="tab-right">
+                        <div class="tab-total">$${(t.total || 0).toFixed(2)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Select/View Tab
+        function selectTab(tabId) {
+            const tab = TabsSync.getTab(tabId);
+            if (!tab) return;
+            
+            // Load tab items into current sale
+            saleItems = (tab.items || []).map((item, i) => ({
+                id: Date.now() + i,
+                name: item.name,
+                price: item.price,
+                qty: item.qty || 1,
+                discount: 0,
+                category: item.category || 'misc'
+            }));
+            
+            document.getElementById('customerName').value = tab.customer;
+            renderSaleItems();
+            
+            // Store active tab ID for closing
+            window.activeTabId = tabId;
+            showToast(`Loaded ${tab.customer}'s tab`);
+        }
+        
+        // Close Tab (pay and complete)
+        async function closeActiveTab(paymentMethod = 'card', tip = 0) {
+            if (!window.activeTabId) return;
+            
+            const employeeName = getCurrentUserName();
+            await TabsSync.closeTab(window.activeTabId, paymentMethod, tip, employeeName);
+            
+            window.activeTabId = null;
+            saleItems = [];
+            document.getElementById('customerName').value = '';
+            renderSaleItems();
+            renderOpenTabs();
+            showToast('Tab closed successfully');
         }
         
         // ============ RENDER PANELS ============
@@ -2094,13 +2306,19 @@
         
         function managerOverride() {
             const pin = prompt('Enter manager PIN:');
-            if (pin === '1234' || pin === '0000') {
+            if (!pin) return false;
+            
+            // Validate against actual manager PINs from localStorage
+            const employees = JSON.parse(localStorage.getItem('gc_employees') || '[]');
+            const manager = employees.find(e => e.pin === pin && (e.role === 'manager' || e.role === 'admin'));
+            
+            if (manager) {
                 showToast('Manager override granted', 'success');
                 return true;
-            } else if (pin) {
+            } else {
                 showToast('Invalid PIN', 'error');
+                return false;
             }
-            return false;
         }
         
         function issueRaincheck() {

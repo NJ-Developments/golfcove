@@ -1355,11 +1355,87 @@
         <div class="page-section" id="section-settings">
             <h1 class="page-title"><i class="fas fa-cog"></i> Settings</h1>
             
+            <!-- Business Details -->
+            <div class="card" style="border-left:4px solid #4a90a4;">
+                <h3><i class="fas fa-building" style="color:#4a90a4;"></i> Business Details</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Core business information used on receipts and communications.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Business Name</label>
+                        <input type="text" id="settingBusinessName" placeholder="Golf Cove" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Phone Number</label>
+                        <input type="tel" id="settingBusinessPhone" placeholder="(203) 390-5994" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Email Address</label>
+                        <input type="email" id="settingBusinessEmail" placeholder="info@golfcovect.com" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Tax Rate (%)</label>
+                        <input type="number" id="settingTaxRate" step="0.01" placeholder="6.35" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                    </div>
+                    <div style="grid-column:span 2;">
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Address</label>
+                        <input type="text" id="settingBusinessAddress" placeholder="336 State Street, North Haven, CT 06473" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                    </div>
+                </div>
+                <button class="btn" onclick="saveBusinessSettings()" style="margin-top:15px;"><i class="fas fa-save"></i> Save Business Details</button>
+            </div>
+            
             <div class="card">
                 <h3><i class="fas fa-golf-ball"></i> Course Pars</h3>
                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Set the par for each hole.</p>
                 <div id="parInputsContainer"></div>
                 <button class="btn" onclick="savePars()" style="margin-top: 15px;"><i class="fas fa-check"></i> Save Pars</button>
+            </div>
+            
+            <!-- Stripe Payment Settings -->
+            <div class="card" style="border-left:4px solid #7b1fa2;">
+                <h3><i class="fab fa-stripe" style="color:#7b1fa2;"></i> Stripe Payment Settings</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Configure Stripe for online gift card purchases and website payments.</p>
+                <div style="display:grid;gap:15px;">
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Publishable Key <span style="font-weight:400;color:#999;">(starts with pk_)</span></label>
+                        <input type="text" id="settingStripePK" placeholder="pk_live_... or pk_test_..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:12px;">
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Secret Key <span style="font-weight:400;color:#999;">(starts with sk_ - keep private!)</span></label>
+                        <input type="password" id="settingStripeSK" placeholder="sk_live_... or sk_test_..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:12px;">
+                        <p style="font-size:11px;color:#e74c3c;margin-top:5px;"><i class="fas fa-exclamation-triangle"></i> Never share your secret key.</p>
+                    </div>
+                </div>
+                <div style="margin-top:15px;padding:12px;background:#f8f9fa;border-radius:6px;">
+                    <div style="font-size:12px;color:#666;">
+                        <strong>Where to find your keys:</strong><br>
+                        <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:#7b1fa2;">Stripe Dashboard → Developers → API Keys</a>
+                    </div>
+                </div>
+                <button class="btn" onclick="saveStripeSettings()" style="margin-top:15px;"><i class="fas fa-save"></i> Save Stripe Settings</button>
+            </div>
+            
+            <!-- Cloud Sync -->
+            <div class="card" style="border-left:4px solid #3498db;">
+                <h3><i class="fas fa-cloud" style="color:#3498db;"></i> Cloud Sync</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Sync data with Firebase cloud storage for backup and cross-device access.</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn" onclick="syncToCloud()"><i class="fas fa-cloud-upload-alt"></i> Push to Cloud</button>
+                    <button class="btn btn-secondary" onclick="pullFromCloud()"><i class="fas fa-cloud-download-alt"></i> Pull from Cloud</button>
+                </div>
+                <p style="font-size:11px;color:#888;margin-top:10px;"><i class="fas fa-info-circle"></i> Push uploads local data to cloud. Pull downloads cloud data to local storage.</p>
+            </div>
+            
+            <!-- Data Management -->
+            <div class="card" style="border-left:4px solid #e74c3c;">
+                <h3><i class="fas fa-database" style="color:#e74c3c;"></i> Data Management</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Import, export, or reset system data. <strong style="color:#e74c3c;">Use caution!</strong></p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn" onclick="exportAllPOSData()"><i class="fas fa-download"></i> Export All Data</button>
+                    <button class="btn btn-secondary" onclick="importPOSData()"><i class="fas fa-upload"></i> Import Data</button>
+                    <button class="btn" style="background:#e74c3c;" onclick="resetAllPOSData()"><i class="fas fa-redo"></i> Reset All Data</button>
+                </div>
+                <input type="file" id="importDataFile" accept=".json" style="display:none;" onchange="handleDataImport(event)">
             </div>
         </div>
 
@@ -2516,6 +2592,7 @@
             else if (section === 'reports') loadSalesReports();
             else if (section === 'timeclock') loadTimeclock();
             else if (section === 'inventory') loadInventory();
+            else if (section === 'settings') loadStripeSettings();
         }
         
         // Teams
@@ -2796,6 +2873,141 @@
             alert('Pars saved!');
         }
         
+        // Business Settings
+        function loadBusinessSettings() {
+            const nameInput = document.getElementById('settingBusinessName');
+            const phoneInput = document.getElementById('settingBusinessPhone');
+            const emailInput = document.getElementById('settingBusinessEmail');
+            const taxInput = document.getElementById('settingTaxRate');
+            const addressInput = document.getElementById('settingBusinessAddress');
+            
+            if (nameInput) nameInput.value = localStorage.getItem('gc_business_name') || 'Golf Cove';
+            if (phoneInput) phoneInput.value = localStorage.getItem('gc_business_phone') || '(203) 390-5994';
+            if (emailInput) emailInput.value = localStorage.getItem('gc_business_email') || 'info@golfcovect.com';
+            if (taxInput) taxInput.value = localStorage.getItem('gc_tax_rate') || '6.35';
+            if (addressInput) addressInput.value = localStorage.getItem('gc_business_address') || '336 State Street, North Haven, CT 06473';
+        }
+        
+        function saveBusinessSettings() {
+            localStorage.setItem('gc_business_name', document.getElementById('settingBusinessName').value);
+            localStorage.setItem('gc_business_phone', document.getElementById('settingBusinessPhone').value);
+            localStorage.setItem('gc_business_email', document.getElementById('settingBusinessEmail').value);
+            localStorage.setItem('gc_tax_rate', document.getElementById('settingTaxRate').value);
+            localStorage.setItem('gc_business_address', document.getElementById('settingBusinessAddress').value);
+            alert('Business settings saved!');
+        }
+        
+        // Stripe Settings (Admin only)
+        function loadStripeSettings() {
+            const pk = localStorage.getItem('gc_stripe_pk') || '';
+            const sk = localStorage.getItem('gc_stripe_sk') || '';
+            const pkInput = document.getElementById('settingStripePK');
+            const skInput = document.getElementById('settingStripeSK');
+            if (pkInput) pkInput.value = pk;
+            if (skInput) skInput.value = sk;
+            
+            // Also load business settings when showing settings section
+            loadBusinessSettings();
+        }
+        
+        function saveStripeSettings() {
+            const pk = document.getElementById('settingStripePK').value.trim();
+            const sk = document.getElementById('settingStripeSK').value.trim();
+            if (pk) localStorage.setItem('gc_stripe_pk', pk);
+            if (sk) localStorage.setItem('gc_stripe_sk', sk);
+            alert('Stripe settings saved!');
+        }
+        
+        // Data Management (Admin only)
+        function exportAllPOSData() {
+            const data = {
+                exportDate: new Date().toISOString(),
+                version: '1.0',
+                customers: JSON.parse(localStorage.getItem('gc_customers') || '[]'),
+                transactions: JSON.parse(localStorage.getItem('gc_transactions') || '[]'),
+                bookings: JSON.parse(localStorage.getItem('gc_bookings') || '[]'),
+                giftCards: JSON.parse(localStorage.getItem('gc_gift_cards') || '[]'),
+                tabs: JSON.parse(localStorage.getItem('gc_tabs') || '[]'),
+                employees: JSON.parse(localStorage.getItem('gc_employees') || '[]'),
+                settings: {
+                    businessName: localStorage.getItem('gc_business_name'),
+                    taxRate: localStorage.getItem('gc_tax_rate'),
+                    stripePK: localStorage.getItem('gc_stripe_pk')
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `golf-cove-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function importPOSData() {
+            document.getElementById('importDataFile').click();
+        }
+        
+        function handleDataImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (!confirm('This will MERGE imported data with existing data. Continue?')) return;
+                    
+                    // Merge data
+                    if (data.customers) {
+                        const existing = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+                        const merged = [...existing, ...data.customers.filter(c => !existing.find(e => e.id === c.id))];
+                        localStorage.setItem('gc_customers', JSON.stringify(merged));
+                    }
+                    if (data.transactions) {
+                        const existing = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
+                        const merged = [...existing, ...data.transactions.filter(t => !existing.find(e => e.id === t.id))];
+                        localStorage.setItem('gc_transactions', JSON.stringify(merged));
+                    }
+                    if (data.employees) {
+                        const existing = JSON.parse(localStorage.getItem('gc_employees') || '[]');
+                        const merged = [...existing, ...data.employees.filter(emp => !existing.find(e => e.pin === emp.pin))];
+                        localStorage.setItem('gc_employees', JSON.stringify(merged));
+                    }
+                    
+                    alert('Data imported successfully! Refresh the page to see changes.');
+                } catch (err) {
+                    alert('Error importing data: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+        
+        function resetAllPOSData() {
+            if (!confirm('⚠️ WARNING: This will DELETE ALL DATA including customers, transactions, bookings, and employees.\n\nThis cannot be undone!\n\nAre you ABSOLUTELY sure?')) return;
+            if (!confirm('FINAL WARNING: Type "RESET" in the next prompt to confirm.')) return;
+            
+            const confirmation = prompt('Type RESET to confirm:');
+            if (confirmation !== 'RESET') {
+                alert('Reset cancelled.');
+                return;
+            }
+            
+            // Clear all GC data
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('gc_')) keysToRemove.push(key);
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            
+            alert('All data has been reset. The page will now reload.');
+            location.reload();
+        }
+
         // QR & URLs
         function copyUrl() {
             navigator.clipboard.writeText(document.getElementById('scoringUrl').textContent);
@@ -3111,14 +3323,23 @@
         
         // ============ STAFF MANAGEMENT ============
         const defaultStaffList = [
-            { id: 1, name: 'EJ Sattelberger', pin: '1234', role: 'manager', color: '#3498db', active: true },
-            { id: 2, name: 'Mike Johnson', pin: '5678', role: 'bartender', color: '#e67e22', active: true },
-            { id: 3, name: 'Sarah Williams', pin: '9012', role: 'bartender', color: '#9b59b6', active: true },
-            { id: 4, name: 'Chris Davis', pin: '3456', role: 'server', color: '#27ae60', active: true }
+            { id: 1, name: 'EJ Sattelberger', pin: '9999', role: 'manager', color: '#3498db', active: true },
+            { id: 2, name: 'Manager', pin: '9999', role: 'manager', color: '#e67e22', active: true },
+            { id: 3, name: 'Bartender', pin: '9999', role: 'bartender', color: '#9b59b6', active: true },
+            { id: 4, name: 'Staff', pin: '9999', role: 'server', color: '#27ae60', active: true }
         ];
         
         function loadStaffList() {
-            const staff = JSON.parse(localStorage.getItem('gc_staff') || 'null') || defaultStaffList;
+            let staff = JSON.parse(localStorage.getItem('gc_employees') || 'null') || defaultStaffList;
+            // Ensure staff has required properties for display
+            staff = staff.map((s, i) => ({
+                id: s.id || i + 1,
+                name: s.name || (s.firstName + ' ' + (s.lastName || '')).trim(),
+                pin: s.pin || '9999',
+                role: s.role || 'staff',
+                color: s.color || ['#3498db', '#e67e22', '#9b59b6', '#27ae60'][i % 4],
+                active: s.active !== false
+            }));
             const container = document.getElementById('staffList');
             if (!container) return;
             
@@ -3160,7 +3381,7 @@
                 return;
             }
             
-            const staff = JSON.parse(localStorage.getItem('gc_staff') || '[]');
+            const staff = JSON.parse(localStorage.getItem('gc_employees') || '[]');
             const colors = ['#3498db', '#e67e22', '#9b59b6', '#27ae60', '#e74c3c', '#1abc9c', '#34495e'];
             
             staff.push({
@@ -3172,12 +3393,12 @@
                 active: true
             });
             
-            localStorage.setItem('gc_staff', JSON.stringify(staff));
+            localStorage.setItem('gc_employees', JSON.stringify(staff));
             loadStaffList();
         }
         
         function editStaffMember(id) {
-            const staff = JSON.parse(localStorage.getItem('gc_staff') || '[]');
+            const staff = JSON.parse(localStorage.getItem('gc_employees') || '[]');
             const member = staff.find(s => s.id === id);
             if (!member) return;
             
@@ -3187,12 +3408,12 @@
             const newRole = prompt('Edit role (manager, bartender, server):', member.role);
             if (newRole) member.role = newRole.toLowerCase();
             
-            localStorage.setItem('gc_staff', JSON.stringify(staff));
+            localStorage.setItem('gc_employees', JSON.stringify(staff));
             loadStaffList();
         }
         
         function resetStaffPin(id) {
-            const staff = JSON.parse(localStorage.getItem('gc_staff') || '[]');
+            const staff = JSON.parse(localStorage.getItem('gc_employees') || '[]');
             const member = staff.find(s => s.id === id);
             if (!member) return;
             
@@ -3203,18 +3424,18 @@
             }
             
             member.pin = newPin;
-            localStorage.setItem('gc_staff', JSON.stringify(staff));
+            localStorage.setItem('gc_employees', JSON.stringify(staff));
             loadStaffList();
             alert('PIN updated successfully');
         }
         
         function toggleStaffActive(id) {
-            const staff = JSON.parse(localStorage.getItem('gc_staff') || '[]');
+            const staff = JSON.parse(localStorage.getItem('gc_employees') || '[]');
             const member = staff.find(s => s.id === id);
             if (!member) return;
             
             member.active = member.active === false ? true : false;
-            localStorage.setItem('gc_staff', JSON.stringify(staff));
+            localStorage.setItem('gc_employees', JSON.stringify(staff));
             loadStaffList();
         }
         
@@ -3504,6 +3725,112 @@
                 loadInventory();
             }
         }
+
+        // ============ CLOUD SYNC FUNCTIONS ============
+        async function syncToCloud() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+            btn.disabled = true;
+            
+            try {
+                const data = {
+                    customers: JSON.parse(localStorage.getItem('gc_customers') || '[]'),
+                    transactions: JSON.parse(localStorage.getItem('gc_transactions') || '[]'),
+                    bookings: JSON.parse(localStorage.getItem('gc_bookings') || '[]')
+                };
+                
+                const response = await fetch('/api/fullSync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`Cloud sync complete!\nCustomers: ${result.customers || 0}\nTransactions: ${result.transactions || 0}\nBookings: ${result.bookings || 0}`);
+                } else {
+                    throw new Error('Sync failed');
+                }
+            } catch (err) {
+                console.error('Sync error:', err);
+                alert('Sync failed: ' + err.message);
+            }
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+        
+        async function pullFromCloud() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pulling...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/fullPull');
+                if (!response.ok) throw new Error('Pull failed');
+                
+                const data = await response.json();
+                
+                if (data.customers) localStorage.setItem('gc_customers', JSON.stringify(data.customers));
+                if (data.transactions) localStorage.setItem('gc_transactions', JSON.stringify(data.transactions));
+                if (data.bookings) localStorage.setItem('gc_bookings', JSON.stringify(data.bookings));
+                
+                alert(`Data pulled from cloud!\nCustomers: ${data.customers?.length || 0}\nTransactions: ${data.transactions?.length || 0}\nBookings: ${data.bookings?.length || 0}`);
+                
+                loadSalesReports();
+            } catch (err) {
+                console.error('Pull error:', err);
+                alert('Pull failed: ' + err.message);
+            }
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+        
+        async function fetchSalesFromBackend() {
+            try {
+                const response = await fetch('/api/sales?limit=100');
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                if (data.sales && data.sales.length > 0) {
+                    // Merge with local
+                    const local = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
+                    const merged = [...local];
+                    
+                    data.sales.forEach(sale => {
+                        if (!merged.find(t => t.id === sale.id)) {
+                            merged.push({
+                                id: sale.id,
+                                date: sale.date,
+                                time: sale.time,
+                                customer: sale.customer,
+                                employee: sale.employee,
+                                method: sale.method,
+                                amount: sale.amount,
+                                itemDetails: sale.items || []
+                            });
+                        }
+                    });
+                    
+                    localStorage.setItem('gc_transactions', JSON.stringify(merged));
+                    loadSalesReports();
+                }
+            } catch (err) {
+                console.error('Failed to fetch sales from backend:', err);
+            }
+        }
+        
+        // Fetch sales from backend on reports page load
+        const originalShowSection = showSection;
+        showSection = function(section) {
+            originalShowSection(section);
+            if (section === 'reports') {
+                fetchSalesFromBackend();
+            }
+        };
         
         init();
     </script>

@@ -44,11 +44,102 @@
       {
         "source": "/api/getPaymentStatus",
         "function": "getPaymentStatus"
+      },
+      {
+        "source": "/api/createBookingCheckout",
+        "function": "createBookingCheckout"
+      },
+      {
+        "source": "/api/createGiftCardCheckout",
+        "function": "createGiftCardCheckout"
+      },
+      {
+        "source": "/api/createMembershipCheckout",
+        "function": "createMembershipCheckout"
+      },
+      {
+        "source": "/api/createEventCheckout",
+        "function": "createEventCheckout"
+      },
+      {
+        "source": "/api/verifyPayment",
+        "function": "verifyPayment"
+      },
+      {
+        "source": "/api/stripeWebhook",
+        "function": "stripeWebhook"
+      },
+      {
+        "source": "/api/createPortalSession",
+        "function": "createPortalSession"
+      },
+      {
+        "source": "/api/sendBookingConfirmation",
+        "function": "sendBookingConfirmation"
+      },
+      {
+        "source": "/api/syncCustomers",
+        "function": "syncCustomers"
+      },
+      {
+        "source": "/api/getCustomers",
+        "function": "getCustomers"
+      },
+      {
+        "source": "/api/syncBookings",
+        "function": "syncBookings"
+      },
+      {
+        "source": "/api/getBookings",
+        "function": "getBookings"
+      },
+      {
+        "source": "/api/syncTransactions",
+        "function": "syncTransactions"
+      },
+      {
+        "source": "/api/getTransactions",
+        "function": "getTransactions"
+      },
+      {
+        "source": "/api/fullSync",
+        "function": "fullSync"
+      },
+      {
+        "source": "/api/fullPull",
+        "function": "fullPull"
+      },
+      {
+        "source": "/api/cart",
+        "function": "cart"
+      },
+      {
+        "source": "/api/sales",
+        "function": "sales"
+      },
+      {
+        "source": "/api/giftcards",
+        "function": "giftcards"
+      },
+      {
+        "source": "/api/customers",
+        "function": "customers"
+      },
+      {
+        "source": "/api/items",
+        "function": "items"
+      },
+      {
+        "source": "/api/reports",
+        "function": "reports"
       }
     ]
   },
   "functions": {
     "source": "functions",
     "runtime": "nodejs20"
+  },
+  "firestore": {
+    "rules": "firebase-security-rules.json"
   }
 }

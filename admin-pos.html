@@ -9,6 +9,8 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://js.stripe.com/terminal/v1/"></script>
     <script src="js/membership-system.js"></script>
+    <script src="js/booking-system.js"></script>
+    <script src="js/tabs-sync.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; }
@@ -368,6 +370,7 @@
             <div class="header-stat"><div class="value" id="statRevenue">$485.00</div><div class="label">Revenue</div></div>
         </div>
         <div class="header-right">
+            <button onclick="showCloudSync()" id="cloudSyncBtn" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:5px;" title="Cloud Sync"><i class="fas fa-cloud"></i> <span id="syncStatusText">Sync</span></button>
             <button onclick="lockPOS()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:5px;" title="Lock POS"><i class="fas fa-lock"></i></button>
             <button onclick="showReaderSetup()" id="readerStatusBtn" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:5px;" title="Card Reader"><i class="fas fa-credit-card"></i> <span id="readerStatusText">Reader</span></button>
             <button onclick="showSettings()" style="background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:5px;" title="Settings"><i class="fas fa-cog"></i></button>
@@ -445,6 +448,20 @@
         <main class="content" id="mainContent">
             <!-- Tee Sheet Page -->
             <div id="page-teesheet" class="page-content">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;padding:10px 15px;background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <button onclick="changeTeeSheetDate(-1)" style="background:#f0f2f5;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;"><i class="fas fa-chevron-left"></i></button>
+                        <input type="date" id="teeSheetDate" onchange="renderTeeSheet()" style="padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;">
+                        <button onclick="changeTeeSheetDate(1)" style="background:#f0f2f5;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;"><i class="fas fa-chevron-right"></i></button>
+                        <button onclick="goToToday()" style="background:#4a90a4;color:#fff;border:none;padding:8px 15px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Today</button>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:15px;">
+                        <span style="font-size:12px;color:#666;"><i class="fas fa-circle" style="color:#27ae60;font-size:8px;"></i> Available</span>
+                        <span style="font-size:12px;color:#666;"><i class="fas fa-circle" style="color:#4a90a4;font-size:8px;"></i> Booked</span>
+                        <span style="font-size:12px;color:#666;"><i class="fas fa-circle" style="color:#9b59b6;font-size:8px;"></i> VIP</span>
+                        <span style="font-size:12px;color:#666;"><i class="fas fa-check-circle" style="color:#27ae60;font-size:10px;"></i> Checked In</span>
+                    </div>
+                </div>
                 <div class="rooms-container" id="roomsContainer"></div>
             </div>
 
@@ -511,59 +528,91 @@
 
     <!-- Booking Modal -->
     <div class="modal-overlay" id="modal-booking">
-        <div class="modal">
+        <div class="modal" style="max-width:600px;">
             <h3><i class="fas fa-calendar-plus"></i> New Reservation</h3>
-            <form id="bookingForm" onsubmit="createBooking(event)">
-                <div style="background:#e8f5e9;padding:10px;border-radius:6px;margin-bottom:15px;font-size:12px;color:#2e7d32;">
-                    <i class="fas fa-info-circle"></i> Fill in customer details to create a bay reservation
-                </div>
+            <form id="bookingForm" onsubmit="handleCreateBooking(event)">
+                <!-- Customer Selection Section -->
                 <div class="form-group" style="position:relative;">
-                    <label>Customer Name *</label>
-                    <input type="text" id="bookingCustomer" required placeholder="Search or enter name..." autocomplete="off">
-                    <div id="bookingCustomerAutocomplete" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:100;display:none;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+                    <label>Customer *</label>
+                    <input type="text" id="bookingCustomer" required placeholder="Search by name, phone, or email..." autocomplete="off">
+                    <div id="bookingCustomerAutocomplete" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:0 0 8px 8px;max-height:250px;overflow-y:auto;z-index:100;display:none;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+                    <input type="hidden" id="bookingCustomerId" value="">
                 </div>
+                
+                <!-- Quick Customer Selection -->
+                <div id="quickCustomerSelect" style="margin-bottom:15px;">
+                    <!-- VIP Members -->
+                    <div style="margin-bottom:10px;">
+                        <label style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">⭐ VIP Members</label>
+                        <div id="vipMembersList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;"></div>
+                    </div>
+                    <!-- Recent Customers -->
+                    <div>
+                        <label style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">🕐 Recent Customers</label>
+                        <div id="recentCustomersList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;"></div>
+                    </div>
+                </div>
+                
+                <!-- Member Badge Display -->
+                <div id="bookingMemberBadge" style="display:none;background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;padding:10px 15px;border-radius:8px;margin-bottom:15px;font-size:13px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span><i class="fas fa-crown"></i> <span id="bookingMemberText">VIP Member</span></span>
+                        <span id="bookingMemberDiscount" style="font-weight:700;"></span>
+                    </div>
+                    <div id="bookingMemberBenefits" style="font-size:11px;opacity:0.9;margin-top:5px;"></div>
+                </div>
+                
+                <!-- Room & Time -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Room/Bay *</label>
-                        <select id="bookingRoom">
+                        <label>Room *</label>
+                        <select id="bookingRoom" onchange="checkBookingAvailability()">
                             <option value="1">Room 1</option>
                             <option value="2">Room 2</option>
                             <option value="3">Room 3</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Duration *</label>
-                        <select id="bookingDuration">
-                            <option value="1">1 Hour - $45</option>
-                            <option value="2">2 Hours - $80</option>
-                            <option value="3">3 Hours - $110</option>
-                        </select>
+                        <label>Date *</label>
+                        <input type="date" id="bookingDate" onchange="checkBookingAvailability()">
                     </div>
                 </div>
+                
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Date *</label>
-                        <input type="date" id="bookingDate">
+                        <label>Time *</label>
+                        <select id="bookingTime" onchange="checkBookingAvailability()">
+                            <option value="9:00am">9:00 AM</option>
+                            <option value="10:00am">10:00 AM</option>
+                            <option value="11:00am">11:00 AM</option>
+                            <option value="12:00pm">12:00 PM</option>
+                            <option value="1:00pm">1:00 PM</option>
+                            <option value="2:00pm">2:00 PM</option>
+                            <option value="3:00pm">3:00 PM</option>
+                            <option value="4:00pm">4:00 PM</option>
+                            <option value="5:00pm">5:00 PM</option>
+                            <option value="6:00pm">6:00 PM</option>
+                            <option value="7:00pm">7:00 PM</option>
+                            <option value="8:00pm">8:00 PM</option>
+                            <option value="9:00pm">9:00 PM</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Time *</label>
-                        <select id="bookingTime">
-                            <option value="09:00">9:00 AM</option>
-                            <option value="10:00">10:00 AM</option>
-                            <option value="11:00">11:00 AM</option>
-                            <option value="12:00">12:00 PM</option>
-                            <option value="13:00">1:00 PM</option>
-                            <option value="14:00">2:00 PM</option>
-                            <option value="15:00">3:00 PM</option>
-                            <option value="16:00">4:00 PM</option>
-                            <option value="17:00">5:00 PM</option>
-                            <option value="18:00">6:00 PM</option>
-                            <option value="19:00">7:00 PM</option>
-                            <option value="20:00">8:00 PM</option>
-                            <option value="21:00">9:00 PM</option>
+                        <label>Duration *</label>
+                        <select id="bookingDuration" onchange="updateBookingPrice()">
+                            <option value="1">1 Hour</option>
+                            <option value="2">2 Hours</option>
+                            <option value="3">3 Hours</option>
+                            <option value="4">4 Hours</option>
                         </select>
                     </div>
                 </div>
+                
+                <!-- Availability Check -->
+                <div id="availabilityCheck" style="display:none;padding:10px;border-radius:6px;margin-bottom:15px;font-size:12px;">
+                </div>
+                
+                <!-- Players & Contact -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Players</label>
@@ -576,20 +625,84 @@
                     </div>
                     <div class="form-group">
                         <label>Phone</label>
-                        <input type="tel" id="bookingPhone" placeholder="(203) 555-0123" oninput="formatPhoneNumber(this)">
+                        <input type="tel" id="bookingPhone" placeholder="(203) 555-0123">
                     </div>
                     <div class="form-group">
                         <label>Email</label>
-                        <input type="email" id="bookingEmail" placeholder="customer@email.com">
+                        <input type="email" id="bookingEmail" placeholder="email@example.com">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Notes</label>
-                    <input type="text" id="bookingNotes" placeholder="Special requests...">
+                
+                <!-- Booking Source -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Booking Source</label>
+                        <select id="bookingSource">
+                            <option value="walk-in">Walk-In</option>
+                            <option value="phone">Phone</option>
+                            <option value="online">Online</option>
+                            <option value="member">Member Portal</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <input type="text" id="bookingNotes" placeholder="Special requests...">
+                    </div>
                 </div>
+                
+                <!-- Pricing Summary -->
+                <div id="bookingPriceSummary" style="background:#f8f9fa;padding:12px 15px;border-radius:8px;margin:15px 0;font-size:13px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                        <span>Base Price:</span>
+                        <span id="bookingBasePrice">$45.00</span>
+                    </div>
+                    <div id="bookingPeakRow" style="display:none;justify-content:space-between;margin-bottom:5px;color:#e67e22;">
+                        <span>Peak Hour Surcharge:</span>
+                        <span>+$10.00</span>
+                    </div>
+                    <div id="bookingDiscountRow" style="display:none;justify-content:space-between;margin-bottom:5px;color:#27ae60;">
+                        <span id="bookingDiscountLabel">Member Discount:</span>
+                        <span id="bookingDiscountAmount">-$0.00</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px;border-top:1px solid #ddd;padding-top:8px;margin-top:8px;">
+                        <span>Total:</span>
+                        <span id="bookingTotalPrice" style="color:#27ae60;">$45.00</span>
+                    </div>
+                </div>
+                
+                <!-- Recurring Option -->
+                <div style="margin-bottom:15px;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+                        <input type="checkbox" id="bookingRecurring" onchange="toggleRecurringOptions()">
+                        <span>Make this a recurring booking</span>
+                    </label>
+                    <div id="recurringOptions" style="display:none;margin-top:10px;padding:10px;background:#e3f2fd;border-radius:6px;">
+                        <div class="form-row">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label style="font-size:11px;">Repeat</label>
+                                <select id="recurringType" style="font-size:12px;">
+                                    <option value="weekly">Weekly</option>
+                                    <option value="biweekly">Every 2 Weeks</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label style="font-size:11px;">For</label>
+                                <select id="recurringCount" style="font-size:12px;">
+                                    <option value="4">4 weeks</option>
+                                    <option value="8">8 weeks</option>
+                                    <option value="12">12 weeks</option>
+                                    <option value="26">6 months</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="modal-buttons">
                     <button type="button" class="btn-cancel" onclick="hideModal('booking')">Cancel</button>
-                    <button type="submit" class="btn-save">Create Reservation</button>
+                    <button type="button" class="btn-save" style="background:#f39c12;" onclick="addToWaitlistFromModal()"><i class="fas fa-clock"></i> Add to Waitlist</button>
+                    <button type="submit" class="btn-save"><i class="fas fa-check"></i> Create Booking</button>
                 </div>
             </form>
         </div>
@@ -597,13 +710,38 @@
 
     <!-- New Tab Modal -->
     <div class="modal-overlay" id="modal-newTab">
-        <div class="modal">
+        <div class="modal" style="max-width:500px;">
             <h3><i class="fas fa-receipt"></i> New Tab</h3>
             <form onsubmit="createTab(event)">
                 <div class="form-group">
                     <label>Customer Name *</label>
-                    <input type="text" id="tabCustomer" required placeholder="Customer name">
+                    <div style="position:relative;">
+                        <input type="text" id="tabCustomer" required placeholder="Search or enter customer name" oninput="searchTabCustomers(this.value)" autocomplete="off">
+                        <input type="hidden" id="tabCustomerId">
+                        <div id="tabCustomerResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+                    </div>
                 </div>
+                
+                <!-- Member Quick Select -->
+                <div class="form-group">
+                    <label style="font-size:11px;color:#666;">Quick Select - Members</label>
+                    <div id="tabMemberQuickSelect" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;"></div>
+                </div>
+                
+                <!-- Member Status Display -->
+                <div id="tabMemberStatus" style="display:none;padding:12px;background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);border-radius:8px;margin-bottom:15px;border-left:4px solid #9b59b6;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-crown" style="font-size:24px;color:#f1c40f;"></i>
+                        <div>
+                            <div style="font-weight:600;color:#333;font-size:14px;" id="tabMemberName">Member Name</div>
+                            <div style="font-size:12px;color:#666;">
+                                <span id="tabMemberTier" style="background:#9b59b6;color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;text-transform:uppercase;"></span>
+                                <span id="tabMemberDiscount" style="color:#27ae60;font-weight:600;margin-left:8px;"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label>Table/Location</label>
                     <select id="tabTable">
@@ -644,6 +782,7 @@
     <div class="modal-overlay" id="modal-bookingDetail">
         <div class="modal">
             <h3><i class="fas fa-calendar-check"></i> Reservation Details</h3>
+            <div id="bookingPriorityBadge" style="display:none;text-align:center;margin-bottom:15px;"></div>
             <div class="booking-detail">
                 <div class="booking-detail-row">
                     <span class="booking-detail-label">Customer</span>
@@ -665,13 +804,34 @@
                     <span class="booking-detail-label">Players</span>
                     <span class="booking-detail-value" id="detailPlayers">-</span>
                 </div>
+                <div class="booking-detail-row">
+                    <span class="booking-detail-label">Status</span>
+                    <span class="booking-detail-value" id="detailStatus">-</span>
+                </div>
+                <div class="booking-detail-row" id="detailPriceRow">
+                    <span class="booking-detail-label">Total Price</span>
+                    <span class="booking-detail-value" id="detailPrice" style="font-weight:700;color:#27ae60;">-</span>
+                </div>
+                <div class="booking-detail-row" id="detailDepositRow" style="display:none;">
+                    <span class="booking-detail-label">Deposit Paid</span>
+                    <span class="booking-detail-value" id="detailDeposit" style="color:#3498db;">-</span>
+                </div>
+                <div class="booking-detail-row" id="detailBalanceRow" style="display:none;border-top:2px solid #eee;padding-top:10px;margin-top:5px;">
+                    <span class="booking-detail-label">Balance Due</span>
+                    <span class="booking-detail-value" id="detailBalance" style="font-weight:700;color:#e74c3c;">-</span>
+                </div>
+                <div class="booking-detail-row" id="detailNotesRow" style="display:none;">
+                    <span class="booking-detail-label">Notes</span>
+                    <span class="booking-detail-value" id="detailNotes" style="font-style:italic;">-</span>
+                </div>
             </div>
-            <div class="modal-buttons" style="flex-wrap:wrap;">
+            <div class="modal-buttons" style="flex-wrap:wrap;" id="bookingDetailButtons">
                 <button type="button" class="btn-cancel" onclick="hideModal('bookingDetail')" style="flex:1;min-width:100px;">Close</button>
-                <button type="button" style="flex:1;min-width:100px;background:#f39c12;border:none;color:#fff;padding:12px;border-radius:6px;font-weight:600;cursor:pointer;" onclick="markNoShow()"><i class="fas fa-user-slash"></i> No Show</button>
-                <button type="button" style="flex:1;min-width:100px;background:#9b59b6;border:none;color:#fff;padding:12px;border-radius:6px;font-weight:600;cursor:pointer;" onclick="rescheduleBooking()"><i class="fas fa-calendar-alt"></i> Reschedule</button>
-                <button type="button" class="delete-booking-btn" onclick="deleteBooking()" style="flex:1;min-width:100px;"><i class="fas fa-trash"></i> Cancel</button>
-                <button type="button" class="btn-save" onclick="checkInBooking()" style="flex:1;min-width:100px;"><i class="fas fa-check"></i> Check In</button>
+                <button type="button" id="btnNoShow" style="flex:1;min-width:100px;background:#f39c12;border:none;color:#fff;padding:12px;border-radius:6px;font-weight:600;cursor:pointer;" onclick="markNoShow()"><i class="fas fa-user-slash"></i> No Show</button>
+                <button type="button" id="btnReschedule" style="flex:1;min-width:100px;background:#9b59b6;border:none;color:#fff;padding:12px;border-radius:6px;font-weight:600;cursor:pointer;" onclick="rescheduleBooking()"><i class="fas fa-calendar-alt"></i> Reschedule</button>
+                <button type="button" id="btnCancelBooking" class="delete-booking-btn" onclick="deleteBooking()" style="flex:1;min-width:100px;"><i class="fas fa-trash"></i> Cancel</button>
+                <button type="button" id="btnCheckIn" class="btn-save" onclick="checkInBooking()" style="flex:1;min-width:100px;"><i class="fas fa-check"></i> Check In</button>
+                <button type="button" id="btnCheckOut" class="btn-save" onclick="checkOutBooking()" style="flex:1;min-width:100px;display:none;background:#27ae60;"><i class="fas fa-sign-out-alt"></i> Check Out</button>
             </div>
         </div>
     </div>
@@ -1074,12 +1234,16 @@
         function renderTeeSheet() {
             const container = document.getElementById('roomsContainer');
             const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const selectedDate = document.getElementById('teeSheetDate')?.value || new Date().toISOString().split('T')[0];
+            
+            // Get all bookings for the selected date from the booking system
+            const allBookings = GolfCoveBooking.getForDate(selectedDate);
             
             container.innerHTML = rooms.map(room => {
-                // Calculate room status
-                const roomBookings = bookings.filter(b => b.room === room.id);
+                // Get bookings for this room using either roomId or room
+                const roomBookings = allBookings.filter(b => (b.roomId || b.room) === room.id);
                 const bookedCount = roomBookings.length;
-                const checkedInCount = roomBookings.filter(b => b.checkedIn).length;
+                const checkedInCount = roomBookings.filter(b => b.status === 'checked-in' || b.checkedIn).length;
                 let statusClass = 'available';
                 if (bookedCount > 0 && checkedInCount === bookedCount) statusClass = 'occupied';
                 else if (bookedCount > 0) statusClass = 'partial';
@@ -1093,32 +1257,44 @@
                     </div>
                     <div class="room-slots">
                         ${timeSlots.map(time => {
-                            const booking = bookings.find(b => b.room === room.id && b.time === time);
+                            const booking = roomBookings.find(b => b.time === time);
                             
-                            // Check if customer is a member
+                            // Check VIP/member status
                             let memberBadge = '';
                             let isVIP = false;
                             if (booking) {
-                                const customer = allCustomers.find(c => 
-                                    `${c.firstName} ${c.lastName}`.toLowerCase() === booking.customer.toLowerCase()
-                                );
-                                if (customer && customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > new Date()) {
-                                    isVIP = customer.memberType && (customer.memberType.includes('eagle') || customer.memberType.includes('birdie'));
-                                    if (isVIP) {
-                                        memberBadge = '<span style="background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;margin-left:4px;">⭐ VIP</span>';
-                                    } else if (customer.memberType) {
-                                        memberBadge = '<span style="background:#27ae60;color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;margin-left:4px;">M</span>';
+                                if (booking.priority === 'vip') {
+                                    isVIP = true;
+                                    memberBadge = '<span style="background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;margin-left:4px;">⭐ VIP</span>';
+                                } else if (booking.priority === 'member') {
+                                    memberBadge = '<span style="background:#27ae60;color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;margin-left:4px;">M</span>';
+                                } else {
+                                    // Fallback to customer lookup
+                                    const customer = allCustomers.find(c => 
+                                        `${c.firstName} ${c.lastName}`.toLowerCase() === booking.customer.toLowerCase()
+                                    );
+                                    if (customer && customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > new Date()) {
+                                        isVIP = customer.memberType && (customer.memberType.includes('eagle') || customer.memberType.includes('birdie'));
+                                        if (isVIP) {
+                                            memberBadge = '<span style="background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;margin-left:4px;">⭐ VIP</span>';
+                                        } else if (customer.memberType) {
+                                            memberBadge = '<span style="background:#27ae60;color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;margin-left:4px;">M</span>';
+                                        }
                                     }
                                 }
                             }
                             
+                            // Status icon
+                            const isCheckedIn = booking && (booking.status === 'checked-in' || booking.checkedIn);
+                            const statusIcon = isCheckedIn ? ' <i class="fas fa-check-circle" style="color:#27ae60;"></i>' : '';
+                            
                             return `
                                 <div class="time-slot">
                                     <div class="time-label">${time}</div>
-                                    <div class="slot-content ${booking ? (booking.checkedIn ? 'booked checked-in' : 'booked') : 'available'}${isVIP ? ' vip-booking' : ''}" onclick="${booking ? `selectBooking(${booking.id})` : `quickBook(${room.id}, '${time}')`}" style="${isVIP ? 'background:linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);box-shadow:0 2px 8px rgba(155,89,182,0.4);' : ''}">
+                                    <div class="slot-content ${booking ? (isCheckedIn ? 'booked checked-in' : 'booked') : 'available'}${isVIP ? ' vip-booking' : ''}" onclick="${booking ? `selectBooking(${booking.id})` : `quickBook(${room.id}, '${time}')`}" style="${isVIP ? 'background:linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);box-shadow:0 2px 8px rgba(155,89,182,0.4);' : ''}">
                                         ${booking ? `
                                             <div class="booking-info">
-                                                <span class="customer-name">${booking.customer}${memberBadge}${booking.checkedIn ? ' <i class="fas fa-check-circle" style="color:#27ae60;"></i>' : ''}</span>
+                                                <span class="customer-name">${booking.customer}${memberBadge}${statusIcon}</span>
                                                 <span class="booking-details">${booking.duration}hr</span>
                                             </div>
                                             <span class="player-count">${booking.players}<i class="fas fa-user" style="margin-left:3px;font-size:10px;"></i></span>
@@ -1145,16 +1321,46 @@
             if (openTabs.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;padding:20px;">No open tabs</td></tr>';
             } else {
-                tbody.innerHTML = openTabs.map(tab => `
-                    <tr class="tab-row">
+                tbody.innerHTML = openTabs.map(tab => {
+                    // Check if customer is a member
+                    let memberBadge = '';
+                    let rowStyle = '';
+                    
+                    if (tab.isMember && tab.memberType) {
+                        const tierColors = {
+                            'par': '#3498db',
+                            'birdie': '#9b59b6', 
+                            'eagle': '#f1c40f',
+                            'family-par': '#3498db',
+                            'family-birdie': '#9b59b6',
+                            'family-eagle': '#f1c40f',
+                            'corporate': '#2c3e50',
+                            'monthly': '#27ae60',
+                            'annual': '#27ae60'
+                        };
+                        const tierColor = tierColors[tab.memberType] || '#9b59b6';
+                        const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family-par': '10%', 'family-birdie': '10%', 'family-eagle': '15%', 'corporate': '20%' };
+                        const discount = discounts[tab.memberType] || '10%';
+                        
+                        memberBadge = `
+                            <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, ${tierColor} 0%, ${tierColor}dd 100%);color:#fff;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:600;text-transform:uppercase;margin-left:8px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+                                <i class="fas fa-crown" style="font-size:9px;color:#f1c40f;"></i>
+                                ${tab.memberType} (${discount} OFF)
+                            </span>
+                        `;
+                        rowStyle = 'background:linear-gradient(135deg, #fef9e7 0%, #f8f4e8 100%);';
+                    }
+                    
+                    return `
+                    <tr class="tab-row" style="${rowStyle}">
                         <td>${tab.table || 'Tab'}</td>
-                        <td>${tab.customer}</td>
+                        <td style="display:flex;align-items:center;flex-wrap:wrap;">${tab.customer}${memberBadge}</td>
                         <td style="font-weight:600;color:#27ae60;">$${tab.amount.toFixed(2)}</td>
                         <td>
                             <button onclick="selectTab(${tab.id})" style="background:#4a90a4;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-right:5px;"><i class="fas fa-eye"></i> View</button>
                         </td>
                     </tr>
-                `).join('');
+                `}).join('');
             }
             
             // Update sidebar summary
@@ -2012,186 +2218,429 @@
             }, 3000);
         }
 
-        // ============ BOOKING FUNCTIONS ============
-        function createBooking(e) {
+        // ============ BOOKING FUNCTIONS (Using GolfCoveBooking System) ============
+        let selectedBookingMemberType = null;
+        
+        function handleCreateBooking(e) {
             e.preventDefault();
             
-            // Convert 24h time to 12h format for tee sheet
-            const timeValue = document.getElementById('bookingTime').value;
-            const hour = parseInt(timeValue.split(':')[0]);
-            const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
-            const ampm = hour >= 12 ? 'pm' : 'am';
-            const timeString = displayHour + ':00' + ampm;
-            
-            // Check for booking conflict
-            const room = parseInt(document.getElementById('bookingRoom').value);
-            const existingBooking = bookings.find(b => b.room === room && b.time === timeString && b.id !== window.rescheduleFromId);
-            if (existingBooking) {
-                showToast('Time slot already booked!', 'error');
-                return;
-            }
-            
             const customerName = document.getElementById('bookingCustomer').value;
+            const room = parseInt(document.getElementById('bookingRoom').value);
+            const date = document.getElementById('bookingDate').value;
+            const time = document.getElementById('bookingTime').value;
+            const duration = parseInt(document.getElementById('bookingDuration').value);
+            const players = parseInt(document.getElementById('bookingPlayers').value);
             const phone = document.getElementById('bookingPhone').value || '';
-            const email = document.getElementById('bookingEmail') ? document.getElementById('bookingEmail').value : '';
+            const email = document.getElementById('bookingEmail').value || '';
+            const notes = document.getElementById('bookingNotes').value || '';
+            const source = document.getElementById('bookingSource').value;
+            const isRecurring = document.getElementById('bookingRecurring').checked;
             
             // Save customer to database
             saveCustomer(customerName, phone, email);
             
-            const booking = {
-                id: Date.now(), // Use timestamp for unique ID
-                room: room,
-                time: timeString,
+            const bookingData = {
                 customer: customerName,
-                players: parseInt(document.getElementById('bookingPlayers').value),
-                duration: parseInt(document.getElementById('bookingDuration').value),
+                room: room,
+                date: date,
+                time: time,
+                duration: duration,
+                players: players,
                 phone: phone,
                 email: email,
-                notes: document.getElementById('bookingNotes').value || '',
-                createdAt: new Date().toISOString()
+                notes: notes,
+                source: source,
+                memberType: selectedBookingMemberType,
+                createdBy: currentEmployee ? currentEmployee.name : 'POS'
             };
             
-            // If rescheduling, remove old booking
-            if (window.rescheduleFromId) {
-                bookings = bookings.filter(b => b.id !== window.rescheduleFromId);
-                window.rescheduleFromId = null;
-                showToast('Booking rescheduled for ' + booking.customer);
+            let result;
+            if (isRecurring) {
+                const recurringType = document.getElementById('recurringType').value;
+                const recurringCount = parseInt(document.getElementById('recurringCount').value);
+                result = GolfCoveBooking.createRecurringBooking(bookingData, { 
+                    type: recurringType, 
+                    count: recurringCount 
+                });
+                if (result.success) {
+                    showToast(`Created ${result.created} recurring bookings for ${customerName}`, 'success');
+                }
             } else {
-                showToast('Booking created for ' + booking.customer);
+                result = GolfCoveBooking.createBooking(bookingData);
+                if (result.success) {
+                    showToast(`Booking created for ${customerName}`, 'success');
+                    
+                    // Add rental to cart for immediate payment option
+                    const pricing = result.booking.price || 45;
+                    if (confirm(`Add Room ${room} rental ($${pricing.toFixed(2)}) to cart for payment?`)) {
+                        addToCart(`Room ${room} - ${duration}hr`, pricing);
+                    }
+                }
             }
             
-            bookings.push(booking);
-            localStorage.setItem('gc_bookings', JSON.stringify(bookings));
+            if (!result.success) {
+                showToast(result.error || 'Failed to create booking', 'error');
+                return;
+            }
+            
+            // Refresh bookings from storage
+            bookings = JSON.parse(localStorage.getItem('gc_bookings') || '[]');
+            
             hideModal('booking');
             renderTeeSheet();
             
-            // Add rental to cart
-            const prices = { 1: 45, 2: 80, 3: 110 };
-            addToCart(`Room ${booking.room} - ${booking.duration}hr`, prices[booking.duration]);
-            
             // Offer email confirmation
             if (email && confirm('Send confirmation email to ' + email + '?')) {
-                sendConfirmationEmail(booking);
+                sendConfirmationEmail(result.booking || result.bookings[0]);
             }
             
-            e.target.reset();
+            document.getElementById('bookingForm').reset();
+            selectedBookingMemberType = null;
+            document.getElementById('bookingMemberBadge').style.display = 'none';
         }
         
-        function sendConfirmationEmail(booking) {
-            // In production, this would call an API
+        function checkBookingAvailability() {
+            const room = parseInt(document.getElementById('bookingRoom').value);
+            const date = document.getElementById('bookingDate').value;
+            const time = document.getElementById('bookingTime').value;
+            const duration = parseInt(document.getElementById('bookingDuration').value);
+            
+            if (!date || !time) return;
+            
+            const checkDiv = document.getElementById('availabilityCheck');
+            const isAvailable = GolfCoveBooking.isSlotAvailable(room, date, time, duration);
+            
+            if (isAvailable) {
+                checkDiv.style.display = 'block';
+                checkDiv.style.background = '#e8f5e9';
+                checkDiv.style.color = '#2e7d32';
+                checkDiv.innerHTML = '<i class="fas fa-check-circle"></i> Time slot is available!';
+            } else {
+                checkDiv.style.display = 'block';
+                checkDiv.style.background = '#ffebee';
+                checkDiv.style.color = '#c62828';
+                checkDiv.innerHTML = '<i class="fas fa-times-circle"></i> Time slot is not available. Try another time or add to waitlist.';
+            }
+            
+            updateBookingPrice();
+        }
+        
+        function updateBookingPrice() {
+            const duration = parseInt(document.getElementById('bookingDuration').value);
+            const date = document.getElementById('bookingDate').value;
+            const time = document.getElementById('bookingTime').value;
+            
+            if (!date || !time) return;
+            
+            const pricing = GolfCoveBooking.calculatePrice(duration, date, time, selectedBookingMemberType);
+            
+            document.getElementById('bookingBasePrice').textContent = '$' + (pricing.basePrice - pricing.peakSurcharge).toFixed(2);
+            
+            // Peak surcharge
+            const peakRow = document.getElementById('bookingPeakRow');
+            if (pricing.peakSurcharge > 0) {
+                peakRow.style.display = 'flex';
+            } else {
+                peakRow.style.display = 'none';
+            }
+            
+            // Member discount
+            const discountRow = document.getElementById('bookingDiscountRow');
+            if (pricing.memberDiscount > 0) {
+                discountRow.style.display = 'flex';
+                document.getElementById('bookingDiscountAmount').textContent = '-$' + pricing.memberDiscount.toFixed(2);
+            } else {
+                discountRow.style.display = 'none';
+            }
+            
+            document.getElementById('bookingTotalPrice').textContent = '$' + pricing.finalPrice.toFixed(2);
+        }
+        
+        function toggleRecurringOptions() {
+            const isRecurring = document.getElementById('bookingRecurring').checked;
+            document.getElementById('recurringOptions').style.display = isRecurring ? 'block' : 'none';
+        }
+        
+        function addToWaitlistFromModal() {
+            const customerName = document.getElementById('bookingCustomer').value;
+            const room = parseInt(document.getElementById('bookingRoom').value);
+            const date = document.getElementById('bookingDate').value;
+            const time = document.getElementById('bookingTime').value;
+            const duration = parseInt(document.getElementById('bookingDuration').value);
+            const phone = document.getElementById('bookingPhone').value || '';
+            const email = document.getElementById('bookingEmail').value || '';
+            
+            if (!customerName) {
+                showToast('Please enter customer name', 'error');
+                return;
+            }
+            
+            const result = GolfCoveBooking.addToWaitlist({
+                customer: customerName,
+                room: room,
+                date: date,
+                time: time,
+                duration: duration,
+                phone: phone,
+                email: email
+            });
+            
+            if (result.success) {
+                showToast(`${customerName} added to waitlist`, 'success');
+                hideModal('booking');
+                document.getElementById('bookingForm').reset();
+            } else {
+                showToast('Failed to add to waitlist', 'error');
+            }
+        }
+        
+        async function sendConfirmationEmail(booking) {
+            if (!booking.email) {
+                showToast('No email address for this booking', 'error');
+                return;
+            }
+            
+            try {
+                // Try to send via backend API
+                const response = await fetch('/api/sendBookingConfirmation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking })
+                });
+                
+                if (response.ok) {
+                    showToast('Confirmation email sent!', 'success');
+                } else {
+                    // Fallback to mailto if API fails
+                    fallbackMailto(booking);
+                }
+            } catch (error) {
+                // Fallback to mailto if API unavailable
+                fallbackMailto(booking);
+            }
+        }
+        
+        function fallbackMailto(booking) {
             const subject = encodeURIComponent('Golf Cove Booking Confirmation');
+            const dateStr = new Date(booking.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
             const body = encodeURIComponent(
                 `Hi ${booking.customer},\n\n` +
                 `Your booking at Golf Cove is confirmed!\n\n` +
                 `Details:\n` +
-                `- Room: Room ${booking.room}\n` +
-                `- Date: ${currentDate.toLocaleDateString()}\n` +
+                `- Bay: Bay ${booking.room}\n` +
+                `- Date: ${dateStr}\n` +
                 `- Time: ${booking.time}\n` +
                 `- Duration: ${booking.duration} hour(s)\n` +
-                `- Players: ${booking.players}\n\n` +
+                `- Players: ${booking.players}\n` +
+                `- Total: $${(booking.price || 0).toFixed(2)}\n\n` +
                 `See you soon!\n` +
-                `Golf Cove Team`
+                `Golf Cove Team\n\n` +
+                `---\n` +
+                `Need to cancel or reschedule? Reply to this email or call us at (203) 390-5994.`
             );
             window.open(`mailto:${booking.email}?subject=${subject}&body=${body}`);
-            showToast('Confirmation email opened', 'success');
+            showToast('Email client opened', 'info');
         }
 
         function quickBook(room, time) {
             document.getElementById('bookingRoom').value = room;
-            // Convert 12h time to 24h for the select input
-            const isPM = time.toLowerCase().includes('pm');
-            let hour = parseInt(time);
-            if (isPM && hour !== 12) hour += 12;
-            if (!isPM && hour === 12) hour = 0;
-            const timeValue = hour.toString().padStart(2, '0') + ':00';
-            document.getElementById('bookingTime').value = timeValue;
+            document.getElementById('bookingTime').value = time;
+            const selectedDate = document.getElementById('teeSheetDate')?.value || new Date().toISOString().split('T')[0];
+            document.getElementById('bookingDate').value = selectedDate;
+            checkBookingAvailability();
+            updateBookingPrice();
             showModal('booking');
         }
 
         function selectBooking(id) {
-            const booking = bookings.find(b => b.id === id);
+            const booking = GolfCoveBooking.get(id);
             if (booking) {
                 selectedBookingId = id;
+                
+                // Basic info
                 document.getElementById('detailCustomer').textContent = booking.customer;
-                document.getElementById('detailRoom').textContent = 'Room ' + booking.room;
-                document.getElementById('detailTime').textContent = booking.time;
+                document.getElementById('detailRoom').textContent = GolfCoveBooking.getRoomName(booking.roomId);
+                document.getElementById('detailTime').textContent = booking.time + ' - ' + booking.date;
                 document.getElementById('detailDuration').textContent = booking.duration + ' hour(s)';
                 document.getElementById('detailPlayers').textContent = booking.players + ' player(s)';
+                
+                // Status with color
+                const statusColors = {
+                    pending: '#f39c12',
+                    confirmed: '#3498db',
+                    'checked-in': '#27ae60',
+                    completed: '#95a5a6',
+                    'no-show': '#e74c3c',
+                    cancelled: '#95a5a6'
+                };
+                const statusEl = document.getElementById('detailStatus');
+                statusEl.textContent = booking.status.charAt(0).toUpperCase() + booking.status.slice(1).replace('-', ' ');
+                statusEl.style.color = statusColors[booking.status] || '#333';
+                
+                // Pricing
+                const totalPrice = booking.totalPrice || 0;
+                const deposit = booking.depositAmount || 0;
+                const balance = totalPrice - deposit;
+                
+                document.getElementById('detailPrice').textContent = '$' + totalPrice.toFixed(2);
+                
+                if (deposit > 0) {
+                    document.getElementById('detailDepositRow').style.display = 'flex';
+                    document.getElementById('detailDeposit').textContent = '$' + deposit.toFixed(2);
+                    document.getElementById('detailBalanceRow').style.display = 'flex';
+                    document.getElementById('detailBalance').textContent = '$' + balance.toFixed(2);
+                } else {
+                    document.getElementById('detailDepositRow').style.display = 'none';
+                    document.getElementById('detailBalanceRow').style.display = 'none';
+                }
+                
+                // Notes
+                if (booking.notes) {
+                    document.getElementById('detailNotesRow').style.display = 'flex';
+                    document.getElementById('detailNotes').textContent = booking.notes;
+                } else {
+                    document.getElementById('detailNotesRow').style.display = 'none';
+                }
+                
+                // Priority badge
+                const badgeEl = document.getElementById('bookingPriorityBadge');
+                if (booking.priority === 'vip') {
+                    badgeEl.style.display = 'block';
+                    badgeEl.innerHTML = '<span style="background:linear-gradient(135deg,#f39c12,#e74c3c);color:#fff;padding:6px 15px;border-radius:20px;font-size:12px;font-weight:700;"><i class="fas fa-crown"></i> VIP MEMBER</span>';
+                } else if (booking.priority === 'member') {
+                    badgeEl.style.display = 'block';
+                    badgeEl.innerHTML = '<span style="background:#27ae60;color:#fff;padding:6px 15px;border-radius:20px;font-size:12px;font-weight:700;"><i class="fas fa-star"></i> MEMBER</span>';
+                } else {
+                    badgeEl.style.display = 'none';
+                }
+                
+                // Show/hide buttons based on status
+                const btnCheckIn = document.getElementById('btnCheckIn');
+                const btnCheckOut = document.getElementById('btnCheckOut');
+                const btnNoShow = document.getElementById('btnNoShow');
+                const btnReschedule = document.getElementById('btnReschedule');
+                const btnCancel = document.getElementById('btnCancelBooking');
+                
+                // Reset all buttons
+                btnCheckIn.style.display = 'none';
+                btnCheckOut.style.display = 'none';
+                btnNoShow.style.display = 'none';
+                btnReschedule.style.display = 'none';
+                btnCancel.style.display = 'none';
+                
+                if (booking.status === 'pending' || booking.status === 'confirmed') {
+                    btnCheckIn.style.display = 'block';
+                    btnNoShow.style.display = 'block';
+                    btnReschedule.style.display = 'block';
+                    btnCancel.style.display = 'block';
+                } else if (booking.status === 'checked-in') {
+                    btnCheckOut.style.display = 'block';
+                } else {
+                    // Completed, no-show, cancelled - just close button shown by default
+                }
+                
                 showModal('bookingDetail');
             }
         }
         
         function deleteBooking() {
             if (!selectedBookingId) return;
-            bookings = bookings.filter(b => b.id !== selectedBookingId);
-            localStorage.setItem('gc_bookings', JSON.stringify(bookings));
-            hideModal('bookingDetail');
-            renderTeeSheet();
-            showToast('Booking cancelled');
+            const booking = GolfCoveBooking.get(selectedBookingId);
+            if (!booking) return;
+            
+            if (!confirm(`Cancel booking for ${booking.customer}?\n\nThis action cannot be undone.`)) return;
+            
+            const result = GolfCoveBooking.cancel(selectedBookingId, 'Cancelled by admin');
+            if (result.success) {
+                hideModal('bookingDetail');
+                renderTeeSheet();
+                showToast('Booking cancelled');
+            } else {
+                showToast(result.error || 'Failed to cancel', 'error');
+            }
             selectedBookingId = null;
         }
         
         function checkInBooking() {
             if (!selectedBookingId) return;
-            const booking = bookings.find(b => b.id === selectedBookingId);
-            if (booking) {
-                booking.checkedIn = true;
-                booking.checkedInAt = new Date().toISOString();
-                localStorage.setItem('gc_bookings', JSON.stringify(bookings));
+            const result = GolfCoveBooking.checkIn(selectedBookingId);
+            if (result.success) {
                 hideModal('bookingDetail');
                 renderTeeSheet();
                 updateStats();
-                showToast(booking.customer + ' checked in!');
+                showToast(result.booking.customer + ' checked in!');
+            } else {
+                showToast(result.error || 'Check-in failed', 'error');
+            }
+            selectedBookingId = null;
+        }
+        
+        function checkOutBooking() {
+            if (!selectedBookingId) return;
+            const booking = GolfCoveBooking.get(selectedBookingId);
+            if (!booking) return;
+            
+            const result = GolfCoveBooking.checkOut(selectedBookingId);
+            if (result.success) {
+                // If there's balance due, prompt for payment
+                const balance = (booking.totalPrice || 0) - (booking.depositAmount || 0);
+                if (balance > 0) {
+                    showToast(`${booking.customer} checked out. Balance due: $${balance.toFixed(2)}`, 'success');
+                } else {
+                    showToast(`${booking.customer} checked out!`);
+                }
+                hideModal('bookingDetail');
+                renderTeeSheet();
+                updateStats();
+            } else {
+                showToast(result.error || 'Check-out failed', 'error');
             }
             selectedBookingId = null;
         }
         
         function markNoShow() {
             if (!selectedBookingId) return;
-            const booking = bookings.find(b => b.id === selectedBookingId);
+            const booking = GolfCoveBooking.get(selectedBookingId);
             if (!booking) return;
             
             if (!confirm(`Mark ${booking.customer} as No Show?\n\nThis will record the no-show and free up the slot.`)) return;
             
-            booking.noShow = true;
-            booking.noShowAt = new Date().toISOString();
-            
-            // Update customer no-show count
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const customer = customers.find(c => `${c.firstName} ${c.lastName}`.toLowerCase() === booking.customer.toLowerCase());
-            if (customer) {
-                customer.noShowCount = (customer.noShowCount || 0) + 1;
-                localStorage.setItem('gc_customers', JSON.stringify(customers));
+            const result = GolfCoveBooking.update(selectedBookingId, { status: 'no-show' });
+            if (result.success) {
+                // Update customer no-show count
+                const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+                const customer = customers.find(c => `${c.firstName} ${c.lastName}`.toLowerCase() === booking.customer.toLowerCase());
+                if (customer) {
+                    customer.noShowCount = (customer.noShowCount || 0) + 1;
+                    localStorage.setItem('gc_customers', JSON.stringify(customers));
+                }
+                
+                // Update stats
+                const noShowCount = parseInt(document.getElementById('statNoShows').textContent) + 1;
+                document.getElementById('statNoShows').textContent = noShowCount;
+                
+                hideModal('bookingDetail');
+                renderTeeSheet();
+                showToast(`${booking.customer} marked as No Show`, 'error');
             }
-            
-            // Remove from bookings
-            bookings = bookings.filter(b => b.id !== selectedBookingId);
-            localStorage.setItem('gc_bookings', JSON.stringify(bookings));
-            
-            // Update stats
-            const noShowCount = parseInt(document.getElementById('statNoShows').textContent) + 1;
-            document.getElementById('statNoShows').textContent = noShowCount;
-            
-            hideModal('bookingDetail');
-            renderTeeSheet();
-            showToast(`${booking.customer} marked as No Show`, 'error');
             selectedBookingId = null;
         }
         
         function rescheduleBooking() {
             if (!selectedBookingId) return;
-            const booking = bookings.find(b => b.id === selectedBookingId);
+            const booking = GolfCoveBooking.get(selectedBookingId);
             if (!booking) return;
             
             hideModal('bookingDetail');
             
             // Pre-fill booking form with existing data
             document.getElementById('bookingCustomer').value = booking.customer;
-            document.getElementById('bookingRoom').value = booking.room;
+            document.getElementById('bookingRoom').value = booking.roomId;
             document.getElementById('bookingDuration').value = booking.duration;
             document.getElementById('bookingPlayers').value = booking.players;
             if (booking.phone) document.getElementById('bookingPhone').value = booking.phone;
             if (booking.notes) document.getElementById('bookingNotes').value = booking.notes;
+            if (booking.depositAmount) document.getElementById('bookingDeposit').value = booking.depositAmount;
             
             // Store original booking ID to delete after rescheduling
             window.rescheduleFromId = selectedBookingId;
@@ -2204,6 +2653,8 @@
         function createTab(e) {
             e.preventDefault();
             const tableValue = document.getElementById('tabTable').value;
+            const customerName = document.getElementById('tabCustomer').value;
+            const customerId = document.getElementById('tabCustomerId').value;
             
             // Check if table already has a tab
             const existingTab = openTabs.find(t => t.table === tableValue && tableValue !== 'Tab');
@@ -2212,22 +2663,146 @@
                 return;
             }
             
+            // Check if customer is a member
+            let isMember = false;
+            let memberType = null;
+            let memberExpires = null;
+            let memberDiscount = 0;
+            
+            if (customerId) {
+                const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+                const customer = customers.find(c => c.id == customerId);
+                if (customer && customer.isMember) {
+                    const expDate = new Date(customer.memberExpires);
+                    if (expDate > new Date()) {
+                        isMember = true;
+                        memberType = customer.memberType;
+                        memberExpires = customer.memberExpires;
+                        // Calculate discount based on tier
+                        const discounts = { 'par': 10, 'birdie': 10, 'eagle': 15, 'family-par': 10, 'family-birdie': 10, 'family-eagle': 15, 'corporate': 20, 'monthly': 10, 'annual': 10 };
+                        memberDiscount = discounts[memberType] || 10;
+                    }
+                }
+            }
+            
             openTabs.push({
                 id: Date.now(), // Use timestamp for unique ID
-                customer: document.getElementById('tabCustomer').value,
+                customer: customerName,
+                customerId: customerId || null,
                 employee: 'GC TABS',
                 amount: 0,
                 subtotal: 0,
                 items: [],
                 table: tableValue,
+                isMember: isMember,
+                memberType: memberType,
+                memberExpires: memberExpires,
+                memberDiscount: memberDiscount,
                 createdAt: new Date().toISOString()
             });
             localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
             hideModal('newTab');
             renderOpenTabs();
             renderFloorPlan(); // Update floor plan to show new tab
-            showToast('Tab created for ' + document.getElementById('tabCustomer').value);
+            
+            const memberMsg = isMember ? ` (${memberType.toUpperCase()} Member - ${memberDiscount}% discount!)` : '';
+            showToast('Tab created for ' + customerName + memberMsg);
             e.target.reset();
+            document.getElementById('tabCustomerId').value = '';
+            document.getElementById('tabMemberStatus').style.display = 'none';
+        }
+        
+        // Tab customer search and member detection
+        function searchTabCustomers(query) {
+            const resultsDiv = document.getElementById('tabCustomerResults');
+            if (!query || query.length < 2) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            
+            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const matches = customers.filter(c => {
+                const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
+                return fullName.includes(query.toLowerCase()) || 
+                       (c.phone && c.phone.includes(query)) ||
+                       (c.email && c.email.toLowerCase().includes(query.toLowerCase()));
+            }).slice(0, 8);
+            
+            if (matches.length === 0) {
+                resultsDiv.innerHTML = '<div style="padding:10px;color:#666;text-align:center;font-size:12px;">No customers found - will create as guest</div>';
+                resultsDiv.style.display = 'block';
+                return;
+            }
+            
+            resultsDiv.innerHTML = matches.map(c => {
+                const isActive = c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date();
+                const memberBadge = isActive ? `<span style="background:linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);color:#fff;padding:2px 6px;border-radius:8px;font-size:9px;margin-left:5px;"><i class="fas fa-crown" style="color:#f1c40f;margin-right:3px;"></i>${c.memberType?.toUpperCase()}</span>` : '';
+                return `
+                    <div onclick="selectTabCustomer(${c.id})" style="padding:10px;border-bottom:1px solid #eee;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
+                        <div>
+                            <div style="font-weight:600;">${c.firstName} ${c.lastName}${memberBadge}</div>
+                            <div style="font-size:11px;color:#666;">${c.phone || c.email || ''}</div>
+                        </div>
+                        ${isActive ? '<i class="fas fa-star" style="color:#f1c40f;"></i>' : ''}
+                    </div>
+                `;
+            }).join('');
+            resultsDiv.style.display = 'block';
+        }
+        
+        function selectTabCustomer(customerId) {
+            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            document.getElementById('tabCustomer').value = `${customer.firstName} ${customer.lastName}`;
+            document.getElementById('tabCustomerId').value = customerId;
+            document.getElementById('tabCustomerResults').style.display = 'none';
+            
+            // Show member status if applicable
+            const isActive = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > new Date();
+            const statusDiv = document.getElementById('tabMemberStatus');
+            
+            if (isActive) {
+                const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family-par': '10%', 'family-birdie': '10%', 'family-eagle': '15%', 'corporate': '20%', 'monthly': '10%', 'annual': '10%' };
+                document.getElementById('tabMemberName').textContent = `${customer.firstName} ${customer.lastName}`;
+                document.getElementById('tabMemberTier').textContent = customer.memberType?.toUpperCase();
+                document.getElementById('tabMemberDiscount').textContent = `${discounts[customer.memberType] || '10%'} Discount Applied!`;
+                statusDiv.style.display = 'block';
+            } else {
+                statusDiv.style.display = 'none';
+            }
+        }
+        
+        function loadTabMemberQuickSelect() {
+            const container = document.getElementById('tabMemberQuickSelect');
+            if (!container) return;
+            
+            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const activeMembers = customers.filter(c => {
+                return c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date();
+            }).slice(0, 6);
+            
+            if (activeMembers.length === 0) {
+                container.innerHTML = '<span style="font-size:11px;color:#999;">No active members</span>';
+                return;
+            }
+            
+            const tierColors = {
+                'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#f1c40f',
+                'family-par': '#3498db', 'family-birdie': '#9b59b6', 'family-eagle': '#f1c40f',
+                'corporate': '#2c3e50', 'monthly': '#27ae60', 'annual': '#27ae60'
+            };
+            
+            container.innerHTML = activeMembers.map(c => {
+                const color = tierColors[c.memberType] || '#9b59b6';
+                return `
+                    <button type="button" onclick="selectTabCustomer(${c.id})" style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;border:none;padding:5px 10px;border-radius:15px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+                        <i class="fas fa-crown" style="font-size:9px;color:#f1c40f;"></i>
+                        ${c.firstName} ${c.lastName?.charAt(0)}.
+                    </button>
+                `;
+            }).join('');
         }
 
         function selectTab(id) {
@@ -2235,7 +2810,17 @@
             if (tab) {
                 selectedTabId = id;
                 document.getElementById('tabDetailId').textContent = tab.id;
-                document.getElementById('tabDetailCustomer').textContent = tab.customer;
+                
+                // Show customer name with member badge if applicable
+                const customerEl = document.getElementById('tabDetailCustomer');
+                if (tab.isMember && tab.memberType) {
+                    const tierColors = { 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#f1c40f', 'family-par': '#3498db', 'family-birdie': '#9b59b6', 'family-eagle': '#f1c40f', 'corporate': '#2c3e50', 'monthly': '#27ae60', 'annual': '#27ae60' };
+                    const color = tierColors[tab.memberType] || '#9b59b6';
+                    customerEl.innerHTML = `${tab.customer} <span style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;margin-left:5px;"><i class="fas fa-crown" style="color:#f1c40f;margin-right:3px;"></i>${tab.memberType.toUpperCase()} - ${tab.memberDiscount}% OFF</span>`;
+                } else {
+                    customerEl.textContent = tab.customer;
+                }
+                
                 document.getElementById('tabDetailTable').textContent = tab.table;
                 
                 // Calculate subtotal and tax
@@ -2248,6 +2833,18 @@
                 if (subtotalEl) subtotalEl.textContent = '$' + subtotal.toFixed(2);
                 if (taxEl) taxEl.textContent = '$' + tax.toFixed(2);
                 document.getElementById('tabDetailAmount').textContent = '$' + tab.amount.toFixed(2);
+                
+                // Show member discount info if applicable
+                const memberDiscountRow = document.getElementById('tabDetailMemberDiscount');
+                if (memberDiscountRow) {
+                    if (tab.isMember && tab.memberDiscount > 0) {
+                        const discountAmount = tab.subtotal * (tab.memberDiscount / 100);
+                        memberDiscountRow.innerHTML = `<span style="color:#27ae60;">-$${discountAmount.toFixed(2)} (${tab.memberDiscount}% member discount)</span>`;
+                        memberDiscountRow.parentElement.style.display = 'flex';
+                    } else {
+                        memberDiscountRow.parentElement.style.display = 'none';
+                    }
+                }
                 
                 // Render items list
                 const itemsListEl = document.getElementById('tabItemsList');
@@ -2388,11 +2985,148 @@
 
         function showModal(name) {
             document.getElementById('modal-' + name).classList.add('active');
-            if (name === 'booking') document.getElementById('bookingDate').valueAsDate = new Date();
+            if (name === 'booking') {
+                document.getElementById('bookingDate').valueAsDate = new Date();
+                document.getElementById('bookingCustomerId').value = '';
+                populateBookingCustomerOptions();
+            }
+            if (name === 'newTab') {
+                document.getElementById('tabCustomerId').value = '';
+                document.getElementById('tabMemberStatus').style.display = 'none';
+                loadTabMemberQuickSelect();
+            }
         }
 
         function hideModal(name) {
             document.getElementById('modal-' + name).classList.remove('active');
+        }
+        
+        // Populate VIP members and recent customers for quick selection
+        function populateBookingCustomerOptions() {
+            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const now = new Date();
+            
+            // Get active VIP members (Eagle & Birdie)
+            const vipMembers = allCustomers.filter(c => {
+                if (!c.isMember || !c.memberExpires) return false;
+                if (new Date(c.memberExpires) <= now) return false;
+                return c.memberType && (c.memberType.includes('eagle') || c.memberType.includes('birdie'));
+            }).slice(0, 8);
+            
+            // Get recent customers (by last visit or creation date)
+            const recentCustomers = [...allCustomers]
+                .sort((a, b) => new Date(b.lastVisit || b.createdAt || 0) - new Date(a.lastVisit || a.createdAt || 0))
+                .filter(c => !vipMembers.find(v => v.id === c.id))
+                .slice(0, 6);
+            
+            // Render VIP Members
+            const vipList = document.getElementById('vipMembersList');
+            if (vipMembers.length > 0) {
+                vipList.innerHTML = vipMembers.map(c => {
+                    const tierColors = {
+                        'eagle': '#9b59b6', 'family_eagle': '#9b59b6',
+                        'birdie': '#f39c12', 'family_birdie': '#f39c12'
+                    };
+                    const color = tierColors[c.memberType] || '#9b59b6';
+                    return `<button type="button" class="quick-customer-btn" style="background:${color};color:#fff;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.2)';"
+                            onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none';"
+                            onclick="quickSelectBookingCustomer(${c.id})">
+                        <i class="fas fa-crown" style="font-size:10px;"></i>
+                        ${c.firstName} ${c.lastName[0]}.
+                    </button>`;
+                }).join('');
+                vipList.parentElement.style.display = 'block';
+            } else {
+                vipList.innerHTML = '<span style="font-size:11px;color:#999;">No VIP members yet</span>';
+            }
+            
+            // Render Recent Customers
+            const recentList = document.getElementById('recentCustomersList');
+            if (recentCustomers.length > 0) {
+                recentList.innerHTML = recentCustomers.map(c => {
+                    const isMember = c.isMember && c.memberExpires && new Date(c.memberExpires) > now;
+                    const bgColor = isMember ? '#27ae60' : '#4a90a4';
+                    return `<button type="button" class="quick-customer-btn" style="background:${bgColor};color:#fff;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;transition:all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.2)';"
+                            onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none';"
+                            onclick="quickSelectBookingCustomer(${c.id})">
+                        ${c.firstName} ${c.lastName[0]}.
+                        ${isMember ? '<i class="fas fa-check-circle" style="font-size:10px;margin-left:2px;"></i>' : ''}
+                    </button>`;
+                }).join('');
+                recentList.parentElement.style.display = 'block';
+            } else {
+                recentList.innerHTML = '<span style="font-size:11px;color:#999;">No recent customers</span>';
+            }
+        }
+        
+        // Quick select a customer from the button lists
+        function quickSelectBookingCustomer(customerId) {
+            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const customer = allCustomers.find(c => c.id === customerId);
+            
+            if (!customer) return;
+            
+            const name = `${customer.firstName} ${customer.lastName}`;
+            document.getElementById('bookingCustomer').value = name;
+            document.getElementById('bookingCustomerId').value = customerId;
+            
+            // Auto-fill phone and email if available
+            if (customer.phone) document.getElementById('bookingPhone').value = customer.phone;
+            if (customer.email) document.getElementById('bookingEmail').value = customer.email;
+            
+            const now = new Date();
+            const isMember = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > now;
+            
+            if (isMember) {
+                selectBookingCustomer(name, true, customer.memberType);
+                updateBookingMemberBadge(customer);
+            } else {
+                selectedBookingCustomerTier = null;
+                document.getElementById('bookingMemberBadge').style.display = 'none';
+            }
+            
+            updateBookingPrice();
+            showToast(`Selected: ${name}`, 'success');
+        }
+        
+        // Update the member badge in booking modal
+        function updateBookingMemberBadge(customer) {
+            const badge = document.getElementById('bookingMemberBadge');
+            const now = new Date();
+            const isMember = customer && customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > now;
+            
+            if (!isMember) {
+                badge.style.display = 'none';
+                return;
+            }
+            
+            const tierDisplay = {
+                'eagle': { name: 'Eagle Member', color: 'linear-gradient(135deg,#9b59b6,#8e44ad)', discount: '20%' },
+                'family_eagle': { name: 'Eagle Family', color: 'linear-gradient(135deg,#9b59b6,#8e44ad)', discount: '20%' },
+                'birdie': { name: 'Birdie Member', color: 'linear-gradient(135deg,#f1c40f,#e67e22)', discount: '15%' },
+                'family_birdie': { name: 'Birdie Family', color: 'linear-gradient(135deg,#f1c40f,#e67e22)', discount: '15%' },
+                'par': { name: 'Par Member', color: 'linear-gradient(135deg,#27ae60,#1e8449)', discount: '10%' },
+                'family_par': { name: 'Par Family', color: 'linear-gradient(135deg,#27ae60,#1e8449)', discount: '10%' }
+            };
+            
+            const tier = tierDisplay[customer.memberType] || { name: 'Member', color: '#27ae60', discount: '10%' };
+            const isVIP = customer.memberType && (customer.memberType.includes('eagle') || customer.memberType.includes('birdie'));
+            
+            badge.style.background = tier.color;
+            badge.style.display = 'block';
+            document.getElementById('bookingMemberText').innerHTML = `${isVIP ? '<i class="fas fa-crown"></i> ' : ''}${tier.name}`;
+            document.getElementById('bookingMemberDiscount').textContent = `-${tier.discount} off`;
+            
+            // Show benefits
+            const benefitsEl = document.getElementById('bookingMemberBenefits');
+            if (benefitsEl) {
+                const benefits = [];
+                if (isVIP) benefits.push('Priority Booking');
+                if (customer.memberType.includes('birdie') || customer.memberType.includes('eagle')) benefits.push('Unlimited Play');
+                benefitsEl.textContent = benefits.join(' • ');
+            }
         }
 
         // ============ DATE FUNCTIONS ============
@@ -2415,10 +3149,25 @@
             currentDate.setMonth(currentDate.getMonth() + delta);
             renderCalendar();
         }
+        
+        function changeTeeSheetDate(delta) {
+            const dateInput = document.getElementById('teeSheetDate');
+            const current = new Date(dateInput.value);
+            current.setDate(current.getDate() + delta);
+            dateInput.value = current.toISOString().split('T')[0];
+            renderTeeSheet();
+        }
+        
+        function goToToday() {
+            document.getElementById('teeSheetDate').value = new Date().toISOString().split('T')[0];
+            renderTeeSheet();
+        }
 
         function selectDate(day) {
             currentDate.setDate(day);
             selectedDate = currentDate.toISOString().split('T')[0];
+            // Sync tee sheet date picker
+            document.getElementById('teeSheetDate').value = selectedDate;
             updateDateDisplay();
             renderTeeSheet(); // Re-render tee sheet for selected date
             showToast(`Viewing ${currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`);
@@ -2430,11 +3179,14 @@
         }
 
         function updateStats() {
-            document.getElementById('statBookings').textContent = bookings.length;
-            document.getElementById('statOccupancy').textContent = Math.round((bookings.length / (rooms.length * timeSlots.length)) * 100) + '%';
-            const checkedIn = bookings.filter(b => b.checkedIn).length;
+            const selectedDate = document.getElementById('teeSheetDate')?.value || new Date().toISOString().split('T')[0];
+            const dayBookings = GolfCoveBooking.getForDate(selectedDate);
+            
+            document.getElementById('statBookings').textContent = dayBookings.length;
+            document.getElementById('statOccupancy').textContent = Math.round((dayBookings.length / (rooms.length * timeSlots.length)) * 100) + '%';
+            const checkedIn = dayBookings.filter(b => b.status === 'checked-in' || b.checkedIn).length;
             document.getElementById('statCheckedIn').textContent = checkedIn;
-            const revenue = bookings.reduce((sum, b) => sum + (b.duration === 1 ? 45 : b.duration === 2 ? 80 : 110), 0);
+            const revenue = dayBookings.reduce((sum, b) => sum + (b.totalPrice || (b.duration === 1 ? 45 : b.duration === 2 ? 80 : 110)), 0);
             document.getElementById('statRevenue').textContent = '$' + revenue.toFixed(2);
         }
         
@@ -2486,21 +3238,24 @@
                 });
             }
             
-            // Search bookings
-            const matchedBookings = bookings.filter(b => 
+            // Search bookings using booking system
+            const allBookings = GolfCoveBooking.getAll();
+            const matchedBookings = allBookings.filter(b => 
                 b.customer.toLowerCase().includes(q) ||
-                b.time.toLowerCase().includes(q)
+                b.time.toLowerCase().includes(q) ||
+                (b.date && b.date.includes(q))
             ).slice(0, 5);
             
             if (matchedBookings.length > 0) {
                 html += '<div style="padding:8px 12px;background:#f0f2f5;font-weight:600;font-size:12px;text-transform:uppercase;color:#666;"><i class="fas fa-calendar"></i> Bookings</div>';
                 matchedBookings.forEach(b => {
-                    const room = rooms.find(r => r.id === b.room);
+                    const roomName = GolfCoveBooking.getRoomName(b.roomId || b.room);
+                    const statusColor = b.status === 'checked-in' ? '#27ae60' : b.status === 'cancelled' ? '#e74c3c' : '#3498db';
                     html += `<div style="padding:12px;border-bottom:1px solid #eee;cursor:pointer;display:flex;align-items:center;gap:12px;" onclick="selectBooking(${b.id}); hideModal('lookup');">
-                        <div style="width:40px;height:40px;background:#27ae60;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;"><i class="fas fa-golf-ball"></i></div>
+                        <div style="width:40px;height:40px;background:${statusColor};border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;"><i class="fas fa-golf-ball"></i></div>
                         <div style="flex:1;">
-                            <div style="font-weight:600;">${b.customer}</div>
-                            <div style="font-size:12px;color:#999;">${room ? room.name : 'Bay ' + b.room} · ${b.time} · ${b.players} players</div>
+                            <div style="font-weight:600;">${b.customer} ${b.priority === 'vip' ? '<span style="background:linear-gradient(135deg,#f39c12,#e74c3c);color:#fff;font-size:9px;padding:2px 5px;border-radius:8px;">VIP</span>' : ''}</div>
+                            <div style="font-size:12px;color:#999;">${roomName} · ${b.date} ${b.time} · ${b.players} players</div>
                         </div>
                         <i class="fas fa-arrow-right" style="color:#ccc;"></i>
                     </div>`;
@@ -2702,18 +3457,35 @@
             }
             
             const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const cleanedPhone = val.replace(/\D/g, '');
+            
             const matches = allCustomers.filter(c => {
                 const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
-                return fullName.includes(val);
-            }).slice(0, 6);
+                const email = (c.email || '').toLowerCase();
+                const phone = (c.phone || '').replace(/\D/g, '');
+                return fullName.includes(val) || 
+                       email.includes(val) || 
+                       (cleanedPhone.length >= 3 && phone.includes(cleanedPhone));
+            }).slice(0, 8);
             
             if (matches.length === 0) {
-                bookingAutocomplete.style.display = 'none';
+                // Show "Add New Customer" option
+                bookingAutocomplete.innerHTML = `
+                    <div style="padding:12px;text-align:center;color:#666;">
+                        <div style="font-size:13px;">No customers found for "${val}"</div>
+                        <button type="button" onclick="createQuickCustomerFromBooking('${val}')" 
+                                style="margin-top:8px;background:#27ae60;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;">
+                            <i class="fas fa-plus"></i> Add as New Customer
+                        </button>
+                    </div>
+                `;
+                bookingAutocomplete.style.display = 'block';
                 return;
             }
             
             bookingAutocomplete.innerHTML = matches.map(c => {
-                const isMember = c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date();
+                const now = new Date();
+                const isMember = c.isMember && c.memberExpires && new Date(c.memberExpires) > now;
                 const tierColors = {
                     'eagle': 'linear-gradient(135deg, #9b59b6, #8e44ad)',
                     'family_eagle': 'linear-gradient(135deg, #9b59b6, #8e44ad)',
@@ -2724,30 +3496,37 @@
                 };
                 const tierNames = {
                     'eagle': '⭐ EAGLE',
-                    'family_eagle': '⭐ EAGLE FAMILY',
+                    'family_eagle': '⭐ EAGLE',
                     'birdie': '🏆 BIRDIE',
-                    'family_birdie': '🏆 BIRDIE FAMILY',
+                    'family_birdie': '🏆 BIRDIE',
                     'par': 'PAR',
-                    'family_par': 'PAR FAMILY'
+                    'family_par': 'PAR'
                 };
                 const tierBg = isMember ? (tierColors[c.memberType] || 'linear-gradient(135deg, #27ae60, #1e8449)') : '#4a90a4';
                 const tierName = isMember ? (tierNames[c.memberType] || 'MEMBER') : '';
                 const isVIP = c.memberType && (c.memberType.includes('eagle') || c.memberType.includes('birdie'));
                 
+                // Contact info display
+                const contactInfo = c.phone || c.email || 'No contact';
+                const visitInfo = c.visitCount ? `${c.visitCount} visits` : '';
+                
                 return `
                     <div style="padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;${isVIP ? 'background:#fffdf5;' : ''}" 
                          onmouseover="this.style.background='${isVIP ? '#fff9e6' : '#f5f6fa'}'" 
                          onmouseout="this.style.background='${isVIP ? '#fffdf5' : '#fff'}'"
-                         onclick="selectBookingCustomer('${c.firstName} ${c.lastName}', ${isMember}, '${c.memberType || ''}')">
-                        <div style="width:32px;height:32px;border-radius:50%;background:${tierBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11px;${isVIP ? 'box-shadow:0 2px 8px rgba(0,0,0,0.2);' : ''}">
+                         onclick="selectBookingCustomerById(${c.id})">
+                        <div style="width:36px;height:36px;border-radius:50%;background:${tierBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;${isVIP ? 'box-shadow:0 2px 8px rgba(0,0,0,0.2);' : ''}">
                             ${(c.firstName[0] || '') + (c.lastName[0] || '')}
                         </div>
-                        <div style="flex:1;">
-                            <div style="font-weight:600;color:#333;font-size:13px;display:flex;align-items:center;gap:6px;">
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:600;color:#333;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                                 ${c.firstName} ${c.lastName}
                                 ${isMember ? `<span style="background:${tierBg};color:#fff;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:700;">${tierName}</span>` : ''}
                             </div>
-                            ${c.phone ? `<div style="font-size:11px;color:#666;">${c.phone}</div>` : ''}
+                            <div style="font-size:11px;color:#666;display:flex;gap:8px;">
+                                <span>${contactInfo}</span>
+                                ${visitInfo ? `<span style="color:#999;">• ${visitInfo}</span>` : ''}
+                            </div>
                         </div>
                         ${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;font-size:16px;"></i>' : ''}
                     </div>
@@ -2757,8 +3536,70 @@
         });
         
         bookingCustomerInput.addEventListener('blur', function() {
-            setTimeout(() => { bookingAutocomplete.style.display = 'none'; }, 200);
+            setTimeout(() => { bookingAutocomplete.style.display = 'none'; }, 250);
         });
+        
+        // Select customer by ID (new unified function)
+        function selectBookingCustomerById(customerId) {
+            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const customer = allCustomers.find(c => c.id === customerId);
+            
+            if (!customer) return;
+            
+            const name = `${customer.firstName} ${customer.lastName}`;
+            bookingCustomerInput.value = name;
+            document.getElementById('bookingCustomerId').value = customerId;
+            bookingAutocomplete.style.display = 'none';
+            
+            // Auto-fill contact info
+            if (customer.phone) document.getElementById('bookingPhone').value = customer.phone;
+            if (customer.email) document.getElementById('bookingEmail').value = customer.email;
+            
+            const now = new Date();
+            const isMember = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > now;
+            
+            if (isMember) {
+                selectedBookingCustomerTier = customer.memberType;
+                updateBookingMemberBadge(customer);
+                const isVIP = customer.memberType && (customer.memberType.includes('eagle') || customer.memberType.includes('birdie'));
+                showToast(`${isVIP ? '⭐ VIP ' : ''}${name} selected`, 'success');
+            } else {
+                selectedBookingCustomerTier = null;
+                document.getElementById('bookingMemberBadge').style.display = 'none';
+            }
+            
+            updateBookingPrice();
+        }
+        
+        // Create quick customer from booking modal
+        function createQuickCustomerFromBooking(searchVal) {
+            // Try to parse as name
+            const parts = searchVal.trim().split(' ');
+            const firstName = parts[0] || 'Guest';
+            const lastName = parts.slice(1).join(' ') || '';
+            
+            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const newCustomer = {
+                id: Date.now(),
+                firstName: firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase(),
+                lastName: lastName ? lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase() : '',
+                email: '',
+                phone: '',
+                isMember: false,
+                memberType: null,
+                visitCount: 0,
+                totalSpent: 0,
+                createdAt: new Date().toISOString(),
+                source: 'booking'
+            };
+            
+            allCustomers.push(newCustomer);
+            localStorage.setItem('gc_customers', JSON.stringify(allCustomers));
+            
+            // Select the new customer
+            selectBookingCustomerById(newCustomer.id);
+            showToast(`Created new customer: ${newCustomer.firstName} ${newCustomer.lastName}`, 'success');
+        }
         
         let selectedBookingCustomerTier = null;
         
@@ -2785,8 +3626,13 @@
                     showToast(`${displayName} selected: ${name}`, 'success');
                 }
             }
+            
+            updateBookingPrice();
         }
 
+        // Initialize tee sheet date picker
+        document.getElementById('teeSheetDate').value = new Date().toISOString().split('T')[0];
+        
         renderTeeSheet();
         renderFloorPlan();
         renderOpenTabs();
@@ -4086,180 +4932,57 @@
         
         // ============ SETTINGS ============
         function showSettings() {
-            const businessName = localStorage.getItem('gc_business_name') || 'Golf Cove';
-            const businessPhone = localStorage.getItem('gc_business_phone') || '(203) 390-5994';
-            const businessEmail = localStorage.getItem('gc_business_email') || 'info@golfcovect.com';
-            const businessAddress = localStorage.getItem('gc_business_address') || '336 State Street';
-            const businessCity = localStorage.getItem('gc_business_city') || 'North Haven';
-            const businessState = localStorage.getItem('gc_business_state') || 'Connecticut';
-            const businessZip = localStorage.getItem('gc_business_zip') || '06473';
             const taxRate = localStorage.getItem('gc_tax_rate') || '6.35';
-            const timeFormat = localStorage.getItem('gc_time_format') || '12h';
-            const dateFormat = localStorage.getItem('gc_date_format') || 'MM/DD/YYYY';
+            const registerId = localStorage.getItem('gc_register_id') || 'POS-1';
             
             const html = `
                 <div id="settingsModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;overflow:auto;">
-                    <div style="background:#fff;padding:25px;border-radius:12px;max-width:700px;width:95%;max-height:90vh;overflow:auto;margin:20px;">
+                    <div style="background:#fff;padding:25px;border-radius:12px;max-width:400px;width:95%;margin:20px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                            <h2 style="margin:0;color:#4a90a4;"><i class="fas fa-cog"></i> Settings</h2>
+                            <h2 style="margin:0;color:#4a90a4;"><i class="fas fa-cog"></i> POS Quick Settings</h2>
                             <button onclick="closeSettings()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">&times;</button>
                         </div>
                         
-                        <!-- Business Details -->
-                        <div style="background:#f8f9fa;padding:20px;border-radius:10px;margin-bottom:20px;">
-                            <h4 style="margin:0 0 15px;color:#2c3e50;"><i class="fas fa-building"></i> Business Details</h4>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+                        <!-- Quick POS Settings -->
+                        <div style="background:#f8f9fa;padding:15px;border-radius:10px;margin-bottom:15px;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                                 <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Business Name</label>
-                                    <input type="text" id="settingBusinessName" value="${businessName}" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:12px;color:#666;">Tax Rate (%)</label>
+                                    <input type="number" id="settingTaxRate" value="${taxRate}" step="0.01" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:14px;">
                                 </div>
                                 <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Phone Number</label>
-                                    <input type="tel" id="settingBusinessPhone" value="${businessPhone}" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                </div>
-                                <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Email Address</label>
-                                    <input type="email" id="settingBusinessEmail" value="${businessEmail}" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                </div>
-                                <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Business Address</label>
-                                    <input type="text" id="settingBusinessAddress" value="${businessAddress}" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                </div>
-                                <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">City</label>
-                                    <input type="text" id="settingBusinessCity" value="${businessCity}" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                </div>
-                                <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;">
-                                    <div>
-                                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">State</label>
-                                        <input type="text" id="settingBusinessState" value="${businessState}" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                    </div>
-                                    <div>
-                                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Zip</label>
-                                        <input type="text" id="settingBusinessZip" value="${businessZip}" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                    </div>
+                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:12px;color:#666;">Register ID</label>
+                                    <input type="text" id="settingRegisterId" value="${registerId}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:14px;">
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Sales Settings -->
-                        <div style="background:#e8f5e9;padding:20px;border-radius:10px;margin-bottom:20px;">
-                            <h4 style="margin:0 0 15px;color:#2e7d32;"><i class="fas fa-cash-register"></i> Sales Settings</h4>
-                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;">
-                                <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Tax Rate (%)</label>
-                                    <input type="number" id="settingTaxRate" value="${taxRate}" step="0.01" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                </div>
-                                <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Time Format</label>
-                                    <select id="settingTimeFormat" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                        <option value="12h" ${timeFormat === '12h' ? 'selected' : ''}>12 Hour (1:00PM)</option>
-                                        <option value="24h" ${timeFormat === '24h' ? 'selected' : ''}>24 Hour (13:00)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Date Format</label>
-                                    <select id="settingDateFormat" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                        <option value="MM/DD/YYYY" ${dateFormat === 'MM/DD/YYYY' ? 'selected' : ''}>MM/DD/YYYY</option>
-                                        <option value="DD/MM/YYYY" ${dateFormat === 'DD/MM/YYYY' ? 'selected' : ''}>DD/MM/YYYY</option>
-                                        <option value="YYYY-MM-DD" ${dateFormat === 'YYYY-MM-DD' ? 'selected' : ''}>YYYY-MM-DD</option>
-                                    </select>
-                                </div>
-                            </div>
+                        <!-- Quick Actions -->
+                        <div style="display:grid;gap:8px;margin-bottom:15px;">
+                            <button onclick="exportAllData(); closeSettings();" style="padding:12px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                                <i class="fas fa-download"></i> Export Data Backup
+                            </button>
+                            <button onclick="showReaderSetup(); closeSettings();" style="padding:12px;background:#635bff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                                <i class="fas fa-credit-card"></i> Card Reader Setup
+                            </button>
                         </div>
                         
-                        <!-- Tee Sheet Settings -->
-                        <div style="background:#e3f2fd;padding:20px;border-radius:10px;margin-bottom:20px;">
-                            <h4 style="margin:0 0 15px;color:#1565c0;"><i class="fas fa-calendar-alt"></i> Tee Sheet Settings</h4>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
-                                <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Number of Bays</label>
-                                    <select id="settingNumBays" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                        <option value="3" ${rooms.length === 3 ? 'selected' : ''}>3 Bays</option>
-                                        <option value="4" ${rooms.length === 4 ? 'selected' : ''}>4 Bays</option>
-                                        <option value="5" ${rooms.length === 5 ? 'selected' : ''}>5 Bays</option>
-                                        <option value="6" ${rooms.length === 6 ? 'selected' : ''}>6 Bays</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Default Booking Duration</label>
-                                    <select id="settingDefaultDuration" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                                        <option value="1">1 Hour</option>
-                                        <option value="2" selected>2 Hours</option>
-                                        <option value="3">3 Hours</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Stripe / Payment Settings -->
-                        <div style="background:#f3e5f5;padding:20px;border-radius:10px;margin-bottom:20px;">
-                            <h4 style="margin:0 0 15px;color:#7b1fa2;"><i class="fab fa-stripe"></i> Stripe Payment Settings</h4>
-                            <p style="font-size:12px;color:#666;margin-bottom:15px;">Configure Stripe for online gift card purchases and website payments. In-person card payments use your external terminal.</p>
-                            <div style="display:grid;grid-template-columns:1fr;gap:15px;">
-                                <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Publishable Key <span style="font-weight:400;color:#999;">(starts with pk_)</span></label>
-                                    <input type="text" id="settingStripePK" value="${localStorage.getItem('gc_stripe_pk') || ''}" placeholder="pk_live_... or pk_test_..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:12px;">
-                                </div>
-                                <div>
-                                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Secret Key <span style="font-weight:400;color:#999;">(starts with sk_ - keep private!)</span></label>
-                                    <input type="password" id="settingStripeSK" value="${localStorage.getItem('gc_stripe_sk') || ''}" placeholder="sk_live_... or sk_test_..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:12px;">
-                                    <p style="font-size:11px;color:#e74c3c;margin-top:5px;"><i class="fas fa-exclamation-triangle"></i> Never share your secret key. It's stored locally on this device only.</p>
-                                </div>
-                            </div>
-                            <div style="margin-top:15px;padding:12px;background:#fff;border-radius:6px;border:1px solid #e1bee7;">
-                                <div style="font-size:12px;color:#666;">
-                                    <strong>Where to find your keys:</strong><br>
-                                    1. Go to <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:#7b1fa2;">Stripe Dashboard → Developers → API Keys</a><br>
-                                    2. Copy your Publishable key and Secret key<br>
-                                    3. Use test keys (pk_test_, sk_test_) for testing before going live
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Employee PINs -->
-                        <div style="background:#e8f5e9;padding:20px;border-radius:10px;margin-bottom:20px;">
-                            <h4 style="margin:0 0 15px;color:#2e7d32;"><i class="fas fa-users"></i> Employee PINs</h4>
-                            <p style="font-size:12px;color:#666;margin-bottom:15px;">Manage employee access to the POS system.</p>
-                            <div id="employeeList" style="margin-bottom:15px;">
-                                ${employees.map((emp, i) => `
-                                    <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#fff;border-radius:6px;margin-bottom:8px;">
-                                        <div style="flex:1;">
-                                            <input type="text" value="${emp.name}" onchange="updateEmployee(${i}, 'name', this.value)" style="border:none;font-weight:600;font-size:14px;width:100%;" placeholder="Employee name">
-                                        </div>
-                                        <div style="width:80px;">
-                                            <input type="text" value="${emp.pin}" onchange="updateEmployee(${i}, 'pin', this.value)" maxlength="4" style="border:1px solid #ddd;border-radius:4px;padding:5px;text-align:center;font-family:monospace;width:100%;" placeholder="PIN">
-                                        </div>
-                                        <select onchange="updateEmployee(${i}, 'role', this.value)" style="border:1px solid #ddd;border-radius:4px;padding:5px;">
-                                            <option value="staff" ${emp.role === 'staff' ? 'selected' : ''}>Staff</option>
-                                            <option value="manager" ${emp.role === 'manager' ? 'selected' : ''}>Manager</option>
-                                        </select>
-                                        <button onclick="removeEmployee(${i})" style="background:#e74c3c;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;" ${employees.length <= 1 ? 'disabled' : ''}><i class="fas fa-trash"></i></button>
-                                    </div>
-                                `).join('')}
-                            </div>
-                            <button onclick="addEmployee()" style="width:100%;padding:10px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-plus"></i> Add Employee</button>
-                        </div>
-                        
-                        <!-- Data Management -->
-                        <div style="background:#fff3e0;padding:20px;border-radius:10px;margin-bottom:20px;">
-                            <h4 style="margin:0 0 15px;color:#e65100;"><i class="fas fa-database"></i> Data Management</h4>
-                            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                                <button onclick="exportAllData()" style="flex:1;min-width:120px;padding:12px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-download"></i> Export All Data</button>
-                                <button onclick="importDataFromFile()" style="flex:1;min-width:120px;padding:12px;background:#3498db;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-upload"></i> Import Data</button>
-                                <button onclick="resetDemoData()" style="flex:1;min-width:120px;padding:12px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-redo"></i> Reset Data</button>
-                            </div>
+                        <!-- Admin Panel Link -->
+                        <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);padding:15px;border-radius:10px;margin-bottom:15px;">
+                            <p style="color:rgba(255,255,255,0.9);font-size:12px;margin:0 0 10px;">Staff management, Stripe keys, data import, and all settings are in the Head Admin panel.</p>
+                            <a href="league-admin.html" style="display:block;padding:10px;background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:6px;text-align:center;text-decoration:none;font-weight:600;font-size:13px;">
+                                <i class="fas fa-external-link-alt"></i> Open Head Admin Panel
+                            </a>
                         </div>
                         
                         <div style="display:flex;gap:10px;">
-                            <button onclick="closeSettings()" style="flex:1;padding:14px;background:#95a5a6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Cancel</button>
-                            <button onclick="saveAllSettings()" style="flex:1;padding:14px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-save"></i> Save Settings</button>
+                            <button onclick="closeSettings()" style="flex:1;padding:12px;background:#95a5a6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
+                            <button onclick="saveAllSettings()" style="flex:1;padding:12px;background:#4a90a4;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-save"></i> Save</button>
                         </div>
                     </div>
                 </div>
             `;
             document.body.insertAdjacentHTML('beforeend', html);
-            loadEmployeeList();
         }
         
         function closeSettings() {
@@ -4268,132 +4991,231 @@
         }
         
         function saveAllSettings() {
-            localStorage.setItem('gc_business_name', document.getElementById('settingBusinessName').value);
-            localStorage.setItem('gc_business_phone', document.getElementById('settingBusinessPhone').value);
-            localStorage.setItem('gc_business_email', document.getElementById('settingBusinessEmail').value);
-            localStorage.setItem('gc_business_address', document.getElementById('settingBusinessAddress').value);
-            localStorage.setItem('gc_business_city', document.getElementById('settingBusinessCity').value);
-            localStorage.setItem('gc_business_state', document.getElementById('settingBusinessState').value);
-            localStorage.setItem('gc_business_zip', document.getElementById('settingBusinessZip').value);
             localStorage.setItem('gc_tax_rate', document.getElementById('settingTaxRate').value);
-            localStorage.setItem('gc_time_format', document.getElementById('settingTimeFormat').value);
-            localStorage.setItem('gc_date_format', document.getElementById('settingDateFormat').value);
-            
-            // Save Stripe settings
-            const stripePK = document.getElementById('settingStripePK').value.trim();
-            const stripeSK = document.getElementById('settingStripeSK').value.trim();
-            if (stripePK) localStorage.setItem('gc_stripe_pk', stripePK);
-            if (stripeSK) localStorage.setItem('gc_stripe_sk', stripeSK);
+            localStorage.setItem('gc_register_id', document.getElementById('settingRegisterId').value);
             
             closeSettings();
-            showToast('Settings saved successfully!', 'success');
+            showToast('Settings saved!', 'success');
         }
+
+        // ============ CLOUD SYNC ============
+        let lastSyncTime = localStorage.getItem('gc_last_sync') || null;
+        let isSyncing = false;
         
-        // Employee Management Functions
-        function loadEmployeeList() {
-            const container = document.getElementById('employeeList');
-            if (!container) return;
+        function showCloudSync() {
+            const lastSync = lastSyncTime ? new Date(lastSyncTime).toLocaleString() : 'Never';
             
-            if (employees.length === 0) {
-                container.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-style: italic;">No employees added yet</p>';
-                return;
-            }
-            
-            container.innerHTML = employees.map((emp, index) => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px;">
-                    <div>
-                        <strong>${emp.name}</strong>
-                        <span style="color: rgba(255,255,255,0.5); margin-left: 10px;">PIN: ****</span>
-                        ${emp.isManager ? '<span style="background: #f59e0b; color: black; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 10px;">Manager</span>' : ''}
-                    </div>
-                    <div>
-                        <button onclick="editEmployee(${index})" style="background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px;">Edit</button>
-                        <button onclick="deleteEmployee(${index})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Delete</button>
+            const html = `
+                <div id="cloudSyncModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">
+                    <div style="background:#fff;padding:25px;border-radius:12px;max-width:450px;width:95%;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h2 style="margin:0;color:#4a90a4;"><i class="fas fa-cloud"></i> Cloud Sync</h2>
+                            <button onclick="closeCloudSync()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">&times;</button>
+                        </div>
+                        
+                        <div style="background:#e3f2fd;padding:15px;border-radius:8px;margin-bottom:20px;">
+                            <p style="margin:0;font-size:13px;color:#1565c0;">
+                                <i class="fas fa-info-circle"></i> Sync keeps your data backed up and available across all devices.
+                            </p>
+                        </div>
+                        
+                        <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:20px;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                                <span style="color:#666;">Last Sync:</span>
+                                <strong id="lastSyncDisplay">${lastSync}</strong>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;">
+                                <span style="color:#666;">Local Records:</span>
+                                <strong>${JSON.parse(localStorage.getItem('gc_customers') || '[]').length} customers, ${JSON.parse(localStorage.getItem('gc_bookings') || '[]').length} bookings</strong>
+                            </div>
+                        </div>
+                        
+                        <div id="syncProgress" style="display:none;margin-bottom:20px;">
+                            <div style="background:#e9ecef;border-radius:4px;height:8px;overflow:hidden;">
+                                <div id="syncProgressBar" style="background:#4a90a4;height:100%;width:0%;transition:width 0.3s;"></div>
+                            </div>
+                            <p id="syncStatus" style="margin:10px 0 0;font-size:12px;color:#666;text-align:center;">Syncing...</p>
+                        </div>
+                        
+                        <div style="display:grid;gap:10px;">
+                            <button onclick="uploadToCloud()" id="uploadBtn" style="padding:14px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;">
+                                <i class="fas fa-cloud-upload-alt"></i> Upload to Cloud
+                            </button>
+                            <button onclick="downloadFromCloud()" id="downloadBtn" style="padding:14px;background:#3498db;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;">
+                                <i class="fas fa-cloud-download-alt"></i> Download from Cloud
+                            </button>
+                            <button onclick="closeCloudSync()" style="padding:12px;background:#95a5a6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
         }
         
-        function showAddEmployeeModal() {
-            const name = prompt('Enter employee name:');
-            if (!name) return;
-            
-            const pin = prompt('Enter 4-digit PIN for this employee:');
-            if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-                showToast('PIN must be exactly 4 digits', 'error');
-                return;
-            }
-            
-            // Check for duplicate PIN
-            if (employees.some(emp => emp.pin === pin)) {
-                showToast('This PIN is already in use', 'error');
-                return;
-            }
-            
-            const isManager = confirm('Is this employee a manager? (Managers can access settings and reports)');
-            
-            employees.push({ name, pin, isManager, clockedIn: false });
-            localStorage.setItem('gc_employees', JSON.stringify(employees));
-            
-            loadEmployeeList();
-            updatePinEmployeeButtons();
-            showToast(`Employee "${name}" added successfully!`, 'success');
+        function closeCloudSync() {
+            const modal = document.getElementById('cloudSyncModal');
+            if (modal) modal.remove();
         }
         
-        function editEmployee(index) {
-            const emp = employees[index];
-            if (!emp) return;
+        async function uploadToCloud() {
+            if (isSyncing) return;
+            isSyncing = true;
             
-            const name = prompt('Enter new name:', emp.name);
-            if (!name) return;
+            const uploadBtn = document.getElementById('uploadBtn');
+            const progressDiv = document.getElementById('syncProgress');
+            const progressBar = document.getElementById('syncProgressBar');
+            const statusText = document.getElementById('syncStatus');
             
-            const changePin = confirm('Do you want to change the PIN?');
-            let pin = emp.pin;
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            progressDiv.style.display = 'block';
             
-            if (changePin) {
-                pin = prompt('Enter new 4-digit PIN:');
-                if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-                    showToast('PIN must be exactly 4 digits', 'error');
-                    return;
-                }
+            try {
+                // Gather all data
+                statusText.textContent = 'Gathering data...';
+                progressBar.style.width = '20%';
                 
-                // Check for duplicate PIN (excluding current employee)
-                if (employees.some((e, i) => i !== index && e.pin === pin)) {
-                    showToast('This PIN is already in use', 'error');
-                    return;
+                const data = {
+                    customers: JSON.parse(localStorage.getItem('gc_customers') || '[]'),
+                    bookings: JSON.parse(localStorage.getItem('gc_bookings') || '[]'),
+                    transactions: JSON.parse(localStorage.getItem('gc_transactions') || '[]'),
+                    settings: {
+                        businessName: localStorage.getItem('gc_business_name'),
+                        businessPhone: localStorage.getItem('gc_business_phone'),
+                        businessEmail: localStorage.getItem('gc_business_email'),
+                        taxRate: localStorage.getItem('gc_tax_rate')
+                    }
+                };
+                
+                statusText.textContent = 'Uploading to cloud...';
+                progressBar.style.width = '50%';
+                
+                const response = await fetch('/api/fullSync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data })
+                });
+                
+                progressBar.style.width = '90%';
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    progressBar.style.width = '100%';
+                    statusText.textContent = 'Upload complete!';
+                    
+                    lastSyncTime = new Date().toISOString();
+                    localStorage.setItem('gc_last_sync', lastSyncTime);
+                    document.getElementById('lastSyncDisplay').textContent = new Date(lastSyncTime).toLocaleString();
+                    document.getElementById('syncStatusText').textContent = 'Synced';
+                    
+                    showToast(`Synced ${result.synced?.customers || 0} customers, ${result.synced?.bookings || 0} bookings`, 'success');
+                } else {
+                    throw new Error('Upload failed');
+                }
+            } catch (error) {
+                statusText.textContent = 'Upload failed: ' + error.message;
+                showToast('Sync failed. Check your connection.', 'error');
+            } finally {
+                isSyncing = false;
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Upload to Cloud';
+            }
+        }
+        
+        async function downloadFromCloud() {
+            if (isSyncing) return;
+            isSyncing = true;
+            
+            const downloadBtn = document.getElementById('downloadBtn');
+            const progressDiv = document.getElementById('syncProgress');
+            const progressBar = document.getElementById('syncProgressBar');
+            const statusText = document.getElementById('syncStatus');
+            
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+            progressDiv.style.display = 'block';
+            
+            try {
+                statusText.textContent = 'Connecting to cloud...';
+                progressBar.style.width = '30%';
+                
+                const response = await fetch('/api/fullPull');
+                progressBar.style.width = '70%';
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    statusText.textContent = 'Updating local data...';
+                    progressBar.style.width = '90%';
+                    
+                    // Merge cloud data with local (cloud wins for conflicts)
+                    if (data.customers?.length) {
+                        localStorage.setItem('gc_customers', JSON.stringify(data.customers));
+                    }
+                    if (data.bookings?.length) {
+                        localStorage.setItem('gc_bookings', JSON.stringify(data.bookings));
+                    }
+                    if (data.transactions?.length) {
+                        localStorage.setItem('gc_transactions', JSON.stringify(data.transactions));
+                    }
+                    if (data.settings) {
+                        if (data.settings.businessName) localStorage.setItem('gc_business_name', data.settings.businessName);
+                        if (data.settings.taxRate) localStorage.setItem('gc_tax_rate', data.settings.taxRate);
+                    }
+                    
+                    progressBar.style.width = '100%';
+                    statusText.textContent = 'Download complete!';
+                    
+                    lastSyncTime = new Date().toISOString();
+                    localStorage.setItem('gc_last_sync', lastSyncTime);
+                    document.getElementById('lastSyncDisplay').textContent = new Date(lastSyncTime).toLocaleString();
+                    
+                    showToast(`Downloaded ${data.customers?.length || 0} customers, ${data.bookings?.length || 0} bookings`, 'success');
+                    
+                    // Refresh displays
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    throw new Error('Download failed');
+                }
+            } catch (error) {
+                statusText.textContent = 'Download failed: ' + error.message;
+                showToast('Download failed. Check your connection.', 'error');
+            } finally {
+                isSyncing = false;
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Download from Cloud';
+            }
+        }
+        
+        // Auto-sync indicator update
+        function updateSyncStatus() {
+            const statusText = document.getElementById('syncStatusText');
+            if (statusText) {
+                if (lastSyncTime) {
+                    const lastSync = new Date(lastSyncTime);
+                    const hoursSince = (Date.now() - lastSync.getTime()) / (1000 * 60 * 60);
+                    if (hoursSince < 1) {
+                        statusText.textContent = 'Synced';
+                        statusText.parentElement.style.borderColor = '#27ae60';
+                    } else if (hoursSince < 24) {
+                        statusText.textContent = Math.floor(hoursSince) + 'h ago';
+                    } else {
+                        statusText.textContent = 'Sync';
+                        statusText.parentElement.style.borderColor = '#f39c12';
+                    }
                 }
             }
-            
-            const isManager = confirm('Is this employee a manager?');
-            
-            employees[index] = { ...emp, name, pin, isManager };
-            localStorage.setItem('gc_employees', JSON.stringify(employees));
-            
-            loadEmployeeList();
-            updatePinEmployeeButtons();
-            showToast(`Employee "${name}" updated successfully!`, 'success');
         }
-        
-        function deleteEmployee(index) {
-            const emp = employees[index];
-            if (!emp) return;
-            
-            if (!confirm(`Are you sure you want to delete "${emp.name}"?`)) return;
-            
-            employees.splice(index, 1);
-            localStorage.setItem('gc_employees', JSON.stringify(employees));
-            
-            loadEmployeeList();
-            updatePinEmployeeButtons();
-            showToast(`Employee deleted`, 'success');
-        }
-        
+
+        // Employee PIN Login Functions (employees managed in Head Admin panel)
         function updatePinEmployeeButtons() {
             const container = document.getElementById('pinEmployeeButtons');
             if (!container) return;
             
             if (employees.length === 0) {
-                container.innerHTML = '<p style="color: rgba(255,255,255,0.5);">No employees. Add employees in Settings.</p>';
+                container.innerHTML = '<p style="color: rgba(255,255,255,0.5);">No employees configured. <a href="league-admin.html" style="color:#4a90a4;">Add staff in Head Admin</a></p>';
                 return;
             }
             
@@ -4418,14 +5240,6 @@
             currentPin = '';
             document.getElementById('pinEmployeeSelect').style.display = 'block';
             document.getElementById('pinEntrySection').style.display = 'none';
-        }
-        
-        // Override openSettings to load employee list
-        const originalOpenSettings = typeof openSettings === 'function' ? openSettings : null;
-        function openSettingsWithEmployees() {
-            if (originalOpenSettings) originalOpenSettings();
-            else document.getElementById('settingsModal').classList.add('active');
-            setTimeout(() => loadEmployeeList(), 100);
         }
         
         function exportAllData() {
@@ -4802,6 +5616,9 @@
             setTimeout(() => {
                 initStripeTerminal();
             }, 1000);
+            
+            // Update sync status indicator
+            updateSyncStatus();
         });
     </script>
 </body>
