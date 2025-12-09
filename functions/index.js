@@ -1822,3 +1822,204 @@ exports.tabs = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+// ============================================================
+// EMPLOYEE & PIN MANAGEMENT
+// ============================================================
+
+/**
+ * Employees API - Manages employee records and PINs
+ * GET: List all employees
+ * POST: Sync employees from client
+ */
+exports.employees = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    const db = admin.firestore();
+    const { storeId = 'golfcove' } = req.query;
+    const employeesRef = db.collection('stores').doc(storeId).collection('employees');
+    
+    try {
+      switch (req.method) {
+        case 'GET': {
+          const snapshot = await employeesRef.where('isActive', '!=', false).get();
+          const employees = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          res.json({ employees });
+          break;
+        }
+        
+        case 'POST': {
+          const { employees } = req.body;
+          
+          if (!employees || !Array.isArray(employees)) {
+            return res.status(400).json({ error: 'employees array required' });
+          }
+          
+          const batch = db.batch();
+          
+          for (const emp of employees) {
+            const docId = emp.id || 'EMP-' + Date.now().toString(36).toUpperCase();
+            const docRef = employeesRef.doc(docId);
+            
+            batch.set(docRef, {
+              ...emp,
+              id: docId,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          }
+          
+          await batch.commit();
+          res.json({ success: true, count: employees.length });
+          break;
+        }
+        
+        default:
+          res.status(405).json({ error: 'Method not allowed' });
+      }
+    } catch (error) {
+      console.error('Employees API error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Validate PIN - Securely validate employee PIN
+ * Returns employee data if valid, error if invalid
+ */
+exports.validatePIN = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
+    const db = admin.firestore();
+    const { storeId = 'golfcove', pin } = req.body;
+    
+    if (!pin || pin.length !== 4) {
+      return res.status(400).json({ error: 'Valid 4-digit PIN required' });
+    }
+    
+    try {
+      const employeesRef = db.collection('stores').doc(storeId).collection('employees');
+      const snapshot = await employeesRef
+        .where('pin', '==', pin)
+        .where('isActive', '!=', false)
+        .limit(1)
+        .get();
+      
+      if (snapshot.empty) {
+        // Log failed attempt
+        await db.collection('stores').doc(storeId).collection('auth_logs').add({
+          type: 'failed_pin',
+          pin: pin.substring(0, 2) + '**', // Partially masked
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          ip: req.ip || 'unknown'
+        });
+        
+        return res.status(401).json({ valid: false, error: 'Invalid PIN' });
+      }
+      
+      const employee = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+      
+      // Log successful login
+      await db.collection('stores').doc(storeId).collection('auth_logs').add({
+        type: 'pin_login',
+        employeeId: employee.id,
+        employeeName: employee.name || employee.displayName,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Don't send PIN back to client
+      delete employee.pin;
+      
+      res.json({ valid: true, employee });
+    } catch (error) {
+      console.error('PIN validation error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Save Employee - Add or update a single employee
+ */
+exports.saveEmployee = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
+    const db = admin.firestore();
+    const { storeId = 'golfcove', employee } = req.body;
+    
+    if (!employee) {
+      return res.status(400).json({ error: 'Employee data required' });
+    }
+    
+    try {
+      const employeesRef = db.collection('stores').doc(storeId).collection('employees');
+      
+      // Check for duplicate PIN
+      if (employee.pin) {
+        const pinCheck = await employeesRef
+          .where('pin', '==', employee.pin)
+          .where('isActive', '!=', false)
+          .get();
+        
+        const duplicates = pinCheck.docs.filter(doc => doc.id !== employee.id);
+        
+        if (duplicates.length > 0) {
+          return res.status(400).json({ error: 'PIN already in use' });
+        }
+      }
+      
+      const docId = employee.id || 'EMP-' + Date.now().toString(36).toUpperCase();
+      
+      await employeesRef.doc(docId).set({
+        ...employee,
+        id: docId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      res.json({ success: true, id: docId });
+    } catch (error) {
+      console.error('Save employee error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Delete Employee - Soft delete an employee
+ */
+exports.deleteEmployee = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
+    const db = admin.firestore();
+    const { storeId = 'golfcove', employeeId } = req.body;
+    
+    if (!employeeId) {
+      return res.status(400).json({ error: 'employeeId required' });
+    }
+    
+    try {
+      const employeesRef = db.collection('stores').doc(storeId).collection('employees');
+      
+      await employeesRef.doc(employeeId).update({
+        isActive: false,
+        deletedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete employee error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});

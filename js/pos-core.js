@@ -21,45 +21,30 @@ const POS = {
         registerId: localStorage.getItem('gc_register_id') || 'POS-1'
     },
     
-    // Employees (loaded from localStorage or defaults)
-    employees: JSON.parse(localStorage.getItem('gc_employees') || 'null') || [
-        { name: 'EJ Sattelberger', pin: '9999', role: 'manager' },
-        { name: 'Manager', pin: '9999', role: 'manager' },
-        { name: 'Staff', pin: '9999', role: 'server' }
-    ],
-    
-    // Migrate old/insecure PINs to new secure default
-    migrateOldPins() {
-        const insecurePins = ['1234', '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888'];
-        let employees = JSON.parse(localStorage.getItem('gc_employees') || '[]');
-        let updated = false;
-        
-        employees.forEach(emp => {
-            if (insecurePins.includes(emp.pin)) {
-                emp.pin = '9999';
-                updated = true;
-            }
-        });
-        
-        if (updated) {
-            localStorage.setItem('gc_employees', JSON.stringify(employees));
-            this.employees = employees;
-            console.log('Migrated insecure PINs to 9999');
+    // Get employees from centralized storage (synced with Firebase)
+    getEmployees() {
+        // Use GolfCovePIN if available (preferred - has Firebase sync)
+        if (typeof GolfCovePIN !== 'undefined') {
+            return GolfCovePIN.getEmployees();
         }
+        // Fallback to localStorage
+        return JSON.parse(localStorage.getItem('gc_employees') || '[]');
     },
     
     // Initialize
-    init() {
-        // Migrate old insecure PINs first
-        this.migrateOldPins();
-        
-        // Save default employees if not exist
-        if (!localStorage.getItem('gc_employees')) {
-            localStorage.setItem('gc_employees', JSON.stringify(this.employees));
+    async init() {
+        // Initialize Firebase sync if available
+        if (typeof GolfCoveFirebase !== 'undefined') {
+            GolfCoveFirebase.startAutoSync();
         }
         
-        // Reload employees after migration
-        this.employees = JSON.parse(localStorage.getItem('gc_employees') || JSON.stringify(this.employees));
+        // Pull latest employees from Firebase
+        if (typeof GolfCovePIN !== 'undefined') {
+            await GolfCovePIN.pullFromFirebase();
+        }
+        
+        // Get employees
+        this.employees = this.getEmployees();
         
         // Check if should show lock screen
         if (this.employees.length > 0) {
@@ -183,11 +168,32 @@ const POS = {
         });
     },
     
-    // Verify PIN
-    verifyPin() {
+    // Verify PIN - now uses Firebase validation
+    async verifyPin() {
+        // Refresh employees list
+        this.employees = this.getEmployees();
         const employee = this.employees.find(e => e.name === this.selectedEmployee);
         
-        if (employee && employee.pin === this.currentPin) {
+        if (!employee) {
+            this.showPinError();
+            return;
+        }
+        
+        // Try Firebase validation first if available
+        if (typeof GolfCoveFirebase !== 'undefined') {
+            try {
+                const validEmployee = await GolfCoveFirebase.validatePIN(this.currentPin);
+                if (validEmployee && validEmployee.name === this.selectedEmployee) {
+                    this.unlock(validEmployee);
+                    return;
+                }
+            } catch (error) {
+                console.warn('Firebase PIN validation failed, using local:', error);
+            }
+        }
+        
+        // Fallback to local validation
+        if (employee.pin === this.currentPin) {
             this.unlock(employee);
         } else {
             this.showPinError();

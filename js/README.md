@@ -7,10 +7,11 @@ Golf Cove is a comprehensive Point of Sale (POS) and booking management system f
 
 ### Technology Stack
 - **Frontend**: Vanilla JavaScript with modular IIFE pattern
-- **Storage**: localStorage (can be extended to IndexedDB or Firebase)
+- **Backend**: Firebase Cloud Functions
+- **Database**: Firebase Firestore (with localStorage fallback)
 - **Payments**: Stripe Terminal integration
 - **Hosting**: Firebase Hosting (https://golfcove.web.app)
-- **Functions**: Firebase Cloud Functions for Stripe Terminal
+- **Authentication**: PIN-based employee auth (synced to Firebase)
 
 ### Module Namespace
 All modules use the `GolfCove*` namespace pattern (e.g., `GolfCoveBooking`, `GolfCoveCustomers`).
@@ -19,7 +20,54 @@ All modules use the `GolfCove*` namespace pattern (e.g., `GolfCoveBooking`, `Gol
 
 ## Core Modules
 
-### 1. `js/config.js` - GolfCoveConfig
+### 1. `js/firebase-sync.js` - GolfCoveFirebase ⭐ NEW
+Centralized Firebase communication for all data sync.
+
+**Features:**
+- Automatic online/offline detection
+- Sync queue for offline changes
+- Employee/PIN management with Firebase
+- Auto-sync every 30 seconds
+- Retry logic with exponential backoff
+
+**Key Methods:**
+```javascript
+GolfCoveFirebase.getEmployees()         // Fetch employees from Firebase
+GolfCoveFirebase.validatePIN(pin)       // Validate PIN against Firebase
+GolfCoveFirebase.saveEmployee(data)     // Save employee to Firebase
+GolfCoveFirebase.syncAll()              // Full data sync
+GolfCoveFirebase.fullPush()             // Push all local data to Firebase
+GolfCoveFirebase.getStatus()            // Get sync status
+GolfCoveFirebase.addSyncListener(cb)    // Listen for sync events
+```
+
+---
+
+### 2. `js/pin-system.js` - GolfCovePIN ⭐ UPDATED
+Employee authentication via PIN codes with Firebase sync.
+
+**Features:**
+- 4-digit PIN authentication
+- Lockout after 5 failed attempts
+- 8-hour session timeout
+- Firebase-backed PIN validation
+- Automatic PIN migration (removes insecure PINs)
+- Offline fallback to localStorage
+
+**Key Methods:**
+```javascript
+GolfCovePIN.init(onSuccess)             // Initialize and show PIN screen
+GolfCovePIN.lock()                      // Lock the POS
+GolfCovePIN.getCurrentEmployee()        // Get logged-in employee
+GolfCovePIN.isManager()                 // Check if current user is manager
+GolfCovePIN.addEmployee(name, pin, role) // Add new employee
+GolfCovePIN.generatePIN()               // Generate unique secure PIN
+GolfCovePIN.syncToFirebase()            // Manual sync to Firebase
+```
+
+---
+
+### 3. `js/config.js` - GolfCoveConfig
 Central configuration for the entire system.
 
 **Contains:**
@@ -42,7 +90,7 @@ GolfCoveConfig.calculateTax(subtotal)  // Calculate tax amount
 
 ---
 
-### 2. `js/database.js` - GolfCoveDB
+### 4. `js/database.js` - GolfCoveDB
 Unified data access layer for all modules.
 
 **Features:**

@@ -1,10 +1,60 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access to all documents (development mode)
-    // TODO: Add proper authentication rules for production
-    match /{document=**} {
+    
+    // Store-level access
+    match /stores/{storeId} {
+      // Allow read/write for now (add proper auth in production)
       allow read, write: if true;
+      
+      // Employees collection - contains PINs (sensitive)
+      match /employees/{employeeId} {
+        // Allow read to validate PINs
+        allow read: if true;
+        // Allow write (in production, restrict to authenticated admins)
+        allow write: if true;
+      }
+      
+      // Auth logs - write-only for security
+      match /auth_logs/{logId} {
+        allow create: if true;
+        allow read: if true; // In production: restrict to admins
+        allow update, delete: if false;
+      }
+      
+      // Customers collection
+      match /customers/{customerId} {
+        allow read, write: if true;
+      }
+      
+      // Transactions collection
+      match /transactions/{transactionId} {
+        allow read: if true;
+        allow create: if true;
+        // Don't allow editing/deleting transactions (audit trail)
+        allow update: if true; // In production: only allow status updates
+        allow delete: if false;
+      }
+      
+      // Bookings collection
+      match /bookings/{bookingId} {
+        allow read, write: if true;
+      }
+      
+      // Tabs (open orders)
+      match /tabs/{tabId} {
+        allow read, write: if true;
+      }
+      
+      // Gift cards
+      match /giftcards/{cardId} {
+        allow read, write: if true;
+      }
+      
+      // Inventory
+      match /inventory/{itemId} {
+        allow read, write: if true;
+      }
     }
   }
 }

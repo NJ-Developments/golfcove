@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://js.stripe.com/terminal/v1/"></script>
+    <script src="js/firebase-sync.js"></script>
+    <script src="js/pin-system.js"></script>
     <script src="js/membership-system.js"></script>
     <script src="js/booking-system.js"></script>
     <script src="js/tabs-sync.js"></script>
@@ -1005,17 +1007,23 @@
         let currentEmployee = null;
         let isLocked = true;
         
-        // Default employees with PINs - stored in localStorage
+        // Default employees (will be synced from Firebase)
         const defaultEmployees = [
-            { id: 1, name: 'EJ Sattelberger', pin: '9999', role: 'manager' },
-            { id: 2, name: 'Manager', pin: '9999', role: 'manager' },
-            { id: 3, name: 'Bartender 1', pin: '9999', role: 'staff' },
-            { id: 4, name: 'Bartender 2', pin: '9999', role: 'staff' },
+            { id: 'EMP-DEFAULT-1', name: 'Manager', pin: '9999', role: 'manager', isActive: true },
+            { id: 'EMP-DEFAULT-2', name: 'Staff', pin: '8888', role: 'staff', isActive: true }
         ];
         
-        // Initialize employees from localStorage or use defaults
-        let employees = JSON.parse(localStorage.getItem('gc_employees') || 'null') || defaultEmployees;
-        localStorage.setItem('gc_employees', JSON.stringify(employees));
+        // Load employees from centralized storage (synced with Firebase)
+        function loadEmployees() {
+            let stored = JSON.parse(localStorage.getItem('gc_employees') || 'null');
+            if (!stored || stored.length === 0) {
+                localStorage.setItem('gc_employees', JSON.stringify(defaultEmployees));
+                return defaultEmployees;
+            }
+            return stored.filter(e => e.isActive !== false);
+        }
+        
+        let employees = loadEmployees();
         
         function enterPin(num) {
             if (currentPin.length < 4) {
@@ -1044,6 +1052,8 @@
         }
         
         function submitPin() {
+            // Refresh employees list (may have been updated from Firebase)
+            employees = loadEmployees();
             const employee = employees.find(e => e.pin === currentPin);
             
             if (employee) {

@@ -132,6 +132,22 @@
       {
         "source": "/api/reports",
         "function": "reports"
+      },
+      {
+        "source": "/api/employees",
+        "function": "employees"
+      },
+      {
+        "source": "/api/employees/validate",
+        "function": "validatePIN"
+      },
+      {
+        "source": "/api/employees/save",
+        "function": "saveEmployee"
+      },
+      {
+        "source": "/api/employees/delete",
+        "function": "deleteEmployee"
       }
     ]
   },

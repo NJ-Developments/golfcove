@@ -7,6 +7,8 @@
     <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
+    <script src="js/firebase-sync.js"></script>
+    <script src="js/pin-system.js"></script>
     <script src="js/membership-system.js"></script>
     <script src="js/tabs-sync.js"></script>
     <style>
@@ -856,15 +858,25 @@
 
     <script>
         // ============ STAFF MANAGEMENT ============
+        // Staff is now loaded from centralized gc_employees (synced with Firebase)
         const defaultStaff = [
-            { id: 1, name: 'EJ Sattelberger', pin: '9999', role: 'manager', color: '#3498db' },
-            { id: 2, name: 'Manager', pin: '9999', role: 'manager', color: '#e67e22' },
-            { id: 3, name: 'Bartender', pin: '9999', role: 'bartender', color: '#9b59b6' },
-            { id: 4, name: 'Staff', pin: '9999', role: 'server', color: '#27ae60' }
+            { id: 'EMP-DEFAULT-1', name: 'Manager', pin: '9999', role: 'manager', color: '#3498db', isActive: true },
+            { id: 'EMP-DEFAULT-2', name: 'Bartender', pin: '8888', role: 'bartender', color: '#e67e22', isActive: true },
+            { id: 'EMP-DEFAULT-3', name: 'Staff', pin: '7777', role: 'server', color: '#27ae60', isActive: true }
         ];
         
         // Permissions by role
         const rolePermissions = {
+            admin: {
+                canVoid: true,
+                canDiscount: true,
+                canRefund: true,
+                canOpenDrawer: true,
+                canViewReports: true,
+                canManageStaff: true,
+                canCloseRegister: true,
+                maxDiscount: 100
+            },
             manager: { 
                 canVoid: true, 
                 canDiscount: true, 
@@ -894,24 +906,49 @@
                 canManageStaff: false,
                 canCloseRegister: false,
                 maxDiscount: 0
+            },
+            staff: { 
+                canVoid: false, 
+                canDiscount: false, 
+                canRefund: false, 
+                canOpenDrawer: false,
+                canViewReports: false,
+                canManageStaff: false,
+                canCloseRegister: false,
+                maxDiscount: 0
             }
         };
         
-        let staff = JSON.parse(localStorage.getItem('gc_employees') || 'null') || defaultStaff;
-        // Ensure staff has required properties
-        staff = staff.map((s, i) => ({
-            id: s.id || i + 1,
-            name: s.name || s.firstName + ' ' + (s.lastName || ''),
-            pin: s.pin || '9999',
-            role: s.role || 'staff',
-            color: s.color || ['#3498db', '#e67e22', '#9b59b6', '#27ae60'][i % 4]
-        }));
+        // Load staff from centralized storage
+        function loadStaff() {
+            let employees = JSON.parse(localStorage.getItem('gc_employees') || 'null');
+            if (!employees || employees.length === 0) {
+                employees = defaultStaff;
+                localStorage.setItem('gc_employees', JSON.stringify(employees));
+            }
+            // Ensure staff has required properties and filter active only
+            return employees
+                .filter(s => s.isActive !== false)
+                .map((s, i) => ({
+                    id: s.id || 'EMP-' + i,
+                    name: s.name || s.displayName || (s.firstName + ' ' + (s.lastName || '')).trim(),
+                    pin: s.pin,
+                    role: s.role || 'staff',
+                    color: s.color || ['#3498db', '#e67e22', '#9b59b6', '#27ae60'][i % 4],
+                    isActive: s.isActive !== false
+                }));
+        }
+        
+        let staff = loadStaff();
         let currentUser = JSON.parse(sessionStorage.getItem('gc_currentUser') || 'null');
         let enteredPin = '';
         let selectedStaffId = null;
         
         // Check if logged in
         function checkLogin() {
+            // Refresh staff list
+            staff = loadStaff();
+            
             if (!currentUser) {
                 document.getElementById('loginScreen').classList.remove('hidden');
                 renderStaffAvatars();
