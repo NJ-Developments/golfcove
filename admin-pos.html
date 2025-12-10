@@ -14,9 +14,12 @@
     <script src="js/customers.js"></script>
     <script src="js/booking-system.js"></script>
     <script src="js/tabs-sync.js"></script>
+    <script src="js/tabs-manager.js"></script>
+    <script src="js/teesheet-manager.js"></script>
+    <script src="js/payment-processor.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; padding-bottom: 28px; }
         
         /* Header - foreUP style */
         .header { background: #4a90a4; color: #fff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; }
@@ -316,6 +319,28 @@
     </style>
 </head>
 <body>
+    <!-- Quick Search Overlay (Ctrl+K) -->
+    <div class="quick-search-overlay" id="quickSearchOverlay" onclick="closeQuickSearch()">
+        <div class="quick-search-box" onclick="event.stopPropagation()">
+            <input type="text" class="quick-search-input" id="quickSearchInput" placeholder="Search customers, bookings, items..." oninput="handleQuickSearch(this.value)" onkeydown="handleQuickSearchKey(event)">
+            <div class="quick-search-results" id="quickSearchResults">
+                <div style="padding:20px;text-align:center;color:#999;">Type to search...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Keyboard Shortcuts Panel -->
+    <div class="shortcut-hint" id="shortcutHint">
+        <h4><i class="fas fa-keyboard"></i> Keyboard Shortcuts</h4>
+        <div class="shortcut"><span class="key">Ctrl+K</span><span>Quick Search</span></div>
+        <div class="shortcut"><span class="key">Ctrl+B</span><span>New Booking</span></div>
+        <div class="shortcut"><span class="key">Ctrl+T</span><span>New Tab</span></div>
+        <div class="shortcut"><span class="key">Ctrl+P</span><span>Process Payment</span></div>
+        <div class="shortcut"><span class="key">Esc</span><span>Close Modal</span></div>
+        <div class="shortcut"><span class="key">L</span><span>Lock Screen</span></div>
+        <div class="shortcut"><span class="key">?</span><span>Toggle This Help</span></div>
+    </div>
+
     <!-- PIN Lock Screen -->
     <div id="lockScreen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg, #2c3e50 0%, #4a90a4 100%);display:flex;align-items:center;justify-content:center;z-index:99999;">
         <div style="background:#fff;border-radius:16px;padding:40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-width:400px;width:90%;">
@@ -351,6 +376,20 @@
         </div>
     </div>
     
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-left">
+            <div class="status-item"><span class="status-dot" id="statusDotSync"></span><span id="statusSyncText">Synced</span></div>
+            <div class="status-item"><span class="status-dot" id="statusDotReader"></span><span id="statusReaderText">Reader</span></div>
+            <div class="status-item"><i class="fas fa-receipt"></i> <span id="statusTabsCount">0</span> open tabs</div>
+            <div class="status-item"><i class="fas fa-calendar"></i> <span id="statusBookingsCount">0</span> bookings today</div>
+        </div>
+        <div class="status-right">
+            <div class="status-item"><i class="fas fa-keyboard"></i> Press <strong>?</strong> for shortcuts</div>
+            <div class="status-item" id="statusClock">--:-- --</div>
+        </div>
+    </div>
+
     <!-- Header -->
     <header class="header">
         <div class="header-left">
@@ -1117,6 +1156,263 @@
             }
         });
         
+        // ============ GLOBAL KEYBOARD SHORTCUTS ============
+        document.addEventListener('keydown', function(e) {
+            // Skip if locked or in input/textarea
+            if (isLocked) return;
+            const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+            
+            // Ctrl+K - Quick Search
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                openQuickSearch();
+                return;
+            }
+            
+            // Ctrl+B - New Booking
+            if (e.ctrlKey && e.key === 'b') {
+                e.preventDefault();
+                showModal('booking');
+                return;
+            }
+            
+            // Ctrl+T - New Tab
+            if (e.ctrlKey && e.key === 't') {
+                e.preventDefault();
+                showModal('newTab');
+                return;
+            }
+            
+            // Ctrl+P - Process Payment
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                if (cart.length > 0) processPayment('quick');
+                return;
+            }
+            
+            // Escape - Close modals
+            if (e.key === 'Escape') {
+                closeQuickSearch();
+                closeAllModals();
+                return;
+            }
+            
+            // Skip character shortcuts if in input
+            if (isInput) return;
+            
+            // ? - Toggle shortcut help
+            if (e.key === '?') {
+                toggleShortcutHelp();
+                return;
+            }
+            
+            // L - Lock screen
+            if (e.key === 'l' || e.key === 'L') {
+                lockPOS();
+                return;
+            }
+        });
+        
+        function toggleShortcutHelp() {
+            const panel = document.getElementById('shortcutHint');
+            if (panel) panel.classList.toggle('visible');
+        }
+        
+        function closeAllModals() {
+            document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+        }
+        
+        // ============ QUICK SEARCH SYSTEM ============
+        let quickSearchIndex = 0;
+        let quickSearchResults = [];
+        
+        function openQuickSearch() {
+            const overlay = document.getElementById('quickSearchOverlay');
+            overlay.classList.add('active');
+            const input = document.getElementById('quickSearchInput');
+            input.value = '';
+            input.focus();
+            document.getElementById('quickSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Type to search customers, bookings, menu items...</div>';
+        }
+        
+        function closeQuickSearch() {
+            document.getElementById('quickSearchOverlay').classList.remove('active');
+        }
+        
+        function handleQuickSearch(query) {
+            if (!query || query.length < 2) {
+                document.getElementById('quickSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Type to search...</div>';
+                return;
+            }
+            
+            query = query.toLowerCase();
+            quickSearchResults = [];
+            
+            // Search customers
+            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            customers.forEach(c => {
+                const fullName = getCustomerFullName(c).toLowerCase();
+                const phone = (c.phone || '').toLowerCase();
+                const email = (c.email || '').toLowerCase();
+                if (fullName.includes(query) || phone.includes(query) || email.includes(query)) {
+                    quickSearchResults.push({
+                        type: 'customer',
+                        icon: c.isMember ? 'fa-crown' : 'fa-user',
+                        title: getCustomerFullName(c),
+                        subtitle: c.isMember ? `Member - ${c.memberType?.replace('_', ' ')}` : (c.phone || c.email || 'Customer'),
+                        action: () => { closeQuickSearch(); selectBookingCustomer(c.id); showModal('booking'); },
+                        actionText: 'New Booking'
+                    });
+                }
+            });
+            
+            // Search bookings for today
+            const today = new Date().toISOString().split('T')[0];
+            const bookingsToday = bookings.filter(b => b.date === today || b.date === document.getElementById('teeSheetDate')?.value);
+            bookingsToday.forEach(b => {
+                if ((b.customer || '').toLowerCase().includes(query)) {
+                    quickSearchResults.push({
+                        type: 'booking',
+                        icon: 'fa-calendar-check',
+                        title: b.customer,
+                        subtitle: `${b.time} - Room ${b.roomId}`,
+                        action: () => { closeQuickSearch(); selectBooking(b.id); },
+                        actionText: 'View'
+                    });
+                }
+            });
+            
+            // Search menu items
+            items.forEach(item => {
+                if (item.name.toLowerCase().includes(query)) {
+                    quickSearchResults.push({
+                        type: 'item',
+                        icon: item.icon,
+                        title: item.name,
+                        subtitle: `$${item.price.toFixed(2)} - ${item.category}`,
+                        action: () => { closeQuickSearch(); addToCart(item.name, item.price); },
+                        actionText: 'Add to Cart'
+                    });
+                }
+            });
+            
+            // Search open tabs
+            openTabs.forEach(tab => {
+                if ((tab.customer || '').toLowerCase().includes(query)) {
+                    quickSearchResults.push({
+                        type: 'tab',
+                        icon: 'fa-receipt',
+                        title: tab.customer,
+                        subtitle: `Tab - $${tab.amount.toFixed(2)}`,
+                        action: () => { closeQuickSearch(); selectTab(tab.id); },
+                        actionText: 'View Tab'
+                    });
+                }
+            });
+            
+            // Render results
+            quickSearchIndex = 0;
+            renderQuickSearchResults();
+        }
+        
+        function renderQuickSearchResults() {
+            const container = document.getElementById('quickSearchResults');
+            if (quickSearchResults.length === 0) {
+                container.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">No results found</div>';
+                return;
+            }
+            
+            container.innerHTML = quickSearchResults.slice(0, 10).map((r, i) => `
+                <div class="quick-search-item ${i === quickSearchIndex ? 'selected' : ''}" onclick="quickSearchResults[${i}].action()" onmouseenter="quickSearchIndex=${i};renderQuickSearchResults()">
+                    <i class="fas ${r.icon}"></i>
+                    <div class="item-info">
+                        <div class="item-title">${r.title}</div>
+                        <div class="item-subtitle">${r.subtitle}</div>
+                    </div>
+                    <span class="item-action">${r.actionText}</span>
+                </div>
+            `).join('');
+        }
+        
+        function handleQuickSearchKey(e) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                quickSearchIndex = Math.min(quickSearchIndex + 1, Math.min(quickSearchResults.length - 1, 9));
+                renderQuickSearchResults();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                quickSearchIndex = Math.max(quickSearchIndex - 1, 0);
+                renderQuickSearchResults();
+            } else if (e.key === 'Enter' && quickSearchResults.length > 0) {
+                e.preventDefault();
+                quickSearchResults[quickSearchIndex].action();
+            } else if (e.key === 'Escape') {
+                closeQuickSearch();
+            }
+        }
+        
+        // ============ STATUS BAR UPDATES ============
+        function updateStatusBar() {
+            // Sync status
+            const syncDot = document.getElementById('statusDotSync');
+            const syncText = document.getElementById('statusSyncText');
+            if (syncDot && syncText) {
+                const lastSync = localStorage.getItem('gc_last_sync');
+                if (lastSync) {
+                    const syncAge = Date.now() - new Date(lastSync).getTime();
+                    if (syncAge < 60000) {
+                        syncDot.className = 'status-dot green';
+                        syncText.textContent = 'Synced';
+                    } else if (syncAge < 300000) {
+                        syncDot.className = 'status-dot yellow';
+                        syncText.textContent = 'Synced ' + Math.floor(syncAge / 60000) + 'm ago';
+                    } else {
+                        syncDot.className = 'status-dot red';
+                        syncText.textContent = 'Sync needed';
+                    }
+                } else {
+                    syncDot.className = 'status-dot yellow';
+                    syncText.textContent = 'Not synced';
+                }
+            }
+            
+            // Reader status
+            const readerDot = document.getElementById('statusDotReader');
+            const readerText = document.getElementById('statusReaderText');
+            if (readerDot && readerText) {
+                if (typeof connectedReader !== 'undefined' && connectedReader) {
+                    readerDot.className = 'status-dot green';
+                    readerText.textContent = 'Reader OK';
+                } else {
+                    readerDot.className = 'status-dot red';
+                    readerText.textContent = 'No Reader';
+                }
+            }
+            
+            // Tabs count
+            const tabsCount = document.getElementById('statusTabsCount');
+            if (tabsCount) {
+                tabsCount.textContent = openTabs.length;
+            }
+            
+            // Bookings today count
+            const bookingsCount = document.getElementById('statusBookingsCount');
+            if (bookingsCount) {
+                const today = new Date().toISOString().split('T')[0];
+                const todayBookings = bookings.filter(b => b.date === today && b.status !== 'cancelled');
+                bookingsCount.textContent = todayBookings.length;
+            }
+            
+            // Clock
+            const clock = document.getElementById('statusClock');
+            if (clock) {
+                clock.textContent = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            }
+        }
+        
+        // Update status bar every 10 seconds
+        setInterval(updateStatusBar, 10000);
+        
         // Add shake animation style
         const shakeStyle = document.createElement('style');
         shakeStyle.textContent = `
@@ -1416,9 +1712,111 @@
         function showTransactionDetail(index) {
             const trans = transactions[index];
             if (!trans) return;
-            if (confirm(`Transaction #${trans.id}\nCustomer: ${trans.customer}\nAmount: $${trans.amount.toFixed(2)}\n\nPrint receipt?`)) {
-                printReceipt(trans);
+            
+            // Build detailed modal
+            const itemsHtml = trans.items && trans.items.length > 0 
+                ? trans.items.map(i => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee;"><span>${i.qty || 1}x ${i.name}</span><span>$${((i.price || 0) * (i.qty || 1)).toFixed(2)}</span></div>`).join('')
+                : '<div style="color:#999;">No item details</div>';
+            
+            const html = `
+                <div id="transDetailModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">
+                    <div style="background:#fff;padding:25px;border-radius:12px;max-width:400px;width:95%;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                            <h3 style="margin:0;"><i class="fas fa-receipt"></i> Transaction #${trans.id}</h3>
+                            <button onclick="document.getElementById('transDetailModal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">&times;</button>
+                        </div>
+                        
+                        <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                <span style="color:#666;">Customer</span>
+                                <span style="font-weight:600;">${trans.customer}</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                <span style="color:#666;">Date/Time</span>
+                                <span>${trans.date || 'N/A'} ${trans.time}</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                <span style="color:#666;">Payment Method</span>
+                                <span>${trans.paymentMethod || trans.method || 'Card'}</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                <span style="color:#666;">Employee</span>
+                                <span>${trans.employee || trans.processedBy || 'Staff'}</span>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom:15px;">
+                            <h4 style="margin:0 0 10px;font-size:13px;color:#666;">Items</h4>
+                            ${itemsHtml}
+                        </div>
+                        
+                        <div style="border-top:2px solid #333;padding-top:10px;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                                <span>Subtotal</span>
+                                <span>$${(trans.subtotal || trans.amount / 1.0635).toFixed(2)}</span>
+                            </div>
+                            ${trans.discount ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px;color:#27ae60;"><span>Discount</span><span>-$${trans.discount.toFixed(2)}</span></div>` : ''}
+                            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                                <span>Tax (6.35%)</span>
+                                <span>$${(trans.tax || trans.amount * 0.0635 / 1.0635).toFixed(2)}</span>
+                            </div>
+                            ${trans.tip ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px;color:#9b59b6;"><span>Tip</span><span>$${trans.tip.toFixed(2)}</span></div>` : ''}
+                            <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px;margin-top:10px;">
+                                <span>Total</span>
+                                <span style="color:#27ae60;">$${trans.amount.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        
+                        <div style="display:flex;gap:10px;margin-top:20px;">
+                            <button onclick="document.getElementById('transDetailModal').remove()" style="flex:1;padding:12px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;">Close</button>
+                            <button onclick="printReceipt(transactions[${index}]); document.getElementById('transDetailModal').remove();" style="flex:1;padding:12px;background:#4a90a4;color:#fff;border:none;border-radius:6px;cursor:pointer;"><i class="fas fa-print"></i> Print Receipt</button>
+                            <button onclick="refundTransaction(${index})" style="padding:12px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;"><i class="fas fa-undo"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function refundTransaction(index) {
+            const trans = transactions[index];
+            if (!trans) return;
+            
+            if (!confirm(`Refund $${trans.amount.toFixed(2)} to ${trans.customer}?\\n\\nThis action cannot be undone.`)) return;
+            
+            // Record refund
+            const refund = {
+                id: Date.now(),
+                originalId: trans.id,
+                customer: trans.customer,
+                amount: -trans.amount,
+                items: trans.items,
+                type: 'refund',
+                reason: prompt('Refund reason:') || 'Customer request',
+                time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                date: new Date().toISOString().split('T')[0],
+                processedBy: currentEmployee ? currentEmployee.name : 'Staff'
+            };
+            
+            transactions.unshift(refund);
+            localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+            
+            // Update customer stats (subtract refund)
+            if (trans.customer && trans.customer !== 'Walk-in') {
+                const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+                const customer = customers.find(c => getCustomerFullName(c).toLowerCase() === trans.customer.toLowerCase());
+                if (customer) {
+                    customer.totalSpent = (customer.totalSpent || 0) - trans.amount;
+                    localStorage.setItem('gc_customers', JSON.stringify(customers));
+                }
             }
+            
+            // Close modal and refresh
+            const modal = document.getElementById('transDetailModal');
+            if (modal) modal.remove();
+            
+            renderRecentTrans();
+            showToast(`Refund of $${trans.amount.toFixed(2)} processed`, 'success');
         }
 
         function renderSuspendedSales() {
@@ -5656,7 +6054,98 @@
             
             // Update sync status indicator
             updateSyncStatus();
+            
+            // Initialize status bar
+            updateStatusBar();
+            
+            // Initialize TabsSync for real-time tab updates
+            if (typeof TabsSync !== 'undefined') {
+                TabsSync.init();
+                TabsSync.onUpdate(() => {
+                    openTabs = TabsSync.getAllTabs();
+                    renderOpenTabs();
+                    renderFloorPlan();
+                    updateStatusBar();
+                });
+            }
+            
+            // Preload quick customer suggestions
+            loadQuickCustomerSuggestions();
         });
+        
+        // ============ QUICK CUSTOMER SUGGESTIONS ============
+        function loadQuickCustomerSuggestions() {
+            const vipList = document.getElementById('vipMembersList');
+            const recentList = document.getElementById('recentCustomersList');
+            
+            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            
+            // VIP Members (active members sorted by tier priority)
+            const tierPriority = { 'eagle': 1, 'family_eagle': 2, 'birdie': 3, 'family_birdie': 4, 'par': 5, 'family_par': 6 };
+            const vipMembers = customers
+                .filter(c => c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date())
+                .sort((a, b) => (tierPriority[a.memberType] || 99) - (tierPriority[b.memberType] || 99))
+                .slice(0, 8);
+            
+            if (vipList) {
+                const tierColors = { 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#f1c40f', 'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#f1c40f' };
+                vipList.innerHTML = vipMembers.length > 0 ? vipMembers.map(c => `
+                    <button type="button" onclick="selectBookingCustomer(${c.id})" style="background:linear-gradient(135deg, ${tierColors[c.memberType] || '#9b59b6'} 0%, ${tierColors[c.memberType] || '#9b59b6'}dd 100%);color:#fff;border:none;padding:4px 10px;border-radius:12px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                        <i class="fas fa-crown" style="font-size:9px;color:#f1c40f;"></i>
+                        ${c.firstName} ${(c.lastName || '').charAt(0)}.
+                    </button>
+                `).join('') : '<span style="color:#999;font-size:11px;">No VIP members</span>';
+            }
+            
+            // Recent customers (sorted by last visit)
+            const recentCustomers = customers
+                .filter(c => c.lastVisit)
+                .sort((a, b) => new Date(b.lastVisit) - new Date(a.lastVisit))
+                .slice(0, 8);
+            
+            if (recentList) {
+                recentList.innerHTML = recentCustomers.length > 0 ? recentCustomers.map(c => `
+                    <button type="button" onclick="selectBookingCustomer(${c.id})" style="background:#f8f9fa;border:1px solid #ddd;padding:4px 10px;border-radius:12px;font-size:11px;cursor:pointer;">
+                        ${c.firstName} ${(c.lastName || '').charAt(0)}.
+                    </button>
+                `).join('') : '<span style="color:#999;font-size:11px;">No recent customers</span>';
+            }
+        }
+        
+        // Select customer for booking modal
+        function selectBookingCustomer(customerId) {
+            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            const fullName = getCustomerFullName(customer);
+            document.getElementById('bookingCustomer').value = fullName;
+            document.getElementById('bookingCustomerId').value = customerId;
+            
+            // Fill in phone/email if available
+            if (customer.phone) document.getElementById('bookingPhone').value = customer.phone;
+            if (customer.email) document.getElementById('bookingEmail').value = customer.email;
+            
+            // Show member badge if applicable
+            const isActive = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > new Date();
+            if (isActive) {
+                selectedBookingMemberType = customer.memberType;
+                const badge = document.getElementById('bookingMemberBadge');
+                const tierNames = { 'par': 'Par Member', 'birdie': 'Birdie Member', 'eagle': 'Eagle Member', 'family_par': 'Family Par', 'family_birdie': 'Family Birdie', 'family_eagle': 'Family Eagle' };
+                const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%' };
+                document.getElementById('bookingMemberText').textContent = tierNames[customer.memberType] || 'Member';
+                document.getElementById('bookingMemberDiscount').textContent = discounts[customer.memberType] || '10%' + ' OFF';
+                document.getElementById('bookingMemberBenefits').textContent = 'Priority booking • Member discount applied';
+                badge.style.display = 'block';
+                updateBookingPrice();
+            } else {
+                selectedBookingMemberType = null;
+                document.getElementById('bookingMemberBadge').style.display = 'none';
+            }
+            
+            // Hide autocomplete dropdown
+            document.getElementById('bookingCustomerAutocomplete').style.display = 'none';
+        }
     </script>
 </body>
 </html>
