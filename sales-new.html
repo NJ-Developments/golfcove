@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Cove - Point of Sale</title>
+    <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: #f5f5f5; 
+            height: 100vh; 
+            overflow: hidden;
+        }
+        
+        /* ============ TOP BAR ============ */
+        .top-bar {
+            background: #2c3e50;
+            color: #fff;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            font-size: 13px;
+        }
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .top-bar-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+        .top-bar-logo img { height: 24px; }
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .top-bar-right a {
+            color: #aaa;
+            text-decoration: none;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .top-bar-right a:hover { color: #fff; }
+        .top-bar-time { color: #aaa; font-size: 12px; }
+        
+        /* ============ MAIN LAYOUT - Toast Style ============ */
+        .pos-layout {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            height: calc(100vh - 40px);
+        }
+        
+        /* ============ LEFT: ORDER PANEL ============ */
+        .order-panel {
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #ddd;
+        }
+        
+        /* Order Header */
+        .order-header {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .order-id {
+            font-weight: 600;
+            color: #e74c3c;
+            font-size: 15px;
+        }
+        .order-table {
+            color: #666;
+            font-size: 14px;
+        }
+        .order-customer {
+            position: relative;
+            flex: 1;
+            margin-left: 15px;
+        }
+        .order-customer input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .order-customer input:focus { outline: none; border-color: #3498db; }
+        
+        /* Customer Results Dropdown */
+        .customer-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 100;
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .customer-result {
+            padding: 10px 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+        }
+        .customer-result:hover { background: #f8f9fa; }
+        .customer-result:last-child { border-bottom: none; }
+        .member-badge {
+            background: linear-gradient(135deg, #f1c40f, #e67e22);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        /* Order Items Table */
+        .order-table-header {
+            display: grid;
+            grid-template-columns: 1fr 50px 60px 70px;
+            background: #f0f0f0;
+            padding: 8px 15px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #3498db;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .order-items {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 150px;
+        }
+        
+        .order-items table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .order-items th {
+            padding: 8px 15px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: #3498db;
+            text-transform: uppercase;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+        }
+        .order-items td {
+            padding: 10px 15px;
+            font-size: 14px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .order-items tr:hover { background: #fafafa; }
+        .item-name-col { font-weight: 500; }
+        .item-qty-col { text-align: center; width: 50px; }
+        .item-price-col { text-align: right; width: 60px; color: #666; }
+        .item-total-col { text-align: right; width: 70px; font-weight: 600; }
+        
+        .empty-order td {
+            text-align: center;
+            padding: 40px 15px;
+            color: #aaa;
+        }
+        
+        /* Order Actions Row */
+        .order-actions {
+            display: flex;
+            gap: 0;
+            border-top: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+        }
+        .order-action-btn {
+            flex: 1;
+            padding: 12px 8px;
+            background: #fff;
+            border: none;
+            border-right: 1px solid #ddd;
+            font-size: 12px;
+            font-weight: 500;
+            color: #555;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .order-action-btn:last-child { border-right: none; }
+        .order-action-btn:hover { background: #f5f5f5; }
+        .order-action-btn.hold { color: #3498db; }
+        .order-action-btn.send { background: #27ae60; color: #fff; }
+        .order-action-btn.send:hover { background: #219a52; }
+        
+        /* Order Totals */
+        .order-totals {
+            padding: 12px 15px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+        }
+        .totals-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .totals-left { color: #666; }
+        .totals-right { text-align: right; }
+        .total-row { 
+            display: flex; 
+            justify-content: space-between;
+            padding: 3px 0;
+        }
+        .total-row.grand {
+            font-size: 24px;
+            font-weight: 700;
+            color: #27ae60;
+            padding-top: 8px;
+        }
+        
+        /* Order Footer */
+        .order-footer {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+            border-top: 1px solid #ddd;
+        }
+        .footer-btn {
+            padding: 15px 10px;
+            background: #f8f9fa;
+            border: none;
+            border-right: 1px solid #ddd;
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .footer-btn:last-child { border-right: none; }
+        .footer-btn:hover { background: #eee; }
+        .footer-btn.pay {
+            background: #27ae60;
+            color: #fff;
+            font-weight: 600;
+        }
+        .footer-btn.pay:hover { background: #219a52; }
+        
+        /* ============ RIGHT: MENU PANEL ============ */
+        .menu-panel {
+            background: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Category Row */
+        .category-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 15px;
+            background: #e8e8e8;
+        }
+        .cat-btn {
+            padding: 14px 10px;
+            background: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .cat-btn:hover { filter: brightness(1.1); }
+        .cat-btn.active { box-shadow: 0 0 0 3px rgba(52,152,219,0.4); }
+        
+        /* Subcategory Grid */
+        .subcategory-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 0 15px 15px;
+            background: #e8e8e8;
+        }
+        .subcat-btn {
+            padding: 12px 10px;
+            background: #5dade2;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .subcat-btn:hover { filter: brightness(1.05); }
+        .subcat-btn.white {
+            background: #fff;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        /* Items Grid */
+        .items-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: #f5f5f5;
+        }
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        .item-btn {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .item-btn:hover { 
+            border-color: #3498db;
+            box-shadow: 0 2px 8px rgba(52,152,219,0.2);
+        }
+        .item-btn:active { transform: scale(0.98); }
+        .item-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+        }
+        .item-price {
+            font-size: 12px;
+            color: #27ae60;
+            font-weight: 600;
+        }
+        .no-items {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        /* ============ MODALS ============ */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .modal h3 {
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+        .modal-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 15px;
+        }
+        .modal-row label { color: #666; }
+        .modal-row span { font-weight: 600; }
+        .modal-row.change span { color: #27ae60; font-size: 20px; }
+        .modal input {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            text-align: right;
+            margin-bottom: 15px;
+        }
+        .modal input:focus { outline: none; border-color: #3498db; }
+        .modal-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .modal-btn.cancel { background: #e0e0e0; color: #333; }
+        .modal-btn.confirm { background: #27ae60; color: #fff; }
+        .modal-btn:hover { filter: brightness(0.95); }
+        
+        /* ============ TOAST ============ */
+        .sales-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 9999;
+            transition: transform 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .sales-toast.show { transform: translateX(-50%) translateY(0); }
+        .sales-toast.success { background: #27ae60; }
+        .sales-toast.error { background: #e74c3c; }
+        
+        /* ============ RESPONSIVE ============ */
+        @media (max-width: 1024px) {
+            .pos-layout { grid-template-columns: 350px 1fr; }
+            .items-grid { grid-template-columns: repeat(3, 1fr); }
+            .category-row { grid-template-columns: repeat(3, 1fr); }
+            .subcategory-row { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <div class="top-bar-logo">
+                <img src="images/golfCoveLogo6.png" alt="Golf Cove">
+                <span>Golf Cove POS</span>
+            </div>
+        </div>
+        <div class="top-bar-right">
+            <a href="admin-pos.html"><i class="fas fa-calendar-alt"></i> Tee Sheet</a>
+            <a href="customers.html"><i class="fas fa-users"></i> Customers</a>
+            <span class="top-bar-time" id="currentTime">12:30</span>
+            <a href="#" onclick="switchUser()"><i class="fas fa-user"></i> <span id="currentUserDisplay">Staff</span></a>
+        </div>
+    </div>
+    
+    <!-- Main POS Layout -->
+    <div class="pos-layout">
+        <!-- Left: Order Panel -->
+        <div class="order-panel">
+            <div class="order-header">
+                <span class="order-id">#185</span>
+                <span class="order-table">Bay 5</span>
+                <div class="order-customer">
+                    <input type="text" id="orderCustomer" placeholder="Customer name...">
+                    <div class="customer-results" id="customerResults"></div>
+                </div>
+            </div>
+            
+            <div class="order-items">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th style="text-align:center;">Qty</th>
+                            <th style="text-align:right;">Each</th>
+                            <th style="text-align:right;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderItems">
+                        <tr class="empty-order">
+                            <td colspan="4">No items - select from menu</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="order-actions">
+                <button class="order-action-btn" onclick="SalesPOS.startTab()">Tab</button>
+                <button class="order-action-btn" onclick="SalesPOS.addItem('Custom Item', parseFloat(prompt('Price:') || 0))">+ Item</button>
+                <button class="order-action-btn" onclick="splitOrder()">Split</button>
+                <button class="order-action-btn" onclick="SalesPOS.clearOrder()">Cancel</button>
+                <button class="order-action-btn hold" onclick="SalesPOS.holdOrder()">Hold</button>
+                <button class="order-action-btn send" onclick="SalesPOS.sendOrder()">Send</button>
+            </div>
+            
+            <div class="order-totals">
+                <div class="totals-grid">
+                    <div class="totals-left">
+                        <div>Credits:</div>
+                        <div>Discounts:</div>
+                        <div>Tips (0%):</div>
+                    </div>
+                    <div class="totals-right">
+                        <div>$0.00</div>
+                        <div>$0.00</div>
+                        <div>$0.00</div>
+                    </div>
+                </div>
+                <div class="totals-grid" style="margin-top:10px;border-top:1px solid #eee;padding-top:10px;">
+                    <div class="totals-left">
+                        <div>Subtotal:</div>
+                        <div>Tax:</div>
+                        <div>Balance Due:</div>
+                    </div>
+                    <div class="totals-right">
+                        <div id="orderSubtotal">$0.00</div>
+                        <div id="orderTax">$0.00</div>
+                        <div id="orderBalance">$0.00</div>
+                    </div>
+                </div>
+                <div class="total-row grand">
+                    <span>Total:</span>
+                    <span id="orderTotal">$0.00</span>
+                </div>
+            </div>
+            
+            <div class="order-footer">
+                <button class="footer-btn" onclick="showGuestCount()">1 Guests</button>
+                <button class="footer-btn" onclick="showDiningMode()">Dining</button>
+                <button class="footer-btn" onclick="noSale()">No Sale</button>
+                <button class="footer-btn pay" onclick="SalesPOS.processPayment('card')">Pay ($)</button>
+            </div>
+        </div>
+        
+        <!-- Right: Menu Panel -->
+        <div class="menu-panel">
+            <!-- Main Categories -->
+            <div class="category-row" id="categoryGrid">
+                <button class="cat-btn active" onclick="SalesPOS.selectCategory('food')">Food</button>
+                <button class="cat-btn" onclick="SalesPOS.selectCategory('speed_bar')">Speed Bar</button>
+                <button class="cat-btn" onclick="SalesPOS.selectCategory('beverage')">Beverage</button>
+                <button class="cat-btn" onclick="SalesPOS.selectCategory('pizza')">Pizza</button>
+                <button class="cat-btn" style="background:#5dade2;" onclick="SalesPOS.selectCategory('giftcard')">Gift Cards</button>
+                <button class="cat-btn" style="background:#5dade2;" onclick="SalesPOS.selectCategory('specials')">Specials</button>
+            </div>
+            
+            <!-- Subcategories -->
+            <div class="subcategory-row" id="subcategoryGrid">
+                <button class="subcat-btn" onclick="SalesPOS.showItems('apps')">Apps</button>
+                <button class="subcat-btn" onclick="SalesPOS.showItems('entrees')">Entrees</button>
+                <button class="subcat-btn" onclick="SalesPOS.showItems('sides')">Sides</button>
+                <button class="subcat-btn" onclick="SalesPOS.showItems('extras')">Extras</button>
+            </div>
+            
+            <!-- Items -->
+            <div class="items-panel" id="itemsPanel">
+                <div class="items-grid">
+                    <button class="item-btn" onclick="SalesPOS.addItem('Wings', 14.99, 'apps')">
+                        <span class="item-name">Wings</span>
+                        <span class="item-price">$14.99</span>
+                    </button>
+                    <button class="item-btn" onclick="SalesPOS.addItem('Nachos', 12.99, 'apps')">
+                        <span class="item-name">Nachos</span>
+                        <span class="item-price">$12.99</span>
+                    </button>
+                    <button class="item-btn" onclick="SalesPOS.addItem('Burger', 15.99, 'entrees')">
+                        <span class="item-name">Burger</span>
+                        <span class="item-price">$15.99</span>
+                    </button>
+                    <button class="item-btn" onclick="SalesPOS.addItem('Fries', 4.99, 'sides')">
+                        <span class="item-name">Fries</span>
+                        <span class="item-price">$4.99</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cash Payment Modal -->
+    <div class="modal-overlay" id="cashModal">
+        <div class="modal">
+            <h3><i class="fas fa-money-bill"></i> Cash Payment</h3>
+            <div class="modal-row">
+                <label>Total Due:</label>
+                <span id="cashTotal">$0.00</span>
+            </div>
+            <input type="number" id="cashTendered" placeholder="Amount tendered" oninput="SalesPOS.calculateChange()">
+            <div class="modal-row change">
+                <label>Change:</label>
+                <span id="cashChange">$0.00</span>
+            </div>
+            <div class="modal-btns">
+                <button class="modal-btn cancel" onclick="SalesPOS.closeCashModal()">Cancel</button>
+                <button class="modal-btn confirm" onclick="SalesPOS.completeCashPayment()">Complete</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="js/firebase-sync.js"></script>
+    <script src="js/pin-system.js"></script>
+    <script src="js/membership-system.js"></script>
+    <script src="js/customers.js"></script>
+    <script src="js/tabs-sync.js"></script>
+    <script src="js/sales-pos.js"></script>
+    <script>
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
+        updateTime();
+        setInterval(updateTime, 60000);
+        
+        // Switch user
+        function switchUser() {
+            if (typeof GolfCovePIN !== 'undefined') {
+                GolfCovePIN.lock();
+            }
+        }
+        
+        // Placeholder functions
+        function showGuestCount() { alert('Guest count: 1'); }
+        function showDiningMode() { alert('Dining mode'); }
+        function noSale() { alert('No Sale - Opening drawer'); }
+        function splitOrder() { alert('Split order'); }
+    </script>
+</body>
+</html>

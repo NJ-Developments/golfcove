@@ -1,0 +1,677 @@
+/**
+ * Golf Cove - Payment Processor
+ * Handles payment modal, calculations, and processing
+ */
+
+const PaymentProcessor = (function() {
+    'use strict';
+    
+    // ============ CONSTANTS ============
+    const TAX_RATE = 0.0635; // 6.35% CT Sales Tax
+    
+    const PAYMENT_METHODS = [
+        { id: 'card', name: 'Card', icon: 'fa-credit-card' },
+        { id: 'cash', name: 'Cash', icon: 'fa-money-bill-wave' },
+        { id: 'gift', name: 'Gift Card', icon: 'fa-gift' },
+        { id: 'tab', name: 'Add to Tab', icon: 'fa-receipt' },
+        { id: 'member', name: 'Member Charge', icon: 'fa-crown' },
+        { id: 'split', name: 'Split Pay', icon: 'fa-divide' }
+    ];
+    
+    const TIP_PRESETS = [
+        { percent: 15, label: '15%' },
+        { percent: 18, label: '18%' },
+        { percent: 20, label: '20%' },
+        { percent: 25, label: '25%' }
+    ];
+    
+    // State
+    let currentTotal = 0;
+    let currentSubtotal = 0;
+    let currentTax = 0;
+    let currentDiscount = 0;
+    let selectedTip = 0;
+    let selectedPaymentMethod = 'card';
+    let onCompleteCallback = null;
+    
+    // ============ INITIALIZATION ============
+    function init() {
+        // Nothing needed at init
+    }
+    
+    // ============ CALCULATIONS ============
+    function calculateTotals(subtotal, discountPercent = 0, tipAmount = 0) {
+        const discount = subtotal * (discountPercent / 100);
+        const taxableAmount = subtotal - discount;
+        const tax = taxableAmount * TAX_RATE;
+        const total = taxableAmount + tax + tipAmount;
+        
+        return {
+            subtotal: subtotal,
+            discount: discount,
+            discountPercent: discountPercent,
+            taxableAmount: taxableAmount,
+            tax: tax,
+            tip: tipAmount,
+            total: total
+        };
+    }
+    
+    function formatCurrency(amount) {
+        return '$' + amount.toFixed(2);
+    }
+    
+    // ============ MODAL ============
+    function showPaymentModal(subtotal, options = {}) {
+        currentSubtotal = subtotal;
+        currentDiscount = options.discountPercent || 0;
+        onCompleteCallback = options.onComplete || null;
+        selectedTip = 0;
+        selectedPaymentMethod = 'card';
+        
+        const totals = calculateTotals(subtotal, currentDiscount, 0);
+        currentTax = totals.tax;
+        currentTotal = totals.total;
+        
+        // Build modal HTML
+        const modalHtml = `
+            <div class="payment-modal-overlay" id="paymentModalOverlay" onclick="PaymentProcessor.closeModal()">
+                <div class="payment-modal" onclick="event.stopPropagation()">
+                    <button class="payment-modal-close" onclick="PaymentProcessor.closeModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    
+                    <div class="payment-header">
+                        <h2><i class="fas fa-cash-register"></i> Complete Payment</h2>
+                    </div>
+                    
+                    <!-- Order Summary -->
+                    <div class="payment-summary">
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span id="paySubtotal">${formatCurrency(subtotal)}</span>
+                        </div>
+                        ${currentDiscount > 0 ? `
+                        <div class="summary-row discount">
+                            <span>Discount (${currentDiscount}%)</span>
+                            <span id="payDiscount">-${formatCurrency(totals.discount)}</span>
+                        </div>
+                        ` : ''}
+                        <div class="summary-row">
+                            <span>Tax (6.35%)</span>
+                            <span id="payTax">${formatCurrency(totals.tax)}</span>
+                        </div>
+                        <div class="summary-row tip-row" id="tipRow" style="display:none;">
+                            <span>Tip</span>
+                            <span id="payTip">$0.00</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total</span>
+                            <span id="payTotal">${formatCurrency(totals.total)}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Tip Selection -->
+                    <div class="tip-section" id="tipSection">
+                        <label>Add Tip</label>
+                        <div class="tip-buttons">
+                            <button class="tip-btn" onclick="PaymentProcessor.setTipPercent(0)">No Tip</button>
+                            ${TIP_PRESETS.map(t => `
+                                <button class="tip-btn" onclick="PaymentProcessor.setTipPercent(${t.percent})">${t.label}</button>
+                            `).join('')}
+                            <button class="tip-btn" onclick="PaymentProcessor.showCustomTip()">Custom</button>
+                        </div>
+                        <div class="custom-tip" id="customTipInput" style="display:none;">
+                            <input type="number" id="customTipAmount" placeholder="Enter tip amount" min="0" step="0.01">
+                            <button onclick="PaymentProcessor.applyCustomTip()">Apply</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Methods -->
+                    <div class="payment-methods">
+                        <label>Payment Method</label>
+                        <div class="method-buttons">
+                            ${PAYMENT_METHODS.map(m => `
+                                <button class="method-btn ${m.id === 'card' ? 'active' : ''}" 
+                                        data-method="${m.id}" 
+                                        onclick="PaymentProcessor.selectMethod('${m.id}')">
+                                    <i class="fas ${m.icon}"></i>
+                                    <span>${m.name}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Cash Tendered (for cash payments) -->
+                    <div class="cash-section" id="cashSection" style="display:none;">
+                        <label>Cash Tendered</label>
+                        <div class="cash-input-row">
+                            <input type="number" id="cashTendered" placeholder="0.00" min="0" step="0.01" oninput="PaymentProcessor.updateChange()">
+                        </div>
+                        <div class="quick-cash">
+                            <button onclick="PaymentProcessor.setCashAmount(20)">$20</button>
+                            <button onclick="PaymentProcessor.setCashAmount(50)">$50</button>
+                            <button onclick="PaymentProcessor.setCashAmount(100)">$100</button>
+                            <button onclick="PaymentProcessor.setExactCash()">Exact</button>
+                        </div>
+                        <div class="change-due" id="changeDue" style="display:none;">
+                            Change Due: <span id="changeAmount">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Gift Card (for gift card payments) -->
+                    <div class="gift-section" id="giftSection" style="display:none;">
+                        <label>Gift Card Number</label>
+                        <input type="text" id="giftCardNumber" placeholder="Enter gift card code">
+                        <button onclick="PaymentProcessor.lookupGiftCard()">Look Up Balance</button>
+                        <div id="giftCardBalance" style="display:none;"></div>
+                    </div>
+                    
+                    <!-- Split Pay -->
+                    <div class="split-section" id="splitSection" style="display:none;">
+                        <label>Split Payment</label>
+                        <div class="split-inputs">
+                            <div class="split-row">
+                                <span>Card 1:</span>
+                                <input type="number" id="splitCard1" value="0" min="0" step="0.01">
+                            </div>
+                            <div class="split-row">
+                                <span>Card 2:</span>
+                                <input type="number" id="splitCard2" value="0" min="0" step="0.01">
+                            </div>
+                            <div class="split-row">
+                                <span>Cash:</span>
+                                <input type="number" id="splitCash" value="0" min="0" step="0.01">
+                            </div>
+                        </div>
+                        <button onclick="PaymentProcessor.splitEvenly()">Split Evenly</button>
+                    </div>
+                    
+                    <!-- Complete Button -->
+                    <button class="complete-payment-btn" onclick="PaymentProcessor.processPayment()">
+                        <i class="fas fa-check-circle"></i>
+                        Complete Payment
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Insert modal
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Add styles if not present
+        if (!document.getElementById('payment-processor-styles')) {
+            addStyles();
+        }
+    }
+    
+    function closeModal() {
+        const overlay = document.getElementById('paymentModalOverlay');
+        if (overlay) overlay.remove();
+    }
+    
+    // ============ TIP HANDLING ============
+    function setTipPercent(percent) {
+        selectedTip = currentSubtotal * (percent / 100);
+        updateTotals();
+        
+        // Update button states
+        document.querySelectorAll('.tip-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+    
+    function showCustomTip() {
+        document.getElementById('customTipInput').style.display = 'flex';
+    }
+    
+    function applyCustomTip() {
+        const amount = parseFloat(document.getElementById('customTipAmount').value) || 0;
+        selectedTip = amount;
+        updateTotals();
+        document.querySelectorAll('.tip-btn').forEach(b => b.classList.remove('active'));
+    }
+    
+    // ============ PAYMENT METHOD ============
+    function selectMethod(method) {
+        selectedPaymentMethod = method;
+        
+        // Update button states
+        document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`[data-method="${method}"]`).classList.add('active');
+        
+        // Show/hide relevant sections
+        document.getElementById('cashSection').style.display = method === 'cash' ? 'block' : 'none';
+        document.getElementById('giftSection').style.display = method === 'gift' ? 'block' : 'none';
+        document.getElementById('splitSection').style.display = method === 'split' ? 'block' : 'none';
+        document.getElementById('tipSection').style.display = (method === 'cash' || method === 'card') ? 'block' : 'none';
+    }
+    
+    // ============ CASH HANDLING ============
+    function setCashAmount(amount) {
+        document.getElementById('cashTendered').value = amount.toFixed(2);
+        updateChange();
+    }
+    
+    function setExactCash() {
+        document.getElementById('cashTendered').value = currentTotal.toFixed(2);
+        updateChange();
+    }
+    
+    function updateChange() {
+        const tendered = parseFloat(document.getElementById('cashTendered').value) || 0;
+        const change = tendered - currentTotal;
+        
+        const changeDue = document.getElementById('changeDue');
+        const changeAmount = document.getElementById('changeAmount');
+        
+        if (tendered > 0 && change >= 0) {
+            changeDue.style.display = 'block';
+            changeAmount.textContent = formatCurrency(change);
+            changeAmount.style.color = change > 0 ? '#27ae60' : '#333';
+        } else {
+            changeDue.style.display = 'none';
+        }
+    }
+    
+    // ============ GIFT CARD ============
+    function lookupGiftCard() {
+        const code = document.getElementById('giftCardNumber').value;
+        if (!code) {
+            showToast('Please enter a gift card code', 'error');
+            return;
+        }
+        
+        // Check localStorage for gift cards
+        const giftCards = JSON.parse(localStorage.getItem('gc_giftcards') || '[]');
+        const card = giftCards.find(g => g.code === code);
+        
+        const balanceDiv = document.getElementById('giftCardBalance');
+        if (card && card.balance > 0) {
+            balanceDiv.style.display = 'block';
+            balanceDiv.innerHTML = `<span style="color:#27ae60;">Balance: ${formatCurrency(card.balance)}</span>`;
+        } else {
+            balanceDiv.style.display = 'block';
+            balanceDiv.innerHTML = `<span style="color:#e74c3c;">Card not found or no balance</span>`;
+        }
+    }
+    
+    // ============ SPLIT PAY ============
+    function splitEvenly() {
+        const half = currentTotal / 2;
+        document.getElementById('splitCard1').value = half.toFixed(2);
+        document.getElementById('splitCard2').value = half.toFixed(2);
+        document.getElementById('splitCash').value = '0';
+    }
+    
+    // ============ UPDATE TOTALS ============
+    function updateTotals() {
+        const totals = calculateTotals(currentSubtotal, currentDiscount, selectedTip);
+        currentTotal = totals.total;
+        
+        document.getElementById('payTotal').textContent = formatCurrency(totals.total);
+        
+        const tipRow = document.getElementById('tipRow');
+        if (selectedTip > 0) {
+            tipRow.style.display = 'flex';
+            document.getElementById('payTip').textContent = formatCurrency(selectedTip);
+        } else {
+            tipRow.style.display = 'none';
+        }
+    }
+    
+    // ============ PROCESS PAYMENT ============
+    function processPayment() {
+        // Validate based on method
+        if (selectedPaymentMethod === 'cash') {
+            const tendered = parseFloat(document.getElementById('cashTendered').value) || 0;
+            if (tendered < currentTotal) {
+                showToast('Insufficient cash tendered', 'error');
+                return;
+            }
+        }
+        
+        if (selectedPaymentMethod === 'gift') {
+            const code = document.getElementById('giftCardNumber').value;
+            if (!code) {
+                showToast('Please enter gift card code', 'error');
+                return;
+            }
+            // Deduct from gift card
+            const giftCards = JSON.parse(localStorage.getItem('gc_giftcards') || '[]');
+            const cardIndex = giftCards.findIndex(g => g.code === code);
+            if (cardIndex >= 0 && giftCards[cardIndex].balance >= currentTotal) {
+                giftCards[cardIndex].balance -= currentTotal;
+                localStorage.setItem('gc_giftcards', JSON.stringify(giftCards));
+            } else {
+                showToast('Insufficient gift card balance', 'error');
+                return;
+            }
+        }
+        
+        if (selectedPaymentMethod === 'split') {
+            const card1 = parseFloat(document.getElementById('splitCard1').value) || 0;
+            const card2 = parseFloat(document.getElementById('splitCard2').value) || 0;
+            const cash = parseFloat(document.getElementById('splitCash').value) || 0;
+            const splitTotal = card1 + card2 + cash;
+            
+            if (Math.abs(splitTotal - currentTotal) > 0.01) {
+                showToast('Split amounts must equal total', 'error');
+                return;
+            }
+        }
+        
+        // Build payment result
+        const result = {
+            success: true,
+            method: selectedPaymentMethod,
+            subtotal: currentSubtotal,
+            discount: currentDiscount,
+            tax: currentTax,
+            tip: selectedTip,
+            total: currentTotal,
+            timestamp: new Date().toISOString()
+        };
+        
+        // Show success toast
+        showToast(`Payment of ${formatCurrency(currentTotal)} completed`, 'success');
+        
+        // Close modal
+        closeModal();
+        
+        // Call callback if provided
+        if (onCompleteCallback) {
+            onCompleteCallback(result);
+        }
+        
+        return result;
+    }
+    
+    // ============ TOAST ============
+    function showToast(message, type = 'success') {
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, type);
+            return;
+        }
+        
+        // Fallback toast
+        const existing = document.querySelector('.pp-toast');
+        if (existing) existing.remove();
+        
+        const toast = document.createElement('div');
+        toast.className = `pp-toast ${type}`;
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 12px 24px;
+            background: ${type === 'error' ? '#e74c3c' : '#27ae60'};
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 10001;
+            animation: fadeIn 0.3s ease;
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+    
+    // ============ STYLES ============
+    function addStyles() {
+        const styles = document.createElement('style');
+        styles.id = 'payment-processor-styles';
+        styles.textContent = `
+            .payment-modal-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.6);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+            }
+            .payment-modal {
+                background: white;
+                border-radius: 16px;
+                width: 100%;
+                max-width: 450px;
+                max-height: 90vh;
+                overflow-y: auto;
+                position: relative;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            }
+            .payment-modal-close {
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                width: 32px;
+                height: 32px;
+                border: none;
+                background: #f0f0f0;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 14px;
+            }
+            .payment-header {
+                padding: 20px 25px;
+                border-bottom: 1px solid #eee;
+            }
+            .payment-header h2 {
+                margin: 0;
+                font-size: 18px;
+                font-weight: 600;
+            }
+            .payment-summary {
+                padding: 15px 25px;
+                background: #f8f9fa;
+            }
+            .summary-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 0;
+                font-size: 14px;
+            }
+            .summary-row.discount {
+                color: #27ae60;
+            }
+            .summary-row.tip-row {
+                color: #9b59b6;
+            }
+            .summary-row.total {
+                font-size: 18px;
+                font-weight: 700;
+                border-top: 2px solid #ddd;
+                margin-top: 10px;
+                padding-top: 15px;
+            }
+            .tip-section, .payment-methods, .cash-section, .gift-section, .split-section {
+                padding: 15px 25px;
+                border-top: 1px solid #eee;
+            }
+            .tip-section label, .payment-methods label, .cash-section label, .gift-section label, .split-section label {
+                display: block;
+                font-size: 12px;
+                color: #666;
+                margin-bottom: 10px;
+                text-transform: uppercase;
+            }
+            .tip-buttons, .method-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .tip-btn, .method-btn {
+                flex: 1 1 auto;
+                min-width: 60px;
+                padding: 10px 15px;
+                border: 1px solid #ddd;
+                background: white;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.2s;
+            }
+            .tip-btn:hover, .method-btn:hover {
+                border-color: #4a90a4;
+                background: #f0f7fa;
+            }
+            .tip-btn.active, .method-btn.active {
+                background: #4a90a4;
+                color: white;
+                border-color: #4a90a4;
+            }
+            .method-btn {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 5px;
+                min-width: 70px;
+            }
+            .method-btn i {
+                font-size: 18px;
+            }
+            .custom-tip {
+                display: flex;
+                gap: 10px;
+                margin-top: 10px;
+            }
+            .custom-tip input {
+                flex: 1;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+            }
+            .custom-tip button {
+                padding: 10px 20px;
+                background: #4a90a4;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+            .cash-input-row input {
+                width: 100%;
+                padding: 12px;
+                font-size: 20px;
+                text-align: center;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+            }
+            .quick-cash {
+                display: flex;
+                gap: 8px;
+                margin-top: 10px;
+            }
+            .quick-cash button {
+                flex: 1;
+                padding: 10px;
+                border: 1px solid #ddd;
+                background: white;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+            .quick-cash button:hover {
+                background: #f0f7fa;
+            }
+            .change-due {
+                margin-top: 15px;
+                padding: 15px;
+                background: #e8f5e9;
+                border-radius: 8px;
+                text-align: center;
+                font-size: 16px;
+                font-weight: 600;
+            }
+            .gift-section input {
+                width: 100%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                margin-bottom: 10px;
+            }
+            .gift-section button {
+                width: 100%;
+                padding: 10px;
+                background: #4a90a4;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+            .split-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+            .split-row span {
+                width: 80px;
+            }
+            .split-row input {
+                flex: 1;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+            }
+            .split-section > button {
+                width: 100%;
+                padding: 10px;
+                background: #f0f0f0;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                margin-top: 10px;
+            }
+            .complete-payment-btn {
+                display: block;
+                width: calc(100% - 50px);
+                margin: 20px 25px;
+                padding: 16px;
+                background: linear-gradient(135deg, #27ae60, #2ecc71);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            .complete-payment-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 20px rgba(39, 174, 96, 0.3);
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+    
+    // ============ PUBLIC API ============
+    return {
+        init,
+        showPaymentModal,
+        closeModal,
+        setTipPercent,
+        showCustomTip,
+        applyCustomTip,
+        selectMethod,
+        setCashAmount,
+        setExactCash,
+        updateChange,
+        lookupGiftCard,
+        splitEvenly,
+        processPayment,
+        calculateTotals,
+        formatCurrency,
+        TAX_RATE,
+        PAYMENT_METHODS,
+        TIP_PRESETS
+    };
+})();
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = PaymentProcessor;
+}
