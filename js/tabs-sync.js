@@ -329,6 +329,20 @@ const TabsSync = (function() {
         saveLocal();
         notifyListeners('close', tab);
         
+        // Update customer stats
+        if (tab.customerId && typeof GolfCoveCustomers !== 'undefined') {
+            GolfCoveCustomers.recordVisit(tab.customerId, tab.finalTotal);
+        } else if (tab.customer && typeof GolfCoveCustomers !== 'undefined') {
+            // Try to find customer by name
+            const parts = tab.customer.trim().split(' ');
+            if (parts.length >= 2) {
+                const customer = GolfCoveCustomers.getByName(parts[0], parts.slice(1).join(' '));
+                if (customer) {
+                    GolfCoveCustomers.recordVisit(customer.id, tab.finalTotal);
+                }
+            }
+        }
+        
         // Sync to server
         if (isOnline) {
             try {

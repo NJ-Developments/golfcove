@@ -56,7 +56,7 @@ const GolfCoveMembership = {
                 guestPasses: 2                 // Free guest passes per month
             }
         },
-        'family-par': {
+        'family_par': {
             name: 'Family Par',
             level: 1,
             color: '#9b59b6',
@@ -73,7 +73,7 @@ const GolfCoveMembership = {
                 includesMultisport: true
             }
         },
-        'family-birdie': {
+        'family_birdie': {
             name: 'Family Birdie',
             level: 2,
             color: '#8e44ad',
@@ -90,7 +90,7 @@ const GolfCoveMembership = {
                 includesMultisport: true
             }
         },
-        'family-eagle': {
+        'family_eagle': {
             name: 'Family Eagle',
             level: 3,
             color: '#e74c3c',

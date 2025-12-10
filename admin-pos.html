@@ -1341,21 +1341,21 @@
                             'par': '#3498db',
                             'birdie': '#9b59b6', 
                             'eagle': '#f1c40f',
-                            'family-par': '#3498db',
-                            'family-birdie': '#9b59b6',
-                            'family-eagle': '#f1c40f',
+                            'family_par': '#3498db',
+                            'family_birdie': '#9b59b6',
+                            'family_eagle': '#f1c40f',
                             'corporate': '#2c3e50',
                             'monthly': '#27ae60',
                             'annual': '#27ae60'
                         };
                         const tierColor = tierColors[tab.memberType] || '#9b59b6';
-                        const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family-par': '10%', 'family-birdie': '10%', 'family-eagle': '15%', 'corporate': '20%' };
+                        const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%', 'corporate': '20%' };
                         const discount = discounts[tab.memberType] || '10%';
                         
                         memberBadge = `
                             <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, ${tierColor} 0%, ${tierColor}dd 100%);color:#fff;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:600;text-transform:uppercase;margin-left:8px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
                                 <i class="fas fa-crown" style="font-size:9px;color:#f1c40f;"></i>
-                                ${tab.memberType} (${discount} OFF)
+                                ${tab.memberType.replace('_', ' ')} (${discount} OFF)
                             </span>
                         `;
                         rowStyle = 'background:linear-gradient(135deg, #fef9e7 0%, #f8f4e8 100%);';
@@ -2716,7 +2716,7 @@
                         memberType = customer.memberType;
                         memberExpires = customer.memberExpires;
                         // Calculate discount based on tier
-                        const discounts = { 'par': 10, 'birdie': 10, 'eagle': 15, 'family-par': 10, 'family-birdie': 10, 'family-eagle': 15, 'corporate': 20, 'monthly': 10, 'annual': 10 };
+                        const discounts = { 'par': 10, 'birdie': 10, 'eagle': 15, 'family_par': 10, 'family_birdie': 10, 'family_eagle': 15, 'corporate': 20, 'monthly': 10, 'annual': 10 };
                         memberDiscount = discounts[memberType] || 10;
                     }
                 }
@@ -2801,9 +2801,9 @@
             const statusDiv = document.getElementById('tabMemberStatus');
             
             if (isActive) {
-                const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family-par': '10%', 'family-birdie': '10%', 'family-eagle': '15%', 'corporate': '20%', 'monthly': '10%', 'annual': '10%' };
+                const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%', 'corporate': '20%', 'monthly': '10%', 'annual': '10%' };
                 document.getElementById('tabMemberName').textContent = `${customer.firstName} ${customer.lastName}`;
-                document.getElementById('tabMemberTier').textContent = customer.memberType?.toUpperCase();
+                document.getElementById('tabMemberTier').textContent = customer.memberType?.replace('_', ' ').toUpperCase();
                 document.getElementById('tabMemberDiscount').textContent = `${discounts[customer.memberType] || '10%'} Discount Applied!`;
                 statusDiv.style.display = 'block';
             } else {
@@ -2827,7 +2827,7 @@
             
             const tierColors = {
                 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#f1c40f',
-                'family-par': '#3498db', 'family-birdie': '#9b59b6', 'family-eagle': '#f1c40f',
+                'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#f1c40f',
                 'corporate': '#2c3e50', 'monthly': '#27ae60', 'annual': '#27ae60'
             };
             
@@ -2851,9 +2851,9 @@
                 // Show customer name with member badge if applicable
                 const customerEl = document.getElementById('tabDetailCustomer');
                 if (tab.isMember && tab.memberType) {
-                    const tierColors = { 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#f1c40f', 'family-par': '#3498db', 'family-birdie': '#9b59b6', 'family-eagle': '#f1c40f', 'corporate': '#2c3e50', 'monthly': '#27ae60', 'annual': '#27ae60' };
+                    const tierColors = { 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#f1c40f', 'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#f1c40f', 'corporate': '#2c3e50', 'monthly': '#27ae60', 'annual': '#27ae60' };
                     const color = tierColors[tab.memberType] || '#9b59b6';
-                    customerEl.innerHTML = `${tab.customer} <span style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;margin-left:5px;"><i class="fas fa-crown" style="color:#f1c40f;margin-right:3px;"></i>${tab.memberType.toUpperCase()} - ${tab.memberDiscount}% OFF</span>`;
+                    customerEl.innerHTML = `${tab.customer} <span style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;margin-left:5px;"><i class="fas fa-crown" style="color:#f1c40f;margin-right:3px;"></i>${tab.memberType.replace('_', ' ').toUpperCase()} - ${tab.memberDiscount}% OFF</span>`;
                 } else {
                     customerEl.textContent = tab.customer;
                 }

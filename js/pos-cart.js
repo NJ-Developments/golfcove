@@ -379,6 +379,14 @@ const Payment = {
         transactions.push(transaction);
         localStorage.setItem('gc_transactions', JSON.stringify(transactions));
         
+        // Update customer stats
+        if (POS.state.selectedCustomer && typeof GolfCoveCustomers !== 'undefined') {
+            const customer = GolfCoveCustomers.search(POS.state.selectedCustomer, { limit: 1 })[0];
+            if (customer) {
+                GolfCoveCustomers.recordVisit(customer.id, transaction.total);
+            }
+        }
+        
         // Sync to server
         try {
             await fetch('/api/sales', {

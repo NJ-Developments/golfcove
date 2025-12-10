@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Golf Cove - Customers</title>
+    <title>Golf Cove - Customers & Members</title>
     <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="js/firebase-sync.js"></script>
+    <script src="js/customers.js"></script>
+    <script src="js/membership-system.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; }
@@ -130,10 +132,12 @@
         .membership-status { font-size: 12px; color: #64748b; }
         .membership-dates { display: flex; gap: 16px; margin-top: 8px; font-size: 11px; color: #64748b; }
         .membership-dates strong { color: #1e293b; }
+        .membership-actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .membership-action { padding: 8px 14px; background: #10b981; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
         .membership-action:hover { background: #059669; }
         .membership-action.upgrade { background: #f59e0b; }
         .membership-action.upgrade:hover { background: #d97706; }
+        .cancel-membership-btn:hover { background: #b91c1c !important; }
         
         .notes-field { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; resize: none; font-family: inherit; color: #334155; background: #fafafa; }
         .notes-field:focus { border-color: #3b82f6; outline: none; background: #fff; }
@@ -228,12 +232,21 @@
                     <button class="filter-chip" data-filter="member" onclick="setFilter('member', this)">
                         <i class="fas fa-crown"></i> Members <span class="count" id="countMembers">0</span>
                     </button>
+                    <button class="filter-chip" data-filter="vip" onclick="setFilter('vip', this)">
+                        <i class="fas fa-star"></i> VIP <span class="count" id="countVIP">0</span>
+                    </button>
                     <button class="filter-chip" data-filter="expiring" onclick="setFilter('expiring', this)">
                         <i class="fas fa-exclamation-triangle"></i> Expiring <span class="count" id="countExpiring">0</span>
                     </button>
+                    <button class="filter-chip" data-filter="expired" onclick="setFilter('expired', this)">
+                        <i class="fas fa-times-circle"></i> Expired <span class="count" id="countExpired">0</span>
+                    </button>
                 </div>
-                <button class="btn-new" onclick="showModal('newCustomer')">
+                <button class="btn-new" onclick="showModal('newCustomer')" style="margin-right:8px;">
                     <i class="fas fa-plus"></i> New Customer
+                </button>
+                <button class="btn-new" onclick="showMembershipReport()" style="background:#9b59b6;">
+                    <i class="fas fa-chart-bar"></i> Report
                 </button>
             </div>
         </section>
@@ -302,7 +315,10 @@
                                 <span>Expires <strong id="memberExpires">-</strong></span>
                             </div>
                         </div>
-                        <button class="membership-action" id="membershipBtn" onclick="showModal('addMembership')">Add</button>
+                        <div class="membership-actions">
+                            <button class="membership-action" id="membershipBtn" onclick="showModal('addMembership')">Add</button>
+                            <button class="membership-action cancel-membership-btn" id="cancelMembershipBtn" onclick="cancelMembership(selectedCustomer)" style="display:none; background:#dc3545;">Cancel</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -386,9 +402,9 @@
                                 <option value="eagle">Eagle - $199/mo (Premium + 15% off)</option>
                             </optgroup>
                             <optgroup label="Family">
-                                <option value="family-par">Family Par - $149/mo</option>
-                                <option value="family-birdie">Family Birdie - $199/mo</option>
-                                <option value="family-eagle">Family Eagle - $249/mo</option>
+                                <option value="family_par">Family Par - $149/mo</option>
+                                <option value="family_birdie">Family Birdie - $199/mo</option>
+                                <option value="family_eagle">Family Eagle - $249/mo</option>
                             </optgroup>
                             <optgroup label="Business">
                                 <option value="corporate">Corporate - Custom</option>
@@ -529,12 +545,18 @@
                 const matchSearch = !search || name.includes(search) || (c.email && c.email.includes(search)) || (c.phone && c.phone.includes(search));
                 
                 if (currentFilter === 'member') return matchSearch && c.isMember && !isExpired(c);
+                if (currentFilter === 'vip') return matchSearch && c.isMember && !isExpired(c) && (c.memberType === 'eagle' || c.memberType === 'birdie' || c.memberType === 'family_eagle' || c.memberType === 'family_birdie');
                 if (currentFilter === 'expiring') return matchSearch && isExpiringSoon(c);
+                if (currentFilter === 'expired') return matchSearch && c.isMember && isExpired(c);
                 return matchSearch;
             });
             
-            // Sort: members first
+            // Sort: VIP first, then members, then by name
             filtered.sort((a, b) => {
+                const aVIP = a.isMember && !isExpired(a) && (a.memberType === 'eagle' || a.memberType === 'birdie' || a.memberType === 'family_eagle' || a.memberType === 'family_birdie');
+                const bVIP = b.isMember && !isExpired(b) && (b.memberType === 'eagle' || b.memberType === 'birdie' || b.memberType === 'family_eagle' || b.memberType === 'family_birdie');
+                if (aVIP && !bVIP) return -1;
+                if (!aVIP && bVIP) return 1;
                 if (a.isMember && !b.isMember) return -1;
                 if (!a.isMember && b.isMember) return 1;
                 return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
@@ -600,7 +622,9 @@
         function updateCounts() {
             document.getElementById('countAll').textContent = customers.length;
             document.getElementById('countMembers').textContent = customers.filter(c => c.isMember && !isExpired(c)).length;
+            document.getElementById('countVIP').textContent = customers.filter(c => c.isMember && !isExpired(c) && (c.memberType === 'eagle' || c.memberType === 'birdie' || c.memberType === 'family_eagle' || c.memberType === 'family_birdie')).length;
             document.getElementById('countExpiring').textContent = customers.filter(c => isExpiringSoon(c)).length;
+            document.getElementById('countExpired').textContent = customers.filter(c => c.isMember && isExpired(c)).length;
         }
         
         // ============ CUSTOMER DETAIL ============
@@ -653,6 +677,7 @@
             const memberCard = document.getElementById('membershipCard');
             const memberDates = document.getElementById('memberDates');
             const memberBtn = document.getElementById('membershipBtn');
+            const cancelBtn = document.getElementById('cancelMembershipBtn');
             
             if (c.isMember) {
                 const expired = isExpired(c);
@@ -664,6 +689,7 @@
                 memberDates.style.display = 'flex';
                 memberBtn.textContent = expired ? 'Renew' : 'Upgrade';
                 memberBtn.className = 'membership-action' + (expired ? '' : ' upgrade');
+                cancelBtn.style.display = expired ? 'none' : 'inline-block';
             } else {
                 memberCard.className = 'membership-card';
                 document.getElementById('memberTier').textContent = 'Non-Member';
@@ -671,6 +697,7 @@
                 memberDates.style.display = 'none';
                 memberBtn.textContent = 'Add';
                 memberBtn.className = 'membership-action';
+                cancelBtn.style.display = 'none';
             }
             
             // Activity stats
@@ -853,7 +880,7 @@
         }
         
         function getTierName(type) {
-            const names = { par: 'Par', birdie: 'Birdie', eagle: 'Eagle', 'family-par': 'Family Par', 'family-birdie': 'Family Birdie', 'family-eagle': 'Family Eagle', corporate: 'Corporate', monthly: 'Monthly', annual: 'Annual' };
+            const names = { par: 'Par', birdie: 'Birdie', eagle: 'Eagle', family_par: 'Family Par', family_birdie: 'Family Birdie', family_eagle: 'Family Eagle', corporate: 'Corporate', monthly: 'Monthly', annual: 'Annual' };
             return names[type] || 'Member';
         }
         
@@ -884,6 +911,103 @@
             document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         }
         
+        // ============ MEMBERSHIP MANAGEMENT ============
+        function cancelMembership() {
+            if (!selectedCustomerId) return;
+            const c = customers.find(x => x.id === selectedCustomerId);
+            if (!c || !c.isMember) return;
+            
+            if (!confirm(`Cancel ${c.firstName}'s ${getTierName(c.memberType)} membership?`)) return;
+            
+            c.isMember = false;
+            c.memberExpires = new Date().toISOString().split('T')[0];
+            localStorage.setItem('gc_customers', JSON.stringify(customers));
+            
+            selectCustomer(selectedCustomerId);
+            updateCounts();
+            renderCustomers();
+            showToast('Membership cancelled', 'error');
+        }
+        
+        function showMembershipReport() {
+            const total = customers.length;
+            const activeMembers = customers.filter(c => c.isMember && !isExpired(c));
+            const expiring = customers.filter(c => isExpiringSoon(c));
+            const expired = customers.filter(c => c.isMember && isExpired(c));
+            
+            // By tier
+            const byTier = {};
+            activeMembers.forEach(c => {
+                const tier = c.memberType || 'unknown';
+                byTier[tier] = (byTier[tier] || 0) + 1;
+            });
+            
+            // Monthly revenue estimate
+            const tierPrices = { par: 99, birdie: 149, eagle: 199, family_par: 149, family_birdie: 199, family_eagle: 249, corporate: 500, monthly: 79, annual: 799 };
+            let monthlyRevenue = 0;
+            activeMembers.forEach(c => {
+                monthlyRevenue += tierPrices[c.memberType] || 100;
+            });
+            
+            let tierRows = Object.entries(byTier).map(([tier, count]) => 
+                `<tr><td style="padding:8px;text-transform:capitalize;">${getTierName(tier)}</td><td style="padding:8px;text-align:right;font-weight:600;">${count}</td></tr>`
+            ).join('');
+            
+            const html = `
+                <div style="padding:24px;">
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px;">
+                        <div style="background:#e8f5e9;padding:15px;border-radius:12px;text-align:center;">
+                            <div style="font-size:28px;font-weight:700;color:#27ae60;">${activeMembers.length}</div>
+                            <div style="font-size:12px;color:#666;">Active Members</div>
+                        </div>
+                        <div style="background:#fff3e0;padding:15px;border-radius:12px;text-align:center;">
+                            <div style="font-size:28px;font-weight:700;color:#f39c12;">${expiring.length}</div>
+                            <div style="font-size:12px;color:#666;">Expiring Soon</div>
+                        </div>
+                        <div style="background:#ffebee;padding:15px;border-radius:12px;text-align:center;">
+                            <div style="font-size:28px;font-weight:700;color:#e74c3c;">${expired.length}</div>
+                            <div style="font-size:12px;color:#666;">Expired</div>
+                        </div>
+                        <div style="background:#e3f2fd;padding:15px;border-radius:12px;text-align:center;">
+                            <div style="font-size:28px;font-weight:700;color:#3498db;">$${monthlyRevenue.toLocaleString()}</div>
+                            <div style="font-size:12px;color:#666;">Monthly Revenue</div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-bottom:10px;color:#333;">Membership by Tier</h4>
+                    <table style="width:100%;border-collapse:collapse;background:#f8f9fa;border-radius:8px;overflow:hidden;">
+                        <thead><tr style="background:#4a90a4;color:#fff;"><th style="padding:10px;text-align:left;">Tier</th><th style="padding:10px;text-align:right;">Count</th></tr></thead>
+                        <tbody>${tierRows || '<tr><td colspan="2" style="padding:10px;text-align:center;color:#999;">No members</td></tr>'}</tbody>
+                    </table>
+                    
+                    ${expiring.length > 0 ? `
+                    <h4 style="margin:20px 0 10px;color:#333;">Expiring in 30 Days</h4>
+                    <div style="max-height:150px;overflow-y:auto;">
+                        ${expiring.map(c => `<div style="display:flex;justify-content:space-between;padding:8px;background:#fff;border-radius:6px;margin-bottom:4px;">
+                            <span>${c.firstName} ${c.lastName}</span>
+                            <span style="color:#f39c12;font-size:13px;">${formatDate(c.memberExpires)}</span>
+                        </div>`).join('')}
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Create modal
+            const overlay = document.createElement('div');
+            overlay.id = 'reportOverlay';
+            overlay.className = 'modal-overlay active';
+            overlay.innerHTML = `
+                <div class="modal" style="max-width:600px;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-chart-bar" style="color:#9b59b6;"></i> Membership Report</h3>
+                        <button class="modal-close" onclick="document.getElementById('reportOverlay').remove()">&times;</button>
+                    </div>
+                    ${html}
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+        
         // ============ MODALS ============
         function showModal(name) {
             document.getElementById('modal-' + name).classList.add('active');
@@ -907,6 +1031,8 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeDetail();
+                const report = document.getElementById('reportOverlay');
+                if (report) report.remove();
             }
         });
         

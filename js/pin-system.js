@@ -563,8 +563,15 @@ const GolfCovePIN = (function() {
     
     // ============ EMPLOYEE MANAGEMENT ============
     
+    const INSECURE_PINS = ['0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999', '1234', '4321', '1010', '2020'];
+    
     async function addEmployee(name, pin, role = 'staff') {
         const employees = getEmployees();
+        
+        // Check for insecure PIN
+        if (INSECURE_PINS.includes(pin)) {
+            throw new Error('Insecure PIN - please choose a less common PIN');
+        }
         
         // Check for duplicate PIN
         if (employees.some(e => e.pin === pin && e.isActive !== false)) {
@@ -590,12 +597,17 @@ const GolfCovePIN = (function() {
         
         return newEmployee;
     }
-    
+
     async function updateEmployee(id, updates) {
         const employees = JSON.parse(localStorage.getItem('gc_employees') || '[]');
         const index = employees.findIndex(e => e.id === id);
         
         if (index === -1) return null;
+        
+        // Check for insecure PIN if changing
+        if (updates.pin && INSECURE_PINS.includes(updates.pin)) {
+            throw new Error('Insecure PIN - please choose a less common PIN');
+        }
         
         // Check for duplicate PIN if changing
         if (updates.pin && updates.pin !== employees[index].pin) {
