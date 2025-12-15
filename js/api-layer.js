@@ -10,17 +10,46 @@ const GolfCoveAPI = (function() {
     
     // ============ CONFIGURATION ============
     const config = {
-        baseUrl: '', // Will be set from environment
+        baseUrl: '', // Will be set from environment/GolfCoveConfig
+        apiKey: '', // Will be set from environment/GolfCoveConfig
         timeout: 30000,
+        maxTimeout: 120000, // Maximum allowed timeout
         retryAttempts: 3,
+        maxRetryAttempts: 10,
         retryDelay: 1000,
+        maxRetryDelay: 30000,
         cacheEnabled: true,
+        maxQueueSize: 100, // Maximum pending requests to store
         cacheTTL: {
             short: 30000,      // 30 seconds
             medium: 300000,    // 5 minutes
             long: 3600000      // 1 hour
         }
     };
+    
+    // Employee context for permission-based requests
+    let currentEmployee = null;
+    
+    function setEmployee(employee) {
+        currentEmployee = employee;
+        if (employee) {
+            localStorage.setItem('gc_current_employee', JSON.stringify(employee));
+        } else {
+            localStorage.removeItem('gc_current_employee');
+        }
+    }
+    
+    function getEmployee() {
+        if (currentEmployee) return currentEmployee;
+        try {
+            const saved = localStorage.getItem('gc_current_employee');
+            if (saved) {
+                currentEmployee = JSON.parse(saved);
+                return currentEmployee;
+            }
+        } catch (e) {}
+        return null;
+    }
     
     // ============ REQUEST STATE ============
     const pendingRequests = new Map();
@@ -42,12 +71,31 @@ const GolfCoveAPI = (function() {
     const pendingQueue = [];
     
     function queueRequest(request) {
-        pendingQueue.push({
-            ...request,
+        // Validate request structure
+        if (!request || !request.method || !request.url) {
+            Core.log('warn', 'Invalid request queued, skipping', { request });
+            return false;
+        }
+        
+        // Check queue size limit
+        if (pendingQueue.length >= config.maxQueueSize) {
+            Core.log('warn', 'Pending queue full, dropping oldest request');
+            pendingQueue.shift(); // Remove oldest
+        }
+        
+        // Sanitize before storing
+        const sanitized = {
+            method: String(request.method).toUpperCase(),
+            url: String(request.url),
+            data: request.data,
+            options: request.options || {},
             queuedAt: Date.now()
-        });
+        };
+        
+        pendingQueue.push(sanitized);
         savePendingQueue();
-        Core.emit('api:queued', { request });
+        Core.emit('api:queued', { request: sanitized });
+        return true;
     }
     
     function savePendingQueue() {
@@ -58,10 +106,21 @@ const GolfCoveAPI = (function() {
         try {
             const saved = localStorage.getItem('gc_pending_requests');
             if (saved) {
-                pendingQueue.push(...JSON.parse(saved));
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed)) {
+                    // Validate and filter queue entries
+                    const valid = parsed.filter(item => 
+                        item && 
+                        typeof item.method === 'string' && 
+                        typeof item.url === 'string' &&
+                        item.queuedAt > Date.now() - 86400000 // Only keep last 24 hours
+                    );
+                    pendingQueue.push(...valid.slice(0, config.maxQueueSize));
+                }
             }
         } catch (e) {
-            console.warn('Failed to load pending queue:', e);
+            Core.log('warn', 'Failed to load pending queue', { error: e.message });
+            localStorage.removeItem('gc_pending_requests'); // Clear corrupted data
         }
     }
     
@@ -105,7 +164,22 @@ const GolfCoveAPI = (function() {
                 ...options.headers
             };
             
-            // Add auth token if available
+            // Add API key for backend authentication
+            if (config.apiKey) {
+                headers['X-API-Key'] = config.apiKey;
+            }
+            
+            // Add employee context for permission-based requests
+            const employee = getEmployee();
+            if (employee) {
+                headers['X-Employee-Id'] = employee.id;
+                if (employee.pin) {
+                    headers['X-Employee-Pin'] = employee.pin;
+                }
+                headers['X-User-Id'] = employee.id; // For audit logging
+            }
+            
+            // Add auth token if available (for Firebase Auth)
             const token = getAuthToken();
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
@@ -175,10 +249,34 @@ const GolfCoveAPI = (function() {
     
     // ============ PUBLIC API METHODS ============
     async function request(method, url, data = null, options = {}) {
+        // Validate URL
+        if (!url || typeof url !== 'string') {
+            return Core.failure(Core.ErrorCodes.VALIDATION_ERROR, 'Invalid URL');
+        }
+        
+        // Validate method
+        const validMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+        const normalizedMethod = String(method).toUpperCase();
+        if (!validMethods.includes(normalizedMethod)) {
+            return Core.failure(Core.ErrorCodes.VALIDATION_ERROR, 'Invalid HTTP method');
+        }
+        
         const fullUrl = url.startsWith('http') ? url : `${config.baseUrl}${url}`;
         
+        // Validate constructed URL
+        try {
+            new URL(fullUrl);
+        } catch (e) {
+            return Core.failure(Core.ErrorCodes.VALIDATION_ERROR, 'Malformed URL');
+        }
+        
+        // Bound timeout and retry values
+        const timeout = Math.min(options.timeout || config.timeout, config.maxTimeout);
+        const retryAttempts = Math.min(options.retryAttempts || config.retryAttempts, config.maxRetryAttempts);
+        const retryDelay = Math.min(options.retryDelay || config.retryDelay, config.maxRetryDelay);
+        
         // Check cache for GET requests
-        if (method === 'GET' && config.cacheEnabled && !options.noCache) {
+        if (normalizedMethod === 'GET' && config.cacheEnabled && !options.noCache) {
             const cached = Core.cache.get(fullUrl);
             if (cached) {
                 return Core.success(cached);
@@ -187,8 +285,8 @@ const GolfCoveAPI = (function() {
         
         // Check if offline
         if (!isOnline && !options.skipQueue) {
-            if (method !== 'GET') {
-                queueRequest({ method, url: fullUrl, data, options });
+            if (normalizedMethod !== 'GET') {
+                queueRequest({ method: normalizedMethod, url: fullUrl, data, options });
                 return Core.success(null, 'Request queued for when online');
             }
             return Core.failure(Core.ErrorCodes.NETWORK_ERROR, 'You are offline');
@@ -196,28 +294,30 @@ const GolfCoveAPI = (function() {
         
         try {
             const result = await Core.retry(
-                () => executeRequest(method, fullUrl, data, options),
-                options.retryAttempts || config.retryAttempts,
-                options.retryDelay || config.retryDelay
+                () => executeRequest(normalizedMethod, fullUrl, data, { ...options, timeout }),
+                retryAttempts,
+                retryDelay
             );
             
             // Cache GET responses
-            if (method === 'GET' && config.cacheEnabled && !options.noCache) {
+            if (normalizedMethod === 'GET' && config.cacheEnabled && !options.noCache) {
                 Core.cache.set(fullUrl, result, options.cacheTTL || config.cacheTTL.medium);
             }
             
             // Invalidate related caches on mutations
-            if (method !== 'GET' && options.invalidateCache) {
-                options.invalidateCache.forEach(pattern => Core.cache.clear(pattern));
+            if (normalizedMethod !== 'GET' && options.invalidateCache) {
+                if (Array.isArray(options.invalidateCache)) {
+                    options.invalidateCache.forEach(pattern => Core.cache.clear(pattern));
+                }
             }
             
             return Core.success(result);
         } catch (error) {
-            Core.log('error', `API ${method} ${url} failed`, { error: error.message });
+            Core.log('error', `API ${normalizedMethod} ${url} failed`, { error: error.message });
             
             // Queue failed mutations for retry
-            if (method !== 'GET' && !options.skipQueue && error.code === Core.ErrorCodes.NETWORK_ERROR) {
-                queueRequest({ method, url: fullUrl, data, options });
+            if (normalizedMethod !== 'GET' && !options.skipQueue && error.code === Core.ErrorCodes.NETWORK_ERROR) {
+                queueRequest({ method: normalizedMethod, url: fullUrl, data, options });
                 return Core.failure(error.code, 'Request queued for retry');
             }
             
@@ -294,16 +394,141 @@ const GolfCoveAPI = (function() {
     };
     
     const reports = {
-        getSales: (startDate, endDate) => get(`/api/reports/sales?start=${startDate}&end=${endDate}`),
-        getBookings: (startDate, endDate) => get(`/api/reports/bookings?start=${startDate}&end=${endDate}`),
-        getCustomers: (startDate, endDate) => get(`/api/reports/customers?start=${startDate}&end=${endDate}`),
-        getDashboard: () => get('/api/reports/dashboard', { cacheTTL: config.cacheTTL.short })
+        getSales: (startDate, endDate, options = {}) => get(`/api/salesReport?startDate=${startDate}&endDate=${endDate}&groupBy=${options.groupBy || 'day'}`),
+        getBookings: (startDate, endDate) => get(`/api/bookingsReport?startDate=${startDate}&endDate=${endDate}`),
+        getCustomers: (startDate, endDate) => get(`/api/customersReport?startDate=${startDate}&endDate=${endDate}`),
+        getInventory: () => get('/api/inventoryReport'),
+        getEmployees: (startDate, endDate) => get(`/api/employeeReport?startDate=${startDate}&endDate=${endDate}`),
+        getDashboard: () => get('/api/reports/dashboard', { cacheTTL: config.cacheTTL.short }),
+        exportData: (type, format, startDate, endDate) => 
+            get(`/api/exportData?type=${type}&format=${format}&startDate=${startDate}&endDate=${endDate}`)
+    };
+    
+    const inventory = {
+        getLevels: (category) => get(`/api/inventoryLevels${category ? `?category=${category}` : ''}`),
+        sync: (items) => post('/api/inventorySync', { items }),
+        adjust: (itemId, quantity, reason) => post('/api/inventoryAdjustment', { itemId, quantity, reason }),
+        getLowStock: () => get('/api/inventoryReport?lowStockOnly=true')
+    };
+    
+    const transactions = {
+        record: (data) => post('/api/recordTransaction', data),
+        validate: (data) => post('/api/validateTransaction', data),
+        getRecent: (limit = 50) => get(`/api/transactions?limit=${limit}`),
+        getById: (id) => get(`/api/transactions/${id}`)
+    };
+    
+    const system = {
+        health: () => get('/api/health', { noCache: true }),
+        backup: () => post('/api/backupData', {}),
+        restore: (backup, overwrite = false) => post('/api/restoreData', { backup, overwrite }),
+        getAuditLog: (filters = {}) => {
+            const params = new URLSearchParams(filters).toString();
+            return get(`/api/auditLog${params ? `?${params}` : ''}`);
+        },
+        validatePermission: (permission) => get(`/api/validatePermission?permission=${permission}`),
+        getRoles: () => get('/api/getRoles', { cacheTTL: config.cacheTTL.long })
+    };
+    
+    const cashDrawer = {
+        open: (employeeId, expectedAmount) => 
+            post('/api/cashDrawer', { action: 'open', employeeId, expectedAmount }),
+        close: (employeeId, expectedAmount, actualAmount, notes) => 
+            post('/api/cashDrawer', { action: 'close', employeeId, expectedAmount, actualAmount, notes }),
+        drop: (employeeId, amount, notes) => 
+            post('/api/cashDrawer', { action: 'drop', employeeId, amount, notes }),
+        adjust: (employeeId, amount, reason) => 
+            post('/api/cashDrawer', { action: 'adjustment', employeeId, amount, reason })
+    };
+    
+    const alerts = {
+        getUnread: () => get('/api/alerts?status=unread'),
+        markRead: (alertId) => put(`/api/alerts/${alertId}`, { status: 'read' }),
+        getAll: (limit = 50) => get(`/api/alerts?limit=${limit}`)
+    };
+    
+    const notifications = {
+        getUnread: () => get('/api/notifications?status=unread'),
+        markRead: (notificationId) => put(`/api/notifications/${notificationId}`, { status: 'read' }),
+        getAll: (limit = 50) => get(`/api/notifications?limit=${limit}`)
+    };
+    
+    // ============ SHIFT MANAGEMENT ============
+    const shifts = {
+        clockIn: (employeeId, notes) => 
+            post('/api/shiftManagement', { action: 'clockIn', employeeId, notes }),
+        clockOut: (employeeId, notes) => 
+            post('/api/shiftManagement', { action: 'clockOut', employeeId, notes }),
+        startBreak: (employeeId, breakType = 'regular') => 
+            post('/api/shiftManagement', { action: 'startBreak', employeeId, breakType }),
+        endBreak: (employeeId) => 
+            post('/api/shiftManagement', { action: 'endBreak', employeeId }),
+        getActive: (employeeId) => 
+            post('/api/shiftManagement', { action: 'getActiveShift', employeeId }),
+        getHistory: (filters = {}) => {
+            const params = new URLSearchParams(filters).toString();
+            return get(`/api/getShifts${params ? `?${params}` : ''}`);
+        }
+    };
+    
+    // ============ RECEIPTS ============
+    const receipts = {
+        generate: (transactionData) => post('/api/generateReceipt', transactionData),
+        get: (receiptNumber) => get(`/api/getReceipt?receiptNumber=${receiptNumber}`),
+        getByTransaction: (transactionId) => get(`/api/getReceipt?transactionId=${transactionId}`),
+        emailToCustomer: (receiptNumber, email) => 
+            post('/api/emailReceipt', { receiptNumber, email })
+    };
+    
+    // ============ DISCOUNTS & LOYALTY ============
+    const discounts = {
+        getActive: () => get('/api/discounts'),
+        create: (discountData) => post('/api/discounts', discountData),
+        validate: (code, subtotal, items) => 
+            post('/api/validateDiscount', { code, subtotal, items }),
+        deactivate: (discountId) => 
+            put(`/api/discounts/${discountId}`, { active: false })
+    };
+    
+    const loyalty = {
+        getBalance: (customerId) => 
+            post('/api/loyaltyPoints', { action: 'balance', customerId }),
+        earnPoints: (customerId, amount, transactionId) => 
+            post('/api/loyaltyPoints', { action: 'earn', customerId, amount, transactionId }),
+        redeemPoints: (customerId, points, description) => 
+            post('/api/loyaltyPoints', { action: 'redeem', customerId, points, description })
+    };
+    
+    // ============ SYNC ============
+    const sync = {
+        getChanges: (lastSyncTime, collections) => 
+            post('/api/syncChanges', { lastSyncTime, collections }),
+        pushChanges: (changes) => 
+            post('/api/pushChanges', { changes })
+    };
+    
+    // ============ VOID TRANSACTIONS ============
+    const voids = {
+        voidTransaction: (transactionId, reason) => 
+            post('/api/voidTransaction', { transactionId, reason })
     };
     
     // ============ INITIALIZATION ============
     function init(options = {}) {
         Object.assign(config, options);
+        
+        // Auto-configure from GolfCoveConfig if available
+        if (typeof GolfCoveConfig !== 'undefined') {
+            if (GolfCoveConfig.api) {
+                config.baseUrl = config.baseUrl || GolfCoveConfig.api.baseUrl || '';
+                config.apiKey = config.apiKey || GolfCoveConfig.api.key || '';
+            }
+        }
+        
         loadPendingQueue();
+        
+        // Restore employee session
+        getEmployee();
         
         if (isOnline && pendingQueue.length > 0) {
             setTimeout(processPendingQueue, 2000);
@@ -311,7 +536,9 @@ const GolfCoveAPI = (function() {
         
         Core.log('info', 'API layer initialized', { 
             pendingRequests: pendingQueue.length,
-            isOnline 
+            isOnline,
+            hasApiKey: !!config.apiKey,
+            hasEmployee: !!currentEmployee
         });
     }
     
@@ -337,10 +564,30 @@ const GolfCoveAPI = (function() {
         giftCards,
         employees,
         reports,
+        inventory,
+        transactions,
+        system,
+        cashDrawer,
+        alerts,
+        notifications,
+        
+        // New endpoints
+        shifts,
+        receipts,
+        discounts,
+        loyalty,
+        sync,
+        voids,
+        
+        // Employee context
+        setEmployee,
+        getEmployee,
+        clearEmployee: () => setEmployee(null),
         
         // State
         get isOnline() { return isOnline; },
         get pendingCount() { return pendingQueue.length; },
+        get currentEmployee() { return getEmployee(); },
         
         // Queue management
         processPendingQueue,

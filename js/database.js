@@ -8,24 +8,62 @@ const GolfCoveDB = (function() {
     'use strict';
     
     const PREFIX = 'gc_';
+    const MAX_KEY_LENGTH = 256;
+    const MAX_VALUE_SIZE = 5 * 1024 * 1024; // 5MB per item
+    const MAX_COLLECTION_SIZE = 10000; // Max items per collection
+    
+    // Input validation helpers
+    function isValidKey(key) {
+        return typeof key === 'string' && key.length > 0 && key.length <= MAX_KEY_LENGTH;
+    }
+    
+    function sanitizeKey(key) {
+        if (!isValidKey(key)) {
+            throw new Error(`Invalid key: ${String(key).substring(0, 50)}`);
+        }
+        return key.replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
     
     // ============ BASIC OPERATIONS ============
     function get(key) {
         try {
+            if (!isValidKey(key)) return null;
             const data = localStorage.getItem(PREFIX + key);
             return data ? JSON.parse(data) : null;
         } catch (e) {
-            console.error('DB get error:', key, e);
+            console.error('DB get error:', key, e.message);
             return null;
         }
     }
     
     function set(key, value) {
         try {
-            localStorage.setItem(PREFIX + key, JSON.stringify(value));
+            if (!isValidKey(key)) {
+                console.error('DB set error: invalid key', key);
+                return false;
+            }
+            
+            const json = JSON.stringify(value);
+            
+            // Check size limits
+            if (json.length > MAX_VALUE_SIZE) {
+                console.error('DB set error: value too large', key, json.length);
+                return false;
+            }
+            
+            localStorage.setItem(PREFIX + key, json);
             return true;
         } catch (e) {
-            console.error('DB set error:', key, e);
+            // Handle quota exceeded
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                console.error('DB set error: storage quota exceeded', key);
+                // Emit event for handling
+                if (typeof window !== 'undefined' && window.GolfCoveCore) {
+                    window.GolfCoveCore.emit('storage:quotaExceeded', { key });
+                }
+            } else {
+                console.error('DB set error:', key, e.message);
+            }
             return false;
         }
     }
@@ -46,15 +84,32 @@ const GolfCoveDB = (function() {
     
     // ============ COLLECTION OPERATIONS ============
     function getCollection(collection) {
-        return get(collection) || [];
+        const data = get(collection);
+        return Array.isArray(data) ? data : [];
     }
     
     function saveCollection(collection, data) {
+        if (!Array.isArray(data)) {
+            console.error('saveCollection requires array data');
+            return false;
+        }
         return set(collection, data);
     }
     
     function addToCollection(collection, item) {
+        if (!item || typeof item !== 'object') {
+            console.error('addToCollection requires object item');
+            return false;
+        }
+        
         const data = getCollection(collection);
+        
+        // Check collection size limit
+        if (data.length >= MAX_COLLECTION_SIZE) {
+            console.error('Collection size limit reached:', collection);
+            return false;
+        }
+        
         data.push(item);
         return saveCollection(collection, data);
     }
@@ -93,35 +148,49 @@ const GolfCoveDB = (function() {
         let results = getCollection(collection);
         
         // Filter by field values
-        if (query.where) {
+        if (query.where && typeof query.where === 'object') {
             Object.entries(query.where).forEach(([field, value]) => {
                 if (typeof value === 'function') {
-                    results = results.filter(item => value(item[field]));
+                    results = results.filter(item => {
+                        try {
+                            return value(item?.[field]);
+                        } catch {
+                            return false;
+                        }
+                    });
                 } else {
-                    results = results.filter(item => item[field] === value);
+                    results = results.filter(item => item?.[field] === value);
                 }
             });
         }
         
         // Sort
-        if (query.orderBy) {
+        if (query.orderBy && typeof query.orderBy === 'string') {
             const [field, direction] = query.orderBy.split(':');
             results.sort((a, b) => {
+                const aVal = a?.[field];
+                const bVal = b?.[field];
+                
+                // Handle null/undefined
+                if (aVal == null && bVal == null) return 0;
+                if (aVal == null) return 1;
+                if (bVal == null) return -1;
+                
                 if (direction === 'desc') {
-                    return a[field] > b[field] ? -1 : 1;
+                    return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
                 }
-                return a[field] > b[field] ? 1 : -1;
+                return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
             });
         }
         
-        // Limit
-        if (query.limit) {
-            results = results.slice(0, query.limit);
+        // Limit (with bounds check)
+        if (query.limit && typeof query.limit === 'number' && query.limit > 0) {
+            results = results.slice(0, Math.min(query.limit, 10000));
         }
         
-        // Skip/Offset
-        if (query.skip) {
-            results = results.slice(query.skip);
+        // Skip/Offset (with bounds check)
+        if (query.skip && typeof query.skip === 'number' && query.skip > 0) {
+            results = results.slice(Math.min(query.skip, results.length));
         }
         
         return results;
@@ -176,26 +245,55 @@ const GolfCoveDB = (function() {
         const keys = getAllKeys();
         
         keys.forEach(key => {
-            data[key] = get(key.replace(PREFIX, ''));
+            try {
+                data[key] = get(key.replace(PREFIX, ''));
+            } catch (e) {
+                console.error('Failed to backup key:', key, e.message);
+            }
         });
         
         return {
             version: '1.0',
             timestamp: new Date().toISOString(),
+            keyCount: Object.keys(data).length,
             data
         };
     }
     
     function restore(backupData) {
-        if (!backupData || !backupData.data) {
-            throw new Error('Invalid backup data');
+        if (!backupData || typeof backupData !== 'object') {
+            throw new Error('Invalid backup data: not an object');
         }
         
+        if (!backupData.data || typeof backupData.data !== 'object') {
+            throw new Error('Invalid backup data: missing data property');
+        }
+        
+        // Version compatibility check
+        const version = backupData.version || '1.0';
+        if (parseFloat(version) > 1.0) {
+            console.warn('Backup version newer than supported, some data may not restore correctly');
+        }
+        
+        let restoredCount = 0;
+        let errorCount = 0;
+        
         Object.entries(backupData.data).forEach(([key, value]) => {
-            set(key.replace(PREFIX, ''), value);
+            try {
+                const cleanKey = key.replace(PREFIX, '');
+                if (set(cleanKey, value)) {
+                    restoredCount++;
+                } else {
+                    errorCount++;
+                }
+            } catch (e) {
+                console.error('Failed to restore key:', key, e.message);
+                errorCount++;
+            }
         });
         
-        return true;
+        console.log(`Restore complete: ${restoredCount} keys restored, ${errorCount} errors`);
+        return { success: errorCount === 0, restoredCount, errorCount };
     }
     
     function exportToJSON() {

@@ -155,6 +155,10 @@ const SalesPOS = (function() {
     // ============ INITIALIZATION ============
     function init(user) {
         currentUser = user || { name: 'Staff', role: 'staff' };
+        
+        // Try to load menu items from unified GolfCoveMenu
+        loadUnifiedMenuItems();
+        
         resetOrder();
         renderCategories();
         renderSubcategories('food');
@@ -163,6 +167,47 @@ const SalesPOS = (function() {
         updateDisplay();
         bindEvents();
         console.log('[SalesPOS] Initialized');
+    }
+    
+    // Load items from unified menu-data.js if available
+    function loadUnifiedMenuItems() {
+        if (typeof GolfCoveMenu === 'undefined' || !GolfCoveMenu.items) return;
+        
+        const unifiedItems = GolfCoveMenu.items;
+        
+        // Map unified categories to sales-pos categories
+        const categoryMap = {
+            'rentals': 'rental',
+            'food': 'apps',
+            'pizza': 'entrees',
+            'wings': 'wings',
+            'cocktails': 'cocktails',
+            'beer': 'beer',
+            'wine': 'wine',
+            'seltzers': 'soft',
+            'coffee': 'soft',
+            'gift-cards': 'giftcard'
+        };
+        
+        Object.keys(unifiedItems).forEach(category => {
+            const targetCategory = categoryMap[category] || category;
+            if (!menuItems[targetCategory]) {
+                menuItems[targetCategory] = [];
+            }
+            
+            unifiedItems[category].forEach(item => {
+                // Avoid duplicates
+                const exists = menuItems[targetCategory].some(m => m.name === item.name);
+                if (!exists) {
+                    menuItems[targetCategory].push({
+                        name: item.name,
+                        price: item.price
+                    });
+                }
+            });
+        });
+        
+        console.log('[SalesPOS] Loaded items from unified GolfCoveMenu');
     }
     
     function bindEvents() {
@@ -534,6 +579,22 @@ const SalesPOS = (function() {
         const transactions = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
         transactions.unshift(transaction);
         localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+        
+        // Update daily sales tracking
+        const today = new Date().toDateString();
+        const dailySales = JSON.parse(localStorage.getItem('gc_daily_sales') || '{}');
+        if (!dailySales[today]) {
+            dailySales[today] = { total: 0, count: 0, cash: 0, card: 0, giftcard: 0 };
+        }
+        dailySales[today].total += transaction.total;
+        dailySales[today].count += 1;
+        dailySales[today][method] = (dailySales[today][method] || 0) + transaction.total;
+        localStorage.setItem('gc_daily_sales', JSON.stringify(dailySales));
+        
+        // Kick cash drawer on cash payment
+        if (method === 'cash' && window.CashDrawer) {
+            CashDrawer.kick();
+        }
         
         // Update customer stats
         if (currentOrder.customerId && typeof GolfCoveCustomers !== 'undefined') {

@@ -12,27 +12,42 @@ const GolfCoveState = (function() {
     const stores = new Map();
     
     function createStore(name, initialState = {}, options = {}) {
+        // Validate inputs
+        if (!name || typeof name !== 'string') {
+            throw new Error('Store name must be a non-empty string');
+        }
+        
+        if (typeof initialState !== 'object' || initialState === null) {
+            throw new Error('Initial state must be an object');
+        }
+        
         if (stores.has(name)) {
-            Core.log('warn', `Store "${name}" already exists`);
+            Core.log('warn', `Store "${name}" already exists, returning existing`);
             return stores.get(name);
         }
         
         const state = Core.deepClone(initialState);
         const subscribers = new Set();
         const history = [];
-        const maxHistory = options.maxHistory || 50;
+        const maxHistory = Math.min(options.maxHistory || 50, 200); // Cap at 200
         const persist = options.persist || false;
         const persistKey = `gc_state_${name}`;
+        const actionLog = []; // Track recent actions for debugging
+        const MAX_ACTION_LOG = 50;
         
         // Load persisted state
         if (persist) {
             try {
                 const saved = localStorage.getItem(persistKey);
                 if (saved) {
-                    Object.assign(state, JSON.parse(saved));
+                    const parsed = JSON.parse(saved);
+                    // Validate persisted state has expected shape
+                    if (typeof parsed === 'object' && parsed !== null) {
+                        Object.assign(state, parsed);
+                    }
                 }
             } catch (e) {
-                Core.log('warn', `Failed to load persisted state for "${name}"`, e);
+                Core.log('warn', `Failed to load persisted state for "${name}"`, { error: e.message });
             }
         }
         
@@ -43,11 +58,36 @@ const GolfCoveState = (function() {
         function setState(updates, meta = {}) {
             const prevState = Core.deepClone(state);
             
-            // Apply updates
-            if (typeof updates === 'function') {
-                Object.assign(state, updates(state));
-            } else {
-                Object.assign(state, updates);
+            // Validate updates
+            if (updates === null || updates === undefined) {
+                Core.log('warn', `setState called with null/undefined in store "${name}"`);
+                return;
+            }
+            
+            try {
+                // Apply updates
+                if (typeof updates === 'function') {
+                    const result = updates(Core.deepClone(state));
+                    if (typeof result === 'object' && result !== null) {
+                        Object.assign(state, result);
+                    }
+                } else if (typeof updates === 'object') {
+                    Object.assign(state, updates);
+                }
+            } catch (e) {
+                Core.log('error', `Error applying state update in "${name}"`, { error: e.message });
+                return;
+            }
+            
+            // Track action for debugging
+            const actionEntry = {
+                action: meta.action || 'unknown',
+                timestamp: Date.now(),
+                changedKeys: Object.keys(computePatch(prevState, state))
+            };
+            actionLog.push(actionEntry);
+            if (actionLog.length > MAX_ACTION_LOG) {
+                actionLog.shift();
             }
             
             // Track history
@@ -64,27 +104,32 @@ const GolfCoveState = (function() {
                 }
             }
             
-            // Persist
+            // Persist with error handling and size check
             if (persist) {
                 try {
-                    localStorage.setItem(persistKey, JSON.stringify(state));
+                    const json = JSON.stringify(state);
+                    if (json.length > 1024 * 1024) { // 1MB limit per store
+                        Core.log('warn', `State too large to persist for "${name}"`, { size: json.length });
+                    } else {
+                        localStorage.setItem(persistKey, json);
+                    }
                 } catch (e) {
-                    Core.log('warn', `Failed to persist state for "${name}"`, e);
+                    Core.log('warn', `Failed to persist state for "${name}"`, { error: e.message });
                 }
             }
             
-            // Notify subscribers
+            // Notify subscribers with error isolation
             const patch = computePatch(prevState, state);
             subscribers.forEach(callback => {
                 try {
-                    callback(state, prevState, patch);
+                    callback(Core.deepClone(state), prevState, patch);
                 } catch (e) {
-                    Core.log('error', 'State subscriber error', e);
+                    Core.log('error', 'State subscriber error', { store: name, error: e.message });
                 }
             });
             
             // Emit event
-            Core.emit(`state:${name}:change`, { state, prevState, patch, meta });
+            Core.emit(`state:${name}:change`, { state: Core.deepClone(state), prevState, patch, meta });
         }
         
         function subscribe(callback) {
@@ -122,10 +167,13 @@ const GolfCoveState = (function() {
             select,
             reset,
             undo,
-            getHistory: () => [...history]
+            getHistory: () => [...history],
+            getActionLog: () => [...actionLog],
+            getSubscriberCount: () => subscribers.size
         };
         
         stores.set(name, store);
+        Core.log('debug', `Store "${name}" created`);
         return store;
     }
     

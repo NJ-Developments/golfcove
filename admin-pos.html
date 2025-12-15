@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://js.stripe.com/terminal/v1/"></script>
+    <!-- Unified config and services - LOAD FIRST -->
+    <script src="js/config-unified.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/services-unified.js"></script>
+    <script src="js/menu-data.js"></script>
+    <!-- Legacy modules (will use unified config) -->
     <script src="js/firebase-sync.js"></script>
     <script src="js/pin-system.js"></script>
     <script src="js/membership-system.js"></script>
@@ -17,6 +23,32 @@
     <script src="js/tabs-manager.js"></script>
     <script src="js/teesheet-manager.js"></script>
     <script src="js/payment-processor.js"></script>
+    <script src="js/cash-drawer.js"></script>
+    <script>
+        // ============ TAX HELPERS - Use Unified Config ============
+        // These helpers ensure tax rate comes from a single source
+        function getTaxRate() {
+            return window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635;
+        }
+        function getTaxRatePercent() {
+            return (getTaxRate() * 100).toFixed(2).replace(/\.?0+$/, '');
+        }
+        function getTaxLabel() {
+            return `Tax (${getTaxRatePercent()}%)`;
+        }
+        function calculateTax(amount) {
+            return amount * getTaxRate();
+        }
+        function formatCurrency(amount) {
+            return '$' + (amount || 0).toFixed(2);
+        }
+        // Update tax labels on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('[data-tax-label]').forEach(el => {
+                el.textContent = getTaxLabel();
+            });
+        });
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; padding-bottom: 28px; }
@@ -35,6 +67,15 @@
         .header-stat .label { opacity: 0.8; font-size: 11px; }
         .header-right { display: flex; align-items: center; gap: 15px; }
         .header-user { display: flex; align-items: center; gap: 8px; }
+
+        /* Status Bar - Fixed at bottom */
+        .status-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 28px; background: #2c3e50; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; font-size: 11px; z-index: 9000; }
+        .status-left, .status-right { display: flex; align-items: center; gap: 15px; }
+        .status-item { display: flex; align-items: center; gap: 5px; opacity: 0.9; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #95a5a6; }
+        .status-dot.green { background: #27ae60; }
+        .status-dot.yellow { background: #f39c12; }
+        .status-dot.red { background: #e74c3c; }
 
         /* Sub-header */
         .sub-header { background: #fff; border-bottom: 1px solid #ddd; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; }
@@ -316,6 +357,75 @@
         /* PIN Button Hover */
         .pin-btn:hover { background: #e9ecef !important; }
         .pin-btn:active { transform: scale(0.95); }
+        
+        /* Quick Search Overlay - Hidden by default */
+        .quick-search-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 100px;
+        }
+        .quick-search-overlay.active { display: flex; }
+        .quick-search-box {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 500px;
+            max-width: 90%;
+            overflow: hidden;
+        }
+        .quick-search-input {
+            width: 100%;
+            padding: 18px 20px;
+            border: none;
+            font-size: 16px;
+            outline: none;
+            border-bottom: 1px solid #eee;
+        }
+        .quick-search-results {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        .quick-search-results .search-result {
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .quick-search-results .search-result:hover { background: #f5f7fa; }
+        .quick-search-results .search-result i { color: #4a90a4; width: 20px; text-align: center; }
+        .quick-search-results .search-result .result-text { flex: 1; }
+        .quick-search-results .search-result .result-label { font-size: 11px; color: #999; margin-left: auto; }
+        
+        /* Keyboard Shortcuts Panel - Hidden by default */
+        .shortcut-hint {
+            display: none;
+            position: fixed;
+            bottom: 40px;
+            right: 20px;
+            background: #2c3e50;
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 9998;
+            font-size: 13px;
+            min-width: 200px;
+        }
+        .shortcut-hint.visible { display: block; }
+        .shortcut-hint h4 { margin: 0 0 10px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .shortcut-hint .shortcut { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .shortcut-hint .shortcut:last-child { border-bottom: none; }
+        .shortcut-hint .key { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -333,11 +443,7 @@
     <div class="shortcut-hint" id="shortcutHint">
         <h4><i class="fas fa-keyboard"></i> Keyboard Shortcuts</h4>
         <div class="shortcut"><span class="key">Ctrl+K</span><span>Quick Search</span></div>
-        <div class="shortcut"><span class="key">Ctrl+B</span><span>New Booking</span></div>
-        <div class="shortcut"><span class="key">Ctrl+T</span><span>New Tab</span></div>
-        <div class="shortcut"><span class="key">Ctrl+P</span><span>Process Payment</span></div>
         <div class="shortcut"><span class="key">Esc</span><span>Close Modal</span></div>
-        <div class="shortcut"><span class="key">L</span><span>Lock Screen</span></div>
         <div class="shortcut"><span class="key">?</span><span>Toggle This Help</span></div>
     </div>
 
@@ -506,17 +612,63 @@
                 <div class="rooms-container" id="roomsContainer"></div>
             </div>
 
-            <!-- Food & Beverage Page -->
+            <!-- Open Tabs Page - Quick view with link to full POS -->
             <div id="page-fnb" class="page-content" style="display:none;">
                 <div class="fnb-container">
-                    <div class="tabs-list">
-                        <h3><i class="fas fa-receipt"></i> Open Tabs <button onclick="showModal('newTab')" style="margin-left:auto;padding:5px 10px;background:#4a90a4;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">+ New Tab</button></h3>
-                        <table class="tabs-table">
+                    <!-- Summary Stats -->
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px;">
+                        <div style="background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                            <div style="font-size:12px;color:#888;text-transform:uppercase;">Open Tabs</div>
+                            <div id="fnbTabCount" style="font-size:28px;font-weight:700;color:#4a90a4;">0</div>
+                        </div>
+                        <div style="background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                            <div style="font-size:12px;color:#888;text-transform:uppercase;">Tab Total</div>
+                            <div id="fnbTabTotal" style="font-size:28px;font-weight:700;color:#27ae60;">$0.00</div>
+                        </div>
+                        <div style="background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                            <div style="font-size:12px;color:#888;text-transform:uppercase;">Today's Sales</div>
+                            <div id="fnbTodaySales" style="font-size:28px;font-weight:700;color:#2ecc71;">$0.00</div>
+                        </div>
+                        <div style="background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                            <div style="font-size:12px;color:#888;text-transform:uppercase;">Transactions</div>
+                            <div id="fnbTransCount" style="font-size:28px;font-weight:700;color:#3498db;">0</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Bar -->
+                    <div style="display:flex;gap:10px;margin-bottom:20px;">
+                        <a href="sales.html" style="padding:12px 24px;background:#27ae60;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-cash-register"></i> Open Full POS
+                        </a>
+                        <button onclick="showModal('newTab')" style="padding:12px 24px;background:#4a90a4;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-plus"></i> New Tab
+                        </button>
+                        <button onclick="refreshTabsView()" style="padding:12px 24px;background:#95a5a6;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                    
+                    <!-- Open Tabs Table -->
+                    <div class="tabs-list" style="background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
+                        <h3 style="padding:15px 20px;margin:0;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-receipt" style="color:#4a90a4;"></i> Open Tabs
+                        </h3>
+                        <table class="tabs-table" style="width:100%;border-collapse:collapse;">
                             <thead>
-                                <tr><th>LOCATION</th><th>CUSTOMER</th><th>AMOUNT</th><th>ACTION</th></tr>
+                                <tr style="background:#f8f9fa;">
+                                    <th style="padding:12px 15px;text-align:left;font-weight:600;color:#555;">LOCATION</th>
+                                    <th style="padding:12px 15px;text-align:left;font-weight:600;color:#555;">CUSTOMER</th>
+                                    <th style="padding:12px 15px;text-align:left;font-weight:600;color:#555;">ITEMS</th>
+                                    <th style="padding:12px 15px;text-align:right;font-weight:600;color:#555;">AMOUNT</th>
+                                    <th style="padding:12px 15px;text-align:center;font-weight:600;color:#555;">ACTION</th>
+                                </tr>
                             </thead>
                             <tbody id="openTabsBody"></tbody>
                         </table>
+                        <div id="noTabsMessage" style="padding:40px;text-align:center;color:#888;display:none;">
+                            <i class="fas fa-check-circle" style="font-size:40px;color:#27ae60;margin-bottom:10px;display:block;"></i>
+                            No open tabs - all tabs have been closed
+                        </div>
                     </div>
                 </div>
             </div>
@@ -550,7 +702,7 @@
                 <div class="cart-totals">
                     <div class="cart-row"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
                     <div class="cart-row" id="discountRow" style="display:none;color:#27ae60;"><span>Discount</span><span id="discountAmount">-$0.00</span></div>
-                    <div class="cart-row"><span>Tax (6.35%)</span><span id="taxAmount">$0.00</span></div>
+                    <div class="cart-row"><span data-tax-label>Tax (6.35%)</span><span id="taxAmount">$0.00</span></div>
                     <div class="cart-row total"><span>Total:</span><span id="totalDue">$0.00</span></div>
                 </div>
                 <div class="payment-buttons" style="display:flex;gap:5px;flex-wrap:wrap;">
@@ -899,7 +1051,7 @@
                     <span class="booking-detail-value" id="tabDetailSubtotal">-</span>
                 </div>
                 <div class="booking-detail-row">
-                    <span class="booking-detail-label">Tax (6.35%)</span>
+                    <span class="booking-detail-label" data-tax-label>Tax (6.35%)</span>
                     <span class="booking-detail-value" id="tabDetailTax">-</span>
                 </div>
                 <div class="booking-detail-row" style="font-weight:700;font-size:16px;border-top:2px solid #eee;padding-top:10px;margin-top:5px;">
@@ -930,7 +1082,7 @@
                     <span class="booking-detail-value" id="payDiscount">-$0.00</span>
                 </div>
                 <div class="booking-detail-row">
-                    <span class="booking-detail-label">Tax (6.35%)</span>
+                    <span class="booking-detail-label" data-tax-label>Tax (6.35%)</span>
                     <span class="booking-detail-value" id="payTax">$0.00</span>
                 </div>
                 <div class="booking-detail-row" style="font-weight:700;font-size:18px;border-top:2px solid #eee;padding-top:10px;margin-top:5px;">
@@ -1162,31 +1314,10 @@
             if (isLocked) return;
             const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
             
-            // Ctrl+K - Quick Search
+            // Ctrl+K - Quick Search (safe, doesn't conflict)
             if (e.ctrlKey && e.key === 'k') {
                 e.preventDefault();
                 openQuickSearch();
-                return;
-            }
-            
-            // Ctrl+B - New Booking
-            if (e.ctrlKey && e.key === 'b') {
-                e.preventDefault();
-                showModal('booking');
-                return;
-            }
-            
-            // Ctrl+T - New Tab
-            if (e.ctrlKey && e.key === 't') {
-                e.preventDefault();
-                showModal('newTab');
-                return;
-            }
-            
-            // Ctrl+P - Process Payment
-            if (e.ctrlKey && e.key === 'p') {
-                e.preventDefault();
-                if (cart.length > 0) processPayment('quick');
                 return;
             }
             
@@ -1203,12 +1334,6 @@
             // ? - Toggle shortcut help
             if (e.key === '?') {
                 toggleShortcutHelp();
-                return;
-            }
-            
-            // L - Lock screen
-            if (e.key === 'l' || e.key === 'L') {
-                lockPOS();
                 return;
             }
         });
@@ -1434,50 +1559,8 @@
 
         const timeSlots = ['9:00am', '10:00am', '11:00am', '12:00pm', '1:00pm', '2:00pm', '3:00pm', '4:00pm', '5:00pm', '6:00pm', '7:00pm', '8:00pm'];
 
-        const items = [
-            // Bay Rentals
-            { id: 1, name: '1 Hour Bay', price: 45, category: 'rental', icon: 'fa-golf-ball' },
-            { id: 2, name: '2 Hour Bay', price: 80, category: 'rental', icon: 'fa-clock' },
-            { id: 3, name: '3 Hour Bay', price: 110, category: 'rental', icon: 'fa-hourglass' },
-            // Food
-            { id: 4, name: 'Burger', price: 14, category: 'food', icon: 'fa-hamburger' },
-            { id: 5, name: 'Wings (10pc)', price: 12, category: 'food', icon: 'fa-drumstick-bite' },
-            { id: 6, name: 'Nachos', price: 11, category: 'food', icon: 'fa-cheese' },
-            { id: 7, name: 'Pizza', price: 13, category: 'food', icon: 'fa-pizza-slice' },
-            { id: 21, name: 'Chicken Tenders', price: 10, category: 'food', icon: 'fa-drumstick-bite' },
-            { id: 22, name: 'Fries', price: 6, category: 'food', icon: 'fa-french-fries' },
-            { id: 23, name: 'Hot Dog', price: 8, category: 'food', icon: 'fa-hotdog' },
-            { id: 24, name: 'Pretzel', price: 7, category: 'food', icon: 'fa-cookie' },
-            // Beer
-            { id: 8, name: 'Domestic Beer', price: 5, category: 'beer', icon: 'fa-beer-mug-empty' },
-            { id: 9, name: 'Craft Beer', price: 7, category: 'beer', icon: 'fa-beer-mug-empty' },
-            { id: 25, name: 'Bucket (5)', price: 20, category: 'beer', icon: 'fa-bucket' },
-            { id: 26, name: 'IPA', price: 8, category: 'beer', icon: 'fa-beer-mug-empty' },
-            // Wine
-            { id: 10, name: 'House Wine', price: 9, category: 'wine', icon: 'fa-wine-glass' },
-            { id: 11, name: 'Premium Wine', price: 12, category: 'wine', icon: 'fa-wine-bottle' },
-            { id: 27, name: 'Prosecco', price: 10, category: 'wine', icon: 'fa-champagne-glasses' },
-            // Cocktails
-            { id: 12, name: 'Well Cocktail', price: 8, category: 'cocktails', icon: 'fa-martini-glass' },
-            { id: 13, name: 'Premium Cocktail', price: 12, category: 'cocktails', icon: 'fa-martini-glass-citrus' },
-            { id: 28, name: 'Margarita', price: 10, category: 'cocktails', icon: 'fa-glass-citrus' },
-            { id: 29, name: 'Old Fashioned', price: 12, category: 'cocktails', icon: 'fa-whiskey-glass' },
-            // Beverages
-            { id: 14, name: 'Soda', price: 3, category: 'beverage', icon: 'fa-glass-water' },
-            { id: 15, name: 'Water', price: 2, category: 'beverage', icon: 'fa-droplet' },
-            { id: 30, name: 'Coffee', price: 3, category: 'beverage', icon: 'fa-mug-hot' },
-            { id: 31, name: 'Energy Drink', price: 5, category: 'beverage', icon: 'fa-bolt' },
-            { id: 32, name: 'Juice', price: 4, category: 'beverage', icon: 'fa-lemon' },
-            // Merchandise
-            { id: 16, name: 'Golf Glove', price: 25, category: 'merch', icon: 'fa-hand' },
-            { id: 17, name: 'Golf Balls (dz)', price: 35, category: 'merch', icon: 'fa-circle' },
-            { id: 18, name: 'Hat', price: 28, category: 'merch', icon: 'fa-hat-cowboy' },
-            { id: 33, name: 'Golf Cove Tee', price: 32, category: 'merch', icon: 'fa-shirt' },
-            { id: 34, name: 'Club Rental', price: 15, category: 'merch', icon: 'fa-golf-ball-tee' },
-            // Lessons
-            { id: 19, name: '30 Min Lesson', price: 50, category: 'rental', icon: 'fa-chalkboard-teacher' },
-            { id: 20, name: '1 Hour Lesson', price: 90, category: 'rental', icon: 'fa-user-graduate' },
-        ];
+        // Use unified menu from menu-data.js
+        const items = window.GolfCoveMenu ? GolfCoveMenu.getAllItems() : [];
 
         const floorPlanTables = [
             { id: 1, type: 'circle', x: 50, y: 50 },
@@ -1497,18 +1580,19 @@
             { id: 15, type: 'circle', x: 600, y: 350 },
         ];
 
-        // Sample bookings
+        // Sample bookings - with proper date, status, and roomId fields
         if (bookings.length === 0) {
+            const today = new Date().toISOString().split('T')[0];
             bookings = [
-                { id: 1, room: 1, time: '10:00am', customer: 'Mike Johnson', players: 2, duration: 1 },
-                { id: 2, room: 1, time: '11:00am', customer: 'Alex Qi', players: 4, duration: 2 },
-                { id: 3, room: 2, time: '12:00pm', customer: 'Sarah Wilson', players: 1, duration: 1 },
-                { id: 4, room: 2, time: '1:00pm', customer: 'Tom Brown', players: 2, duration: 1 },
-                { id: 5, room: 3, time: '1:00pm', customer: 'Chris Lee', players: 1, duration: 1 },
-                { id: 6, room: 3, time: '2:00pm', customer: 'Ryan Smith', players: 1, duration: 1 },
-                { id: 7, room: 1, time: '5:00pm', customer: 'Nick Piselli', players: 1, duration: 1 },
-                { id: 8, room: 2, time: '4:00pm', customer: 'Brett Huck', players: 1, duration: 1 },
-                { id: 9, room: 3, time: '4:00pm', customer: 'Dylan Vasp', players: 1, duration: 1 },
+                { id: 1, room: 1, roomId: 1, time: '10:00am', date: today, customer: 'Mike Johnson', players: 2, duration: 1, status: 'confirmed' },
+                { id: 2, room: 1, roomId: 1, time: '11:00am', date: today, customer: 'Alex Qi', players: 4, duration: 2, status: 'confirmed' },
+                { id: 3, room: 2, roomId: 2, time: '12:00pm', date: today, customer: 'Sarah Wilson', players: 1, duration: 1, status: 'confirmed' },
+                { id: 4, room: 2, roomId: 2, time: '1:00pm', date: today, customer: 'Tom Brown', players: 2, duration: 1, status: 'confirmed' },
+                { id: 5, room: 3, roomId: 3, time: '1:00pm', date: today, customer: 'Chris Lee', players: 1, duration: 1, status: 'confirmed' },
+                { id: 6, room: 3, roomId: 3, time: '2:00pm', date: today, customer: 'Ryan Smith', players: 1, duration: 1, status: 'confirmed' },
+                { id: 7, room: 1, roomId: 1, time: '5:00pm', date: today, customer: 'Nick Piselli', players: 1, duration: 1, status: 'confirmed' },
+                { id: 8, room: 2, roomId: 2, time: '4:00pm', date: today, customer: 'Brett Huck', players: 1, duration: 1, status: 'confirmed' },
+                { id: 9, room: 3, roomId: 3, time: '4:00pm', date: today, customer: 'Dylan Vasp', players: 1, duration: 1, status: 'confirmed' },
             ];
             localStorage.setItem('gc_bookings', JSON.stringify(bookings));
         }
@@ -1535,21 +1619,88 @@
                 { id: 26758, customer: 'No Customer', amount: 0, subtotal: 0, tax: 0, items: [], itemCount: 0, method: 'cash', time: '3:12PM', date: today, discount: 0, isReturn: false, register: 'POS-1' },
             ];
         }
+        
+        // ============ TAB LOADING & SYNCHRONIZATION ============
+        function loadTabs() {
+            // Try TabsSync first (Firebase-synced), fallback to localStorage
+            if (typeof TabsSync !== 'undefined') {
+                try {
+                    const syncedTabs = TabsSync.getAllTabs();
+                    if (syncedTabs && syncedTabs.length > 0) {
+                        openTabs = syncedTabs;
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('TabsSync error, falling back to localStorage:', e);
+                }
+            }
+            
+            // Load from localStorage
+            try {
+                const stored = localStorage.getItem('gc_tabs');
+                if (stored) {
+                    openTabs = JSON.parse(stored);
+                    // Normalize tab data structure
+                    openTabs = openTabs.map(tab => ({
+                        ...tab,
+                        id: tab.id || Date.now(),
+                        customer: tab.customer || 'Guest',
+                        amount: tab.amount || tab.total || 0,
+                        subtotal: tab.subtotal || 0,
+                        items: tab.items || [],
+                        table: tab.table || 'Tab',
+                        createdAt: tab.createdAt || tab.openedAt || new Date().toISOString()
+                    }));
+                }
+            } catch (e) {
+                console.error('Error loading tabs:', e);
+                openTabs = [];
+            }
+        }
+        
+        function saveTabs() {
+            try {
+                localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
+                // Sync to Firebase if available
+                if (typeof TabsSync !== 'undefined' && TabsSync.syncToServer) {
+                    TabsSync.syncToServer();
+                }
+            } catch (e) {
+                console.error('Error saving tabs:', e);
+            }
+        }
 
         // ============ RENDER FUNCTIONS ============
         function renderTeeSheet() {
             const container = document.getElementById('roomsContainer');
+            if (!container) {
+                console.error('roomsContainer not found');
+                return;
+            }
+            
             const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
             const selectedDate = document.getElementById('teeSheetDate')?.value || new Date().toISOString().split('T')[0];
             
             // Get all bookings for the selected date from the booking system
-            const allBookings = GolfCoveBooking.getForDate(selectedDate);
+            let allBookings = [];
+            try {
+                if (typeof GolfCoveBooking !== 'undefined' && GolfCoveBooking.getForDate) {
+                    allBookings = GolfCoveBooking.getForDate(selectedDate) || [];
+                } else {
+                    // Fallback to localStorage
+                    const storedBookings = JSON.parse(localStorage.getItem('gc_bookings') || '[]');
+                    allBookings = storedBookings.filter(b => b.date === selectedDate && b.status !== 'cancelled');
+                }
+            } catch (e) {
+                console.error('Error loading bookings:', e);
+                allBookings = [];
+            }
             
             container.innerHTML = rooms.map(room => {
                 // Get bookings for this room using either roomId or room
                 const roomBookings = allBookings.filter(b => (b.roomId || b.room) === room.id);
                 const bookedCount = roomBookings.length;
-                const checkedInCount = roomBookings.filter(b => b.status === 'checked-in' || b.checkedIn).length;
+                const checkedInCount = roomBookings.filter(b => b.status === 'checked-in' || b.status === 'checked_in' || b.checkedIn).length;
                 let statusClass = 'available';
                 if (bookedCount > 0 && checkedInCount === bookedCount) statusClass = 'occupied';
                 else if (bookedCount > 0) statusClass = 'partial';
@@ -1591,7 +1742,7 @@
                             }
                             
                             // Status icon
-                            const isCheckedIn = booking && (booking.status === 'checked-in' || booking.checkedIn);
+                            const isCheckedIn = booking && (booking.status === 'checked-in' || booking.status === 'checked_in' || booking.checkedIn);
                             const statusIcon = isCheckedIn ? ' <i class="fas fa-check-circle" style="color:#27ae60;"></i>' : '';
                             
                             return `
@@ -1622,11 +1773,35 @@
 
         function renderOpenTabs() {
             const tbody = document.getElementById('openTabsBody');
+            const noTabsMsg = document.getElementById('noTabsMessage');
             if (!tbody) return;
             
+            // Ensure openTabs is loaded
+            if (!openTabs || !Array.isArray(openTabs)) {
+                loadTabs();
+            }
+            
+            // Update summary stats
+            const tabCount = openTabs.length;
+            const tabTotal = openTabs.reduce((sum, t) => sum + (t.amount || t.total || 0), 0);
+            const todaySales = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+            const transCount = transactions.length;
+            
+            const fnbTabCountEl = document.getElementById('fnbTabCount');
+            const fnbTabTotalEl = document.getElementById('fnbTabTotal');
+            const fnbTodaySalesEl = document.getElementById('fnbTodaySales');
+            const fnbTransCountEl = document.getElementById('fnbTransCount');
+            
+            if (fnbTabCountEl) fnbTabCountEl.textContent = tabCount;
+            if (fnbTabTotalEl) fnbTabTotalEl.textContent = '$' + tabTotal.toFixed(2);
+            if (fnbTodaySalesEl) fnbTodaySalesEl.textContent = '$' + todaySales.toFixed(2);
+            if (fnbTransCountEl) fnbTransCountEl.textContent = transCount;
+            
             if (openTabs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;padding:20px;">No open tabs</td></tr>';
+                tbody.innerHTML = '';
+                if (noTabsMsg) noTabsMsg.style.display = 'block';
             } else {
+                if (noTabsMsg) noTabsMsg.style.display = 'none';
                 tbody.innerHTML = openTabs.map(tab => {
                     // Check if customer is a member
                     let memberBadge = '';
@@ -1657,13 +1832,18 @@
                         rowStyle = 'background:linear-gradient(135deg, #fef9e7 0%, #f8f4e8 100%);';
                     }
                     
+                    const itemCount = tab.items ? tab.items.length : 0;
+                    const tabAmount = tab.amount || tab.total || 0;
+                    
                     return `
-                    <tr class="tab-row" style="${rowStyle}">
-                        <td>${tab.table || 'Tab'}</td>
-                        <td style="display:flex;align-items:center;flex-wrap:wrap;">${tab.customer}${memberBadge}</td>
-                        <td style="font-weight:600;color:#27ae60;">$${tab.amount.toFixed(2)}</td>
-                        <td>
-                            <button onclick="selectTab(${tab.id})" style="background:#4a90a4;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-right:5px;"><i class="fas fa-eye"></i> View</button>
+                    <tr class="tab-row" style="${rowStyle}border-bottom:1px solid #eee;">
+                        <td style="padding:12px 15px;">${tab.table || 'Tab'}</td>
+                        <td style="padding:12px 15px;display:flex;align-items:center;flex-wrap:wrap;">${tab.customer || 'Guest'}${memberBadge}</td>
+                        <td style="padding:12px 15px;color:#666;">${itemCount} item${itemCount !== 1 ? 's' : ''}</td>
+                        <td style="padding:12px 15px;font-weight:600;color:#27ae60;text-align:right;">$${tabAmount.toFixed(2)}</td>
+                        <td style="padding:12px 15px;text-align:center;">
+                            <button onclick="selectTab(${tab.id})" style="background:#4a90a4;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:11px;margin-right:5px;"><i class="fas fa-plus"></i> Add Items</button>
+                            <button onclick="closeTabWithPayment(${tab.id})" style="background:#27ae60;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:11px;"><i class="fas fa-check"></i> Close</button>
                         </td>
                     </tr>
                 `}).join('');
@@ -1673,27 +1853,54 @@
             const openTabsCount = document.getElementById('summaryOpenTabs');
             if (openTabsCount) openTabsCount.textContent = openTabs.length;
         }
+        
+        // Refresh tabs view (for manual refresh button)
+        function refreshTabsView() {
+            loadTabs();
+            renderOpenTabs();
+            showToast('Tabs refreshed', 'success');
+        }
+        
+        // Close tab with payment from tabs view
+        function closeTabWithPayment(tabId) {
+            const tab = openTabs.find(t => t.id == tabId);
+            if (!tab) {
+                showToast('Tab not found', 'error');
+                return;
+            }
+            
+            // Switch to this tab and open payment modal
+            selectTab(tabId);
+            setTimeout(() => {
+                processPayment('quick');
+            }, 100);
+        }
 
         function renderCart() {
             const container = document.getElementById('cartItems');
+            if (!container) return;
+            
             if (cart.length === 0) {
                 container.innerHTML = '<div class="cart-empty"><i class="fas fa-shopping-cart" style="font-size:40px;margin-bottom:10px;"></i><p>No items in cart</p></div>';
             } else {
-                container.innerHTML = cart.map((item, i) => `
+                container.innerHTML = cart.map((item, i) => {
+                    const price = item.price || 0;
+                    const qty = item.qty || 1;
+                    return `
                     <div class="cart-item">
                         <div class="cart-item-info">
-                            <div class="cart-item-name">${item.name}</div>
-                            <div class="cart-item-price">$${item.price.toFixed(2)} each</div>
+                            <div class="cart-item-name">${item.name || 'Item'}</div>
+                            <div class="cart-item-price">$${price.toFixed(2)} each</div>
                         </div>
                         <div class="qty-controls">
                             <button class="qty-btn" onclick="changeQty(${i}, -1)">-</button>
-                            <span class="qty-value">${item.qty}</span>
+                            <span class="qty-value">${qty}</span>
                             <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
                         </div>
-                        <div class="cart-item-total">$${(item.price * item.qty).toFixed(2)}</div>
+                        <div class="cart-item-total">$${(price * qty).toFixed(2)}</div>
                         <button class="cart-item-remove" onclick="removeFromCart(${i})"><i class="fas fa-trash"></i></button>
                     </div>
-                `).join('');
+                `}).join('');
             }
             updateTotals();
         }
@@ -1753,12 +1960,12 @@
                         <div style="border-top:2px solid #333;padding-top:10px;">
                             <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                                 <span>Subtotal</span>
-                                <span>$${(trans.subtotal || trans.amount / 1.0635).toFixed(2)}</span>
+                                <span>$${(trans.subtotal || trans.amount / (1 + getTaxRate())).toFixed(2)}</span>
                             </div>
                             ${trans.discount ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px;color:#27ae60;"><span>Discount</span><span>-$${trans.discount.toFixed(2)}</span></div>` : ''}
                             <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-                                <span>Tax (6.35%)</span>
-                                <span>$${(trans.tax || trans.amount * 0.0635 / 1.0635).toFixed(2)}</span>
+                                <span>${getTaxLabel()}</span>
+                                <span>$${(trans.tax || trans.amount * getTaxRate() / (1 + getTaxRate())).toFixed(2)}</span>
                             </div>
                             ${trans.tip ? `<div style="display:flex;justify-content:space-between;margin-bottom:5px;color:#9b59b6;"><span>Tip</span><span>$${trans.tip.toFixed(2)}</span></div>` : ''}
                             <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px;margin-top:10px;">
@@ -2025,19 +2232,24 @@
         function updateTotals() {
             const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
             const discountedSubtotal = subtotal - currentDiscount;
-            const tax = discountedSubtotal * 0.0635;
+            const tax = calculateTax(discountedSubtotal);
             const total = discountedSubtotal + tax;
             
-            document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
-            document.getElementById('taxAmount').textContent = '$' + tax.toFixed(2);
-            document.getElementById('totalDue').textContent = '$' + total.toFixed(2);
+            document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('taxAmount').textContent = formatCurrency(tax);
+            document.getElementById('totalDue').textContent = formatCurrency(total);
             document.getElementById('totalAmount').textContent = total.toFixed(2);
+            
+            // Update tax label dynamically
+            document.querySelectorAll('[data-tax-label]').forEach(el => {
+                el.textContent = getTaxLabel();
+            });
             
             // Show/hide discount row
             const discountRow = document.getElementById('discountRow');
             if (currentDiscount > 0) {
                 discountRow.style.display = 'flex';
-                document.getElementById('discountAmount').textContent = '-$' + currentDiscount.toFixed(2);
+                document.getElementById('discountAmount').textContent = '-' + formatCurrency(currentDiscount);
             } else {
                 discountRow.style.display = 'none';
             }
@@ -2099,13 +2311,13 @@
             // Calculate totals
             const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
             const discountedSubtotal = subtotal - currentDiscount;
-            const tax = discountedSubtotal * 0.0635;
+            const tax = calculateTax(discountedSubtotal);
             currentPayTotal = discountedSubtotal + tax;
             
             // Populate payment modal
-            document.getElementById('paySubtotal').textContent = '$' + subtotal.toFixed(2);
-            document.getElementById('payTax').textContent = '$' + tax.toFixed(2);
-            document.getElementById('payTotal').textContent = '$' + currentPayTotal.toFixed(2);
+            document.getElementById('paySubtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('payTax').textContent = formatCurrency(tax);
+            document.getElementById('payTotal').textContent = formatCurrency(currentPayTotal);
             
             if (currentDiscount > 0) {
                 document.getElementById('payDiscountRow').style.display = 'flex';
@@ -2261,7 +2473,7 @@
         function completePaymentWithStripe(paymentIntentId) {
             const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
             const discountedSubtotal = subtotal - currentDiscount;
-            const tax = discountedSubtotal * 0.0635;
+            const tax = calculateTax(discountedSubtotal);
             
             const cartItems = [...cart];
             transactions.unshift({
@@ -2283,6 +2495,17 @@
                 register: localStorage.getItem('gc_register_id') || 'POS-1'
             });
             localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+            
+            // Update daily sales tracking for analytics
+            const today = new Date().toDateString();
+            const dailySales = JSON.parse(localStorage.getItem('gc_daily_sales') || '{}');
+            if (!dailySales[today]) {
+                dailySales[today] = { total: 0, count: 0, cash: 0, card: 0, giftcard: 0 };
+            }
+            dailySales[today].total += currentPayTotal;
+            dailySales[today].count += 1;
+            dailySales[today].card = (dailySales[today].card || 0) + currentPayTotal;
+            localStorage.setItem('gc_daily_sales', JSON.stringify(dailySales));
             
             // Update customer stats
             const customerName = document.getElementById('customerSearch').value;
@@ -2399,15 +2622,40 @@
                 if (giftCards[cardIndex].balance <= 0) {
                     return showToast('Gift card has no balance', 'error');
                 }
-                // Deduct from gift card balance
-                const amountToDeduct = Math.min(giftCards[cardIndex].balance, currentPayTotal);
-                giftCards[cardIndex].balance -= amountToDeduct;
+                
+                // Check if gift card balance covers the full amount
+                const cardBalance = giftCards[cardIndex].balance;
+                if (cardBalance < currentPayTotal) {
+                    const remaining = currentPayTotal - cardBalance;
+                    const usePartial = confirm(`Gift card balance ($${cardBalance.toFixed(2)}) is less than the total ($${currentPayTotal.toFixed(2)}).\n\nRemaining amount needed: $${remaining.toFixed(2)}\n\nWould you like to:\n- OK: Use gift card for $${cardBalance.toFixed(2)} and pay remaining $${remaining.toFixed(2)} another way\n- Cancel: Cancel and choose a different payment method`);
+                    
+                    if (!usePartial) {
+                        return; // User cancelled - don't process partial payment
+                    }
+                    
+                    // Deduct full gift card balance
+                    giftCards[cardIndex].balance = 0;
+                    giftCards[cardIndex].lastUsed = new Date().toISOString();
+                    localStorage.setItem('gc_gift_cards', JSON.stringify(giftCards));
+                    
+                    // Record partial payment and prompt for remainder
+                    showToast(`Gift card applied: $${cardBalance.toFixed(2)}. Collect remaining $${remaining.toFixed(2)} via another method.`, 'warning');
+                    
+                    // Update the payment total to show remaining amount
+                    currentPayTotal = remaining;
+                    document.getElementById('payTotal').textContent = formatCurrency(remaining);
+                    
+                    // Switch to another payment method for the remainder
+                    document.getElementById('giftCardNumber').value = '';
+                    selectPaymentMethod('card'); // Default to card for remainder
+                    return; // Don't complete sale yet - need remaining payment
+                }
+                
+                // Full payment covered by gift card
+                giftCards[cardIndex].balance -= currentPayTotal;
                 giftCards[cardIndex].lastUsed = new Date().toISOString();
                 localStorage.setItem('gc_gift_cards', JSON.stringify(giftCards));
-                
-                if (amountToDeduct < currentPayTotal) {
-                    showToast(`Gift card covered $${amountToDeduct.toFixed(2)}. Remaining $${(currentPayTotal - amountToDeduct).toFixed(2)} needed.`, 'warning');
-                }
+                showToast(`Gift card payment successful. Remaining balance: $${giftCards[cardIndex].balance.toFixed(2)}`, 'success');
             }
             
             if (currentPayMethod === 'tab') {
@@ -2423,7 +2671,7 @@
             
             const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
             const discountedSubtotal = subtotal - currentDiscount;
-            const tax = discountedSubtotal * 0.0635;
+            const tax = calculateTax(discountedSubtotal);
             
             // Friendly method names for display
             const methodNames = {
@@ -2459,6 +2707,27 @@
             });
             localStorage.setItem('gc_transactions', JSON.stringify(transactions));
             
+            // Update daily sales tracking for analytics
+            const today = new Date().toDateString();
+            const dailySales = JSON.parse(localStorage.getItem('gc_daily_sales') || '{}');
+            if (!dailySales[today]) {
+                dailySales[today] = { total: 0, count: 0, cash: 0, card: 0, giftcard: 0 };
+            }
+            dailySales[today].total += currentPayTotal;
+            dailySales[today].count += 1;
+            if (currentPayMethod === 'cash') {
+                dailySales[today].cash = (dailySales[today].cash || 0) + currentPayTotal;
+                // Kick physical drawer on cash sale
+                if (window.CashDrawer) {
+                    CashDrawer.kick();
+                }
+            } else if (currentPayMethod === 'card') {
+                dailySales[today].card = (dailySales[today].card || 0) + currentPayTotal;
+            } else if (currentPayMethod === 'giftcard') {
+                dailySales[today].giftcard = (dailySales[today].giftcard || 0) + currentPayTotal;
+            }
+            localStorage.setItem('gc_daily_sales', JSON.stringify(dailySales));
+            
             // Update customer stats
             const customerName = document.getElementById('customerSearch').value;
             if (customerName) {
@@ -2490,66 +2759,88 @@
             showToast(`Payment of $${currentPayTotal.toFixed(2)} processed via ${methodNames[currentPayMethod] || currentPayMethod}!`, 'success');
         }
         
-        function addToTabFromCart(customerName) {
-            // Find or create tab for customer
-            let tab = openTabs.find(t => t.customer.toLowerCase() === customerName.toLowerCase());
-            if (!tab) {
-                // Look up customer for member info
-                let isMember = false;
-                let isVIP = false;
-                let memberType = null;
-                let memberDiscount = 0;
-                let customerId = null;
-                
-                if (typeof GolfCoveCustomers !== 'undefined') {
-                    const parts = customerName.trim().split(' ');
-                    if (parts.length >= 2) {
-                        const customer = GolfCoveCustomers.getByName(parts[0], parts.slice(1).join(' '));
-                        if (customer) {
-                            customerId = customer.id;
-                            isMember = GolfCoveCustomers.isActiveMember(customer);
-                            isVIP = GolfCoveCustomers.isVIP(customer);
-                            memberType = customer.memberType;
-                            memberDiscount = GolfCoveCustomers.getMemberDiscount(customer);
-                        }
-                    }
-                }
-                
-                tab = {
-                    id: Date.now(),
-                    customer: customerName,
-                    customerId: customerId,
-                    items: [],
-                    total: 0,
-                    amount: 0,
-                    isMember: isMember,
-                    isVIP: isVIP,
-                    memberType: memberType,
-                    memberDiscount: memberDiscount,
-                    created: new Date().toISOString()
-                };
-                openTabs.push(tab);
+        async function addToTabFromCart(customerName) {
+            if (cart.length === 0) {
+                showToast('Add items to cart first', 'error');
+                return;
             }
             
-            // Add cart items to tab
-            cart.forEach(item => {
-                const existingItem = tab.items.find(i => i.name === item.name && i.price === item.price);
-                if (existingItem) {
-                    existingItem.qty += item.qty;
+            const employeeName = getCurrentUserName();
+            
+            // Format cart items for TabsSync
+            const items = cart.map(item => ({
+                name: item.name,
+                price: parseFloat(item.price) || 0,
+                qty: parseInt(item.qty) || 1,
+                category: item.category || 'misc'
+            }));
+            
+            try {
+                // Use TabsSync for synced tab management
+                if (typeof TabsSync !== 'undefined') {
+                    const existingTab = TabsSync.getTabByCustomer(customerName);
+                    
+                    if (existingTab) {
+                        await TabsSync.addItemsToTab(existingTab.id, items, employeeName);
+                        showToast(`${items.length} item(s) added to ${customerName}'s tab!`, 'success');
+                    } else {
+                        // Look up customer for member info
+                        let customerId = null;
+                        if (typeof GolfCoveCustomers !== 'undefined') {
+                            const parts = customerName.trim().split(' ');
+                            if (parts.length >= 2) {
+                                const customer = GolfCoveCustomers.getByName(parts[0], parts.slice(1).join(' '));
+                                if (customer) customerId = customer.id;
+                            }
+                        }
+                        
+                        await TabsSync.createTab(customerName, customerId, items, employeeName);
+                        showToast(`Tab started for ${customerName}!`, 'success');
+                    }
+                    
+                    // Reload tabs from TabsSync
+                    openTabs = TabsSync.getAllTabs();
                 } else {
-                    tab.items.push({...item});
+                    // Fallback to local storage
+                    let tab = openTabs.find(t => t.customer && t.customer.toLowerCase() === customerName.toLowerCase());
+                    if (!tab) {
+                        const itemsTotal = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+                        tab = {
+                            id: Date.now().toString(),
+                            customer: customerName,
+                            items: items,
+                            subtotal: itemsTotal,
+                            total: itemsTotal * (1 + getTaxRate()),
+                            amount: itemsTotal * (1 + getTaxRate()),
+                            createdAt: new Date().toISOString(),
+                            openedBy: employeeName
+                        };
+                        openTabs.push(tab);
+                    } else {
+                        items.forEach(item => {
+                            const existing = tab.items.find(i => i.name === item.name && i.price === item.price);
+                            if (existing) {
+                                existing.qty += item.qty;
+                            } else {
+                                tab.items.push({...item});
+                            }
+                        });
+                        tab.subtotal = tab.items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+                        tab.total = tab.subtotal * (1 + getTaxRate());
+                        tab.amount = tab.total;
+                    }
+                    saveTabs();
+                    showToast(`Items added to ${customerName}'s tab!`, 'success');
                 }
-            });
-            
-            // Recalculate tab total
-            tab.total = tab.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
-            
-            cart = [];
-            currentDiscount = 0;
-            renderCart();
-            renderOpenTabs();
-            showToast(`Items added to ${customerName}'s tab!`, 'success');
+                
+                cart = [];
+                currentDiscount = 0;
+                renderCart();
+                renderOpenTabs();
+            } catch (error) {
+                console.error('Error adding to tab:', error);
+                showToast('Failed to add items to tab', 'error');
+            }
         }
         
         function printReceipt(transaction) {
@@ -2561,10 +2852,10 @@
                 '<tr><td style="padding:5px 0;">' + item.name + '</td><td style="padding:5px 0;text-align:center;">' + item.qty + '</td><td style="padding:5px 0;text-align:right;">$' + (item.price * item.qty).toFixed(2) + '</td></tr>'
             ).join('') : '<tr><td colspan="3">Items not recorded</td></tr>';
             
-            const subtotal = transaction.items ? transaction.items.reduce((sum, i) => sum + i.price * i.qty, 0) : transaction.amount / 1.0635;
+            const subtotal = transaction.items ? transaction.items.reduce((sum, i) => sum + i.price * i.qty, 0) : transaction.amount / (1 + getTaxRate());
             const discount = transaction.discount || 0;
             const discountedSubtotal = subtotal - discount;
-            const tax = discountedSubtotal * 0.0635;
+            const tax = calculateTax(discountedSubtotal);
             
             // Show discount with type (member vs manual)
             const discountLabel = transaction.discountType === 'member' ? 'Member Discount:' : 'Discount:';
@@ -2588,7 +2879,7 @@
                 '<table><thead><tr><th style="text-align:left;">Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Price</th></tr></thead>' +
                 '<tbody>' + itemsHtml + '</tbody></table><div class="divider"></div>' +
                 '<div class="totals"><div><span>Subtotal:</span><span>$' + subtotal.toFixed(2) + '</span></div>' + discountHtml +
-                '<div><span>Tax (6.35%):</span><span>$' + tax.toFixed(2) + '</span></div>' +
+                '<div><span>' + getTaxLabel() + ':</span><span>$' + tax.toFixed(2) + '</span></div>' +
                 '<div class="total"><span>TOTAL:</span><span>$' + transaction.amount.toFixed(2) + '</span></div>' +
                 '<div><span>Method:</span><span>' + (transaction.methodDisplay || transaction.method || 'Card') + '</span></div></div>' +
                 '<div class="divider"></div><div class="footer"><p>Thank you for visiting Golf Cove!</p><p>336 State Street, North Haven, CT</p><p>www.golfcovect.com</p></div>' +
@@ -2608,7 +2899,7 @@
         function suspendSale() {
             if (cart.length === 0) return showToast('Cart is empty', 'error');
             const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            const total = subtotal * 1.0635;
+            const total = subtotal * (1 + getTaxRate());
             const suspended = JSON.parse(localStorage.getItem('gc_suspended') || '[]');
             suspended.push({
                 id: Date.now(),
@@ -3085,11 +3376,16 @@
         }
 
         // ============ TAB FUNCTIONS ============
-        function createTab(e) {
+        async function createTab(e) {
             e.preventDefault();
             const tableValue = document.getElementById('tabTable').value;
             const customerName = document.getElementById('tabCustomer').value;
             const customerId = document.getElementById('tabCustomerId').value;
+            
+            if (!customerName || !customerName.trim()) {
+                showToast('Please enter customer name', 'error');
+                return;
+            }
             
             // Check if table already has a tab
             const existingTab = openTabs.find(t => t.table === tableValue && tableValue !== 'Tab');
@@ -3098,53 +3394,72 @@
                 return;
             }
             
-            // Check if customer is a member
-            let isMember = false;
-            let memberType = null;
-            let memberExpires = null;
-            let memberDiscount = 0;
+            const employeeName = getCurrentUserName();
             
-            if (customerId) {
-                const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-                const customer = customers.find(c => c.id == customerId);
-                if (customer && customer.isMember) {
-                    const expDate = new Date(customer.memberExpires);
-                    if (expDate > new Date()) {
-                        isMember = true;
-                        memberType = customer.memberType;
-                        memberExpires = customer.memberExpires;
-                        // Calculate discount based on tier
-                        const discounts = { 'par': 10, 'birdie': 10, 'eagle': 15, 'family_par': 10, 'family_birdie': 10, 'family_eagle': 15, 'corporate': 20, 'monthly': 10, 'annual': 10 };
-                        memberDiscount = discounts[memberType] || 10;
+            try {
+                if (typeof TabsSync !== 'undefined') {
+                    // Use TabsSync for synced tab management
+                    const options = { table: tableValue };
+                    
+                    await TabsSync.createTab(customerName.trim(), customerId || null, [], employeeName, options);
+                    
+                    // Reload tabs from TabsSync
+                    openTabs = TabsSync.getAllTabs();
+                } else {
+                    // Check if customer is a member
+                    let isMember = false;
+                    let memberType = null;
+                    let memberExpires = null;
+                    let memberDiscount = 0;
+                    
+                    if (customerId) {
+                        const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+                        const customer = customers.find(c => c.id == customerId);
+                        if (customer && customer.isMember) {
+                            const expDate = new Date(customer.memberExpires);
+                            if (expDate > new Date()) {
+                                isMember = true;
+                                memberType = customer.memberType;
+                                memberExpires = customer.memberExpires;
+                                const discounts = { 'par': 10, 'birdie': 10, 'eagle': 15, 'family_par': 10, 'family_birdie': 10, 'family_eagle': 15, 'corporate': 20, 'monthly': 10, 'annual': 10 };
+                                memberDiscount = discounts[memberType] || 10;
+                            }
+                        }
                     }
+                    
+                    openTabs.push({
+                        id: Date.now().toString(),
+                        customer: customerName.trim(),
+                        customerId: customerId || null,
+                        employee: employeeName,
+                        amount: 0,
+                        subtotal: 0,
+                        total: 0,
+                        items: [],
+                        table: tableValue,
+                        isMember: isMember,
+                        memberType: memberType,
+                        memberExpires: memberExpires,
+                        memberDiscount: memberDiscount,
+                        createdAt: new Date().toISOString(),
+                        openedAt: new Date().toISOString(),
+                        openedBy: employeeName
+                    });
+                    saveTabs();
                 }
+                
+                hideModal('newTab');
+                renderOpenTabs();
+                renderFloorPlan();
+                
+                showToast('Tab created for ' + customerName.trim());
+                e.target.reset();
+                document.getElementById('tabCustomerId').value = '';
+                document.getElementById('tabMemberStatus').style.display = 'none';
+            } catch (error) {
+                console.error('Error creating tab:', error);
+                showToast('Failed to create tab', 'error');
             }
-            
-            openTabs.push({
-                id: Date.now(), // Use timestamp for unique ID
-                customer: customerName,
-                customerId: customerId || null,
-                employee: 'GC TABS',
-                amount: 0,
-                subtotal: 0,
-                items: [],
-                table: tableValue,
-                isMember: isMember,
-                memberType: memberType,
-                memberExpires: memberExpires,
-                memberDiscount: memberDiscount,
-                createdAt: new Date().toISOString()
-            });
-            localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
-            hideModal('newTab');
-            renderOpenTabs();
-            renderFloorPlan(); // Update floor plan to show new tab
-            
-            const memberMsg = isMember ? ` (${memberType.toUpperCase()} Member - ${memberDiscount}% discount!)` : '';
-            showToast('Tab created for ' + customerName + memberMsg);
-            e.target.reset();
-            document.getElementById('tabCustomerId').value = '';
-            document.getElementById('tabMemberStatus').style.display = 'none';
         }
         
         // Tab customer search and member detection
@@ -3241,71 +3556,87 @@
         }
 
         function selectTab(id) {
-            const tab = openTabs.find(t => t.id === id);
-            if (tab) {
-                selectedTabId = id;
-                document.getElementById('tabDetailId').textContent = tab.id;
-                
-                // Show customer name with member badge if applicable
-                const customerEl = document.getElementById('tabDetailCustomer');
+            // Flexible ID matching (handle both number and string IDs)
+            const tab = openTabs.find(t => t.id == id || String(t.id) === String(id));
+            if (!tab) {
+                showToast('Tab not found', 'error');
+                return;
+            }
+            
+            selectedTabId = tab.id;
+            const tabIdEl = document.getElementById('tabDetailId');
+            if (tabIdEl) tabIdEl.textContent = tab.id;
+            
+            // Show customer name with member badge if applicable
+            const customerEl = document.getElementById('tabDetailCustomer');
+            if (customerEl) {
                 if (tab.isMember && tab.memberType) {
                     const tierColors = { 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#f1c40f', 'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#f1c40f', 'corporate': '#2c3e50', 'monthly': '#27ae60', 'annual': '#27ae60' };
                     const color = tierColors[tab.memberType] || '#9b59b6';
-                    customerEl.innerHTML = `${tab.customer} <span style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;margin-left:5px;"><i class="fas fa-crown" style="color:#f1c40f;margin-right:3px;"></i>${tab.memberType.replace('_', ' ').toUpperCase()} - ${tab.memberDiscount}% OFF</span>`;
+                    const discount = tab.memberDiscount || 10;
+                    customerEl.innerHTML = `${tab.customer || 'Guest'} <span style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;margin-left:5px;"><i class="fas fa-crown" style="color:#f1c40f;margin-right:3px;"></i>${tab.memberType.replace('_', ' ').toUpperCase()} - ${discount}% OFF</span>`;
                 } else {
-                    customerEl.textContent = tab.customer;
+                    customerEl.textContent = tab.customer || 'Guest';
                 }
-                
-                document.getElementById('tabDetailTable').textContent = tab.table;
-                
-                // Calculate subtotal and tax
-                const subtotal = tab.subtotal || (tab.amount / 1.0635);
-                const tax = subtotal * 0.0635;
-                
-                // Update detail fields if they exist
-                const subtotalEl = document.getElementById('tabDetailSubtotal');
-                const taxEl = document.getElementById('tabDetailTax');
-                if (subtotalEl) subtotalEl.textContent = '$' + subtotal.toFixed(2);
-                if (taxEl) taxEl.textContent = '$' + tax.toFixed(2);
-                document.getElementById('tabDetailAmount').textContent = '$' + tab.amount.toFixed(2);
-                
-                // Show member discount info if applicable
-                const memberDiscountRow = document.getElementById('tabDetailMemberDiscount');
-                if (memberDiscountRow) {
-                    if (tab.isMember && tab.memberDiscount > 0) {
-                        const discountAmount = tab.subtotal * (tab.memberDiscount / 100);
-                        memberDiscountRow.innerHTML = `<span style="color:#27ae60;">-$${discountAmount.toFixed(2)} (${tab.memberDiscount}% member discount)</span>`;
-                        memberDiscountRow.parentElement.style.display = 'flex';
-                    } else {
-                        memberDiscountRow.parentElement.style.display = 'none';
-                    }
-                }
-                
-                // Render items list
-                const itemsListEl = document.getElementById('tabItemsList');
-                if (itemsListEl) {
-                    if (tab.items && tab.items.length > 0) {
-                        itemsListEl.innerHTML = tab.items.map(item => `
-                            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;">
-                                <span>${item.qty}x ${item.name}</span>
-                                <span>$${(item.price * item.qty).toFixed(2)}</span>
-                            </div>
-                        `).join('');
-                    } else {
-                        itemsListEl.innerHTML = '<div style="color:#999;text-align:center;">No items on this tab yet</div>';
-                    }
-                }
-                
-                showModal('tabDetail');
             }
+            
+            const tableEl = document.getElementById('tabDetailTable');
+            if (tableEl) tableEl.textContent = tab.table || 'Tab';
+                
+            // Calculate subtotal and tax
+            const tabAmount = tab.amount || tab.total || 0;
+            const subtotal = tab.subtotal || (tabAmount / (1 + getTaxRate()));
+            const tax = calculateTax(subtotal);
+            
+            // Update detail fields if they exist
+            const subtotalEl = document.getElementById('tabDetailSubtotal');
+            const taxEl = document.getElementById('tabDetailTax');
+            if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
+            if (taxEl) taxEl.textContent = formatCurrency(tax);
+            
+            const amountEl = document.getElementById('tabDetailAmount');
+            if (amountEl) amountEl.textContent = formatCurrency(tabAmount);
+            
+            // Show member discount info if applicable
+            const memberDiscountRow = document.getElementById('tabDetailMemberDiscount');
+            if (memberDiscountRow) {
+                if (tab.isMember && tab.memberDiscount > 0) {
+                    const discountAmount = (tab.subtotal || 0) * (tab.memberDiscount / 100);
+                    memberDiscountRow.innerHTML = `<span style="color:#27ae60;">-$${discountAmount.toFixed(2)} (${tab.memberDiscount}% member discount)</span>`;
+                    if (memberDiscountRow.parentElement) memberDiscountRow.parentElement.style.display = 'flex';
+                } else {
+                    if (memberDiscountRow.parentElement) memberDiscountRow.parentElement.style.display = 'none';
+                }
+            }
+            
+            // Render items list
+            const itemsListEl = document.getElementById('tabItemsList');
+            if (itemsListEl) {
+                if (tab.items && tab.items.length > 0) {
+                    itemsListEl.innerHTML = tab.items.map(item => `
+                        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;">
+                            <span>${item.qty || 1}x ${item.name || 'Item'}</span>
+                            <span>$${((item.price || 0) * (item.qty || 1)).toFixed(2)}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    itemsListEl.innerHTML = '<div style="color:#999;text-align:center;">No items on this tab yet</div>';
+                }
+            }
+            
+            showModal('tabDetail');
         }
         
         function closeTab() {
             if (!selectedTabId) return;
-            const tab = openTabs.find(t => t.id === selectedTabId);
-            if (!tab) return;
+            const tab = openTabs.find(t => t.id == selectedTabId);
+            if (!tab) {
+                showToast('Tab not found', 'error');
+                return;
+            }
             
-            if (tab.amount > 0 || (tab.items && tab.items.length > 0)) {
+            const tabAmount = tab.amount || tab.total || 0;
+            if (tabAmount > 0 || (tab.items && tab.items.length > 0)) {
                 // Load tab items into cart and open payment modal
                 cart = tab.items ? tab.items.map(i => ({...i})) : [];
                 currentDiscount = 0;
@@ -3336,7 +3667,7 @@
             } else {
                 // No charges - just close the tab
                 openTabs = openTabs.filter(t => t.id !== selectedTabId);
-                localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
+                saveTabs();
                 hideModal('tabDetail');
                 renderOpenTabs();
                 renderFloorPlan();
@@ -3346,50 +3677,98 @@
         }
         
         // Called after payment is completed to finalize tab closing
-        function finalizeTabClose(tabId, paymentMethod) {
-            const tab = openTabs.find(t => t.id === tabId);
-            if (tab) {
-                openTabs = openTabs.filter(t => t.id !== tabId);
-                localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
+        async function finalizeTabClose(tabId, paymentMethod) {
+            const employeeName = getCurrentUserName();
+            
+            try {
+                if (typeof TabsSync !== 'undefined') {
+                    // Use TabsSync to close the tab
+                    await TabsSync.closeTab(tabId, paymentMethod, 0, employeeName);
+                    // Reload tabs from TabsSync
+                    openTabs = TabsSync.getAllTabs();
+                } else {
+                    // Fallback to local array
+                    openTabs = openTabs.filter(t => String(t.id) !== String(tabId));
+                    saveTabs();
+                }
+                
                 renderOpenTabs();
                 renderFloorPlan();
+            } catch (error) {
+                console.error('Error closing tab:', error);
+                showToast('Error finalizing tab close', 'error');
             }
         }
         
-        function addToTabFromCurrent() {
+        async function addToTabFromCurrent() {
             if (!selectedTabId) return showToast('No tab selected', 'error');
             if (cart.length === 0) return showToast('Add items to cart first', 'error');
             
-            const tab = openTabs.find(t => t.id === selectedTabId);
-            if (tab) {
-                const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-                const cartTax = cartTotal * 0.0635;
+            const employeeName = getCurrentUserName();
+            
+            // Format cart items for TabsSync
+            const items = cart.map(item => ({
+                name: item.name,
+                price: parseFloat(item.price) || 0,
+                qty: parseInt(item.qty) || 1,
+                category: item.category || 'misc'
+            }));
+            
+            const itemCount = items.reduce((sum, i) => sum + i.qty, 0);
+            const cartTotal = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+            const cartTax = calculateTax(cartTotal);
+            
+            try {
+                let tab = null;
                 
-                // Add items to tab
-                if (!tab.items) tab.items = [];
-                cart.forEach(cartItem => {
-                    const existing = tab.items.find(i => i.name === cartItem.name);
-                    if (existing) {
-                        existing.qty += cartItem.qty;
-                    } else {
-                        tab.items.push({ ...cartItem });
+                if (typeof TabsSync !== 'undefined') {
+                    // Use TabsSync for synced tab management
+                    tab = TabsSync.getTab(selectedTabId);
+                    if (!tab) {
+                        showToast('Tab not found', 'error');
+                        return;
                     }
-                });
+                    
+                    await TabsSync.addItemsToTab(selectedTabId, items, employeeName);
+                    
+                    // Reload tabs from TabsSync
+                    openTabs = TabsSync.getAllTabs();
+                } else {
+                    // Fallback to local storage
+                    tab = openTabs.find(t => String(t.id) === String(selectedTabId));
+                    if (!tab) {
+                        showToast('Tab not found', 'error');
+                        return;
+                    }
+                    
+                    if (!tab.items) tab.items = [];
+                    items.forEach(item => {
+                        const existing = tab.items.find(i => i.name === item.name && i.price === item.price);
+                        if (existing) {
+                            existing.qty += item.qty;
+                        } else {
+                            tab.items.push({...item});
+                        }
+                    });
+                    
+                    tab.subtotal = tab.items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+                    tab.total = tab.subtotal * (1 + getTaxRate());
+                    tab.amount = tab.total;
+                    saveTabs();
+                }
                 
-                tab.subtotal = (tab.subtotal || 0) + cartTotal;
-                tab.amount += cartTotal + cartTax;
-                localStorage.setItem('gc_tabs', JSON.stringify(openTabs));
-                
-                const itemCount = cart.reduce((sum, i) => sum + i.qty, 0);
                 cart = [];
                 currentDiscount = 0;
                 renderCart();
                 hideModal('tabDetail');
                 renderOpenTabs();
-                renderFloorPlan(); // Update floor plan to show updated tab amount
-                showToast(`${itemCount} item${itemCount > 1 ? 's' : ''} ($${(cartTotal + cartTax).toFixed(2)}) added to ${tab.customer}'s tab`);
+                renderFloorPlan();
+                showToast(`${itemCount} item${itemCount > 1 ? 's' : ''} ($${(cartTotal + cartTax).toFixed(2)}) added to ${tab?.customer || 'tab'}'s tab`);
+                selectedTabId = null;
+            } catch (error) {
+                console.error('Error adding to tab:', error);
+                showToast('Failed to add items to tab', 'error');
             }
-            selectedTabId = null;
         }
 
         function selectTable(id) {
@@ -3568,6 +3947,8 @@
         function changeDate(delta) {
             currentDate.setDate(currentDate.getDate() + delta);
             selectedDate = currentDate.toISOString().split('T')[0];
+            // Sync tee sheet date picker
+            document.getElementById('teeSheetDate').value = selectedDate;
             updateDateDisplay();
             renderTeeSheet();
         }
@@ -3575,6 +3956,8 @@
         function goToToday() {
             currentDate = new Date();
             selectedDate = currentDate.toISOString().split('T')[0];
+            // Sync tee sheet date picker
+            document.getElementById('teeSheetDate').value = selectedDate;
             updateDateDisplay();
             renderTeeSheet();
             showToast('Viewing today');
@@ -3590,13 +3973,14 @@
             const current = new Date(dateInput.value);
             current.setDate(current.getDate() + delta);
             dateInput.value = current.toISOString().split('T')[0];
+            // Sync currentDate and selectedDate
+            currentDate = new Date(current);
+            selectedDate = dateInput.value;
+            updateDateDisplay();
             renderTeeSheet();
         }
         
-        function goToToday() {
-            document.getElementById('teeSheetDate').value = new Date().toISOString().split('T')[0];
-            renderTeeSheet();
-        }
+        // REMOVED duplicate goToToday - using unified version above
 
         function selectDate(day) {
             currentDate.setDate(day);
@@ -4037,11 +4421,16 @@
         }
         
         let selectedBookingCustomerTier = null;
+        // Note: selectedBookingMemberType is declared earlier in the file (line ~2717)
         
-        function selectBookingCustomer(name, isMember, tierType) {
+        // Legacy function for autocomplete selections by name
+        // DEPRECATED: Use selectBookingCustomerById when possible
+        function selectBookingCustomerByName(name, isMember, tierType) {
             bookingCustomerInput.value = name;
             bookingAutocomplete.style.display = 'none';
             selectedBookingCustomerTier = tierType;
+            // IMPORTANT: Also set selectedBookingMemberType for pricing consistency
+            selectedBookingMemberType = tierType;
             
             if (isMember) {
                 const isVIP = tierType && (tierType.includes('eagle') || tierType.includes('birdie'));
@@ -4060,13 +4449,37 @@
                 } else {
                     showToast(`${displayName} selected: ${name}`, 'success');
                 }
+                
+                // Show member badge
+                document.getElementById('bookingMemberBadge').style.display = 'block';
+                document.getElementById('bookingMemberText').textContent = displayName;
+                const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%' };
+                document.getElementById('bookingMemberDiscount').textContent = (discounts[tierType] || '10%') + ' OFF';
+            } else {
+                selectedBookingMemberType = null;
+                document.getElementById('bookingMemberBadge').style.display = 'none';
             }
             
             updateBookingPrice();
         }
+        
+        // Wrapper function for backward compatibility - routes to ID-based or name-based
+        function selectBookingCustomer(firstArg, isMember, tierType) {
+            // Check if first argument is a customer ID (number) or name (string with spaces)
+            if (typeof firstArg === 'number' || (typeof firstArg === 'string' && !firstArg.includes(' ') && !isNaN(parseInt(firstArg)))) {
+                // It's an ID - use the ID-based selector (defined later in the file)
+                selectBookingCustomerById(parseInt(firstArg));
+            } else {
+                // It's a name - use the name-based selector
+                selectBookingCustomerByName(firstArg, isMember, tierType);
+            }
+        }
 
         // Initialize tee sheet date picker
         document.getElementById('teeSheetDate').value = new Date().toISOString().split('T')[0];
+        
+        // Load tabs before rendering
+        loadTabs();
         
         renderTeeSheet();
         renderFloorPlan();
@@ -4481,14 +4894,15 @@
             
             else if (selectedImportType === 'transactions') {
                 pendingImportData.forEach(row => {
+                    const amount = parseFloat(row[mapping.amount]) || 0;
                     const trans = {
                         id: transactions.length + imported + 26763,
                         date: row[mapping.date] || new Date().toISOString(),
                         time: row[mapping.time] || '12:00 PM',
                         customer: row[mapping.customer] || 'Imported',
-                        amount: parseFloat(row[mapping.amount]) || 0,
-                        subtotal: parseFloat(row[mapping.amount]) / 1.0635 || 0,
-                        tax: parseFloat(row[mapping.tax]) || (parseFloat(row[mapping.amount]) * 0.0635 / 1.0635) || 0,
+                        amount: amount,
+                        subtotal: amount / (1 + getTaxRate()) || 0,
+                        tax: parseFloat(row[mapping.tax]) || (amount * getTaxRate() / (1 + getTaxRate())) || 0,
                         method: row[mapping.method] || 'cash',
                         items: [],
                         itemCount: 0,
@@ -5400,6 +5814,9 @@
                             <button onclick="showReaderSetup(); closeSettings();" style="padding:12px;background:#635bff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;">
                                 <i class="fas fa-credit-card"></i> Card Reader Setup
                             </button>
+                            <button onclick="connectCashDrawerFromSettings()" style="padding:12px;background:#1976d2;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                                <i class="fas fa-cash-register"></i> ${window.CashDrawer?.isConnected ? '✓ Drawer Connected' : 'Connect USB Drawer'}
+                            </button>
                         </div>
                         
                         <!-- Admin Panel Link -->
@@ -5431,6 +5848,23 @@
             
             closeSettings();
             showToast('Settings saved!', 'success');
+        }
+        
+        // Connect USB cash drawer from settings
+        async function connectCashDrawerFromSettings() {
+            if (typeof CashDrawer === 'undefined') {
+                showToast('Cash drawer module not loaded', 'error');
+                return;
+            }
+            
+            try {
+                await CashDrawer.connect();
+                closeSettings();
+                showSettings(); // Refresh to update button text
+                showToast('Cash drawer connected!', 'success');
+            } catch (err) {
+                showToast('Failed to connect: ' + err.message, 'error');
+            }
         }
 
         // ============ CLOUD SYNC ============
@@ -5937,7 +6371,7 @@
                                 <i class="fas fa-exclamation-triangle" style="color:#f57c00;"></i>
                                 <strong>Stripe Not Configured</strong>
                                 <p style="margin:5px 0 0;font-size:13px;">Add your Stripe API keys in Settings first.</p>
-                                <button onclick="closeReaderSetup(); showSettingsModal();" style="margin-top:10px;padding:8px 15px;background:#4a90a4;color:#fff;border:none;border-radius:6px;cursor:pointer;">Open Settings</button>
+                                <button onclick="closeReaderSetup(); showSettings();" style="margin-top:10px;padding:8px 15px;background:#4a90a4;color:#fff;border:none;border-radius:6px;cursor:pointer;">Open Settings</button>
                             </div>
                         ` : `
                             <div style="margin-bottom:20px;">
@@ -6013,6 +6447,54 @@
             }
         }
         
+        async function reconnectSavedReader() {
+            const savedReader = JSON.parse(localStorage.getItem('gc_saved_reader') || 'null');
+            if (!savedReader) {
+                showToast('No saved reader found', 'error');
+                return;
+            }
+            
+            const statusEl = document.getElementById('readerStatus');
+            if (statusEl) {
+                statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reconnecting...';
+            }
+            
+            try {
+                if (!stripeTerminal) {
+                    await initStripeTerminal();
+                }
+                
+                const discoverResult = await stripeTerminal.discoverReaders({ location: savedReader.location });
+                const reader = discoverResult.discoveredReaders.find(r => r.id === savedReader.id);
+                
+                if (reader) {
+                    const connectResult = await stripeTerminal.connectReader(reader);
+                    if (!connectResult.error) {
+                        connectedReader = connectResult.reader;
+                        showToast('Reconnected to ' + (reader.label || 'Card Reader'), 'success');
+                        updateReaderStatus();
+                        closeReaderSetup();
+                    } else {
+                        showToast('Failed to reconnect: ' + connectResult.error.message, 'error');
+                        if (statusEl) {
+                            statusEl.innerHTML = '<i class="fas fa-times-circle" style="color:#e74c3c;"></i> Connection failed';
+                        }
+                    }
+                } else {
+                    showToast('Saved reader not found. Try scanning for readers.', 'error');
+                    if (statusEl) {
+                        statusEl.innerHTML = '<i class="fas fa-times-circle" style="color:#e74c3c;"></i> Reader not found';
+                    }
+                }
+            } catch (error) {
+                console.error('Reconnect error:', error);
+                showToast('Failed to reconnect', 'error');
+                if (statusEl) {
+                    statusEl.innerHTML = '<i class="fas fa-times-circle" style="color:#e74c3c;"></i> Error reconnecting';
+                }
+            }
+        }
+        
         async function useSimulatedReader() {
             if (!stripeTerminal) {
                 await initStripeTerminal();
@@ -6069,6 +6551,13 @@
                 });
             }
             
+            // Initialize tee sheet with today's date
+            const teeSheetDate = document.getElementById('teeSheetDate');
+            if (teeSheetDate) {
+                teeSheetDate.value = new Date().toISOString().split('T')[0];
+            }
+            renderTeeSheet();
+            
             // Preload quick customer suggestions
             loadQuickCustomerSuggestions();
         });
@@ -6112,8 +6601,8 @@
             }
         }
         
-        // Select customer for booking modal
-        function selectBookingCustomer(customerId) {
+        // Select customer for booking modal by ID (primary method)
+        function selectBookingCustomerById(customerId) {
             const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
             const customer = customers.find(c => c.id === customerId);
             if (!customer) return;
@@ -6130,6 +6619,7 @@
             const isActive = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > new Date();
             if (isActive) {
                 selectedBookingMemberType = customer.memberType;
+                selectedBookingCustomerTier = customer.memberType; // Sync both variables
                 const badge = document.getElementById('bookingMemberBadge');
                 const tierNames = { 'par': 'Par Member', 'birdie': 'Birdie Member', 'eagle': 'Eagle Member', 'family_par': 'Family Par', 'family_birdie': 'Family Birdie', 'family_eagle': 'Family Eagle' };
                 const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%' };
@@ -6140,6 +6630,7 @@
                 updateBookingPrice();
             } else {
                 selectedBookingMemberType = null;
+                selectedBookingCustomerTier = null; // Sync both variables
                 document.getElementById('bookingMemberBadge').style.display = 'none';
             }
             

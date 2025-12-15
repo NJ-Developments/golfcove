@@ -42,15 +42,43 @@ const TabsManager = (function() {
         if (typeof TabsSync !== 'undefined') {
             return TabsSync.getAllTabs();
         }
-        return JSON.parse(localStorage.getItem('gc_tabs') || '[]')
-            .filter(t => t.status === 'open' || !t.status);
+        const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+        // Filter open tabs (no status means open, or status === 'open')
+        // Also normalize the data structure for compatibility
+        return tabs.filter(t => !t.status || t.status === 'open').map(normalizeTab);
+    }
+    
+    function normalizeTab(tab) {
+        if (!tab) return null;
+        return {
+            ...tab,
+            // Ensure consistent ID format
+            id: tab.id,
+            // Normalize customer name
+            customer: tab.customer || tab.customerName || 'Guest',
+            // Normalize totals (amount vs total)
+            total: tab.total ?? tab.amount ?? 0,
+            amount: tab.amount ?? tab.total ?? 0,
+            subtotal: tab.subtotal ?? 0,
+            // Normalize timestamps
+            openedAt: tab.openedAt || tab.createdAt,
+            createdAt: tab.createdAt || tab.openedAt,
+            // Ensure items array exists
+            items: tab.items || [],
+            // Member info
+            isMember: tab.isMember || false,
+            memberType: tab.memberType || null,
+            memberDiscount: tab.memberDiscount || 0
+        };
     }
     
     function getTab(tabId) {
         if (typeof TabsSync !== 'undefined') {
-            return TabsSync.getTab(tabId);
+            const tab = TabsSync.getTab(tabId);
+            return normalizeTab(tab);
         }
-        return getTabs().find(t => t.id === tabId);
+        const tab = getTabs().find(t => t.id === tabId || t.id == tabId);
+        return normalizeTab(tab);
     }
     
     // ============ RENDERING ============
@@ -78,7 +106,7 @@ const TabsManager = (function() {
             const isMember = tab.isMember || false;
             const isVIP = tab.isVIP || false;
             const itemCount = (tab.items || []).length;
-            const total = tab.total || 0;
+            const total = tab.total || tab.amount || 0;
             
             let tabClass = 'tab-item';
             if (isVIP) tabClass += ' vip';
@@ -179,7 +207,7 @@ const TabsManager = (function() {
             openedAt: new Date().toISOString(),
             openedBy: options.employee || 'Staff'
         };
-        newTab.tax = newTab.subtotal * 0.0635;
+        newTab.tax = newTab.subtotal * (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635);
         newTab.total = newTab.subtotal + newTab.tax;
         
         tabs.push(newTab);
@@ -202,7 +230,7 @@ const TabsManager = (function() {
         
         tabs[idx].items = [...(tabs[idx].items || []), ...items];
         tabs[idx].subtotal = tabs[idx].items.reduce((sum, i) => sum + (i.price * (i.qty || 1)), 0);
-        tabs[idx].tax = tabs[idx].subtotal * 0.0635;
+        tabs[idx].tax = tabs[idx].subtotal * (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635);
         tabs[idx].total = tabs[idx].subtotal + tabs[idx].tax;
         
         localStorage.setItem('gc_tabs', JSON.stringify(tabs));

@@ -5,6 +5,33 @@
 
 const Customers = {
     list: [],
+    MAX_CUSTOMERS: 10000, // Storage limit
+    
+    // Validation helpers
+    _sanitize(str) {
+        if (typeof str !== 'string') return '';
+        return str.trim().substring(0, 200);
+    },
+    
+    _validateEmail(email) {
+        if (!email) return '';
+        email = String(email).trim().toLowerCase();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email) ? email : '';
+    },
+    
+    _validatePhone(phone) {
+        if (!phone) return '';
+        // Strip to digits only, keep 10-15 digits
+        const digits = String(phone).replace(/\D/g, '');
+        return digits.length >= 10 && digits.length <= 15 ? digits : '';
+    },
+    
+    _validateName(name) {
+        if (!name || typeof name !== 'string') return null;
+        const clean = name.trim().substring(0, 100);
+        return clean.length >= 1 ? clean : null;
+    },
     
     // Load customers
     init() {
@@ -25,12 +52,19 @@ const Customers = {
     search(query) {
         if (!query) return this.list.slice(0, 20);
         
-        query = query.toLowerCase();
-        return this.list.filter(c => 
-            c.name.toLowerCase().includes(query) ||
+        // Sanitize query
+        if (typeof query !== 'string') return [];
+        query = query.toLowerCase().trim().substring(0, 50);
+        if (query.length < 1) return this.list.slice(0, 20);
+        
+        const results = this.list.filter(c => 
+            c.name?.toLowerCase().includes(query) ||
             c.phone?.includes(query) ||
             c.email?.toLowerCase().includes(query)
         );
+        
+        // Limit results
+        return results.slice(0, 50);
     },
     
     // Get customer by ID
@@ -40,13 +74,47 @@ const Customers = {
     
     // Add new customer
     add(customer) {
+        // Validate required name
+        const validName = this._validateName(customer?.name);
+        if (!validName) {
+            console.error('Invalid customer name');
+            return null;
+        }
+        
+        // Check for duplicates (by phone or email)
+        const phone = this._validatePhone(customer.phone);
+        const email = this._validateEmail(customer.email);
+        
+        if (phone || email) {
+            const duplicate = this.list.find(c => 
+                (phone && c.phone === phone) || 
+                (email && c.email === email)
+            );
+            if (duplicate) {
+                console.warn('Customer with this phone/email already exists:', duplicate.id);
+                // Return existing customer instead of creating duplicate
+                return duplicate;
+            }
+        }
+        
+        // Check storage limit
+        if (this.list.length >= this.MAX_CUSTOMERS) {
+            console.error('Customer storage limit reached');
+            POS.toast('Customer database full. Please contact support.', 'error');
+            return null;
+        }
+        
         const newCustomer = {
             id: Date.now().toString(),
-            name: customer.name,
-            phone: customer.phone || '',
-            email: customer.email || '',
-            notes: customer.notes || '',
+            name: validName,
+            phone: phone,
+            email: email,
+            notes: this._sanitize(customer.notes || ''),
             membershipType: customer.membershipType || null,
+            loyaltyPoints: 0,
+            totalSpent: 0,
+            visitCount: 0,
+            lastVisit: null,
             createdAt: new Date().toISOString()
         };
         
@@ -60,7 +128,37 @@ const Customers = {
         const index = this.list.findIndex(c => c.id === id);
         if (index === -1) return null;
         
-        this.list[index] = { ...this.list[index], ...updates };
+        // Validate updates
+        const validated = {};
+        if (updates.name !== undefined) {
+            const name = this._validateName(updates.name);
+            if (name) validated.name = name;
+        }
+        if (updates.phone !== undefined) {
+            validated.phone = this._validatePhone(updates.phone);
+        }
+        if (updates.email !== undefined) {
+            validated.email = this._validateEmail(updates.email);
+        }
+        if (updates.notes !== undefined) {
+            validated.notes = this._sanitize(updates.notes);
+        }
+        if (updates.membershipType !== undefined) {
+            validated.membershipType = updates.membershipType;
+        }
+        // Allow updating numeric fields
+        ['loyaltyPoints', 'totalSpent', 'visitCount'].forEach(field => {
+            if (typeof updates[field] === 'number' && updates[field] >= 0) {
+                validated[field] = updates[field];
+            }
+        });
+        if (updates.lastVisit) {
+            validated.lastVisit = updates.lastVisit;
+        }
+        
+        validated.updatedAt = new Date().toISOString();
+        
+        this.list[index] = { ...this.list[index], ...validated };
         this.save();
         return this.list[index];
     },

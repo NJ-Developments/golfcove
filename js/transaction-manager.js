@@ -9,13 +9,24 @@ const GolfCoveTransactionManager = (function() {
     const Core = GolfCoveCore;
     
     // ============ CONFIGURATION ============
-    const config = {
-        taxRate: 0.0635,
-        tipOptions: [15, 18, 20, 25],
-        receiptEmail: true,
-        requireSignature: false, // For amounts over signatureThreshold
-        signatureThreshold: 25
+    // Use unified config, with fallbacks for backwards compatibility
+    const getConfig = () => {
+        const unified = window.GolfCoveConfig;
+        return {
+            taxRate: unified?.pricing?.taxRate ?? 0.0635,
+            tipOptions: unified?.pricing?.tipPresets ?? [15, 18, 20, 25],
+            receiptEmail: unified?.pos?.receiptEmail ?? true,
+            requireSignature: unified?.pos?.requireSignature ?? false,
+            signatureThreshold: unified?.pos?.signatureThreshold ?? 25
+        };
     };
+    
+    // Legacy config accessor for backwards compatibility
+    const config = new Proxy({}, {
+        get(target, prop) {
+            return getConfig()[prop];
+        }
+    });
     
     // ============ STATE ============
     const transactionQueue = [];
@@ -720,6 +731,171 @@ const GolfCoveTransactionManager = (function() {
         return summary;
     }
     
+    // ============ AUDIT LOGGING ============
+    function logAuditEvent(eventType, data) {
+        const auditLog = JSON.parse(localStorage.getItem('gc_audit_log') || '[]');
+        
+        const entry = {
+            id: Core.generateId('aud'),
+            type: eventType,
+            timestamp: new Date().toISOString(),
+            userId: data.employeeId || window.POS?.state?.currentUser?.id,
+            userName: data.employeeName || window.POS?.state?.currentUser?.name,
+            register: data.register || window.GolfCoveConfig?.pos?.registerId || 'POS-1',
+            details: data,
+            sessionId: sessionStorage.getItem('gc_session_id')
+        };
+        
+        auditLog.unshift(entry);
+        
+        // Keep last 2000 audit entries
+        if (auditLog.length > 2000) {
+            auditLog.length = 2000;
+        }
+        
+        localStorage.setItem('gc_audit_log', JSON.stringify(auditLog));
+        
+        // Sync to server if available
+        if (typeof GolfCoveSyncManager !== 'undefined') {
+            GolfCoveSyncManager.create('audit_logs', entry);
+        }
+        
+        return entry;
+    }
+    
+    function getAuditLog(filters = {}) {
+        let logs = JSON.parse(localStorage.getItem('gc_audit_log') || '[]');
+        
+        if (filters.type) {
+            logs = logs.filter(l => l.type === filters.type);
+        }
+        
+        if (filters.userId) {
+            logs = logs.filter(l => l.userId === filters.userId);
+        }
+        
+        if (filters.startDate) {
+            const start = new Date(filters.startDate).getTime();
+            logs = logs.filter(l => new Date(l.timestamp).getTime() >= start);
+        }
+        
+        if (filters.endDate) {
+            const end = new Date(filters.endDate).getTime();
+            logs = logs.filter(l => new Date(l.timestamp).getTime() <= end);
+        }
+        
+        if (filters.limit) {
+            logs = logs.slice(0, filters.limit);
+        }
+        
+        return logs;
+    }
+    
+    // ============ DAILY REPORTS ============
+    function generateDailyReport(date = null) {
+        const targetDate = date || new Date().toISOString().split('T')[0];
+        const nextDate = new Date(targetDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        
+        const transactions = getTransactions({
+            startDate: targetDate,
+            endDate: nextDate.toISOString().split('T')[0]
+        });
+        
+        const report = {
+            date: targetDate,
+            generatedAt: new Date().toISOString(),
+            summary: {
+                totalTransactions: 0,
+                completedTransactions: 0,
+                voidedTransactions: 0,
+                refundedTransactions: 0,
+                grossSales: 0,
+                discounts: 0,
+                netSales: 0,
+                tax: 0,
+                tips: 0,
+                refunds: 0,
+                totalCollected: 0
+            },
+            byPaymentMethod: {},
+            byEmployee: {},
+            byHour: {},
+            topItems: {},
+            averageTicket: 0
+        };
+        
+        transactions.forEach(txn => {
+            report.summary.totalTransactions++;
+            
+            if (txn.status === 'completed') {
+                report.summary.completedTransactions++;
+                report.summary.grossSales += txn.pricing.subtotal;
+                report.summary.discounts += txn.pricing.discount || 0;
+                report.summary.tax += txn.pricing.tax;
+                report.summary.tips += txn.pricing.tip || 0;
+                report.summary.totalCollected += txn.pricing.total;
+            } else if (txn.status === 'voided') {
+                report.summary.voidedTransactions++;
+            }
+            
+            if (txn.refunded) {
+                report.summary.refundedTransactions++;
+                report.summary.refunds += txn.refunded;
+            }
+            
+            // By payment method
+            txn.payments?.forEach(p => {
+                if (p.status === 'completed') {
+                    if (!report.byPaymentMethod[p.method]) {
+                        report.byPaymentMethod[p.method] = { count: 0, amount: 0 };
+                    }
+                    report.byPaymentMethod[p.method].count++;
+                    report.byPaymentMethod[p.method].amount += p.amount;
+                }
+            });
+            
+            // By employee
+            const empId = txn.metadata?.employeeId || 'unknown';
+            const empName = txn.metadata?.employeeName || 'Unknown';
+            if (!report.byEmployee[empId]) {
+                report.byEmployee[empId] = { name: empName, transactions: 0, sales: 0 };
+            }
+            report.byEmployee[empId].transactions++;
+            report.byEmployee[empId].sales += txn.pricing.total;
+            
+            // By hour
+            const hour = new Date(txn.timestamps.created).getHours();
+            if (!report.byHour[hour]) {
+                report.byHour[hour] = { transactions: 0, sales: 0 };
+            }
+            report.byHour[hour].transactions++;
+            report.byHour[hour].sales += txn.pricing.total;
+            
+            // Top items
+            txn.items?.forEach(item => {
+                const key = item.id || item.name;
+                if (!report.topItems[key]) {
+                    report.topItems[key] = { name: item.name, quantity: 0, revenue: 0 };
+                }
+                report.topItems[key].quantity += item.quantity || item.qty || 1;
+                report.topItems[key].revenue += item.lineTotal || (item.price * (item.quantity || item.qty || 1));
+            });
+        });
+        
+        report.summary.netSales = report.summary.grossSales - report.summary.discounts;
+        report.summary.averageTicket = report.summary.completedTransactions > 0 
+            ? report.summary.totalCollected / report.summary.completedTransactions 
+            : 0;
+        
+        // Sort top items by quantity
+        report.topItems = Object.values(report.topItems)
+            .sort((a, b) => b.quantity - a.quantity)
+            .slice(0, 20);
+        
+        return report;
+    }
+    
     // ============ PUBLIC API ============
     return {
         // Configuration
@@ -742,6 +918,13 @@ const GolfCoveTransactionManager = (function() {
         // Queries
         getTransactions,
         getTodaysSummary,
+        
+        // Reporting
+        generateDailyReport,
+        
+        // Audit
+        logAuditEvent,
+        getAuditLog,
         
         // Current transaction
         get current() { return currentTransaction; },

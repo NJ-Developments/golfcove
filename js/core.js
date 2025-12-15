@@ -7,13 +7,23 @@ const GolfCoveCore = (function() {
     'use strict';
     
     // ============ CONFIGURATION ============
+    // Use unified config if available, otherwise fallback to defaults
+    const getConfig = () => window.GolfCoveConfig || null;
+    
     const config = {
         appName: 'Golf Cove',
         version: '2.0.0',
         debug: localStorage.getItem('gc_debug') === 'true',
-        taxRate: 0.0635,
-        currency: 'USD',
-        timezone: 'America/New_York'
+        // Tax rate should come from unified config
+        get taxRate() { 
+            return getConfig()?.pricing?.taxRate ?? 0.0635; 
+        },
+        get currency() { 
+            return getConfig()?.pricing?.currency ?? 'USD'; 
+        },
+        get timezone() { 
+            return getConfig()?.business?.timezone ?? 'America/New_York'; 
+        }
     };
     
     // ============ ERROR TYPES ============
@@ -298,20 +308,56 @@ const GolfCoveCore = (function() {
     // ============ CACHING ============
     const cache = new Map();
     const cacheTTL = new Map();
+    const cacheAccess = new Map(); // Track access for LRU
+    const MAX_CACHE_SIZE = 500;
     
     function cacheGet(key) {
+        if (typeof key !== 'string' || !key) return null;
+        
         const ttl = cacheTTL.get(key);
         if (ttl && Date.now() > ttl) {
             cache.delete(key);
             cacheTTL.delete(key);
+            cacheAccess.delete(key);
             return null;
+        }
+        
+        if (cache.has(key)) {
+            cacheAccess.set(key, Date.now()); // Update access time
         }
         return cache.get(key);
     }
     
     function cacheSet(key, value, ttlMs = 60000) {
+        if (typeof key !== 'string' || !key) return;
+        if (ttlMs < 0 || ttlMs > 86400000) ttlMs = 60000; // Max 24 hours
+        
+        // Evict old entries if at capacity
+        if (cache.size >= MAX_CACHE_SIZE && !cache.has(key)) {
+            evictLRU();
+        }
+        
         cache.set(key, value);
         cacheTTL.set(key, Date.now() + ttlMs);
+        cacheAccess.set(key, Date.now());
+    }
+    
+    function evictLRU() {
+        let oldestKey = null;
+        let oldestTime = Infinity;
+        
+        for (const [key, time] of cacheAccess) {
+            if (time < oldestTime) {
+                oldestTime = time;
+                oldestKey = key;
+            }
+        }
+        
+        if (oldestKey) {
+            cache.delete(oldestKey);
+            cacheTTL.delete(oldestKey);
+            cacheAccess.delete(oldestKey);
+        }
     }
     
     function cacheClear(pattern = null) {
@@ -331,7 +377,13 @@ const GolfCoveCore = (function() {
     // ============ FORMATTING ============
     const Format = {
         currency: (amount, showSymbol = true) => {
-            const formatted = parseFloat(amount || 0).toFixed(2);
+            const num = parseFloat(amount);
+            if (isNaN(num) || !isFinite(num)) {
+                return showSymbol ? '$0.00' : '0.00';
+            }
+            // Clamp to reasonable range to prevent display issues
+            const clamped = Math.max(-999999999, Math.min(999999999, num));
+            const formatted = clamped.toFixed(2);
             return showSymbol ? `$${formatted}` : formatted;
         },
         
@@ -435,18 +487,34 @@ const GolfCoveCore = (function() {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     
-    async function retry(fn, attempts = 3, delay = 1000) {
+    async function retry(fn, attempts = 3, delay = 1000, options = {}) {
+        const { exponentialBackoff = true, maxDelay = 30000, onRetry = null } = options;
         let lastError;
+        
+        if (typeof fn !== 'function') {
+            throw new AppError(ErrorCodes.INVALID_REQUEST, 'retry requires a function');
+        }
+        
         for (let i = 0; i < attempts; i++) {
             try {
                 return await fn();
             } catch (e) {
                 lastError = e;
                 if (i < attempts - 1) {
-                    await sleep(delay * (i + 1));
+                    const waitTime = exponentialBackoff 
+                        ? Math.min(delay * Math.pow(2, i), maxDelay)
+                        : delay;
+                    
+                    if (onRetry) {
+                        onRetry({ attempt: i + 1, error: e, nextDelay: waitTime });
+                    }
+                    
+                    log('warn', `Retry attempt ${i + 1}/${attempts}`, { error: e.message, waitTime });
+                    await sleep(waitTime);
                 }
             }
         }
+        log('error', `All ${attempts} retry attempts failed`, { error: lastError?.message });
         throw lastError;
     }
     
@@ -506,13 +574,55 @@ const GolfCoveCore = (function() {
     }
     
     // ============ LOGGING ============
+    const logRateLimiter = new Map();
+    const LOG_RATE_LIMIT = 10; // Max logs per key per minute
+    
+    function serializeError(obj) {
+        if (obj instanceof Error) {
+            return { message: obj.message, stack: obj.stack, name: obj.name };
+        }
+        if (typeof obj === 'object' && obj !== null) {
+            const result = {};
+            for (const key of Object.keys(obj)) {
+                result[key] = serializeError(obj[key]);
+            }
+            return result;
+        }
+        return obj;
+    }
+    
+    function isRateLimited(key) {
+        const now = Date.now();
+        const window = 60000; // 1 minute
+        
+        if (!logRateLimiter.has(key)) {
+            logRateLimiter.set(key, { count: 1, resetAt: now + window });
+            return false;
+        }
+        
+        const entry = logRateLimiter.get(key);
+        if (now > entry.resetAt) {
+            entry.count = 1;
+            entry.resetAt = now + window;
+            return false;
+        }
+        
+        entry.count++;
+        return entry.count > LOG_RATE_LIMIT;
+    }
+    
     function log(level, message, data = {}) {
         if (!config.debug && level === 'debug') return;
         
+        // Rate limit repeated log messages
+        const rateKey = `${level}:${message}`;
+        if (isRateLimited(rateKey)) return;
+        
+        const serializedData = serializeError(data);
         const entry = {
             level,
-            message,
-            data,
+            message: String(message).substring(0, 500), // Truncate long messages
+            data: serializedData,
             timestamp: new Date().toISOString()
         };
         
@@ -520,25 +630,33 @@ const GolfCoveCore = (function() {
         
         switch (level) {
             case 'error':
-                console.error(prefix, message, data);
+                console.error(prefix, message, serializedData);
                 break;
             case 'warn':
-                console.warn(prefix, message, data);
+                console.warn(prefix, message, serializedData);
                 break;
             case 'info':
-                console.info(prefix, message, data);
+                console.info(prefix, message, serializedData);
                 break;
             case 'debug':
-                console.log(prefix, message, data);
+                console.log(prefix, message, serializedData);
                 break;
         }
         
-        // Store errors
+        // Store errors with size limit check
         if (level === 'error') {
-            const errors = JSON.parse(localStorage.getItem('gc_error_log') || '[]');
-            errors.unshift(entry);
-            if (errors.length > 100) errors.length = 100;
-            localStorage.setItem('gc_error_log', JSON.stringify(errors));
+            try {
+                const errors = JSON.parse(localStorage.getItem('gc_error_log') || '[]');
+                errors.unshift(entry);
+                if (errors.length > 100) errors.length = 100;
+                
+                const errorJson = JSON.stringify(errors);
+                if (errorJson.length < 500000) { // 500KB limit
+                    localStorage.setItem('gc_error_log', errorJson);
+                }
+            } catch (e) {
+                console.error('Failed to store error log', e);
+            }
         }
     }
     

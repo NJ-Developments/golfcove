@@ -619,11 +619,16 @@
     </div>
     
     <!-- Scripts -->
+    <script src="js/config-unified.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/services-unified.js"></script>
+    <script src="js/menu-data.js"></script>
     <script src="js/firebase-sync.js"></script>
     <script src="js/pin-system.js"></script>
     <script src="js/membership-system.js"></script>
     <script src="js/customers.js"></script>
     <script src="js/tabs-sync.js"></script>
+    <script src="js/cash-drawer.js"></script>
     <script src="js/sales-pos.js"></script>
     <script>
         // Update time
@@ -641,11 +646,48 @@
             }
         }
         
-        // Placeholder functions
-        function showGuestCount() { alert('Guest count: 1'); }
-        function showDiningMode() { alert('Dining mode'); }
-        function noSale() { alert('No Sale - Opening drawer'); }
-        function splitOrder() { alert('Split order'); }
+        // Guest count modal
+        let guestCount = 1;
+        function showGuestCount() {
+            const count = prompt('Enter number of guests:', guestCount);
+            if (count && !isNaN(parseInt(count))) {
+                guestCount = parseInt(count);
+                document.querySelector('.footer-btn').textContent = guestCount + ' Guests';
+            }
+        }
+        
+        // Dining mode toggle
+        let diningMode = 'Dining';
+        function showDiningMode() {
+            const modes = ['Dining', 'Takeout', 'Delivery', 'Bar'];
+            const current = modes.indexOf(diningMode);
+            diningMode = modes[(current + 1) % modes.length];
+            document.querySelectorAll('.footer-btn')[1].textContent = diningMode;
+            if (typeof showToast === 'function') showToast('Mode: ' + diningMode);
+        }
+        
+        // No Sale - opens drawer without transaction
+        async function noSale() {
+            if (window.CashDrawer) {
+                await CashDrawer.kick();
+                if (typeof showToast === 'function') showToast('Drawer opened (No Sale)');
+            } else {
+                if (typeof showToast === 'function') showToast('No Sale - Drawer opened');
+            }
+        }
+        
+        // Split order between multiple payments
+        function splitOrder() {
+            if (typeof SalesPOS !== 'undefined' && SalesPOS.currentOrder && SalesPOS.currentOrder.items.length === 0) {
+                if (typeof showToast === 'function') showToast('Add items first', 'error');
+                return;
+            }
+            const ways = prompt('Split how many ways?', '2');
+            if (ways && !isNaN(parseInt(ways)) && parseInt(ways) > 1) {
+                const splitAmount = SalesPOS.currentOrder ? (SalesPOS.currentOrder.total / parseInt(ways)).toFixed(2) : '0.00';
+                if (typeof showToast === 'function') showToast('Split ' + ways + ' ways: $' + splitAmount + ' each');
+            }
+        }
     </script>
 </body>
 </html>

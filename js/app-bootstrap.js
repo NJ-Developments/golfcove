@@ -12,8 +12,10 @@ const GolfCoveApp = (function() {
         environment: 'production',
         debug: false,
         modules: [
+            'Config',           // Unified config - load first!
             'Core',
-            'ValidationSchemas', 
+            'ValidationSchemas',
+            'Services',         // Unified services layer
             'API',
             'State',
             'Notifications',
@@ -29,7 +31,9 @@ const GolfCoveApp = (function() {
     
     // ============ MODULE REGISTRY ============
     const moduleMap = {
+        'Config': () => window.GolfCoveConfig,
         'Core': () => window.GolfCoveCore,
+        'Services': () => window.GolfCoveServices,
         'ValidationSchemas': () => window.ValidationSchemas,
         'API': () => window.GolfCoveAPI,
         'State': () => window.GolfCoveState,
@@ -62,50 +66,71 @@ const GolfCoveApp = (function() {
         const startTime = performance.now();
         
         try {
+            // Helper to safely initialize a module with error boundary
+            const safeInit = (name, initFn) => {
+                try {
+                    const result = initFn();
+                    if (result) loadedModules.set(name, result);
+                    return true;
+                } catch (error) {
+                    console.error(`[${name}] Module initialization failed:`, error);
+                    // Continue with other modules
+                    return false;
+                }
+            };
+            
             // 1. Initialize core first
-            if (window.GolfCoveCore) {
-                window.GolfCoveCore.config.debug = config.debug;
-                loadedModules.set('Core', window.GolfCoveCore);
-            }
+            safeInit('Core', () => {
+                if (window.GolfCoveCore) {
+                    window.GolfCoveCore.config.debug = config.debug;
+                    return window.GolfCoveCore;
+                }
+            });
             
             // 2. Initialize validation schemas
-            if (window.ValidationSchemas) {
-                loadedModules.set('ValidationSchemas', window.ValidationSchemas);
-            }
+            safeInit('ValidationSchemas', () => window.ValidationSchemas);
             
             // 3. Initialize API layer
-            if (window.GolfCoveAPI) {
-                window.GolfCoveAPI.init({
-                    baseUrl: config.apiUrl || ''
-                });
-                loadedModules.set('API', window.GolfCoveAPI);
-            }
+            safeInit('API', () => {
+                if (window.GolfCoveAPI) {
+                    window.GolfCoveAPI.init({ baseUrl: config.apiUrl || '' });
+                    return window.GolfCoveAPI;
+                }
+            });
             
             // 4. Initialize state management
-            if (window.GolfCoveState) {
-                window.GolfCoveState.init();
-                loadedModules.set('State', window.GolfCoveState);
-            }
+            safeInit('State', () => {
+                if (window.GolfCoveState) {
+                    window.GolfCoveState.init();
+                    return window.GolfCoveState;
+                }
+            });
             
             // 5. Initialize notifications
-            if (window.GolfCoveNotifications) {
-                window.GolfCoveNotifications.init();
-                loadedModules.set('Notifications', window.GolfCoveNotifications);
-            }
+            safeInit('Notifications', () => {
+                if (window.GolfCoveNotifications) {
+                    window.GolfCoveNotifications.init();
+                    return window.GolfCoveNotifications;
+                }
+            });
             
             // 6. Initialize sync manager
-            if (window.GolfCoveSyncManager) {
-                window.GolfCoveSyncManager.init({
-                    collections: ['customers', 'bookings', 'tabs', 'transactions', 'inventory']
-                });
-                loadedModules.set('SyncManager', window.GolfCoveSyncManager);
-            }
+            safeInit('SyncManager', () => {
+                if (window.GolfCoveSyncManager) {
+                    window.GolfCoveSyncManager.init({
+                        collections: ['customers', 'bookings', 'tabs', 'transactions', 'inventory']
+                    });
+                    return window.GolfCoveSyncManager;
+                }
+            });
             
             // 7. Initialize booking manager
-            if (window.GolfCoveBookingManager) {
-                window.GolfCoveBookingManager.init();
-                loadedModules.set('BookingManager', window.GolfCoveBookingManager);
-            }
+            safeInit('BookingManager', () => {
+                if (window.GolfCoveBookingManager) {
+                    window.GolfCoveBookingManager.init();
+                    return window.GolfCoveBookingManager;
+                }
+            });
             
             // Load other modules
             for (const [name, getter] of Object.entries(moduleMap)) {

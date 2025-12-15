@@ -4,6 +4,24 @@
 // ============================================================
 
 const Menu = {
+    // Sanitization helpers
+    _sanitize(str) {
+        if (typeof str !== 'string') return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    },
+    
+    _validatePrice(price) {
+        const num = parseFloat(price);
+        if (isNaN(num) || num < 0 || num > 10000) return null;
+        return Math.round(num * 100) / 100; // Round to 2 decimal places
+    },
+    
+    _validateProductId(id) {
+        return typeof id === 'string' && /^[a-zA-Z0-9_-]+$/.test(id);
+    },
+    
     // Categories
     categories: [
         { id: 'tee-times', name: 'Tee Times', icon: 'fa-golf-ball-tee' },
@@ -75,6 +93,11 @@ const Menu = {
     
     // Initialize menu
     init() {
+        // Try to load products from unified GolfCoveMenu if available
+        if (typeof GolfCoveMenu !== 'undefined' && GolfCoveMenu.items) {
+            this.loadFromUnifiedMenu();
+        }
+        
         // Load custom products from localStorage
         const customProducts = JSON.parse(localStorage.getItem('gc_custom_products') || '{}');
         Object.keys(customProducts).forEach(cat => {
@@ -84,6 +107,53 @@ const Menu = {
         
         this.renderCategories();
         this.renderProducts('tee-times');
+    },
+    
+    // Load products from unified menu-data.js
+    loadFromUnifiedMenu() {
+        if (typeof GolfCoveMenu === 'undefined') return;
+        
+        const menuItems = GolfCoveMenu.items;
+        
+        // Map categories from unified menu
+        const categoryMap = {
+            'rentals': 'rentals',
+            'food': 'food',
+            'pizza': 'food',
+            'wings': 'food',
+            'cocktails': 'alcohol',
+            'beer': 'alcohol',
+            'wine': 'alcohol',
+            'seltzers': 'alcohol',
+            'coffee': 'drinks',
+            'merch': 'merch',
+            'gift-cards': 'merch'
+        };
+        
+        // Convert GolfCoveMenu items to POS menu format
+        Object.keys(menuItems).forEach(category => {
+            const targetCategory = categoryMap[category] || category;
+            if (!this.products[targetCategory]) {
+                this.products[targetCategory] = [];
+            }
+            
+            menuItems[category].forEach(item => {
+                // Avoid duplicates
+                const exists = this.products[targetCategory].some(p => p.name === item.name);
+                if (!exists) {
+                    this.products[targetCategory].push({
+                        id: item.id || category + '_' + item.name.toLowerCase().replace(/\s+/g, '_'),
+                        name: item.name,
+                        price: item.price,
+                        type: category,
+                        inventoryId: item.id,
+                        trackInventory: item.stock !== undefined
+                    });
+                }
+            });
+        });
+        
+        console.log('[Menu] Loaded items from unified GolfCoveMenu');
     },
     
     // Render category tabs
@@ -140,6 +210,12 @@ const Menu = {
     
     // Add product to cart
     addToCart(productId) {
+        // Validate product ID format
+        if (!this._validateProductId(productId)) {
+            console.warn('Invalid product ID format:', productId);
+            return false;
+        }
+        
         // Find product across all categories
         let product = null;
         for (const cat in this.products) {
@@ -147,24 +223,56 @@ const Menu = {
             if (product) break;
         }
         
-        if (product) {
-            Cart.add({
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                type: product.type
-            });
+        if (!product) {
+            console.warn('Product not found:', productId);
+            return false;
         }
+        
+        // Validate price before adding
+        const validPrice = this._validatePrice(product.price);
+        if (validPrice === null) {
+            console.error('Invalid product price:', product.price);
+            return false;
+        }
+        
+        Cart.add({
+            id: product.id,
+            name: this._sanitize(product.name),
+            price: validPrice,
+            type: product.type || 'general'
+        });
+        
+        return true;
     },
     
     // Quick add by name (for custom items)
     quickAdd(name, price) {
+        // Validate inputs
+        if (!name || typeof name !== 'string') {
+            POS.toast('Item name is required', 'error');
+            return false;
+        }
+        
+        const sanitizedName = this._sanitize(name.trim());
+        if (sanitizedName.length === 0 || sanitizedName.length > 100) {
+            POS.toast('Invalid item name', 'error');
+            return false;
+        }
+        
+        const validPrice = this._validatePrice(price);
+        if (validPrice === null || validPrice <= 0) {
+            POS.toast('Invalid price', 'error');
+            return false;
+        }
+        
         Cart.add({
             id: 'custom_' + Date.now(),
-            name: name,
-            price: price,
+            name: sanitizedName,
+            price: validPrice,
             type: 'custom'
         });
+        
+        return true;
     },
     
     // Search products
@@ -174,12 +282,21 @@ const Menu = {
             return;
         }
         
-        query = query.toLowerCase();
+        // Sanitize and limit query
+        if (typeof query !== 'string') return;
+        query = query.toLowerCase().trim().substring(0, 50);
+        if (query.length < 1) {
+            this.renderProducts(this.activeCategory);
+            return;
+        }
+        
         const results = [];
+        const maxResults = 50; // Limit results for performance
         
         for (const cat in this.products) {
+            if (results.length >= maxResults) break;
             this.products[cat].forEach(product => {
-                if (product.name.toLowerCase().includes(query)) {
+                if (results.length < maxResults && product.name.toLowerCase().includes(query)) {
                     results.push(product);
                 }
             });

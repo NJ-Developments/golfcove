@@ -10,6 +10,31 @@ const GolfCoveInventory = (function() {
     const ORDERS_KEY = 'gc_purchase_orders';
     const MOVEMENTS_KEY = 'gc_inventory_movements';
     
+    // Production limits
+    const MAX_ITEMS = 5000;
+    const MAX_MOVEMENTS = 5000;
+    const MAX_ORDERS = 1000;
+    const MAX_QUANTITY = 99999;
+    const MAX_PRICE = 99999.99;
+    
+    // Validation helpers
+    function sanitizeString(str, maxLen = 200) {
+        if (typeof str !== 'string') return '';
+        return str.trim().substring(0, maxLen);
+    }
+    
+    function validateNumber(val, min = 0, max = MAX_QUANTITY) {
+        const num = parseFloat(val);
+        if (isNaN(num)) return null;
+        return Math.max(min, Math.min(max, num));
+    }
+    
+    function validatePrice(val) {
+        const num = parseFloat(val);
+        if (isNaN(num) || num < 0 || num > MAX_PRICE) return 0;
+        return Math.round(num * 100) / 100;
+    }
+    
     // ============ DATA ACCESS ============
     function getItems() {
         return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -37,25 +62,50 @@ const GolfCoveInventory = (function() {
     
     // ============ ITEM MANAGEMENT ============
     function createItem(data) {
+        if (!data || typeof data !== 'object') {
+            console.error('Invalid item data');
+            return null;
+        }
+        
         const items = getItems();
+        
+        // Check storage limit
+        if (items.length >= MAX_ITEMS) {
+            console.error('Inventory storage limit reached');
+            return null;
+        }
+        
+        // Validate required name
+        const name = sanitizeString(data.name, 100);
+        if (!name) {
+            console.error('Item name is required');
+            return null;
+        }
+        
+        // Check for duplicate SKU
+        const sku = data.sku ? sanitizeString(data.sku, 50) : generateSKU(data.category, name);
+        if (items.find(i => i.sku === sku && i.isActive)) {
+            console.error('SKU already exists:', sku);
+            return null;
+        }
         
         const item = {
             id: 'INV-' + Date.now().toString(36).toUpperCase(),
-            sku: data.sku || generateSKU(data.category, data.name),
-            name: data.name,
-            category: data.category || 'general',
-            description: data.description || '',
-            unit: data.unit || 'each', // each, case, lb, oz, etc.
-            quantity: data.quantity || 0,
-            minQuantity: data.minQuantity || 5,
-            maxQuantity: data.maxQuantity || 100,
-            reorderPoint: data.reorderPoint || 10,
-            reorderQuantity: data.reorderQuantity || 20,
-            cost: data.cost || 0,
-            price: data.price || 0,
-            vendor: data.vendor || '',
-            vendorSKU: data.vendorSKU || '',
-            location: data.location || '',
+            sku: sku,
+            name: name,
+            category: sanitizeString(data.category, 50) || 'general',
+            description: sanitizeString(data.description, 500),
+            unit: sanitizeString(data.unit, 20) || 'each',
+            quantity: validateNumber(data.quantity, 0) || 0,
+            minQuantity: validateNumber(data.minQuantity, 0) || 5,
+            maxQuantity: validateNumber(data.maxQuantity, 1) || 100,
+            reorderPoint: validateNumber(data.reorderPoint, 0) || 10,
+            reorderQuantity: validateNumber(data.reorderQuantity, 1) || 20,
+            cost: validatePrice(data.cost),
+            price: validatePrice(data.price),
+            vendor: sanitizeString(data.vendor, 100),
+            vendorSKU: sanitizeString(data.vendorSKU, 50),
+            location: sanitizeString(data.location, 50),
             expirationDate: data.expirationDate || null,
             isActive: true,
             createdAt: new Date().toISOString(),
@@ -124,22 +174,46 @@ const GolfCoveInventory = (function() {
     
     // ============ STOCK MANAGEMENT ============
     function adjustStock(id, quantity, reason = '', type = 'adjustment') {
+        // Validate inputs
+        if (!id || typeof id !== 'string') {
+            console.error('Invalid item ID');
+            return null;
+        }
+        
+        const validQty = validateNumber(quantity, -MAX_QUANTITY, MAX_QUANTITY);
+        if (validQty === null) {
+            console.error('Invalid quantity:', quantity);
+            return null;
+        }
+        
         const items = getItems();
         const index = items.findIndex(i => i.id === id);
         
-        if (index === -1) return null;
-        
-        const oldQty = items[index].quantity;
-        items[index].quantity += quantity;
-        items[index].updatedAt = new Date().toISOString();
-        
-        // Prevent negative stock
-        if (items[index].quantity < 0) {
-            items[index].quantity = 0;
+        if (index === -1) {
+            console.error('Item not found:', id);
+            return null;
         }
         
+        const oldQty = items[index].quantity;
+        let newQty = oldQty + validQty;
+        
+        // Prevent negative stock
+        if (newQty < 0) {
+            console.warn(`Stock would go negative. Adjusting to 0. Requested: ${validQty}, Available: ${oldQty}`);
+            newQty = 0;
+        }
+        
+        // Prevent overflow
+        if (newQty > MAX_QUANTITY) {
+            console.warn(`Stock exceeds maximum. Capping at ${MAX_QUANTITY}`);
+            newQty = MAX_QUANTITY;
+        }
+        
+        items[index].quantity = newQty;
+        items[index].updatedAt = new Date().toISOString();
+        
         saveItems(items);
-        recordMovement(id, type, quantity, reason, oldQty, items[index].quantity);
+        recordMovement(id, type, validQty, sanitizeString(reason, 200), oldQty, newQty);
         
         // Check for low stock alert
         if (items[index].quantity <= items[index].reorderPoint) {

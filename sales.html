@@ -7,11 +7,18 @@
     <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
+    <!-- Unified Config & Core -->
+    <script src="js/config-unified.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/services-unified.js"></script>
+    <script src="js/menu-data.js"></script>
+    <!-- Feature Modules -->
     <script src="js/firebase-sync.js"></script>
     <script src="js/pin-system.js"></script>
     <script src="js/membership-system.js"></script>
     <script src="js/customers.js"></script>
     <script src="js/tabs-sync.js"></script>
+    <script src="js/cash-drawer.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; }
@@ -759,6 +766,13 @@
                     <button class="mode-btn active" onclick="setMode('sale', this)">Sale</button>
                     <button class="mode-btn return-btn" onclick="setMode('return', this)">Return</button>
                 </div>
+                <div id="activeTabBanner" style="display:none;background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;padding:8px 15px;border-radius:8px;font-size:13px;font-weight:600;align-items:center;gap:8px;">
+                    <i class="fas fa-receipt"></i>
+                    <span id="activeTabName">Tab: Customer</span>
+                    <button onclick="clearActiveTab()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;margin-left:auto;">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
                 <div class="sale-search">
                     <input type="text" id="itemSearch" placeholder="Search items or scan barcode..." onkeyup="searchItems(this.value)">
                 </div>
@@ -800,7 +814,7 @@
             <div class="totals-section">
                 <div class="total-row"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
                 <div class="total-row discount-row" id="discountRow" style="display:none;"><span>Discount</span><span id="discountAmt">-$0.00</span></div>
-                <div class="total-row"><span>Tax (6.35%)</span><span id="taxAmt">$0.00</span></div>
+                <div class="total-row"><span data-tax-label>Tax (6.35%)</span><span id="taxAmt">$0.00</span></div>
                 <div class="total-row grand"><span>Total Due</span><span id="totalDue">$0.00</span></div>
             </div>
             
@@ -865,6 +879,28 @@
     </div>
 
     <script>
+        // ============ TAX HELPER FUNCTIONS ============
+        // Centralized tax rate from GolfCoveConfig
+        function getTaxRate() {
+            return window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635;
+        }
+        
+        function getTaxRatePercent() {
+            return (getTaxRate() * 100).toFixed(2).replace(/\.?0+$/, '');
+        }
+        
+        function getTaxLabel() {
+            return `Tax (${getTaxRatePercent()}%)`;
+        }
+        
+        function calculateTax(subtotal) {
+            return subtotal * getTaxRate();
+        }
+        
+        function formatCurrency(amount) {
+            return '$' + (typeof amount === 'number' ? amount.toFixed(2) : parseFloat(amount || 0).toFixed(2));
+        }
+        
         // ============ STAFF MANAGEMENT ============
         // Staff is now loaded from centralized gc_employees (synced with Firebase)
         const defaultStaff = [
@@ -1189,68 +1225,25 @@
         }
         
         // ============ DATA ============
-        // Load inventory from localStorage or use defaults
-        const defaultItems = [
-            // Rentals (services - no inventory tracking)
-            { id: 1, name: 'Room 1 Hour', price: 45, category: 'rental', icon: 'fa-door-open', trackInventory: false },
-            { id: 2, name: 'Room 2 Hours', price: 80, category: 'rental', icon: 'fa-door-open', trackInventory: false },
-            { id: 3, name: 'Room 3 Hours', price: 110, category: 'rental', icon: 'fa-door-open', trackInventory: false },
-            { id: 4, name: 'Club Rental', price: 15, category: 'rental', icon: 'fa-golf-ball', trackInventory: false },
-            // Food
-            { id: 10, name: 'Hot Dog', price: 4.50, category: 'food', icon: 'fa-hotdog', trackInventory: true, stock: 50 },
-            { id: 11, name: 'Burger', price: 9.00, category: 'food', icon: 'fa-hamburger', trackInventory: true, stock: 30 },
-            { id: 12, name: 'Chicken Tenders', price: 10.00, category: 'food', icon: 'fa-drumstick-bite', trackInventory: true, stock: 40 },
-            { id: 13, name: 'Nachos', price: 8.00, category: 'food', icon: 'fa-cheese', trackInventory: true, stock: 25 },
-            { id: 14, name: 'Pizza Slice', price: 4.00, category: 'food', icon: 'fa-pizza-slice', trackInventory: true, stock: 40 },
-            { id: 15, name: 'Fries', price: 4.00, category: 'food', icon: 'fa-bacon', trackInventory: true, stock: 60 },
-            { id: 16, name: 'Mozzarella Sticks', price: 7.00, category: 'food', icon: 'fa-cheese', trackInventory: true, stock: 30 },
-            { id: 17, name: 'Wings (6pc)', price: 10.00, category: 'food', icon: 'fa-drumstick-bite', trackInventory: true, stock: 35 },
-            // Beer
-            { id: 20, name: 'Bud Light', price: 5.00, category: 'beer', icon: 'fa-beer', trackInventory: true, stock: 48 },
-            { id: 21, name: 'Coors Light', price: 5.00, category: 'beer', icon: 'fa-beer', trackInventory: true, stock: 48 },
-            { id: 22, name: 'Miller Lite', price: 5.00, category: 'beer', icon: 'fa-beer', trackInventory: true, stock: 48 },
-            { id: 23, name: 'Corona', price: 6.00, category: 'beer', icon: 'fa-beer', trackInventory: true, stock: 24 },
-            { id: 24, name: 'Heineken', price: 6.00, category: 'beer', icon: 'fa-beer', trackInventory: true, stock: 24 },
-            { id: 25, name: 'Sam Adams', price: 6.50, category: 'beer', icon: 'fa-beer', trackInventory: true, stock: 24 },
-            { id: 26, name: 'Blue Moon', price: 6.50, category: 'beer', icon: 'fa-beer', trackInventory: true, stock: 24 },
-            { id: 27, name: 'IPA Draft', price: 7.00, category: 'beer', icon: 'fa-beer', trackInventory: false },
-            // Wine
-            { id: 30, name: 'House Red', price: 8.00, category: 'wine', icon: 'fa-wine-glass-alt', trackInventory: false },
-            { id: 31, name: 'House White', price: 8.00, category: 'wine', icon: 'fa-wine-glass-alt', trackInventory: false },
-            { id: 32, name: 'Pinot Grigio', price: 9.00, category: 'wine', icon: 'fa-wine-glass-alt', trackInventory: true, stock: 6 },
-            { id: 33, name: 'Chardonnay', price: 9.00, category: 'wine', icon: 'fa-wine-glass-alt', trackInventory: true, stock: 6 },
-            { id: 34, name: 'Cabernet', price: 10.00, category: 'wine', icon: 'fa-wine-glass-alt', trackInventory: true, stock: 6 },
-            { id: 35, name: 'Merlot', price: 9.00, category: 'wine', icon: 'fa-wine-glass-alt', trackInventory: true, stock: 6 },
-            // Cocktails (made to order - no inventory)
-            { id: 40, name: 'Margarita', price: 10.00, category: 'cocktails', icon: 'fa-cocktail', trackInventory: false },
-            { id: 41, name: 'Vodka Soda', price: 8.00, category: 'cocktails', icon: 'fa-glass-martini-alt', trackInventory: false },
-            { id: 42, name: 'Rum & Coke', price: 8.00, category: 'cocktails', icon: 'fa-glass-whiskey', trackInventory: false },
-            { id: 43, name: 'Whiskey Sour', price: 10.00, category: 'cocktails', icon: 'fa-glass-whiskey', trackInventory: false },
-            { id: 44, name: 'Old Fashioned', price: 12.00, category: 'cocktails', icon: 'fa-glass-whiskey', trackInventory: false },
-            { id: 45, name: 'Mojito', price: 10.00, category: 'cocktails', icon: 'fa-cocktail', trackInventory: false },
-            { id: 46, name: 'Long Island', price: 12.00, category: 'cocktails', icon: 'fa-cocktail', trackInventory: false },
-            // Beverages
-            { id: 50, name: 'Soda', price: 2.50, category: 'beverage', icon: 'fa-glass-water', trackInventory: true, stock: 100 },
-            { id: 51, name: 'Coffee', price: 3.00, category: 'beverage', icon: 'fa-mug-hot', trackInventory: false },
-            { id: 52, name: 'Iced Tea', price: 3.00, category: 'beverage', icon: 'fa-glass-water', trackInventory: false },
-            { id: 53, name: 'Lemonade', price: 3.50, category: 'beverage', icon: 'fa-lemon', trackInventory: false },
-            { id: 54, name: 'Energy Drink', price: 4.50, category: 'beverage', icon: 'fa-bolt', trackInventory: true, stock: 24 },
-            { id: 55, name: 'Water', price: 2.00, category: 'beverage', icon: 'fa-tint', trackInventory: true, stock: 48 },
-            // Merchandise
-            { id: 60, name: 'Golf Cove Hat', price: 25.00, category: 'merch', icon: 'fa-hat-cowboy', trackInventory: true, stock: 20 },
-            { id: 61, name: 'Golf Cove Polo', price: 45.00, category: 'merch', icon: 'fa-tshirt', trackInventory: true, stock: 15 },
-            { id: 62, name: 'Golf Balls (sleeve)', price: 12.00, category: 'merch', icon: 'fa-golf-ball', trackInventory: true, stock: 30 },
-            { id: 63, name: 'Golf Glove', price: 18.00, category: 'merch', icon: 'fa-hand-paper', trackInventory: true, stock: 12 },
-            { id: 64, name: 'Golf Towel', price: 15.00, category: 'merch', icon: 'fa-scroll', trackInventory: true, stock: 25 },
-            // Gift Cards
-            { id: 70, name: 'Gift Card $25', price: 25.00, category: 'giftcard', icon: 'fa-gift', trackInventory: false },
-            { id: 71, name: 'Gift Card $50', price: 50.00, category: 'giftcard', icon: 'fa-gift', trackInventory: false },
-            { id: 72, name: 'Gift Card $100', price: 100.00, category: 'giftcard', icon: 'fa-gift', trackInventory: false },
-            { id: 73, name: 'Gift Card Custom', price: 0, category: 'giftcard', icon: 'fa-gift', trackInventory: false, customPrice: true }
-        ];
+        // Use centralized product catalog from menu-data.js
+        const defaultItems = window.GolfCoveMenu ? GolfCoveMenu.getAllItems() : [];
         
-        // Load items with saved inventory levels
-        let items = JSON.parse(localStorage.getItem('gc_inventory') || 'null') || defaultItems;
+        // Load items with saved inventory levels (merges with default catalog)
+        let items = (function() {
+            const saved = JSON.parse(localStorage.getItem('gc_inventory') || 'null');
+            if (!saved) {
+                // Initialize with default stock levels
+                return defaultItems.map(item => ({
+                    ...item,
+                    stock: item.defaultStock || 0
+                }));
+            }
+            // Merge saved inventory with current catalog (in case new items added)
+            return defaultItems.map(catItem => {
+                const savedItem = saved.find(s => s.id === catItem.id);
+                return savedItem ? { ...catItem, stock: savedItem.stock } : { ...catItem, stock: catItem.defaultStock || 0 };
+            });
+        })();
         
         // Save inventory function
         function saveInventory() {
@@ -1294,6 +1287,16 @@
         
         // ============ INIT ============
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize TabsSync first
+            if (typeof TabsSync !== 'undefined') {
+                TabsSync.init();
+            }
+            
+            // Update tax labels dynamically from config
+            document.querySelectorAll('[data-tax-label]').forEach(el => {
+                el.textContent = getTaxLabel();
+            });
+            
             // Migrate old insecure PINs (1234, 0000, etc.) to 9999
             migrateOldPins();
             
@@ -1304,10 +1307,12 @@
             updateTabCount();
             
             // Listen for tab changes from other pages
-            TabsSync.addListener((event, data, allTabs) => {
-                renderOpenTabs();
-                updateTabCount();
-            });
+            if (typeof TabsSync !== 'undefined') {
+                TabsSync.addListener((event, data, allTabs) => {
+                    renderOpenTabs();
+                    updateTabCount();
+                });
+            }
         });
         
         // Migrate old/insecure PINs to new secure default
@@ -1441,13 +1446,34 @@
             closeItemOptionsModal();
             closeItemsModal();
             
-            const item = { name, price, qty: 1, category };
+            const item = { name, price: parseFloat(price) || 0, qty: 1, category: category || 'misc' };
             const employeeName = getCurrentUserName();
             
-            await TabsSync.addItemsToTab(tabId, [item], employeeName);
-            const tab = TabsSync.getTab(tabId);
-            showToast(`Added ${name} to ${tab?.customer}'s tab`, 'success');
-            renderOpenTabs();
+            try {
+                if (typeof TabsSync !== 'undefined' && TabsSync.addItemsToTab) {
+                    await TabsSync.addItemsToTab(tabId, [item], employeeName);
+                    const tab = TabsSync.getTab(tabId);
+                    showToast(`Added ${name} to ${tab?.customer || 'Guest'}'s tab`, 'success');
+                } else {
+                    // Fallback: update localStorage directly
+                    const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+                    const tabIndex = tabs.findIndex(t => String(t.id) === String(tabId));
+                    if (tabIndex >= 0) {
+                        if (!tabs[tabIndex].items) tabs[tabIndex].items = [];
+                        tabs[tabIndex].items.push(item);
+                        tabs[tabIndex].total = (tabs[tabIndex].total || 0) + item.price;
+                        tabs[tabIndex].amount = tabs[tabIndex].total;
+                        localStorage.setItem('gc_tabs', JSON.stringify(tabs));
+                        showToast(`Added ${name} to ${tabs[tabIndex].customer || 'Guest'}'s tab`, 'success');
+                    } else {
+                        showToast('Tab not found', 'error');
+                    }
+                }
+                renderOpenTabs();
+            } catch (error) {
+                console.error('Error adding to tab:', error);
+                showToast('Failed to add item to tab', 'error');
+            }
         }
         
         // ============ SALE ITEMS ============
@@ -1524,7 +1550,7 @@
             const subtotal = saleItems.reduce((sum, item) => {
                 return sum + (item.price * item.qty * (1 - item.discount / 100));
             }, 0);
-            const tax = subtotal * 0.0635;
+            const tax = calculateTax(subtotal);
             const total = subtotal + tax;
             
             document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
@@ -1665,7 +1691,7 @@
             }
             
             const subtotal = saleItems.reduce((sum, item) => sum + (item.price * item.qty * (1 - item.discount / 100)), 0);
-            const total = subtotal * 1.0635;
+            const total = subtotal * (1 + getTaxRate());
             const customer = document.getElementById('customerName').value || 'Walk-in';
             pendingPaymentTotal = total;
             pendingPaymentCustomer = customer;
@@ -1859,7 +1885,7 @@
         
         function completePayment(method, customer, total, stripePaymentId = null, paymentDetails = {}) {
             const now = new Date();
-            const subtotal = total / 1.0635;
+            const subtotal = total / (1 + getTaxRate());
             const tax = total - subtotal;
             
             const transaction = {
@@ -1903,8 +1929,16 @@
             // Update cash drawer if cash payment
             if (method === 'cash' && !isReturnMode) {
                 updateCashDrawer(total, 'in');
+                // Kick physical drawer on cash sale
+                if (window.CashDrawer) {
+                    CashDrawer.kick();
+                }
             } else if (method === 'cash' && isReturnMode) {
                 updateCashDrawer(total, 'out');
+                // Kick physical drawer on cash refund
+                if (window.CashDrawer) {
+                    CashDrawer.kick();
+                }
             }
             
             const actionWord = isReturnMode ? 'Return' : 'Payment';
@@ -1962,9 +1996,21 @@
         }
         
         function printReceipt(customer, total, method, items, transId) {
-            const subtotal = total / 1.0635;
+            const subtotal = total / (1 + getTaxRate());
             const tax = total - subtotal;
             const now = new Date();
+            
+            // Get business info from centralized config
+            const config = window.GolfCoveConfig || {};
+            const business = config.business || {};
+            const addr = business.address || {};
+            const businessName = business.name || 'Golf Cove';
+            const businessAddress = addr.street || '336 State Street';
+            const businessCity = addr.city || 'North Haven';
+            const businessState = addr.state || 'CT';
+            const businessZip = addr.zip || '06473';
+            const businessPhone = business.phone || '(203) 555-0100';
+            const businessWebsite = (business.website || 'golfcove.com').replace('https://', '').replace('http://', '');
             
             const receiptWindow = window.open('', '_blank', 'width=350,height=600');
             var html = '<html><head><title>Receipt</title><style>';
@@ -1974,27 +2020,34 @@
             html += '.row { display: flex; justify-content: space-between; margin: 3px 0; }';
             html += '.total-row { font-size: 14px; font-weight: bold; }';
             html += 'h2 { margin: 5px 0; font-size: 16px; }';
+            html += '.trans-id { font-size: 10px; color: #666; margin-top: 5px; }';
             html += '</style></head><bo' + 'dy>';
-            html += '<div class="center"><h2>⛳ GOLF COVE</h2>';
-            html += '<p>123 Golf Course Rd<br>Anytown, CT 06000<br>(555) 123-4567</p></div>';
+            html += '<div class="center"><h2>⛳ ' + businessName.toUpperCase() + '</h2>';
+            html += '<p>' + businessAddress + '<br>' + businessCity + ', ' + businessState + ' ' + businessZip + '<br>' + businessPhone + '</p></div>';
             html += '<div class="line"></div>';
+            html += '<div class="row"><span>Trans #:</span><span>' + (transId || 'N/A') + '</span></div>';
             html += '<div class="row"><span>Date:</span><span>' + now.toLocaleDateString() + '</span></div>';
             html += '<div class="row"><span>Time:</span><span>' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '</span></div>';
             html += '<div class="row"><span>Customer:</span><span>' + customer + '</span></div>';
+            html += '<div class="row"><span>Cashier:</span><span>' + (currentUser?.name || 'Staff') + '</span></div>';
             html += '<div class="line"></div>';
             items.forEach(function(item) {
-                html += '<div class="row"><span>' + item.name + ' x' + item.qty + '</span><span>$' + (item.price * item.qty * (1 - item.discount/100)).toFixed(2) + '</span></div>';
+                const itemTotal = (item.price * item.qty * (1 - (item.discount || 0)/100));
+                html += '<div class="row"><span>' + item.name + ' x' + item.qty + '</span><span>$' + itemTotal.toFixed(2) + '</span></div>';
                 if (item.discount > 0) html += '<div style="font-size:10px;color:#666;margin-left:10px;">(' + item.discount + '% disc)</div>';
             });
             html += '<div class="line"></div>';
             html += '<div class="row"><span>Subtotal:</span><span>$' + subtotal.toFixed(2) + '</span></div>';
-            html += '<div class="row"><span>Tax (6.35%):</span><span>$' + tax.toFixed(2) + '</span></div>';
+            html += '<div class="row"><span>' + getTaxLabel() + ':</span><span>$' + tax.toFixed(2) + '</span></div>';
             html += '<div class="line"></div>';
             html += '<div class="row total-row"><span>TOTAL:</span><span>$' + total.toFixed(2) + '</span></div>';
             html += '<div class="row"><span>Paid:</span><span>' + method.toUpperCase() + '</span></div>';
             html += '<div class="line"></div>';
-            html += '<div class="center" style="margin-top:10px;"><p>Thank you for visiting!</p>';
-            html += '<p style="font-size:10px;">⛳ See you on the greens! ⛳</p></div>';
+            html += '<div class="center" style="margin-top:10px;">';
+            html += '<p>Thank you for visiting!</p>';
+            html += '<p style="font-size:10px;">Visit us at ' + businessWebsite + '</p>';
+            html += '<p style="font-size:10px;">⛳ See you on the greens! ⛳</p>';
+            html += '</div>';
             html += '</bo' + 'dy></ht' + 'ml>';
             receiptWindow.document.write(html);
             receiptWindow.document.close();
@@ -2042,7 +2095,7 @@
             suspendedSales.push({
                 id: Date.now(),
                 customer: customer,
-                amount: subtotal * 1.0635,
+                amount: subtotal * (1 + getTaxRate()),
                 items: [...saleItems],
                 time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
             });
@@ -2078,40 +2131,87 @@
             // Format items for TabsSync
             const items = saleItems.map(item => ({
                 name: item.name,
-                price: item.price * (1 - item.discount / 100),
-                qty: item.qty,
-                category: item.category
+                price: (parseFloat(item.price) || 0) * (1 - (item.discount || 0) / 100),
+                qty: parseInt(item.qty) || 1,
+                category: item.category || 'misc'
             }));
             
-            // Use TabsSync for global tab management
             const employeeName = getCurrentUserName();
-            const existingTab = TabsSync.getTabByCustomer(customer);
             
-            if (existingTab) {
-                // Add to existing tab
-                await TabsSync.addItemsToTab(existingTab.id, items, employeeName);
-                showToast(`Added ${items.length} item(s) to ${customer}'s tab`);
-            } else {
-                // Create new tab
-                await TabsSync.createTab(customer, null, items, employeeName);
-                showToast(`Tab started for ${customer}`);
+            try {
+                if (typeof TabsSync !== 'undefined') {
+                    // Use TabsSync for global tab management
+                    const existingTab = TabsSync.getTabByCustomer ? TabsSync.getTabByCustomer(customer) : null;
+                    
+                    if (existingTab) {
+                        // Add to existing tab
+                        await TabsSync.addItemsToTab(existingTab.id, items, employeeName);
+                        showToast(`Added ${items.length} item(s) to ${customer}'s tab`);
+                    } else {
+                        // Create new tab
+                        await TabsSync.createTab(customer, null, items, employeeName);
+                        showToast(`Tab started for ${customer}`);
+                    }
+                } else {
+                    // Fallback: store in localStorage
+                    const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+                    const existingIndex = tabs.findIndex(t => t.customer && t.customer.toLowerCase() === customer.toLowerCase());
+                    
+                    if (existingIndex >= 0) {
+                        // Add to existing tab
+                        if (!tabs[existingIndex].items) tabs[existingIndex].items = [];
+                        tabs[existingIndex].items.push(...items);
+                        const itemsTotal = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+                        tabs[existingIndex].total = (tabs[existingIndex].total || 0) + itemsTotal;
+                        tabs[existingIndex].amount = tabs[existingIndex].total;
+                        showToast(`Added ${items.length} item(s) to ${customer}'s tab`);
+                    } else {
+                        // Create new tab
+                        const itemsTotal = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+                        const newTab = {
+                            id: Date.now().toString(),
+                            customer: customer,
+                            items: items,
+                            total: itemsTotal,
+                            amount: itemsTotal,
+                            createdAt: new Date().toISOString(),
+                            openedAt: new Date().toISOString(),
+                            openedBy: employeeName
+                        };
+                        tabs.push(newTab);
+                        showToast(`Tab started for ${customer}`);
+                    }
+                    localStorage.setItem('gc_tabs', JSON.stringify(tabs));
+                }
+                
+                saleItems = [];
+                document.getElementById('customerName').value = '';
+                renderSaleItems();
+                renderOpenTabs();
+            } catch (error) {
+                console.error('Error starting tab:', error);
+                showToast('Failed to start tab', 'error');
             }
-            
-            saleItems = [];
-            document.getElementById('customerName').value = '';
-            renderSaleItems();
-            renderOpenTabs();
         }
         
         // Quick Add to Tab (for single item)
         async function quickAddToTab(itemName, itemPrice, category) {
-            // Show tab selector modal
-            const tabs = TabsSync.getAllTabs();
+            // Show tab selector modal - get tabs with fallback
+            let tabs = [];
+            if (typeof TabsSync !== 'undefined') {
+                tabs = TabsSync.getAllTabs() || [];
+            } else {
+                try {
+                    tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+                } catch (e) {
+                    tabs = [];
+                }
+            }
             
             let html = '<div style="padding:20px;">';
             html += '<h3 style="margin-bottom:15px;">Add to Tab</h3>';
             html += '<div style="margin-bottom:15px;padding:10px;background:#f5f5f5;border-radius:8px;">';
-            html += `<strong>${itemName}</strong> - $${itemPrice.toFixed(2)}`;
+            html += `<strong>${itemName}</strong> - $${(parseFloat(itemPrice) || 0).toFixed(2)}`;
             html += '</div>';
             
             if (tabs.length > 0) {
@@ -2119,7 +2219,8 @@
                 html += '<label style="font-size:13px;color:#666;">Select Tab:</label>';
                 html += '<select id="tabSelect" style="width:100%;padding:10px;margin-top:5px;border:1px solid #ddd;border-radius:6px;font-size:14px;">';
                 tabs.forEach(t => {
-                    html += `<option value="${t.id}">${t.customer} - $${(t.total||0).toFixed(2)} (${t.items?.length||0} items)</option>`;
+                    const tabTotal = t.total || t.amount || 0;
+                    html += `<option value="${t.id}">${t.customer || 'Guest'} - $${tabTotal.toFixed(2)} (${t.items?.length||0} items)</option>`;
                 });
                 html += '<option value="new">+ New Tab</option>';
                 html += '</select></div>';
@@ -2132,7 +2233,7 @@
             
             html += '<div style="display:flex;gap:10px;">';
             html += '<button onclick="closeQuickTabModal()" style="flex:1;padding:12px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;">Cancel</button>';
-            html += `<button onclick="confirmAddToTab('${itemName}', ${itemPrice}, '${category}')" style="flex:1;padding:12px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;">Add to Tab</button>`;
+            html += `<button onclick="confirmAddToTab('${itemName}', ${itemPrice}, '${category || 'misc'}')" style="flex:1;padding:12px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer;">Add to Tab</button>`;
             html += '</div></div>';
             
             // Create modal
@@ -2159,22 +2260,59 @@
         async function confirmAddToTab(itemName, itemPrice, category) {
             const select = document.getElementById('tabSelect');
             const tabId = select ? select.value : 'new';
-            const item = { name: itemName, price: itemPrice, qty: 1, category: category };
+            const item = { name: itemName, price: parseFloat(itemPrice) || 0, qty: 1, category: category || 'misc' };
             const employeeName = getCurrentUserName();
             
-            if (tabId === 'new') {
-                const customerName = document.getElementById('newTabName').value.trim();
-                if (!customerName) return showToast('Enter customer name', 'error');
-                await TabsSync.createTab(customerName, null, [item], employeeName);
-                showToast(`Tab started for ${customerName}`);
-            } else {
-                await TabsSync.addItemsToTab(tabId, [item], employeeName);
-                const tab = TabsSync.getTab(tabId);
-                showToast(`Added to ${tab?.customer}'s tab`);
+            try {
+                if (tabId === 'new') {
+                    const customerName = document.getElementById('newTabName').value.trim();
+                    if (!customerName) return showToast('Enter customer name', 'error');
+                    
+                    if (typeof TabsSync !== 'undefined' && TabsSync.createTab) {
+                        await TabsSync.createTab(customerName, null, [item], employeeName);
+                    } else {
+                        // Fallback: create tab in localStorage
+                        const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+                        const newTab = {
+                            id: Date.now().toString(),
+                            customer: customerName,
+                            items: [item],
+                            total: item.price,
+                            amount: item.price,
+                            createdAt: new Date().toISOString(),
+                            openedAt: new Date().toISOString(),
+                            openedBy: employeeName
+                        };
+                        tabs.push(newTab);
+                        localStorage.setItem('gc_tabs', JSON.stringify(tabs));
+                    }
+                    showToast(`Tab started for ${customerName}`);
+                } else {
+                    if (typeof TabsSync !== 'undefined' && TabsSync.addItemsToTab) {
+                        await TabsSync.addItemsToTab(tabId, [item], employeeName);
+                        const tab = TabsSync.getTab(tabId);
+                        showToast(`Added to ${tab?.customer || 'Guest'}'s tab`);
+                    } else {
+                        // Fallback: update localStorage directly
+                        const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+                        const tabIndex = tabs.findIndex(t => String(t.id) === String(tabId));
+                        if (tabIndex >= 0) {
+                            if (!tabs[tabIndex].items) tabs[tabIndex].items = [];
+                            tabs[tabIndex].items.push(item);
+                            tabs[tabIndex].total = (tabs[tabIndex].total || 0) + item.price;
+                            tabs[tabIndex].amount = tabs[tabIndex].total;
+                            localStorage.setItem('gc_tabs', JSON.stringify(tabs));
+                            showToast(`Added to ${tabs[tabIndex].customer || 'Guest'}'s tab`);
+                        }
+                    }
+                }
+                
+                closeQuickTabModal();
+                renderOpenTabs();
+            } catch (error) {
+                console.error('Error adding to tab:', error);
+                showToast('Failed to add to tab', 'error');
             }
-            
-            closeQuickTabModal();
-            renderOpenTabs();
         }
         
         // Render Open Tabs
@@ -2182,7 +2320,18 @@
             const container = document.getElementById('openTabsList');
             if (!container) return;
             
-            const tabs = TabsSync.getAllTabs();
+            // Get tabs - with fallback to localStorage if TabsSync not available
+            let tabs = [];
+            if (typeof TabsSync !== 'undefined') {
+                tabs = TabsSync.getAllTabs() || [];
+            } else {
+                try {
+                    tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+                } catch (e) {
+                    console.error('Error loading tabs:', e);
+                    tabs = [];
+                }
+            }
             
             if (tabs.length === 0) {
                 container.innerHTML = '<div class="empty-list">No open tabs</div>';
@@ -2203,21 +2352,26 @@
                     badge = '<span class="tab-badge"><i class="fas fa-star"></i> Member</span>';
                 }
                 
-                if (t.memberDiscount > 0) {
-                    discountInfo = `<div class="tab-discount">${Math.round(t.memberDiscount * 100)}% member discount</div>`;
+                // Handle memberDiscount as percentage (could be 0.10 or 10 depending on source)
+                const discountPercent = t.memberDiscount > 1 ? t.memberDiscount : (t.memberDiscount * 100);
+                if (discountPercent > 0) {
+                    discountInfo = `<div class="tab-discount">${Math.round(discountPercent)}% member discount</div>`;
                 }
                 
                 const bayInfo = t.bayNumber ? ` • Bay ${t.bayNumber}` : '';
+                const tableInfo = t.table && t.table !== 'Tab' ? ` • ${t.table}` : '';
+                const tabTotal = t.total || t.amount || 0;
+                const itemCount = t.items?.length || 0;
                 
                 return `
                 <div class="${tabClass}" onclick="selectTab('${t.id}')">
                     <div class="tab-left">
-                        <div class="tab-customer">${t.customer} ${badge}</div>
-                        <div class="tab-info">${t.items?.length || 0} items${bayInfo}</div>
+                        <div class="tab-customer">${t.customer || 'Guest'} ${badge}</div>
+                        <div class="tab-info">${itemCount} item${itemCount !== 1 ? 's' : ''}${bayInfo}${tableInfo}</div>
                         ${discountInfo}
                     </div>
                     <div class="tab-right">
-                        <div class="tab-total">$${(t.total || 0).toFixed(2)}</div>
+                        <div class="tab-total">$${tabTotal.toFixed(2)}</div>
                     </div>
                 </div>
             `}).join('');
@@ -2225,40 +2379,103 @@
         
         // Select/View Tab
         function selectTab(tabId) {
-            const tab = TabsSync.getTab(tabId);
-            if (!tab) return;
+            let tab = null;
+            
+            // Try to get tab from TabsSync first, then fallback to localStorage
+            if (typeof TabsSync !== 'undefined') {
+                tab = TabsSync.getTab(tabId);
+            }
+            
+            if (!tab) {
+                // Fallback: try localStorage directly
+                try {
+                    const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+                    tab = tabs.find(t => String(t.id) === String(tabId));
+                } catch (e) {
+                    console.error('Error loading tab:', e);
+                }
+            }
+            
+            if (!tab) {
+                showToast('Tab not found', 'error');
+                return;
+            }
             
             // Load tab items into current sale
             saleItems = (tab.items || []).map((item, i) => ({
                 id: Date.now() + i,
-                name: item.name,
-                price: item.price,
-                qty: item.qty || 1,
+                name: item.name || 'Unknown Item',
+                price: parseFloat(item.price) || 0,
+                qty: parseInt(item.qty) || 1,
                 discount: 0,
                 category: item.category || 'misc'
             }));
             
-            document.getElementById('customerName').value = tab.customer;
+            document.getElementById('customerName').value = tab.customer || 'Guest';
             renderSaleItems();
             
             // Store active tab ID for closing
-            window.activeTabId = tabId;
-            showToast(`Loaded ${tab.customer}'s tab`);
+            window.activeTabId = String(tabId);
+            
+            // Show active tab banner
+            const banner = document.getElementById('activeTabBanner');
+            const tabName = document.getElementById('activeTabName');
+            if (banner && tabName) {
+                tabName.textContent = `Tab: ${tab.customer || 'Guest'}`;
+                banner.style.display = 'flex';
+            }
+            
+            showToast(`Loaded ${tab.customer || 'Guest'}'s tab`);
         }
         
-        // Close Tab (pay and complete)
-        async function closeActiveTab(paymentMethod = 'card', tip = 0) {
-            if (!window.activeTabId) return;
-            
-            const employeeName = getCurrentUserName();
-            await TabsSync.closeTab(window.activeTabId, paymentMethod, tip, employeeName);
-            
+        // Clear active tab without closing it
+        function clearActiveTab() {
             window.activeTabId = null;
             saleItems = [];
             document.getElementById('customerName').value = '';
             renderSaleItems();
-            renderOpenTabs();
-            showToast('Tab closed successfully');
+            
+            // Hide active tab banner
+            const banner = document.getElementById('activeTabBanner');
+            if (banner) banner.style.display = 'none';
+            
+            showToast('Tab cleared from current sale');
+        }
+        
+        // Close Tab (pay and complete)
+        async function closeActiveTab(paymentMethod = 'card', tip = 0) {
+            if (!window.activeTabId) {
+                showToast('No active tab selected', 'warning');
+                return;
+            }
+            
+            try {
+                const employeeName = getCurrentUserName();
+                
+                if (typeof TabsSync !== 'undefined' && TabsSync.closeTab) {
+                    await TabsSync.closeTab(window.activeTabId, paymentMethod, tip, employeeName);
+                } else {
+                    // Fallback: remove from localStorage directly
+                    const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+                    const updatedTabs = tabs.filter(t => String(t.id) !== String(window.activeTabId));
+                    localStorage.setItem('gc_tabs', JSON.stringify(updatedTabs));
+                }
+                
+                window.activeTabId = null;
+                saleItems = [];
+                document.getElementById('customerName').value = '';
+                
+                // Hide active tab banner
+                const banner = document.getElementById('activeTabBanner');
+                if (banner) banner.style.display = 'none';
+                
+                renderSaleItems();
+                renderOpenTabs();
+                showToast('Tab closed successfully');
+            } catch (error) {
+                console.error('Error closing tab:', error);
+                showToast('Failed to close tab', 'error');
+            }
         }
         
         // ============ RENDER PANELS ============
@@ -2342,9 +2559,12 @@
         }
         
         // ============ REGISTER FUNCTIONS ============
-        function openDrawer() {
+        async function openDrawer() {
             showToast('Cash drawer opened');
-            // In a real system, this would send a signal to open the physical drawer
+            // Kick physical USB drawer if connected
+            if (window.CashDrawer) {
+                await CashDrawer.kick();
+            }
         }
         
         function closeRegister() {
@@ -2367,7 +2587,7 @@
             const cardTotal = cardSales.reduce((sum, t) => sum + t.amount, 0);
             
             // Calculate tax collected
-            const taxCollected = netTotal - (netTotal / 1.0635);
+            const taxCollected = netTotal - (netTotal / (1 + getTaxRate()));
             
             // Calculate average transaction
             const avgTransaction = sales.length > 0 ? salesTotal / sales.length : 0;
@@ -2393,7 +2613,7 @@
                         
                         <div style="background:#e8f5e9;padding:15px;border-radius:8px;margin-bottom:15px;">
                             <h4 style="margin:0 0 10px;color:#2e7d32;">Additional Details</h4>
-                            <div style="display:flex;justify-content:space-between;padding:5px 0;"><span>Tax Collected (6.35%):</span><span>$${taxCollected.toFixed(2)}</span></div>
+                            <div style="display:flex;justify-content:space-between;padding:5px 0;"><span>Tax Collected (${getTaxRatePercent()}%):</span><span>$${taxCollected.toFixed(2)}</span></div>
                             <div style="display:flex;justify-content:space-between;padding:5px 0;"><span>Avg Transaction:</span><span>$${avgTransaction.toFixed(2)}</span></div>
                             <div style="display:flex;justify-content:space-between;padding:5px 0;"><span>Items Sold:</span><span>${sales.reduce((sum, t) => sum + (t.items || 0), 0)}</span></div>
                         </div>
@@ -2415,7 +2635,7 @@
             const salesTotal = sales.reduce((sum, t) => sum + t.amount, 0);
             const returnsTotal = returns.reduce((sum, t) => sum + Math.abs(t.amount), 0);
             const netTotal = salesTotal - returnsTotal;
-            const taxCollected = netTotal - (netTotal / 1.0635);
+            const taxCollected = netTotal - (netTotal / (1 + getTaxRate()));
             
             const w = window.open('', '_blank', 'width=400,height=600');
             var html = '<html><head><title>Register Close Report</title>';
@@ -2587,7 +2807,7 @@
             if (!tabName) return;
             
             const subtotal = saleItems.reduce((sum, item) => sum + (item.price * item.qty * (1 - item.discount / 100)), 0);
-            const total = subtotal * 1.0635;
+            const total = subtotal * (1 + getTaxRate());
             
             const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
             tabs.push({
@@ -2715,6 +2935,17 @@
                             </div>
                         </div>
                         
+                        <div style="background:#e3f2fd;padding:15px;border-radius:8px;margin-bottom:15px;">
+                            <h4 style="margin:0 0 15px;color:#1976d2;"><i class="fas fa-cash-register"></i> Cash Drawer</h4>
+                            <div id="drawerStatus" style="margin-bottom:10px;font-size:13px;">
+                                ${window.CashDrawer?.isConnected ? '<span style="color:#27ae60;"><i class="fas fa-check-circle"></i> Connected</span>' : '<span style="color:#666;"><i class="fas fa-circle"></i> Not Connected</span>'}
+                            </div>
+                            <button onclick="connectCashDrawer()" style="width:100%;padding:10px;border:1px solid #1976d2;background:#fff;color:#1976d2;border-radius:6px;cursor:pointer;font-weight:600;">
+                                <i class="fas fa-plug"></i> ${window.CashDrawer?.isConnected ? 'Reconnect Drawer' : 'Connect USB Drawer'}
+                            </button>
+                            <p style="font-size:11px;color:#666;margin-top:8px;margin-bottom:0;">USB cash drawer required. Works with Chrome, Edge, Opera.</p>
+                        </div>
+                        
                         <div style="background:#fff3cd;padding:12px;border-radius:8px;margin-bottom:15px;font-size:13px;">
                             <i class="fas fa-info-circle" style="color:#856404;"></i>
                             For production, you'll need a Stripe account with Terminal enabled. 
@@ -2753,6 +2984,25 @@
             
             if (pk) {
                 initStripeTerminal();
+            }
+        }
+        
+        // Connect USB cash drawer
+        async function connectCashDrawer() {
+            if (typeof CashDrawer === 'undefined') {
+                showToast('Cash drawer module not loaded', 'error');
+                return;
+            }
+            
+            try {
+                await CashDrawer.connect();
+                // Update status in modal
+                const status = document.getElementById('drawerStatus');
+                if (status) {
+                    status.innerHTML = '<span style="color:#27ae60;"><i class="fas fa-check-circle"></i> Connected</span>';
+                }
+            } catch (err) {
+                showToast('Failed to connect: ' + err.message, 'error');
             }
         }
         
@@ -3556,7 +3806,7 @@
             if (saleItems.length === 0) return showToast('No items in sale', 'error');
             
             const subtotal = saleItems.reduce((sum, item) => sum + (item.price * item.qty * (1 - item.discount / 100)), 0);
-            const total = subtotal * 1.0635;
+            const total = subtotal * (1 + getTaxRate());
             const customer = document.getElementById('customerName').value || 'Walk-in';
             
             const html = `
@@ -4142,7 +4392,7 @@
             if (modal) modal.remove();
         }
         
-        function openDrawer() {
+        async function openDrawer() {
             const amount = parseFloat(document.getElementById('openingCash').value) || 0;
             const drawer = JSON.parse(localStorage.getItem('gc_cash_drawer') || '{}');
             const today = new Date().toDateString();
@@ -4162,6 +4412,11 @@
             closeDrawerModal();
             showToast('Drawer opened', 'success');
             showDrawerManagement();
+            
+            // Kick physical USB drawer if connected
+            if (window.CashDrawer) {
+                await CashDrawer.kick();
+            }
         }
         
         function showPayInOut(type) {

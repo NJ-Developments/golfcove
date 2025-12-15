@@ -183,22 +183,46 @@ const GolfCoveSyncManager = (function() {
     }
     
     async function syncPendingChanges() {
+        const now = Date.now();
+        
         for (const [collection, changes] of pendingChanges) {
             const remaining = [];
             
             for (const change of changes) {
+                // Skip if not ready for retry yet
+                if (change.nextRetryAt && now < change.nextRetryAt) {
+                    remaining.push(change);
+                    continue;
+                }
+                
                 try {
                     await pushChange(change);
                     Core.emit('sync:changeSynced', { change });
                 } catch (error) {
                     change.retries++;
-                    change.lastError = error.message;
+                    change.lastError = error.message || 'Unknown error';
                     
                     if (change.retries < config.maxRetries) {
+                        // Exponential backoff with jitter
+                        const backoff = Math.min(
+                            config.baseRetryDelay * Math.pow(2, change.retries),
+                            config.maxRetryDelay
+                        );
+                        const jitter = Math.random() * 0.3 * backoff;
+                        change.nextRetryAt = now + backoff + jitter;
+                        
                         remaining.push(change);
+                        Core.log('warn', `Sync retry scheduled`, { 
+                            change: change.id, 
+                            retries: change.retries,
+                            nextRetryIn: Math.round((change.nextRetryAt - now) / 1000) + 's'
+                        });
                     } else {
-                        Core.log('error', 'Change exceeded max retries', { change });
+                        Core.log('error', 'Change exceeded max retries, moving to dead letter queue', { change });
                         Core.emit('sync:changeFailed', { change, error });
+                        
+                        // Store failed changes in dead letter queue
+                        storeFailedChange(change);
                     }
                 }
             }
@@ -209,8 +233,30 @@ const GolfCoveSyncManager = (function() {
         savePendingChanges();
     }
     
+    function storeFailedChange(change) {
+        try {
+            const failedChanges = JSON.parse(localStorage.getItem('gc_failed_changes') || '[]');
+            failedChanges.push({
+                ...change,
+                failedAt: new Date().toISOString()
+            });
+            // Keep only last 100 failed changes
+            if (failedChanges.length > 100) {
+                failedChanges.splice(0, failedChanges.length - 100);
+            }
+            localStorage.setItem('gc_failed_changes', JSON.stringify(failedChanges));
+        } catch (e) {
+            Core.log('error', 'Failed to store failed change', { error: e.message });
+        }
+    }
+    
     async function pushChange(change) {
         const { collection, operation, data } = change;
+        
+        // Validate change structure
+        if (!collection || !operation || !data) {
+            throw new Error('Invalid change structure');
+        }
         
         // Get Firebase reference
         const db = getFirestore();
@@ -218,31 +264,56 @@ const GolfCoveSyncManager = (function() {
             throw new Error('Firestore not available');
         }
         
-        switch (operation) {
-            case 'create':
-                await db.collection(collection).add({
-                    ...data,
-                    createdAt: new Date().toISOString(),
-                    syncedAt: new Date().toISOString()
-                });
-                break;
-                
-            case 'update':
-                if (!data.id) throw new Error('Update requires id');
-                await db.collection(collection).doc(data.id).update({
-                    ...data,
-                    updatedAt: new Date().toISOString(),
-                    syncedAt: new Date().toISOString()
-                });
-                break;
-                
-            case 'delete':
-                if (!data.id) throw new Error('Delete requires id');
-                await db.collection(collection).doc(data.id).delete();
-                break;
-        }
+        const timeout = 30000; // 30 second timeout
         
-        Core.log('info', `Synced ${operation} to ${collection}`, { id: data.id });
+        try {
+            switch (operation) {
+                case 'create':
+                    await Core.timeout(
+                        db.collection(collection).add({
+                            ...data,
+                            createdAt: new Date().toISOString(),
+                            syncedAt: new Date().toISOString()
+                        }),
+                        timeout,
+                        `Create operation timed out for ${collection}`
+                    );
+                    break;
+                    
+                case 'update':
+                    if (!data.id) throw new Error('Update requires id');
+                    await Core.timeout(
+                        db.collection(collection).doc(data.id).update({
+                            ...data,
+                            updatedAt: new Date().toISOString(),
+                            syncedAt: new Date().toISOString()
+                        }),
+                        timeout,
+                        `Update operation timed out for ${collection}/${data.id}`
+                    );
+                    break;
+                    
+                case 'delete':
+                    if (!data.id) throw new Error('Delete requires id');
+                    await Core.timeout(
+                        db.collection(collection).doc(data.id).delete(),
+                        timeout,
+                        `Delete operation timed out for ${collection}/${data.id}`
+                    );
+                    break;
+                    
+                default:
+                    throw new Error(`Unknown operation: ${operation}`);
+            }
+            
+            Core.log('info', `Synced ${operation} to ${collection}`, { id: data.id });
+        } catch (error) {
+            Core.log('error', `Push change failed: ${operation} ${collection}`, { 
+                id: data.id, 
+                error: error.message 
+            });
+            throw error;
+        }
     }
     
     async function pullCollection(collection) {

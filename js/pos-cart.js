@@ -5,21 +5,52 @@
 
 const Cart = {
     items: [],
+    MAX_ITEMS: 100,
+    MAX_QTY: 999,
+    MAX_PRICE: 10000,
     
     // Add item to cart
     add(item) {
+        // Validate input
+        if (!item || typeof item !== 'object') {
+            console.error('Invalid item provided');
+            return;
+        }
+        
+        if (!item.name || typeof item.name !== 'string') {
+            console.error('Item must have a name');
+            return;
+        }
+        
+        const price = parseFloat(item.price);
+        if (isNaN(price) || price < 0 || price > this.MAX_PRICE) {
+            console.error('Invalid item price');
+            return;
+        }
+        
+        // Check cart size limit
+        if (this.items.length >= this.MAX_ITEMS) {
+            POS.toast('Cart is full', 'error');
+            return;
+        }
+        
         const existing = this.items.find(i => i.id === item.id && i.type === item.type);
         
         if (existing) {
-            existing.qty += 1;
+            if (existing.qty < this.MAX_QTY) {
+                existing.qty += 1;
+            } else {
+                POS.toast('Maximum quantity reached', 'error');
+                return;
+            }
         } else {
             this.items.push({
                 id: item.id || Date.now(),
-                name: item.name,
-                price: parseFloat(item.price) || 0,
-                qty: item.qty || 1,
+                name: String(item.name).substring(0, 100), // Truncate long names
+                price: Math.round(price * 100) / 100, // Round to cents
+                qty: Math.min(Math.max(item.qty || 1, 1), this.MAX_QTY),
                 type: item.type || 'item',
-                modifiers: item.modifiers || []
+                modifiers: Array.isArray(item.modifiers) ? item.modifiers : []
             });
         }
         
@@ -35,14 +66,26 @@ const Cart = {
     
     // Update quantity
     updateQty(index, delta) {
+        // Validate inputs
+        if (typeof index !== 'number' || index < 0 || index >= this.items.length) {
+            return;
+        }
+        if (typeof delta !== 'number' || !Number.isFinite(delta)) {
+            return;
+        }
+        
         const item = this.items[index];
         if (!item) return;
         
-        item.qty += delta;
-        if (item.qty <= 0) {
+        const newQty = item.qty + delta;
+        
+        if (newQty <= 0) {
             this.remove(index);
-        } else {
+        } else if (newQty <= this.MAX_QTY) {
+            item.qty = newQty;
             this.render();
+        } else {
+            POS.toast('Maximum quantity reached', 'error');
         }
     },
     
@@ -274,24 +317,49 @@ const Payment = {
     
     // Process cash payment
     async processCash(amount) {
+        // Validate amount
+        if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
+            return { success: false, error: 'Invalid amount' };
+        }
+        
         return new Promise((resolve) => {
             // Show cash drawer modal
-            const amountDue = amount;
+            const amountDue = Math.round(amount * 100) / 100;
             const modal = document.getElementById('cashModal');
+            if (!modal) {
+                resolve({ success: false, error: 'Cash modal not found' });
+                return;
+            }
+            
             document.getElementById('cashAmountDue').textContent = POS.formatCurrency(amountDue);
             document.getElementById('cashTendered').value = '';
             document.getElementById('cashChange').textContent = '$0.00';
             modal.style.display = 'flex';
             
             // Handle cash completion
-            window.completeCashPayment = () => {
+            window.completeCashPayment = async () => {
                 const tendered = parseFloat(document.getElementById('cashTendered').value) || 0;
+                
+                // Validate tendered amount
+                if (tendered < 0 || tendered > 10000) {
+                    POS.toast('Invalid amount', 'error');
+                    return;
+                }
+                
                 if (tendered < amountDue) {
                     POS.toast('Insufficient amount', 'error');
                     return;
                 }
+                
+                const change = Math.round((tendered - amountDue) * 100) / 100;
                 modal.style.display = 'none';
-                resolve({ success: true, method: 'cash', tendered, change: tendered - amountDue });
+                
+                // Kick cash drawer for cash payment
+                if (window.CashDrawer) {
+                    await CashDrawer.kick();
+                }
+                
+                resolve({ success: true, method: 'cash', tendered, change });
             };
             
             window.cancelCashPayment = () => {
@@ -361,49 +429,69 @@ const Payment = {
     
     // Complete transaction
     async completeTransaction(paymentResult) {
+        // Validate paymentResult
+        if (!paymentResult || !paymentResult.method) {
+            console.error('Invalid payment result');
+            POS.toast('Error completing transaction', 'error');
+            return;
+        }
+        
+        const subtotal = Cart.getSubtotal();
+        const tax = Cart.getTax();
+        const total = Cart.getTotal();
+        
+        // Validate amounts are reasonable
+        if (total < 0 || total > 100000 || !Number.isFinite(total)) {
+            console.error('Invalid transaction total:', total);
+            POS.toast('Error: Invalid total', 'error');
+            return;
+        }
+        
         const transaction = {
-            id: Date.now(),
-            items: [...Cart.items],
-            subtotal: Cart.getSubtotal(),
-            tax: Cart.getTax(),
-            total: Cart.getTotal(),
-            payment: paymentResult,
+            items: Cart.items.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                qty: item.qty,
+                type: item.type
+            })),
+            subtotal: Math.round(subtotal * 100) / 100,
+            tax: Math.round(tax * 100) / 100,
+            total: Math.round(total * 100) / 100,
+            paymentMethod: paymentResult.method,
+            paymentDetails: paymentResult,
             customer: POS.state.selectedCustomer,
-            employee: POS.state.currentUser?.name,
-            register: POS.config.registerId,
-            createdAt: new Date().toISOString()
+            customerId: POS.state.selectedCustomer?.id || null,
+            status: 'completed'
         };
         
-        // Save locally
-        const transactions = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
-        transactions.push(transaction);
-        localStorage.setItem('gc_transactions', JSON.stringify(transactions));
-        
-        // Update customer stats
-        if (POS.state.selectedCustomer && typeof GolfCoveCustomers !== 'undefined') {
-            const customer = GolfCoveCustomers.search(POS.state.selectedCustomer, { limit: 1 })[0];
-            if (customer) {
-                GolfCoveCustomers.recordVisit(customer.id, transaction.total);
-            }
-        }
-        
-        // Sync to server
         try {
-            await fetch('/api/sales', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(transaction)
-            });
+            // Use POS.recordTransaction which handles backend sync
+            const savedTransaction = await POS.recordTransaction(transaction);
+            
+            if (!savedTransaction) {
+                throw new Error('Failed to save transaction');
+            }
+            
+            // Show success
+            this.close();
+            this.showReceipt(savedTransaction);
+            Cart.clear();
+            
+            // Update inventory if tracking enabled
+            if (typeof GolfCoveMenu !== 'undefined') {
+                for (const item of transaction.items) {
+                    if (item.inventoryId || item.id) {
+                        GolfCoveMenu.deductInventory(item.inventoryId || item.id, item.qty);
+                    }
+                }
+            }
+            
+            POS.toast('Payment successful!', 'success');
         } catch (err) {
-            console.error('Failed to sync transaction:', err);
+            console.error('Transaction error:', err);
+            POS.toast('Error completing transaction', 'error');
         }
-        
-        // Show success
-        this.close();
-        this.showReceipt(transaction);
-        Cart.clear();
-        
-        POS.toast('Payment successful!', 'success');
     },
     
     // Show receipt
@@ -411,15 +499,30 @@ const Payment = {
         const modal = document.getElementById('receiptModal');
         if (!modal) return;
         
+        // Get business info from unified config
+        const businessInfo = window.GolfCoveConfig?.business || {
+            name: POS.config.businessName,
+            address: { street: '', city: '', state: '', zip: '' },
+            phone: ''
+        };
+        
+        const addressStr = businessInfo.address 
+            ? `${businessInfo.address.street}, ${businessInfo.address.city}, ${businessInfo.address.state} ${businessInfo.address.zip}`
+            : '';
+        
         document.getElementById('receiptContent').innerHTML = `
             <div class="receipt">
                 <div class="receipt-header">
-                    <h2>${POS.config.businessName}</h2>
+                    <h2>${businessInfo.name || POS.config.businessName}</h2>
+                    ${addressStr ? `<p>${addressStr}</p>` : ''}
+                    ${businessInfo.phone ? `<p>${businessInfo.phone}</p>` : ''}
+                    <hr>
                     <p>${new Date(transaction.createdAt).toLocaleString()}</p>
-                    <p>Served by: ${transaction.employee}</p>
+                    <p>Served by: ${transaction.employeeName || transaction.employee || 'Staff'}</p>
+                    ${transaction.customer ? `<p>Customer: ${transaction.customer.name || transaction.customer.firstName + ' ' + transaction.customer.lastName}</p>` : ''}
                 </div>
                 <div class="receipt-items">
-                    ${transaction.items.map(item => `
+                    ${(transaction.items || []).map(item => `
                         <div class="receipt-item">
                             <span>${item.qty}x ${item.name}</span>
                             <span>${POS.formatCurrency(item.price * item.qty)}</span>
@@ -431,33 +534,165 @@ const Payment = {
                         <span>Subtotal</span>
                         <span>${POS.formatCurrency(transaction.subtotal)}</span>
                     </div>
+                    ${transaction.discount ? `
+                        <div class="receipt-row discount">
+                            <span>Discount</span>
+                            <span>-${POS.formatCurrency(transaction.discount)}</span>
+                        </div>
+                    ` : ''}
                     <div class="receipt-row">
-                        <span>Tax (${POS.config.taxRate}%)</span>
+                        <span>Tax (${(window.GolfCoveConfig?.pricing?.taxRate * 100 || POS.config.taxRate).toFixed(2)}%)</span>
                         <span>${POS.formatCurrency(transaction.tax)}</span>
                     </div>
+                    ${transaction.paymentDetails?.tip ? `
+                        <div class="receipt-row">
+                            <span>Tip</span>
+                            <span>${POS.formatCurrency(transaction.paymentDetails.tip)}</span>
+                        </div>
+                    ` : ''}
                     <div class="receipt-row total">
                         <span>Total</span>
                         <span>${POS.formatCurrency(transaction.total)}</span>
                     </div>
                     <div class="receipt-row">
-                        <span>Paid (${transaction.payment.method})</span>
-                        <span>${POS.formatCurrency(transaction.total)}</span>
+                        <span>Paid (${transaction.paymentMethod || transaction.payment?.method || 'Card'})</span>
+                        <span>${POS.formatCurrency(transaction.paymentDetails?.tendered || transaction.total)}</span>
                     </div>
-                    ${transaction.payment.change ? `
+                    ${transaction.paymentDetails?.change > 0 ? `
                         <div class="receipt-row">
                             <span>Change</span>
-                            <span>${POS.formatCurrency(transaction.payment.change)}</span>
+                            <span>${POS.formatCurrency(transaction.paymentDetails.change)}</span>
                         </div>
                     ` : ''}
                 </div>
                 <div class="receipt-footer">
+                    <p class="receipt-id">Transaction: ${transaction.id}</p>
                     <p>Thank you for visiting!</p>
-                    <p>Transaction #${transaction.id}</p>
+                    ${transaction.customer?.loyaltyPoints ? `<p>Points Earned: +${Math.floor(transaction.total)}</p>` : ''}
+                    <div class="receipt-barcode">
+                        <div style="font-family: 'Libre Barcode 39', monospace; font-size: 32px;">${transaction.id}</div>
+                    </div>
                 </div>
             </div>
         `;
         
         modal.style.display = 'flex';
+    },
+    
+    // Print receipt
+    printReceipt(transaction) {
+        const printWindow = window.open('', '_blank', 'width=400,height=600');
+        if (!printWindow) {
+            POS.toast('Please allow popups for printing', 'error');
+            return;
+        }
+        
+        const businessInfo = window.GolfCoveConfig?.business || {
+            name: POS.config.businessName,
+            address: { street: '', city: '', state: '', zip: '' },
+            phone: ''
+        };
+        
+        const addressStr = businessInfo.address 
+            ? `${businessInfo.address.street}<br>${businessInfo.address.city}, ${businessInfo.address.state} ${businessInfo.address.zip}`
+            : '';
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Receipt - ${transaction.id}</title>
+                <style>
+                    @page { margin: 0; size: 80mm auto; }
+                    body { 
+                        font-family: 'Courier New', monospace;
+                        font-size: 12px;
+                        width: 72mm;
+                        padding: 4mm;
+                        margin: 0 auto;
+                    }
+                    .header { text-align: center; margin-bottom: 10px; }
+                    .header h1 { font-size: 16px; margin: 0; }
+                    .divider { border-top: 1px dashed #000; margin: 8px 0; }
+                    .item { display: flex; justify-content: space-between; margin: 4px 0; }
+                    .total { font-weight: bold; font-size: 14px; }
+                    .footer { text-align: center; margin-top: 10px; font-size: 10px; }
+                    @media print { body { -webkit-print-color-adjust: exact; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>${businessInfo.name || 'Golf Cove'}</h1>
+                    ${addressStr ? `<p>${addressStr}</p>` : ''}
+                    ${businessInfo.phone ? `<p>${businessInfo.phone}</p>` : ''}
+                </div>
+                <div class="divider"></div>
+                <p>${new Date(transaction.createdAt).toLocaleString()}</p>
+                <p>Served by: ${transaction.employeeName || 'Staff'}</p>
+                ${transaction.customer ? `<p>Customer: ${transaction.customer.name || (transaction.customer.firstName + ' ' + transaction.customer.lastName)}</p>` : ''}
+                <div class="divider"></div>
+                ${(transaction.items || []).map(item => `
+                    <div class="item">
+                        <span>${item.qty}x ${item.name}</span>
+                        <span>${POS.formatCurrency(item.price * item.qty)}</span>
+                    </div>
+                `).join('')}
+                <div class="divider"></div>
+                <div class="item"><span>Subtotal</span><span>${POS.formatCurrency(transaction.subtotal)}</span></div>
+                ${transaction.discount ? `<div class="item"><span>Discount</span><span>-${POS.formatCurrency(transaction.discount)}</span></div>` : ''}
+                <div class="item"><span>Tax</span><span>${POS.formatCurrency(transaction.tax)}</span></div>
+                ${transaction.paymentDetails?.tip ? `<div class="item"><span>Tip</span><span>${POS.formatCurrency(transaction.paymentDetails.tip)}</span></div>` : ''}
+                <div class="item total"><span>TOTAL</span><span>${POS.formatCurrency(transaction.total)}</span></div>
+                <div class="divider"></div>
+                <div class="item"><span>Paid (${transaction.paymentMethod})</span><span>${POS.formatCurrency(transaction.paymentDetails?.tendered || transaction.total)}</span></div>
+                ${transaction.paymentDetails?.change > 0 ? `<div class="item"><span>Change</span><span>${POS.formatCurrency(transaction.paymentDetails.change)}</span></div>` : ''}
+                <div class="divider"></div>
+                <div class="footer">
+                    <p>Transaction: ${transaction.id}</p>
+                    <p>Thank you for visiting!</p>
+                </div>
+            </body>
+            </html>
+        `);
+        
+        printWindow.document.close();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 250);
+    },
+    
+    // Email receipt
+    async emailReceipt(transaction, email = null) {
+        const customerEmail = email || transaction.customer?.email;
+        if (!customerEmail) {
+            POS.toast('No email address available', 'error');
+            return { success: false };
+        }
+        
+        if (typeof GolfCoveAPI !== 'undefined') {
+            try {
+                await GolfCoveAPI.receipts.email({
+                    transactionId: transaction.id,
+                    email: customerEmail,
+                    transaction: transaction
+                });
+                POS.toast('Receipt sent to ' + customerEmail, 'success');
+                return { success: true };
+            } catch (err) {
+                POS.toast('Failed to send receipt', 'error');
+                return { success: false, error: err.message };
+            }
+        }
+        
+        POS.toast('Email service not available', 'error');
+        return { success: false, error: 'Service unavailable' };
+    },
+    
+    // Close receipt modal
+    closeReceiptModal() {
+        const modal = document.getElementById('receiptModal');
+        if (modal) modal.style.display = 'none';
     }
 };
 

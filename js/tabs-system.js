@@ -6,6 +6,13 @@
 const GolfCoveTabs = (function() {
     'use strict';
     
+    // Get Core reference for event emissions
+    const getCore = () => window.GolfCoveCore;
+    const emit = (event, data) => {
+        const Core = getCore();
+        if (Core?.emit) Core.emit(event, data);
+    };
+    
     // State
     let openTabs = [];
     let cart = [];
@@ -13,13 +20,20 @@ const GolfCoveTabs = (function() {
     let currentCustomer = null;
     let memberDiscount = 0;
     
-    // Tax rate
-    const TAX_RATE = 0.0635; // 6.35% CT tax
+    // Tax rate - Use unified config if available
+    const getTaxRate = () => window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635;
     
     // Initialize
     function init() {
-        openTabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
-        cart = [];
+        try {
+            openTabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+            cart = [];
+            emit('tabs:initialized', { count: openTabs.length });
+        } catch (error) {
+            console.error('[GolfCoveTabs] Init error:', error);
+            openTabs = [];
+            cart = [];
+        }
     }
     
     function saveTabs() {
@@ -51,6 +65,7 @@ const GolfCoveTabs = (function() {
         
         openTabs.push(tab);
         saveTabs();
+        emit('tab:created', { tab });
         
         return { success: true, tab };
     }
@@ -69,10 +84,11 @@ const GolfCoveTabs = (function() {
         
         // Recalculate totals
         tab.subtotal = tab.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        tab.tax = tab.subtotal * TAX_RATE;
+        tab.tax = tab.subtotal * getTaxRate();
         tab.amount = tab.subtotal + tab.tax - (tab.memberDiscount || 0);
         
         saveTabs();
+        emit('tab:updated', { tab });
         return tab;
     }
     
@@ -137,6 +153,9 @@ const GolfCoveTabs = (function() {
         openTabs.splice(tabIndex, 1);
         saveTabs();
         
+        emit('tab:closed', { tab, transaction });
+        emit('transaction:created', { transaction });
+        
         return { success: true, transaction };
     }
     
@@ -144,8 +163,10 @@ const GolfCoveTabs = (function() {
         const tabIndex = openTabs.findIndex(t => t.id === tabId);
         if (tabIndex === -1) return { success: false, error: 'Tab not found' };
         
+        const tab = openTabs[tabIndex];
         openTabs.splice(tabIndex, 1);
         saveTabs();
+        emit('tab:deleted', { tab });
         return { success: true };
     }
     
@@ -213,7 +234,7 @@ const GolfCoveTabs = (function() {
     }
     
     function getCartTax() {
-        return (getCartSubtotal() - memberDiscount) * TAX_RATE;
+        return (getCartSubtotal() - memberDiscount) * getTaxRate();
     }
     
     function getCartTotal() {
@@ -391,8 +412,8 @@ const GolfCoveTabs = (function() {
         getTodaysTransactions,
         getTodaysSales,
         
-        // Constants
-        TAX_RATE
+        // Tax rate (dynamic from config)
+        getTaxRate
     };
 })();
 

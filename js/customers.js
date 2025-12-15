@@ -1,6 +1,10 @@
 /**
  * Golf Cove - Customer Management System
  * Handles customer data, search, and history
+ * 
+ * @deprecated This module is being phased out in favor of customer-manager.js
+ * Use GolfCoveCustomerManager or GolfCoveServices.CustomerService instead
+ * All new code should use the unified services layer (services-unified.js)
  */
 
 const GolfCoveCustomers = (function() {
@@ -8,8 +12,18 @@ const GolfCoveCustomers = (function() {
     
     const STORAGE_KEY = 'gc_customers';
     
+    // Emit deprecation warning once
+    let deprecationWarned = false;
+    function warnDeprecation(methodName) {
+        if (!deprecationWarned) {
+            console.warn('[GolfCoveCustomers] DEPRECATED: This module is being phased out. Use GolfCoveCustomerManager or GolfCoveServices.CustomerService instead.');
+            deprecationWarned = true;
+        }
+    }
+    
     // ============ DATA MANAGEMENT ============
     function getAll() {
+        warnDeprecation('getAll');
         return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     }
     

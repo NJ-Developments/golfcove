@@ -63,6 +63,59 @@ const GolfCoveBooking = (function() {
     
     function saveBookings(bookings) {
         localStorage.setItem('gc_bookings', JSON.stringify(bookings));
+        
+        // Sync to cloud if available
+        if (typeof GolfCoveSyncManager !== 'undefined') {
+            try {
+                GolfCoveSyncManager.syncCollection('bookings', bookings);
+            } catch (e) {
+                console.warn('[Booking] Cloud sync failed:', e);
+            }
+        }
+    }
+    
+    // Sync bookings from cloud on init
+    function syncFromCloud() {
+        if (typeof GolfCoveSyncManager !== 'undefined') {
+            try {
+                const cloudBookings = GolfCoveSyncManager.getCollection('bookings');
+                if (cloudBookings && cloudBookings.length > 0) {
+                    // Merge with local, preferring newer versions
+                    const localBookings = getBookings();
+                    const mergedBookings = mergeBookings(localBookings, cloudBookings);
+                    localStorage.setItem('gc_bookings', JSON.stringify(mergedBookings));
+                    return mergedBookings;
+                }
+            } catch (e) {
+                console.warn('[Booking] Cloud sync failed:', e);
+            }
+        }
+        return getBookings();
+    }
+    
+    // Merge local and cloud bookings, preferring most recent updates
+    function mergeBookings(local, cloud) {
+        const bookingsMap = new Map();
+        
+        // Add all local bookings
+        local.forEach(b => bookingsMap.set(b.id, b));
+        
+        // Merge cloud bookings (overwrite if newer)
+        cloud.forEach(b => {
+            const existing = bookingsMap.get(b.id);
+            if (!existing) {
+                bookingsMap.set(b.id, b);
+            } else {
+                // Compare updatedAt timestamps
+                const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+                const cloudTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+                if (cloudTime > existingTime) {
+                    bookingsMap.set(b.id, b);
+                }
+            }
+        });
+        
+        return Array.from(bookingsMap.values());
     }
     
     function getWaitlist() {
@@ -608,6 +661,9 @@ const GolfCoveBooking = (function() {
         // Stats
         getDayStats,
         getCustomerBookings,
+        
+        // Sync
+        syncFromCloud,
         
         // Utils
         formatTime,

@@ -7,7 +7,8 @@ const PaymentProcessor = (function() {
     'use strict';
     
     // ============ CONSTANTS ============
-    const TAX_RATE = 0.0635; // 6.35% CT Sales Tax
+    // Use unified config for tax rate
+    const getTaxRate = () => window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635;
     
     const PAYMENT_METHODS = [
         { id: 'card', name: 'Card', icon: 'fa-credit-card' },
@@ -18,14 +19,44 @@ const PaymentProcessor = (function() {
         { id: 'split', name: 'Split Pay', icon: 'fa-divide' }
     ];
     
-    const TIP_PRESETS = [
-        { percent: 15, label: '15%' },
-        { percent: 18, label: '18%' },
-        { percent: 20, label: '20%' },
-        { percent: 25, label: '25%' }
-    ];
+    // Use unified config for tip presets if available
+    const getTipPresets = () => {
+        const presets = window.GolfCoveConfig?.pricing?.tipPresets ?? [15, 18, 20, 25];
+        return presets.map(p => ({ percent: p, label: `${p}%` }));
+    };
+    
+    // Production limits
+    const MAX_TRANSACTION = 50000; // $50,000 max single transaction
+    const MIN_TRANSACTION = 0.01;
+    const MAX_TIP_PERCENT = 100;
+    const PAYMENT_TIMEOUT = 60000; // 60 second timeout
+    
+    // Validation helpers
+    function validateAmount(amount, field = 'amount') {
+        const num = parseFloat(amount);
+        if (isNaN(num)) {
+            console.error(`Invalid ${field}: not a number`);
+            return null;
+        }
+        if (num < 0) {
+            console.error(`Invalid ${field}: negative value`);
+            return null;
+        }
+        if (num > MAX_TRANSACTION) {
+            console.error(`${field} exceeds maximum: ${MAX_TRANSACTION}`);
+            return null;
+        }
+        return Math.round(num * 100) / 100;
+    }
+    
+    function sanitizeInput(str, maxLen = 100) {
+        if (typeof str !== 'string') return '';
+        return str.trim().substring(0, maxLen).replace(/[<>"']/g, '');
+    }
     
     // State
+    let paymentInProgress = false;
+    let paymentTimeoutId = null;
     let currentTotal = 0;
     let currentSubtotal = 0;
     let currentTax = 0;
@@ -41,10 +72,31 @@ const PaymentProcessor = (function() {
     
     // ============ CALCULATIONS ============
     function calculateTotals(subtotal, discountPercent = 0, tipAmount = 0) {
-        const discount = subtotal * (discountPercent / 100);
-        const taxableAmount = subtotal - discount;
-        const tax = taxableAmount * TAX_RATE;
-        const total = taxableAmount + tax + tipAmount;
+        // Validate inputs
+        const validSubtotal = validateAmount(subtotal, 'subtotal');
+        if (validSubtotal === null || validSubtotal < MIN_TRANSACTION) {
+            return { error: 'Invalid subtotal', subtotal: 0, total: 0 };
+        }
+        
+        // Clamp discount to valid range
+        let validDiscount = parseFloat(discountPercent) || 0;
+        validDiscount = Math.max(0, Math.min(100, validDiscount));
+        
+        // Clamp tip to reasonable range
+        let validTip = parseFloat(tipAmount) || 0;
+        const maxTip = validSubtotal * (MAX_TIP_PERCENT / 100);
+        validTip = Math.max(0, Math.min(maxTip, validTip));
+        
+        const taxRate = getTaxRate();
+        const discount = validSubtotal * (validDiscount / 100);
+        const taxableAmount = validSubtotal - discount;
+        const tax = Math.round(taxableAmount * taxRate * 100) / 100; // Round to cents
+        const total = Math.round((taxableAmount + tax + validTip) * 100) / 100;
+        
+        // Final validation
+        if (total > MAX_TRANSACTION) {
+            return { error: 'Transaction exceeds maximum limit', subtotal: validSubtotal, total: 0 };
+        }
         
         return {
             subtotal: subtotal,
@@ -52,6 +104,7 @@ const PaymentProcessor = (function() {
             discountPercent: discountPercent,
             taxableAmount: taxableAmount,
             tax: tax,
+            taxRate: taxRate,
             tip: tipAmount,
             total: total
         };
@@ -63,11 +116,31 @@ const PaymentProcessor = (function() {
     
     // ============ MODAL ============
     function showPaymentModal(subtotal, options = {}) {
-        currentSubtotal = subtotal;
-        currentDiscount = options.discountPercent || 0;
-        onCompleteCallback = options.onComplete || null;
+        // Prevent duplicate modals
+        if (paymentInProgress) {
+            showToast('Payment already in progress', 'error');
+            return;
+        }
+        
+        // Validate subtotal
+        const validSubtotal = validateAmount(subtotal, 'subtotal');
+        if (validSubtotal === null || validSubtotal < MIN_TRANSACTION) {
+            showToast('Invalid payment amount', 'error');
+            return;
+        }
+        
+        currentSubtotal = validSubtotal;
+        currentDiscount = Math.max(0, Math.min(100, parseFloat(options.discountPercent) || 0));
+        onCompleteCallback = typeof options.onComplete === 'function' ? options.onComplete : null;
         selectedTip = 0;
         selectedPaymentMethod = 'card';
+        paymentInProgress = true;
+        
+        // Set payment timeout
+        paymentTimeoutId = setTimeout(() => {
+            showToast('Payment timed out', 'error');
+            closeModal();
+        }, PAYMENT_TIMEOUT);
         
         const totals = calculateTotals(subtotal, currentDiscount, 0);
         currentTax = totals.tax;
@@ -98,7 +171,7 @@ const PaymentProcessor = (function() {
                         </div>
                         ` : ''}
                         <div class="summary-row">
-                            <span>Tax (6.35%)</span>
+                            <span>Tax (${((GolfCoveConfig?.pricing?.taxRate ?? 0.0635) * 100).toFixed(2).replace(/\.?0+$/, '')}%)</span>
                             <span id="payTax">${formatCurrency(totals.tax)}</span>
                         </div>
                         <div class="summary-row tip-row" id="tipRow" style="display:none;">
@@ -116,7 +189,7 @@ const PaymentProcessor = (function() {
                         <label>Add Tip</label>
                         <div class="tip-buttons">
                             <button class="tip-btn" onclick="PaymentProcessor.setTipPercent(0)">No Tip</button>
-                            ${TIP_PRESETS.map(t => `
+                            ${getTipPresets().map(t => `
                                 <button class="tip-btn" onclick="PaymentProcessor.setTipPercent(${t.percent})">${t.label}</button>
                             `).join('')}
                             <button class="tip-btn" onclick="PaymentProcessor.showCustomTip()">Custom</button>
@@ -208,6 +281,13 @@ const PaymentProcessor = (function() {
     function closeModal() {
         const overlay = document.getElementById('paymentModalOverlay');
         if (overlay) overlay.remove();
+        
+        // Clear timeout and state
+        if (paymentTimeoutId) {
+            clearTimeout(paymentTimeoutId);
+            paymentTimeoutId = null;
+        }
+        paymentInProgress = false;
     }
     
     // ============ TIP HANDLING ============
@@ -225,7 +305,21 @@ const PaymentProcessor = (function() {
     }
     
     function applyCustomTip() {
-        const amount = parseFloat(document.getElementById('customTipAmount').value) || 0;
+        const input = document.getElementById('customTipAmount');
+        const amount = validateAmount(input?.value, 'tip');
+        
+        if (amount === null) {
+            showToast('Invalid tip amount', 'error');
+            return;
+        }
+        
+        // Cap tip at 100% of subtotal
+        const maxTip = currentSubtotal * (MAX_TIP_PERCENT / 100);
+        if (amount > maxTip) {
+            showToast(`Tip cannot exceed ${formatCurrency(maxTip)}`, 'error');
+            return;
+        }
+        
         selectedTip = amount;
         updateTotals();
         document.querySelectorAll('.tip-btn').forEach(b => b.classList.remove('active'));
@@ -321,11 +415,36 @@ const PaymentProcessor = (function() {
     
     // ============ PROCESS PAYMENT ============
     function processPayment() {
+        // Prevent double-submit
+        if (!paymentInProgress) {
+            showToast('No payment in progress', 'error');
+            return;
+        }
+        
+        // Generate idempotency key
+        const idempotencyKey = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Validate final amount
+        if (currentTotal < MIN_TRANSACTION) {
+            showToast('Invalid payment amount', 'error');
+            return;
+        }
+        
+        if (currentTotal > MAX_TRANSACTION) {
+            showToast('Transaction exceeds maximum limit', 'error');
+            return;
+        }
+        
         // Validate based on method
         if (selectedPaymentMethod === 'cash') {
-            const tendered = parseFloat(document.getElementById('cashTendered').value) || 0;
+            const tendered = parseFloat(document.getElementById('cashTendered')?.value) || 0;
             if (tendered < currentTotal) {
                 showToast('Insufficient cash tendered', 'error');
+                return;
+            }
+            // Validate reasonable cash amount
+            if (tendered > currentTotal * 10) {
+                showToast('Cash amount seems incorrect. Please verify.', 'error');
                 return;
             }
         }

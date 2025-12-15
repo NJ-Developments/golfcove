@@ -20,7 +20,15 @@ const TabsSync = (function() {
     // ============ INITIALIZATION ============
     function init() {
         // Load from localStorage first (immediate)
-        localTabs = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
+        try {
+            const stored = localStorage.getItem(LOCAL_KEY);
+            localTabs = stored ? JSON.parse(stored) : [];
+            // Normalize tabs for compatibility with admin-pos.html
+            localTabs = localTabs.map(normalizeTab).filter(t => t !== null);
+        } catch (e) {
+            console.error('[TabsSync] Error loading tabs:', e);
+            localTabs = [];
+        }
         
         // Set up online/offline detection
         window.addEventListener('online', () => {
@@ -43,6 +51,40 @@ const TabsSync = (function() {
         
         console.log('[TabsSync] Initialized with', localTabs.length, 'tabs');
         return localTabs;
+    }
+    
+    // Normalize tab data for cross-module compatibility
+    function normalizeTab(tab) {
+        if (!tab || typeof tab !== 'object') return null;
+        return {
+            ...tab,
+            id: tab.id,
+            customer: tab.customer || tab.customerName || 'Guest',
+            // Normalize totals
+            total: tab.total ?? tab.amount ?? 0,
+            amount: tab.amount ?? tab.total ?? 0,
+            subtotal: tab.subtotal ?? 0,
+            // Normalize timestamps
+            openedAt: tab.openedAt || tab.createdAt,
+            createdAt: tab.createdAt || tab.openedAt,
+            // Ensure items array
+            items: Array.isArray(tab.items) ? tab.items : [],
+            // Member info
+            isMember: tab.isMember || false,
+            isVIP: tab.isVIP || false,
+            memberType: tab.memberType || null,
+            memberDiscount: tab.memberDiscount || 0,
+            // Table/location
+            table: tab.table || 'Tab'
+        };
+    }
+    
+    function saveLocal() {
+        try {
+            localStorage.setItem(LOCAL_KEY, JSON.stringify(localTabs));
+        } catch (e) {
+            console.error('[TabsSync] Error saving tabs:', e);
+        }
     }
     
     // ============ SERVER SYNC ============
@@ -111,14 +153,32 @@ const TabsSync = (function() {
     
     // ============ TAB OPERATIONS ============
     
-    // Get all open tabs
-    function getAllTabs() {
-        return localTabs.filter(t => t.status === 'open' || !t.status);
+    // Ensure initialized
+    function ensureInit() {
+        if (localTabs.length === 0) {
+            // Check localStorage directly
+            try {
+                const stored = localStorage.getItem(LOCAL_KEY);
+                if (stored) {
+                    localTabs = JSON.parse(stored).map(normalizeTab).filter(t => t !== null);
+                }
+            } catch (e) {
+                console.error('[TabsSync] Error in ensureInit:', e);
+            }
+        }
     }
     
-    // Get tab by ID
+    // Get all open tabs
+    function getAllTabs() {
+        ensureInit();
+        // Filter open tabs (no status means open, or status === 'open')
+        return localTabs.filter(t => !t.status || t.status === 'open');
+    }
+    
+    // Get tab by ID (flexible matching for number vs string IDs)
     function getTab(tabId) {
-        return localTabs.find(t => t.id === tabId);
+        ensureInit();
+        return localTabs.find(t => t.id == tabId || String(t.id) === String(tabId));
     }
     
     // Get tab by customer name
@@ -179,6 +239,7 @@ const TabsSync = (function() {
         
         const newTab = {
             id: tabId,
+            version: 1, // Version for optimistic locking
             customerId: customerId || (customer ? customer.id : null),
             customer: customerName || 'Guest',
             // Member info
@@ -193,11 +254,15 @@ const TabsSync = (function() {
                 addedBy: employeeName
             })),
             subtotal: itemsTotal,
-            tax: itemsTotal * 0.0635,
-            total: itemsTotal * 1.0635,
+            tax: itemsTotal * (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635),
+            total: itemsTotal * (1 + (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635)),
+            amount: itemsTotal * (1 + (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635)), // Alias for compatibility
             status: 'open',
             openedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(), // Alias for compatibility
             openedBy: employeeName,
+            employee: employeeName, // Alias for compatibility
+            table: options.table || 'Tab', // Compatibility with admin-pos
             updatedAt: new Date().toISOString(),
             notes: options.notes || null,
             bayNumber: options.bayNumber || null,
@@ -242,10 +307,12 @@ const TabsSync = (function() {
         
         tab.items = [...(tab.items || []), ...newItems];
         tab.subtotal = tab.items.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 1)), 0);
-        tab.tax = tab.subtotal * 0.0635;
-        tab.total = tab.subtotal * 1.0635;
+        tab.tax = tab.subtotal * (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635);
+        tab.total = tab.subtotal + tab.tax;
+        tab.amount = tab.total; // Alias for compatibility
         tab.updatedAt = new Date().toISOString();
         tab.lastUpdatedBy = employeeName;
+        tab.version = (tab.version || 0) + 1; // Increment version for optimistic locking
         
         saveLocal();
         notifyListeners('update', tab);
@@ -289,8 +356,9 @@ const TabsSync = (function() {
         
         tab.items.splice(itemIndex, 1);
         tab.subtotal = tab.items.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 1)), 0);
-        tab.tax = tab.subtotal * 0.0635;
-        tab.total = tab.subtotal * 1.0635;
+        tab.tax = tab.subtotal * (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635);
+        tab.total = tab.subtotal + tab.tax;
+        tab.amount = tab.total; // Alias for compatibility
         tab.updatedAt = new Date().toISOString();
         
         saveLocal();
@@ -365,6 +433,22 @@ const TabsSync = (function() {
         localTabs = localTabs.filter(t => t.id !== tabId);
         saveLocal();
         
+        // Also record this as a completed transaction for reporting
+        try {
+            const completedTabs = JSON.parse(localStorage.getItem('gc_completed_tabs') || '[]');
+            completedTabs.push({
+                ...tab,
+                completedAt: new Date().toISOString()
+            });
+            // Keep only last 100 completed tabs
+            if (completedTabs.length > 100) {
+                completedTabs.splice(0, completedTabs.length - 100);
+            }
+            localStorage.setItem('gc_completed_tabs', JSON.stringify(completedTabs));
+        } catch (e) {
+            console.error('[TabsSync] Failed to save completed tab:', e);
+        }
+        
         return tab;
     }
     
@@ -405,11 +489,6 @@ const TabsSync = (function() {
         return tab;
     }
     
-    // ============ LOCAL STORAGE ============
-    function saveLocal() {
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(localTabs));
-    }
-    
     // ============ LISTENERS ============
     function addListener(callback) {
         listeners.push(callback);
@@ -446,6 +525,18 @@ const TabsSync = (function() {
         }
     }
     
+    // Alias for saveTabs in admin-pos.html
+    function syncToServer() {
+        forceSync();
+    }
+    
+    // Alias for onUpdate callback registration
+    function onUpdate(callback) {
+        if (typeof callback === 'function') {
+            addListener(callback);
+        }
+    }
+    
     // ============ PUBLIC API ============
     return {
         init,
@@ -459,8 +550,10 @@ const TabsSync = (function() {
         closeTab,
         voidTab,
         addListener,
+        onUpdate, // Alias for addListener
         getStats,
         forceSync,
+        syncToServer, // Alias for forceSync
         
         // Aliases for compatibility
         get tabs() { return getAllTabs(); },

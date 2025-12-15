@@ -69,10 +69,17 @@ const GolfCoveCustomerManager = (function() {
     
     // ============ CUSTOMER CRUD ============
     function createCustomer(data) {
-        // Validate
-        const validation = ValidationSchemas.validate('customer', 'create', data);
-        if (!validation.success) {
-            return validation;
+        // Validate - check if ValidationSchemas exists first
+        if (typeof ValidationSchemas !== 'undefined' && ValidationSchemas.validate) {
+            const validation = ValidationSchemas.validate('customer', 'create', data);
+            if (!validation.success) {
+                return validation;
+            }
+        } else {
+            // Basic validation fallback
+            if (!data.firstName || !data.lastName) {
+                return Core.failure(Core.ErrorCodes.VALIDATION, 'First name and last name are required');
+            }
         }
         
         // Check for duplicates
@@ -175,7 +182,7 @@ const GolfCoveCustomerManager = (function() {
         return Core.success(updatedCustomer);
     }
     
-    function deleteCustomer(customerId) {
+    function deleteCustomer(customerId, hardDelete = false) {
         const customers = getAllCustomers();
         const index = customers.findIndex(c => c.id === customerId);
         
@@ -184,16 +191,58 @@ const GolfCoveCustomerManager = (function() {
         }
         
         const customer = customers[index];
-        customers.splice(index, 1);
+        
+        if (hardDelete) {
+            // Permanently remove
+            customers.splice(index, 1);
+        } else {
+            // Soft delete - mark as deleted but keep data
+            customer.deleted = true;
+            customer.deletedAt = new Date().toISOString();
+            customers[index] = customer;
+        }
+        
         localStorage.setItem('gc_customers', JSON.stringify(customers));
         
         if (typeof GolfCoveSyncManager !== 'undefined') {
-            GolfCoveSyncManager.delete('customers', customerId);
+            if (hardDelete) {
+                GolfCoveSyncManager.delete('customers', customerId);
+            } else {
+                GolfCoveSyncManager.update('customers', customer);
+            }
         }
         
-        Core.emit('customer:deleted', { customer });
+        Core.emit('customer:deleted', { customer, hardDelete });
         
         return Core.success();
+    }
+    
+    // Restore a soft-deleted customer
+    function restoreCustomer(customerId) {
+        const customers = getAllCustomers();
+        const customer = customers.find(c => c.id === customerId);
+        
+        if (!customer) {
+            return Core.failure(Core.ErrorCodes.NOT_FOUND, 'Customer not found');
+        }
+        
+        if (!customer.deleted) {
+            return Core.failure(Core.ErrorCodes.VALIDATION, 'Customer is not deleted');
+        }
+        
+        customer.deleted = false;
+        delete customer.deletedAt;
+        customer.updatedAt = new Date().toISOString();
+        
+        localStorage.setItem('gc_customers', JSON.stringify(customers));
+        
+        if (typeof GolfCoveSyncManager !== 'undefined') {
+            GolfCoveSyncManager.update('customers', customer);
+        }
+        
+        Core.emit('customer:restored', { customer });
+        
+        return Core.success(customer);
     }
     
     // ============ STORAGE ============
@@ -757,6 +806,7 @@ const GolfCoveCustomerManager = (function() {
         createCustomer,
         updateCustomer,
         deleteCustomer,
+        restoreCustomer,
         getCustomer,
         getAllCustomers,
         findByEmail,

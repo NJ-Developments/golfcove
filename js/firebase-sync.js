@@ -37,11 +37,17 @@ const GolfCoveFirebase = (function() {
     });
     
     // ============ HTTP HELPERS ============
+    // API key for authenticated requests (should match backend config)
+    const getApiKey = () => window.GolfCoveConfig?.api?.key || 'gc-dev-key-2024';
+    
     async function apiRequest(endpoint, method = 'GET', data = null) {
         const url = `${config.baseUrl}/${endpoint}`;
         const options = {
             method,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-API-Key': getApiKey()
+            }
         };
         
         if (data && method !== 'GET') {

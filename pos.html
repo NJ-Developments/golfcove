@@ -531,6 +531,14 @@
                     <label>Register ID</label>
                     <input type="text" id="settingsRegisterId" value="POS-1">
                 </div>
+                <div class="form-group" style="margin-top:16px; padding-top:16px; border-top:1px solid #eee;">
+                    <label>Cash Drawer</label>
+                    <button class="btn-secondary" onclick="connectDrawerFromSettings()" style="width:100%; margin-top:8px;">
+                        <i class="fas fa-cash-register"></i> 
+                        <span id="drawerBtnText">Connect USB Drawer</span>
+                    </button>
+                    <small style="display:block; margin-top:4px; color:#888;">Works with Chrome, Edge, Opera</small>
+                </div>
             </div>
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="document.getElementById('settingsModal').style.display='none'">Cancel</button>
@@ -541,7 +549,12 @@
         </div>
     </div>
 
-    <!-- Firebase & PIN System (load first) -->
+    <!-- Unified Config & Core (load first) -->
+    <script src="js/config-unified.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/services-unified.js"></script>
+    
+    <!-- Firebase & PIN System -->
     <script src="js/firebase-sync.js"></script>
     <script src="js/pin-system.js"></script>
     
@@ -551,6 +564,7 @@
     <script src="js/pos-menu.js"></script>
     <script src="js/pos-teesheet.js"></script>
     <script src="js/pos-customers.js"></script>
+    <script src="js/cash-drawer.js"></script>
     
     <!-- Additional Functions -->
     <script>
@@ -592,7 +606,28 @@
         function showSettings() {
             document.getElementById('settingsTaxRate').value = POS.config.taxRate;
             document.getElementById('settingsRegisterId').value = POS.config.registerId;
+            // Update drawer button text
+            const drawerBtn = document.getElementById('drawerBtnText');
+            if (drawerBtn && window.CashDrawer?.isConnected) {
+                drawerBtn.textContent = '✓ Drawer Connected';
+            }
             document.getElementById('settingsModal').style.display = 'flex';
+        }
+        
+        // Connect drawer from settings
+        async function connectDrawerFromSettings() {
+            if (typeof CashDrawer === 'undefined') {
+                POS.toast('Cash drawer module not loaded', 'error');
+                return;
+            }
+            try {
+                await CashDrawer.connect();
+                const btn = document.getElementById('drawerBtnText');
+                if (btn) btn.textContent = '✓ Drawer Connected';
+                POS.toast('Cash drawer connected!', 'success');
+            } catch (err) {
+                POS.toast('Failed: ' + err.message, 'error');
+            }
         }
         
         function saveSettings() {
