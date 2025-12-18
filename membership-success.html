@@ -852,11 +852,6 @@
         // Check if this is a createTeam flow - require team creation
         if (source === 'createTeam') {
             isCreateTeamFlow = true;
-            // Hide the Return Home and Book buttons until team is registered
-            document.addEventListener('DOMContentLoaded', () => {
-                document.getElementById('returnHomeBtn').style.display = 'none';
-                document.getElementById('bookBtn').style.display = 'none';
-            });
         }
         
         async function init() {
@@ -937,18 +932,24 @@
                     document.getElementById('registrationForm').style.display = 'block';
                     document.getElementById('player2Section').style.display = 'block';
                     document.getElementById('player2Name').required = true;
+                    // Hide buttons until team is created
+                    document.getElementById('bookBtn').style.display = 'none';
+                    document.getElementById('returnHomeBtn').style.display = 'none';
                 } else if (isCreateTeamFlow) {
                     // League Player from Create Team flow - go straight to team creation
                     document.getElementById('playerChoice').style.display = 'none';
                     document.getElementById('registrationForm').style.display = 'block';
                     document.getElementById('player2Section').style.display = 'none';
+                    // Hide buttons until team is created
+                    document.getElementById('bookBtn').style.display = 'none';
+                    document.getElementById('returnHomeBtn').style.display = 'none';
                 } else {
                     // League Player: Show choice (create or join)
                     document.getElementById('playerChoice').style.display = 'block';
                     document.getElementById('registrationForm').style.display = 'none';
                 }
                 
-                // Update booking button for league
+                // Hide book button for league (will show View Standings after registration)
                 document.getElementById('bookBtn').style.display = 'none';
                 
             } else {
