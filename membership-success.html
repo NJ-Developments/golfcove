@@ -187,18 +187,22 @@
         
         .league-registration-header h2 {
             font-size: 24px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 12px;
             color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         
-        .league-registration-header .intro {
-            font-size: 15px;
-            opacity: 0.95;
+        .league-registration-header .intro,
+        .league-registration-header p {
+            font-size: 16px;
+            color: #fff;
+            opacity: 1;
             margin: 0;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
         
         .league-registration-body {
@@ -1084,6 +1088,10 @@
             const tier = session.tier || '';
             const type = session.type || '';
             
+            console.log('Session tier:', tier);
+            console.log('Session type:', type);
+            console.log('isCreateTeamFlow:', isCreateTeamFlow);
+            
             if (type === 'league' || tier.includes('league')) {
                 // Show league registration
                 document.getElementById('leagueRegistration').style.display = 'block';
@@ -1109,28 +1117,37 @@
                 }
                 
                 isLeagueTeam = tier === 'league-team';
+                console.log('isLeagueTeam:', isLeagueTeam);
                 
                 if (isLeagueTeam) {
-                    // League Team: Go straight to team creation
+                    // League Team ($800): Go straight to team creation with BOTH players
+                    console.log('Showing team registration with Player 2');
                     document.getElementById('playerChoice').style.display = 'none';
+                    document.getElementById('joinTeamSection').style.display = 'none';
                     document.getElementById('registrationForm').style.display = 'block';
                     document.getElementById('player2Section').style.display = 'block';
                     document.getElementById('player2Name').required = true;
                     // Hide buttons until team is created
                     document.getElementById('bookBtn').style.display = 'none';
                     document.getElementById('returnHomeBtn').style.display = 'none';
-                } else if (isCreateTeamFlow) {
-                    // League Player from Create Team flow - go straight to team creation
-                    document.getElementById('playerChoice').style.display = 'none';
-                    document.getElementById('registrationForm').style.display = 'block';
-                    document.getElementById('player2Section').style.display = 'none';
-                    // Hide buttons until team is created
+                } else {
+                    // League Player ($400): Show choice (create or join)
+                    console.log('Showing player choice');
+                    if (isCreateTeamFlow) {
+                        // Came from "Create Team" button - go straight to team creation
+                        document.getElementById('playerChoice').style.display = 'none';
+                        document.getElementById('joinTeamSection').style.display = 'none';
+                        document.getElementById('registrationForm').style.display = 'block';
+                        document.getElementById('player2Section').style.display = 'none';
+                    } else {
+                        // Normal flow - show choice to create or join
+                        document.getElementById('playerChoice').style.display = 'block';
+                        document.getElementById('registrationForm').style.display = 'none';
+                        document.getElementById('joinTeamSection').style.display = 'none';
+                    }
+                    // Hide buttons until team is created/joined
                     document.getElementById('bookBtn').style.display = 'none';
                     document.getElementById('returnHomeBtn').style.display = 'none';
-                } else {
-                    // League Player: Show choice (create or join)
-                    document.getElementById('playerChoice').style.display = 'block';
-                    document.getElementById('registrationForm').style.display = 'none';
                 }
                 
                 // Hide book button for league (will show View Standings after registration)
