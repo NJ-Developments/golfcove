@@ -94,7 +94,7 @@ const TabsSync = (function() {
             if (!response.ok) throw new Error('Sync failed');
             
             const data = await response.json();
-            const serverTabs = data.tabs || [];
+            const serverTabs = (data.tabs || []).map(normalizeTab).filter(t => t !== null);
             
             // Merge server tabs with any local-only tabs
             const localOnlyTabs = localTabs.filter(lt => 
@@ -171,14 +171,18 @@ const TabsSync = (function() {
     // Get all open tabs
     function getAllTabs() {
         ensureInit();
-        // Filter open tabs (no status means open, or status === 'open')
-        return localTabs.filter(t => !t.status || t.status === 'open');
+        // Filter open tabs (no status means open, or status === 'open') and normalize each tab
+        return localTabs
+            .filter(t => !t.status || t.status === 'open')
+            .map(normalizeTab)
+            .filter(t => t !== null);
     }
     
     // Get tab by ID (flexible matching for number vs string IDs)
     function getTab(tabId) {
         ensureInit();
-        return localTabs.find(t => t.id == tabId || String(t.id) === String(tabId));
+        const tab = localTabs.find(t => t.id == tabId || String(t.id) === String(tabId));
+        return tab ? normalizeTab(tab) : null;
     }
     
     // Get tab by customer name
