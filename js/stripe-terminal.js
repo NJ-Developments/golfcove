@@ -8,6 +8,7 @@ const GolfCoveStripe = (function() {
     'use strict';
     
     // Configuration - Use unified config with fallbacks
+    // Note: We use a getter pattern so config is always fresh from GolfCoveConfig
     const getConfig = () => {
         const unified = window.GolfCoveConfig?.stripe;
         const terminal = unified?.terminal || {};
@@ -26,6 +27,18 @@ const GolfCoveStripe = (function() {
             collectTimeout: terminal.collectTimeout ?? 60000   // 1 minute for tap/insert/swipe
         };
     };
+    
+    // Create config getter for use throughout module
+    // Using Object.defineProperty to create a live getter
+    const config = {};
+    Object.defineProperty(config, 'functionsUrl', { get: () => getConfig().functionsUrl });
+    Object.defineProperty(config, 'locationId', { get: () => getConfig().locationId });
+    Object.defineProperty(config, 'simulatedReader', { get: () => getConfig().simulatedReader });
+    Object.defineProperty(config, 'autoReconnect', { get: () => getConfig().autoReconnect });
+    Object.defineProperty(config, 'reconnectAttempts', { get: () => getConfig().reconnectAttempts });
+    Object.defineProperty(config, 'reconnectDelay', { get: () => getConfig().reconnectDelay });
+    Object.defineProperty(config, 'paymentTimeout', { get: () => getConfig().paymentTimeout });
+    Object.defineProperty(config, 'collectTimeout', { get: () => getConfig().collectTimeout });
     
     // State
     let terminal = null;
