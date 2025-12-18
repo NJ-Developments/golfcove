@@ -321,22 +321,10 @@ const POS = {
         this.backToEmployees();
     },
     
-    // Log clock in
+    // Log clock in - DISABLED: Timeclock feature temporarily removed
     logClockIn(name) {
-        const clockIns = JSON.parse(localStorage.getItem('gc_clock_ins') || '[]');
-        clockIns.push({
-            employee: name,
-            type: 'in',
-            time: new Date().toISOString()
-        });
-        localStorage.setItem('gc_clock_ins', JSON.stringify(clockIns));
-        
-        // Sync with backend if available
-        if (typeof GolfCoveAPI !== 'undefined') {
-            GolfCoveAPI.shifts.clockIn(employee.id || name).catch(err => {
-                console.warn('Failed to sync clock-in:', err);
-            });
-        }
+        // TODO: Re-enable when timeclock is moved to Firebase
+        console.log('Timeclock disabled - clock in:', name);
     },
     
     // Toast notification
@@ -889,22 +877,8 @@ const ProfileMenu = {
     async clockOut() {
         if (!POS.state.currentUser) return;
         
-        const clockIns = JSON.parse(localStorage.getItem('gc_clock_ins') || '[]');
-        clockIns.push({
-            employee: POS.state.currentUser.name,
-            type: 'out',
-            time: new Date().toISOString()
-        });
-        localStorage.setItem('gc_clock_ins', JSON.stringify(clockIns));
-        
-        // Sync with backend
-        if (typeof GolfCoveAPI !== 'undefined') {
-            try {
-                await GolfCoveAPI.shifts.clockOut(POS.state.currentUser.id || POS.state.currentUser.name);
-            } catch (err) {
-                console.warn('Failed to sync clock-out:', err);
-            }
-        }
+        // TODO: Re-enable when timeclock is moved to Firebase
+        console.log('Timeclock disabled - clock out:', POS.state.currentUser.name);
         
         POS.toast(`${POS.state.currentUser.name} clocked out`, 'success');
         this.switchUser();

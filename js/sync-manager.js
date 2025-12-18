@@ -15,7 +15,8 @@ const GolfCoveSyncManager = (function() {
         retryDelay: 5000,
         maxRetries: 3,
         conflictResolution: 'server-wins', // 'server-wins', 'client-wins', 'merge', 'manual'
-        collections: ['customers', 'bookings', 'tabs', 'transactions', 'inventory', 'employees']
+        // Note: inventory and timeclock removed - will be re-added when moved to Firebase
+        collections: ['customers', 'bookings', 'tabs', 'transactions', 'employees', 'giftCards']
     };
     
     // ============ STATE ============

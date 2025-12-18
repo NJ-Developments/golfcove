@@ -1,7 +1,15 @@
 /**
  * Golf Cove - Configuration & Constants
- * Central configuration for the entire system
+ * 
+ * @deprecated USE config-unified.js INSTEAD
+ * This file is maintained only for backwards compatibility.
+ * All new code should import from config-unified.js
+ * 
+ * If both files are loaded, config-unified.js will override this.
  */
+
+// Log deprecation warning once
+console.warn('[Golf Cove] config.js is deprecated. Use config-unified.js instead.');
 
 const GolfCoveConfig = (function() {
     'use strict';
@@ -67,8 +75,8 @@ const GolfCoveConfig = (function() {
             largeGroup: 50
         },
         
-        // Tax rate
-        taxRate: 0.08 // 8%
+        // Tax rate - MUST MATCH config-unified.js
+        taxRate: 0.0635 // 6.35% CT Sales Tax
     };
     
     // ============ MEMBERSHIP TIERS ============

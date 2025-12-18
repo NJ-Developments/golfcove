@@ -21,6 +21,8 @@
     <script src="js/firebase-sync.js"></script>
     <script src="js/pin-system.js"></script>
     <script src="js/membership-system.js"></script>
+    <script src="js/validation-schemas.js"></script>
+    <script src="js/customer-manager.js"></script>
     <script src="js/customers.js"></script>
     <script src="js/booking-system.js"></script>
     <script src="js/tabs-sync.js"></script>
@@ -1258,15 +1260,8 @@
                 document.getElementById('currentUserName').textContent = employee.name;
                 showToast(`Welcome, ${employee.name}!`, 'success');
                 
-                // Log the clock-in
-                const clockIns = JSON.parse(localStorage.getItem('gc_clock_ins') || '[]');
-                clockIns.push({
-                    employee: employee.name,
-                    employeeId: employee.id,
-                    action: 'clock_in',
-                    time: new Date().toISOString()
-                });
-                localStorage.setItem('gc_clock_ins', JSON.stringify(clockIns));
+                // Timeclock disabled - TODO: Re-enable when moved to Firebase
+                console.log('Timeclock disabled - clock in:', employee.name);
             } else {
                 document.getElementById('pinError').style.display = 'block';
                 currentPin = '';
@@ -1287,15 +1282,8 @@
             document.getElementById('pinError').style.display = 'none';
             
             if (currentEmployee) {
-                // Log the clock-out
-                const clockIns = JSON.parse(localStorage.getItem('gc_clock_ins') || '[]');
-                clockIns.push({
-                    employee: currentEmployee.name,
-                    employeeId: currentEmployee.id,
-                    action: 'lock',
-                    time: new Date().toISOString()
-                });
-                localStorage.setItem('gc_clock_ins', JSON.stringify(clockIns));
+                // Timeclock disabled - TODO: Re-enable when moved to Firebase
+                console.log('Timeclock disabled - lock:', currentEmployee.name);
             }
         }
         

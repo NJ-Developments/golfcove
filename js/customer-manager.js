@@ -797,6 +797,86 @@ const GolfCoveCustomerManager = (function() {
         return Array.from(tags).sort();
     }
     
+    // ============ STRIPE INTEGRATION ============
+    
+    /**
+     * Get the Stripe Functions URL from config
+     */
+    function getStripeUrl() {
+        return window.GolfCoveConfig?.stripe?.functionsUrl || 
+               'https://us-central1-golfcove.cloudfunctions.net';
+    }
+    
+    /**
+     * Sync customer to Stripe - creates or updates Stripe Customer
+     * Returns the stripeCustomerId
+     */
+    async function syncToStripe(customerId) {
+        const customer = getCustomer(customerId);
+        if (!customer) {
+            return { success: false, error: 'Customer not found' };
+        }
+        
+        try {
+            const response = await fetch(`${getStripeUrl()}/createStripeCustomer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customerId: customer.id.toString(),
+                    email: customer.email,
+                    name: `${customer.firstName} ${customer.lastName}`,
+                    phone: customer.phone,
+                    metadata: {
+                        localId: customer.id,
+                        membershipTier: customer.membership?.tier || null
+                    }
+                })
+            });
+            
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+            
+            // Save the Stripe customer ID locally
+            if (data.stripeCustomerId && data.stripeCustomerId !== customer.stripeCustomerId) {
+                customer.stripeCustomerId = data.stripeCustomerId;
+                customer.updatedAt = new Date().toISOString();
+                saveCustomer(customer);
+                
+                Core.emit('customer:stripe-synced', { customer, stripeCustomerId: data.stripeCustomerId });
+            }
+            
+            return { success: true, stripeCustomerId: data.stripeCustomerId };
+        } catch (error) {
+            console.error('Failed to sync customer to Stripe:', error);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    /**
+     * Get or create Stripe customer ID for a local customer
+     * Used by payment flows to ensure customer exists in Stripe
+     */
+    async function getStripeCustomerId(customerId) {
+        const customer = getCustomer(customerId);
+        if (!customer) return null;
+        
+        // If already synced, return existing ID
+        if (customer.stripeCustomerId) {
+            return customer.stripeCustomerId;
+        }
+        
+        // Otherwise sync to Stripe
+        const result = await syncToStripe(customerId);
+        return result.success ? result.stripeCustomerId : null;
+    }
+    
+    /**
+     * Find local customer by Stripe customer ID
+     */
+    function findByStripeId(stripeCustomerId) {
+        return getAllCustomers().find(c => c.stripeCustomerId === stripeCustomerId);
+    }
+    
     // ============ PUBLIC API ============
     return {
         // Config
@@ -846,7 +926,12 @@ const GolfCoveCustomerManager = (function() {
         getAllTags,
         
         // Analytics
-        getCustomerAnalytics
+        getCustomerAnalytics,
+        
+        // Stripe Integration
+        syncToStripe,
+        getStripeCustomerId,
+        findByStripeId
     };
 })();
 

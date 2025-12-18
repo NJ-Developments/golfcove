@@ -1,6 +1,8 @@
 /**
  * Golf Cove - Saved Payment Methods
  * Allows members to save and use cards for seamless checkout
+ * 
+ * Uses GolfCoveCustomerManager for Stripe customer sync
  */
 
 const SavedCards = (function() {
@@ -18,8 +20,16 @@ const SavedCards = (function() {
     
     /**
      * Get or create a Stripe customer for a member
+     * Uses unified customer manager if available, falls back to direct API call
      */
     async function getOrCreateStripeCustomer(customer) {
+        // Use unified customer manager if available
+        if (typeof GolfCoveCustomerManager !== 'undefined' && GolfCoveCustomerManager.getStripeCustomerId) {
+            const stripeCustomerId = await GolfCoveCustomerManager.getStripeCustomerId(customer.id);
+            if (stripeCustomerId) return stripeCustomerId;
+        }
+        
+        // Fallback to direct API call
         try {
             const response = await fetch(`${FUNCTIONS_URL}/createStripeCustomer`, {
                 method: 'POST',

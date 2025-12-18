@@ -172,6 +172,36 @@ const GolfCoveServices = (function() {
             if (customer.isMember === true) return true;
             if (customer.membership?.status === 'active') return true;
             return false;
+        },
+        
+        /**
+         * Sync customer to Stripe (creates/updates Stripe Customer)
+         */
+        async syncToStripe(customerId) {
+            if (window.GolfCoveCustomerManager?.syncToStripe) {
+                return window.GolfCoveCustomerManager.syncToStripe(customerId);
+            }
+            return { success: false, error: 'CustomerManager not available' };
+        },
+        
+        /**
+         * Get Stripe customer ID for a local customer
+         */
+        async getStripeCustomerId(customerId) {
+            if (window.GolfCoveCustomerManager?.getStripeCustomerId) {
+                return window.GolfCoveCustomerManager.getStripeCustomerId(customerId);
+            }
+            return null;
+        },
+        
+        /**
+         * Find local customer by Stripe customer ID
+         */
+        findByStripeId(stripeCustomerId) {
+            if (window.GolfCoveCustomerManager?.findByStripeId) {
+                return window.GolfCoveCustomerManager.findByStripeId(stripeCustomerId);
+            }
+            return this.getAll().find(c => c.stripeCustomerId === stripeCustomerId);
         }
     };
     
