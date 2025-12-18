@@ -5978,3 +5978,278 @@ exports.stripeConnectionToken = exports.createConnectionToken;
 exports.stripeRefund = exports.createRefund;
 exports.stripeRegisterReader = exports.registerReader;
 exports.stripeListReaders = exports.listReaders;
+
+/**
+ * Save global site settings (Stripe keys, etc.)
+ * These settings are shared across all devices/browsers
+ */
+exports.saveGlobalSettings = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      const db = admin.firestore();
+      const { stripePublishableKey, stripeTerminalLocation, businessName, taxRate } = req.body;
+      
+      const settings = {
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      // Only update provided fields (partial update support)
+      if (stripePublishableKey !== undefined) settings.stripePublishableKey = stripePublishableKey;
+      if (stripeTerminalLocation !== undefined) settings.stripeTerminalLocation = stripeTerminalLocation;
+      if (businessName !== undefined) settings.businessName = businessName;
+      if (taxRate !== undefined) settings.taxRate = taxRate;
+      
+      await db.collection('settings').doc('global').set(settings, { merge: true });
+      
+      res.json({ success: true, message: 'Settings saved successfully' });
+    } catch (error) {
+      console.error('Save settings error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Get global site settings
+ */
+exports.getGlobalSettings = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const db = admin.firestore();
+      const doc = await db.collection('settings').doc('global').get();
+      
+      if (!doc.exists) {
+        return res.json({ 
+          success: true, 
+          settings: {
+            stripePublishableKey: '',
+            stripeTerminalLocation: '',
+            businessName: 'Golf Cove',
+            taxRate: 0.0635
+          }
+        });
+      }
+      
+      res.json({ success: true, settings: doc.data() });
+    } catch (error) {
+      console.error('Get settings error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+// ============ SAVED PAYMENT METHODS FOR MEMBERS ============
+
+/**
+ * Create or get a Stripe Customer for a member
+ */
+exports.createStripeCustomer = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      const db = admin.firestore();
+      const { customerId, email, name, phone } = req.body;
+
+      if (!customerId) {
+        return res.status(400).json({ error: 'Customer ID required' });
+      }
+
+      // Check if customer already has a Stripe customer ID
+      const customerDoc = await db.collection('customers').doc(customerId).get();
+      
+      if (customerDoc.exists && customerDoc.data().stripeCustomerId) {
+        // Return existing Stripe customer
+        const stripeCustomer = await stripe.customers.retrieve(customerDoc.data().stripeCustomerId);
+        return res.json({ 
+          success: true, 
+          stripeCustomerId: stripeCustomer.id,
+          isNew: false
+        });
+      }
+
+      // Create new Stripe customer
+      const stripeCustomer = await stripe.customers.create({
+        email: email || undefined,
+        name: name || undefined,
+        phone: phone || undefined,
+        metadata: {
+          golfCoveCustomerId: customerId
+        }
+      });
+
+      // Save Stripe customer ID to our database
+      await db.collection('customers').doc(customerId).set({
+        stripeCustomerId: stripeCustomer.id,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      res.json({ 
+        success: true, 
+        stripeCustomerId: stripeCustomer.id,
+        isNew: true
+      });
+    } catch (error) {
+      console.error('Create Stripe customer error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Create a SetupIntent for saving a card
+ */
+exports.createSetupIntent = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      const { stripeCustomerId } = req.body;
+
+      if (!stripeCustomerId) {
+        return res.status(400).json({ error: 'Stripe Customer ID required' });
+      }
+
+      const setupIntent = await stripe.setupIntents.create({
+        customer: stripeCustomerId,
+        payment_method_types: ['card'],
+        usage: 'off_session' // Allow charging later without customer present
+      });
+
+      res.json({ 
+        success: true, 
+        clientSecret: setupIntent.client_secret,
+        setupIntentId: setupIntent.id
+      });
+    } catch (error) {
+      console.error('Create SetupIntent error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Get saved payment methods for a customer
+ */
+exports.getSavedPaymentMethods = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const stripeCustomerId = req.query.stripeCustomerId || req.body?.stripeCustomerId;
+
+      if (!stripeCustomerId) {
+        return res.status(400).json({ error: 'Stripe Customer ID required' });
+      }
+
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: stripeCustomerId,
+        type: 'card'
+      });
+
+      res.json({ 
+        success: true, 
+        paymentMethods: paymentMethods.data.map(pm => ({
+          id: pm.id,
+          brand: pm.card.brand,
+          last4: pm.card.last4,
+          expMonth: pm.card.exp_month,
+          expYear: pm.card.exp_year,
+          isDefault: false // Could implement default logic
+        }))
+      });
+    } catch (error) {
+      console.error('Get payment methods error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Charge a saved payment method
+ */
+exports.chargesSavedCard = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      const { stripeCustomerId, paymentMethodId, amount, description, metadata } = req.body;
+
+      if (!stripeCustomerId || !paymentMethodId || !amount) {
+        return res.status(400).json({ error: 'Customer ID, Payment Method ID, and amount required' });
+      }
+
+      if (amount < 50) {
+        return res.status(400).json({ error: 'Amount must be at least 50 cents' });
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount),
+        currency: 'usd',
+        customer: stripeCustomerId,
+        payment_method: paymentMethodId,
+        off_session: true,
+        confirm: true,
+        description: description || 'Golf Cove Purchase',
+        metadata: {
+          source: 'saved_card',
+          ...metadata
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        paymentIntentId: paymentIntent.id,
+        status: paymentIntent.status,
+        amount: paymentIntent.amount
+      });
+    } catch (error) {
+      console.error('Charge saved card error:', error);
+      
+      // Handle specific Stripe errors
+      if (error.code === 'authentication_required') {
+        return res.status(400).json({ 
+          error: 'Card requires authentication',
+          requiresAction: true,
+          clientSecret: error.raw?.payment_intent?.client_secret
+        });
+      }
+      
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Delete a saved payment method
+ */
+exports.deletePaymentMethod = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST' && req.method !== 'DELETE') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      const paymentMethodId = req.body?.paymentMethodId || req.query?.paymentMethodId;
+
+      if (!paymentMethodId) {
+        return res.status(400).json({ error: 'Payment Method ID required' });
+      }
+
+      await stripe.paymentMethods.detach(paymentMethodId);
+
+      res.json({ success: true, message: 'Payment method removed' });
+    } catch (error) {
+      console.error('Delete payment method error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});

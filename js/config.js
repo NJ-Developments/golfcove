@@ -144,6 +144,9 @@ const GolfCoveConfig = (function() {
     
     // ============ STRIPE SETTINGS ============
     const STRIPE = {
+        // Publishable key (safe for client-side) - get from Stripe Dashboard → Developers → API Keys
+        // Your secret key is configured in Firebase Functions (functions/index.js)
+        publishableKey: 'pk_test_51ScLeeJaljqVA3AD63xtmTb7CI3AQGgdJ6M6MeTBq7vtLas4zpWXD6buOI8TJMwUgJ63jSDxKQVD01ipUTNpIZE100r4b710QD',
         terminalLocation: 'tml_xxx', // Replace with actual
         readerIds: [], // Terminal reader IDs
         currency: 'usd',

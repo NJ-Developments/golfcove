@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://js.stripe.com/terminal/v1/"></script>
     <!-- Unified Config & Core -->
     <script src="js/config-unified.js"></script>
     <script src="js/core.js"></script>
@@ -19,6 +20,7 @@
     <script src="js/customers.js"></script>
     <script src="js/tabs-sync.js"></script>
     <script src="js/cash-drawer.js"></script>
+    <script src="js/saved-cards.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; }
@@ -829,6 +831,9 @@
                     <button class="pay-btn cash" onclick="processPayment('cash')">
                         <i class="fas fa-money-bill"></i> Cash
                     </button>
+                    <button class="pay-btn" onclick="processPayment('saved')" style="background:linear-gradient(135deg,#9b59b6,#8e44ad);" title="Pay with saved card (members only)">
+                        <i class="fas fa-wallet"></i> Saved
+                    </button>
                 </div>
                 <div class="action-btns">
                     <button class="action-btn" onclick="suspendSale()"><i class="fas fa-pause"></i> Suspend</button>
@@ -837,6 +842,9 @@
                     <button class="action-btn" onclick="clearSale()"><i class="fas fa-trash"></i> Clear</button>
                     <button class="action-btn" onclick="redeemGiftCard()"><i class="fas fa-gift"></i> Gift</button>
                     <button class="action-btn" onclick="showSplitPaymentModal()"><i class="fas fa-divide"></i> Split</button>
+                </div>
+                <div class="action-btns" style="margin-top:5px;">
+                    <button class="action-btn" onclick="addCardToCustomer()" style="background:#9b59b6;color:#fff;" title="Save a card to customer profile"><i class="fas fa-plus"></i> Add Card</button>
                 </div>
                 <div class="register-links">
                     <a href="#" onclick="showDrawerManagement(); return false;"><i class="fas fa-cash-register"></i> Drawer</a>
@@ -1286,7 +1294,10 @@
         let suspendedSales = JSON.parse(localStorage.getItem('gc_suspended') || '[]');
         
         // ============ INIT ============
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load global settings from Firebase on startup
+            await loadGlobalSettings();
+            
             // Initialize TabsSync first
             if (typeof TabsSync !== 'undefined') {
                 TabsSync.init();
@@ -1584,31 +1595,37 @@
         
         // Initialize Stripe Terminal
         async function initStripeTerminal() {
-            if (!STRIPE_CONFIG.publishableKey) {
-                console.log('Stripe not configured - using simulation mode');
-                return;
-            }
-            
+            // Simulated readers work even without a publishable key for testing
             try {
                 stripeTerminal = StripeTerminal.create({
                     onFetchConnectionToken: fetchConnectionToken,
                     onUnexpectedReaderDisconnect: handleDisconnect
                 });
+                console.log('Stripe Terminal initialized');
                 showToast('Stripe Terminal initialized', 'success');
             } catch (e) {
                 console.error('Stripe Terminal init failed:', e);
+                showToast('Stripe Terminal init failed: ' + e.message, 'error');
             }
         }
         
         async function fetchConnectionToken() {
-            // In production, this calls your backend
-            // For now, return mock or call your API endpoint
-            const response = await fetch('/api/stripe/connection-token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await response.json();
-            return data.secret;
+            // Calls Firebase function to get Stripe Terminal connection token
+            try {
+                const response = await fetch('https://us-central1-golfcove.cloudfunctions.net/createConnectionToken');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                console.log('Got connection token');
+                return data.secret;
+            } catch (e) {
+                console.error('Failed to fetch connection token:', e);
+                throw e;
+            }
         }
         
         function handleDisconnect() {
@@ -1619,21 +1636,30 @@
         
         async function discoverReaders() {
             if (!stripeTerminal) {
-                showToast('Stripe not initialized. Configure API key in settings.', 'error');
-                return;
+                // Try to initialize if not done yet
+                await initStripeTerminal();
+                if (!stripeTerminal) {
+                    showToast('Stripe Terminal not available', 'error');
+                    return;
+                }
             }
             
             showToast('Searching for card readers...', 'info');
             const config = { simulated: STRIPE_CONFIG.isTestMode };
+            console.log('Discovering readers with config:', config);
             
             try {
                 const discoverResult = await stripeTerminal.discoverReaders(config);
+                console.log('Discover result:', discoverResult);
+                
                 if (discoverResult.error) {
                     showToast('Reader discovery failed: ' + discoverResult.error.message, 'error');
                     return;
                 }
                 
                 discoveredReaders = discoverResult.discoveredReaders;
+                console.log('Found readers:', discoveredReaders);
+                
                 if (discoveredReaders.length === 0) {
                     showToast('No readers found', 'error');
                     return;
@@ -1641,6 +1667,7 @@
                 
                 showReaderSelectionModal();
             } catch (e) {
+                console.error('Discovery error:', e);
                 showToast('Discovery error: ' + e.message, 'error');
             }
         }
@@ -1662,8 +1689,14 @@
             showToast('Connecting to reader...', 'info');
             
             try {
+                // Connect to the reader (simulated readers don't need special config)
+                console.log('Connecting to reader:', reader);
+                
                 const connectResult = await stripeTerminal.connectReader(reader);
+                console.log('Connect result:', connectResult);
+                
                 if (connectResult.error) {
+                    console.error('Connection error details:', connectResult.error);
                     showToast('Connection failed: ' + connectResult.error.message, 'error');
                     return;
                 }
@@ -1672,6 +1705,7 @@
                 showToast('Reader connected: ' + (connectedReader.label || connectedReader.serial_number), 'success');
                 updateReaderStatus();
             } catch (e) {
+                console.error('Connection exception:', e);
                 showToast('Connection error: ' + e.message, 'error');
             }
         }
@@ -1708,7 +1742,78 @@
                 return;
             }
             
+            // For saved card payments (members only)
+            if (method === 'saved' && !isReturnMode) {
+                processSavedCardPayment(total, customer);
+                return;
+            }
+            
             completePayment(method, customer, total);
+        }
+        
+        // Process payment with saved card
+        async function processSavedCardPayment(total, customerName) {
+            // Find customer record
+            const customerRecord = findCustomerRecord(customerName);
+            
+            if (!customerRecord) {
+                showToast('Please select a member customer first', 'error');
+                return;
+            }
+            
+            if (!customerRecord.stripeCustomerId) {
+                showToast('This customer has no saved cards. Add a card first.', 'info');
+                return;
+            }
+            
+            const amountCents = Math.round(total * 100);
+            
+            // Show saved cards checkout modal
+            const hasCards = await SavedCards.showSavedCardsCheckout(
+                customerRecord,
+                amountCents,
+                (result) => {
+                    // Payment completed
+                    completePayment('saved_card', customerName, total, result.paymentIntentId);
+                }
+            );
+            
+            if (!hasCards) {
+                showToast('No saved cards for this customer', 'info');
+            }
+        }
+        
+        // Find customer record by name
+        function findCustomerRecord(customerName) {
+            if (!customerName || customerName === 'Walk-in') return null;
+            
+            const customers = typeof GolfCoveCustomers !== 'undefined' 
+                ? GolfCoveCustomers.getAll() 
+                : JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            
+            const nameParts = customerName.trim().split(' ');
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(' ');
+            
+            return customers.find(c => 
+                c.firstName?.toLowerCase() === firstName?.toLowerCase() &&
+                c.lastName?.toLowerCase() === lastName?.toLowerCase()
+            );
+        }
+        
+        // Add a card to current customer
+        async function addCardToCustomer() {
+            const customerName = document.getElementById('customerName').value;
+            const customerRecord = findCustomerRecord(customerName);
+            
+            if (!customerRecord) {
+                showToast('Please select a customer first (not Walk-in)', 'error');
+                return;
+            }
+            
+            SavedCards.showAddCardModal(customerRecord, (paymentMethodId) => {
+                showToast(`Card saved to ${customerName}'s profile`, 'success');
+            });
         }
         
         async function processStripePayment(total, customer) {
@@ -2890,10 +2995,42 @@
         }
         
         // ============ STRIPE SETTINGS ============
-        function showSettings() {
-            const currentPK = localStorage.getItem('gc_stripe_pk') || '';
-            const currentLocation = localStorage.getItem('gc_stripe_location') || '';
+        const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
+        
+        async function loadGlobalSettings() {
+            try {
+                const response = await fetch(`${FUNCTIONS_URL}/getGlobalSettings`);
+                const data = await response.json();
+                if (data.success && data.settings) {
+                    // Update local cache and config
+                    if (data.settings.stripePublishableKey) {
+                        localStorage.setItem('gc_stripe_pk', data.settings.stripePublishableKey);
+                        STRIPE_CONFIG.publishableKey = data.settings.stripePublishableKey;
+                    }
+                    if (data.settings.stripeTerminalLocation) {
+                        localStorage.setItem('gc_stripe_location', data.settings.stripeTerminalLocation);
+                        STRIPE_CONFIG.terminalLocationId = data.settings.stripeTerminalLocation;
+                    }
+                    return data.settings;
+                }
+            } catch (e) {
+                console.error('Failed to load global settings:', e);
+            }
+            return null;
+        }
+        
+        async function showSettings() {
+            // Try to load from Firebase first, fall back to localStorage
+            let currentPK = localStorage.getItem('gc_stripe_pk') || '';
+            let currentLocation = localStorage.getItem('gc_stripe_location') || '';
             const registerId = localStorage.getItem('gc_register_id') || 'POS-1';
+            
+            // Fetch latest from Firebase
+            const globalSettings = await loadGlobalSettings();
+            if (globalSettings) {
+                currentPK = globalSettings.stripePublishableKey || currentPK;
+                currentLocation = globalSettings.stripeTerminalLocation || currentLocation;
+            }
             
             const html = `
                 <div id="settingsModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">
@@ -2907,6 +3044,7 @@
                         
                         <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px;">
                             <h4 style="margin:0 0 15px;color:#6772e5;"><i class="fab fa-stripe"></i> Stripe Configuration</h4>
+                            <p style="font-size:12px;color:#666;margin-bottom:15px;"><i class="fas fa-cloud"></i> These settings are saved globally and shared across all devices.</p>
                             
                             <div style="margin-bottom:10px;">
                                 <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Publishable Key:</label>
@@ -2967,11 +3105,12 @@
             if (modal) modal.remove();
         }
         
-        function saveSettings() {
+        async function saveSettings() {
             const pk = document.getElementById('settingsStripePK').value.trim();
             const location = document.getElementById('settingsStripeLocation').value.trim();
             const registerId = document.getElementById('settingsRegisterId').value.trim();
             
+            // Save locally for immediate use
             localStorage.setItem('gc_stripe_pk', pk);
             localStorage.setItem('gc_stripe_location', location);
             localStorage.setItem('gc_register_id', registerId);
@@ -2979,8 +3118,28 @@
             STRIPE_CONFIG.publishableKey = pk;
             STRIPE_CONFIG.terminalLocationId = location;
             
+            // Save to Firebase for global persistence
+            try {
+                const response = await fetch(`${FUNCTIONS_URL}/saveGlobalSettings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stripePublishableKey: pk,
+                        stripeTerminalLocation: location
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Settings saved globally! Reinitializing Stripe...', 'success');
+                } else {
+                    showToast('Settings saved locally. Firebase save failed.', 'warning');
+                }
+            } catch (e) {
+                console.error('Failed to save to Firebase:', e);
+                showToast('Settings saved locally. Firebase unavailable.', 'warning');
+            }
+            
             closeSettings();
-            showToast('Settings saved. Reinitializing Stripe...', 'success');
             
             if (pk) {
                 initStripeTerminal();

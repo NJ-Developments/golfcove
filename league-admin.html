@@ -1132,6 +1132,9 @@
                 <div class="nav-item" data-section="rounds" onclick="showSection('rounds')">
                     <i class="fas fa-flag"></i> Rounds
                 </div>
+                <div class="nav-item" data-section="scoredocs" onclick="showSection('scoredocs')">
+                    <i class="fas fa-file-alt"></i> Score Documents
+                </div>
                 <div class="nav-item" data-section="print" onclick="showSection('print')">
                     <i class="fas fa-print"></i> Print
                 </div>
@@ -1310,6 +1313,55 @@
                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Download all league data as a JSON file.</p>
                 <button class="btn btn-secondary" onclick="exportData()"><i class="fas fa-download"></i> Export JSON</button>
             </div>
+        </div>
+        
+        <!-- Score Documents Section -->
+        <div class="page-section" id="section-scoredocs">
+            <h1 class="page-title"><i class="fas fa-file-alt"></i> Score Documents</h1>
+            
+            <div class="card">
+                <h3><i class="fas fa-filter"></i> Filter Documents</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Round</label>
+                        <select id="filterRound" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                            <option value="">All Rounds</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Team</label>
+                        <select id="filterTeam" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                            <option value="">All Teams</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Date Range</label>
+                        <select id="filterDateRange" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                            <option value="">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="loadScoreDocuments()"><i class="fas fa-search"></i> Search</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-clipboard-list"></i> Submitted Scorecards</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">View and print individual player scorecards from tournament rounds.</p>
+                <div id="scoreDocsList" style="min-height: 200px;">
+                    <div style="text-align: center; color: #999; padding: 40px;">
+                        <i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 15px;"></i>
+                        <p>No score documents found. Submitted scorecards will appear here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Score Document Print View (Hidden by default) -->
+        <div id="scoreDocPrintView" style="display: none;">
+            <div id="scoreDocPrintContent"></div>
         </div>
         
         <!-- Settings Section -->
@@ -2599,6 +2651,7 @@
             else if (section === 'timeclock') loadTimeclock();
             else if (section === 'inventory') loadInventory();
             else if (section === 'settings') loadStripeSettings();
+            else if (section === 'scoredocs') loadScoreDocuments();
         }
         
         // Teams
@@ -3323,6 +3376,454 @@
             a.click();
         }
         
+        // =====================
+        // Score Documents
+        // =====================
+        
+        function loadScoreDocuments() {
+            // Populate filter dropdowns
+            const roundSelect = document.getElementById('filterRound');
+            const teamSelect = document.getElementById('filterTeam');
+            
+            // Populate rounds
+            roundSelect.innerHTML = '<option value="">All Rounds</option>';
+            if (league.rounds) {
+                league.rounds.forEach((round, idx) => {
+                    roundSelect.innerHTML += `<option value="${round.id}">${round.name || ('Round ' + (idx + 1))} - ${new Date(round.date).toLocaleDateString()}</option>`;
+                });
+            }
+            
+            // Populate teams
+            teamSelect.innerHTML = '<option value="">All Teams</option>';
+            if (league.teams) {
+                league.teams.forEach(team => {
+                    teamSelect.innerHTML += `<option value="${team.id}">${team.name}</option>`;
+                });
+            }
+            
+            renderScoreDocuments();
+        }
+        
+        function renderScoreDocuments() {
+            const container = document.getElementById('scoreDocsList');
+            const filterRound = document.getElementById('filterRound').value;
+            const filterTeam = document.getElementById('filterTeam').value;
+            const filterDate = document.getElementById('filterDateRange').value;
+            
+            if (!league.scores || Object.keys(league.scores).length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #999; padding: 40px;">
+                        <i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 15px;"></i>
+                        <p>No score documents found. Submitted scorecards will appear here.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let scoreDocuments = [];
+            
+            // Collect all submitted scores
+            Object.keys(league.scores).forEach(roundId => {
+                const round = league.rounds?.find(r => r.id === roundId);
+                if (!round) return;
+                
+                Object.keys(league.scores[roundId]).forEach(playerId => {
+                    const scoreData = league.scores[roundId][playerId];
+                    if (!scoreData.submitted) return;
+                    
+                    const player = league.players?.find(p => p.id === playerId);
+                    if (!player) return;
+                    
+                    const team = league.teams?.find(t => t.id === player.teamId);
+                    
+                    // Apply filters
+                    if (filterRound && roundId !== filterRound) return;
+                    if (filterTeam && player.teamId !== filterTeam) return;
+                    
+                    // Date filter
+                    if (filterDate) {
+                        const submittedDate = new Date(scoreData.submittedAt || round.date);
+                        const now = new Date();
+                        if (filterDate === 'today') {
+                            if (submittedDate.toDateString() !== now.toDateString()) return;
+                        } else if (filterDate === 'week') {
+                            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                            if (submittedDate < weekAgo) return;
+                        } else if (filterDate === 'month') {
+                            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                            if (submittedDate < monthAgo) return;
+                        }
+                    }
+                    
+                    scoreDocuments.push({
+                        roundId,
+                        playerId,
+                        round,
+                        player,
+                        team,
+                        scoreData
+                    });
+                });
+            });
+            
+            if (scoreDocuments.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #999; padding: 40px;">
+                        <i class="fas fa-search" style="font-size: 48px; margin-bottom: 15px;"></i>
+                        <p>No documents match your filters.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort by submission date (newest first)
+            scoreDocuments.sort((a, b) => {
+                const dateA = new Date(a.scoreData.submittedAt || a.round.date);
+                const dateB = new Date(b.scoreData.submittedAt || b.round.date);
+                return dateB - dateA;
+            });
+            
+            // Render document cards
+            container.innerHTML = `
+                <div style="display: grid; gap: 10px;">
+                    ${scoreDocuments.map(doc => renderScoreDocCard(doc)).join('')}
+                </div>
+            `;
+        }
+        
+        function renderScoreDocCard(doc) {
+            const { roundId, playerId, round, player, team, scoreData } = doc;
+            const submittedAt = scoreData.submittedAt ? new Date(scoreData.submittedAt).toLocaleString() : 'Unknown';
+            const totalScore = calculateTotal(scoreData.holes || []);
+            const pars = league.pars || [3, 3, 3, 3, 3, 3, 3, 3, 3];
+            const totalPar = pars.reduce((a, b) => a + b, 0);
+            const scoreDiff = totalScore - totalPar;
+            const scoreClass = scoreDiff < 0 ? 'color: #27ae60;' : scoreDiff > 0 ? 'color: #e74c3c;' : '';
+            
+            return `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #4a90a4;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">
+                            ${player.name}
+                            ${team ? `<span style="color: #888; font-weight: 400; font-size: 14px;"> - ${team.name}</span>` : ''}
+                        </div>
+                        <div style="font-size: 13px; color: #666;">
+                            <span style="margin-right: 15px;"><i class="fas fa-flag" style="color: #4a90a4;"></i> ${round.name || 'Round'}</span>
+                            <span style="margin-right: 15px;"><i class="fas fa-calendar"></i> ${new Date(round.date).toLocaleDateString()}</span>
+                            <span><i class="fas fa-clock"></i> Submitted: ${submittedAt}</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center; padding: 0 20px;">
+                        <div style="font-size: 24px; font-weight: 700; ${scoreClass}">${totalScore}</div>
+                        <div style="font-size: 11px; color: #888;">Total Score</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm" onclick="viewScoreDocument('${roundId}', '${playerId}')" title="View Document">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="printScoreDocument('${roundId}', '${playerId}')" title="Print">
+                            <i class="fas fa-print"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function calculateTotal(holes) {
+            return holes.reduce((sum, h) => sum + (parseInt(h) || 0), 0);
+        }
+        
+        function viewScoreDocument(roundId, playerId) {
+            const content = generateScoreDocumentHTML(roundId, playerId, false);
+            
+            // Create modal to display
+            let modal = document.getElementById('scoreDocModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'scoreDocModal';
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-file-alt"></i> Score Document</h3>
+                            <span class="modal-close" onclick="closeModal('scoreDocModal')">&times;</span>
+                        </div>
+                        <div id="scoreDocModalContent" style="padding: 20px;"></div>
+                        <div style="padding: 15px 20px; border-top: 1px solid #eee; text-align: right;">
+                            <button class="btn" onclick="printCurrentScoreDoc()"><i class="fas fa-print"></i> Print</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            document.getElementById('scoreDocModalContent').innerHTML = content;
+            modal.dataset.roundId = roundId;
+            modal.dataset.playerId = playerId;
+            openModal('scoreDocModal');
+        }
+        
+        function printCurrentScoreDoc() {
+            const modal = document.getElementById('scoreDocModal');
+            if (modal) {
+                printScoreDocument(modal.dataset.roundId, modal.dataset.playerId);
+            }
+        }
+        
+        function printScoreDocument(roundId, playerId) {
+            const content = generateScoreDocumentHTML(roundId, playerId, true);
+            
+            const printWindow = window.open('', '_blank', 'width=800,height=900');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Score Document - Golf Cove</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                            padding: 30px;
+                            color: #333;
+                        }
+                        .header { 
+                            text-align: center; 
+                            margin-bottom: 25px;
+                            padding-bottom: 15px;
+                            border-bottom: 2px solid #4a90a4;
+                        }
+                        .header h1 { 
+                            color: #2c3e50; 
+                            font-size: 24px; 
+                            margin-bottom: 5px;
+                        }
+                        .header .subtitle { 
+                            color: #666; 
+                            font-size: 14px;
+                        }
+                        .info-grid {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 15px;
+                            margin-bottom: 25px;
+                            padding: 15px;
+                            background: #f8f9fa;
+                            border-radius: 8px;
+                        }
+                        .info-item label {
+                            font-weight: 600;
+                            color: #555;
+                            font-size: 12px;
+                            display: block;
+                            margin-bottom: 3px;
+                        }
+                        .info-item span {
+                            font-size: 14px;
+                        }
+                        .scorecard {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 20px;
+                        }
+                        .scorecard th, .scorecard td {
+                            border: 1px solid #ddd;
+                            padding: 8px 10px;
+                            text-align: center;
+                            font-size: 13px;
+                        }
+                        .scorecard th {
+                            background: #4a90a4;
+                            color: white;
+                            font-weight: 600;
+                        }
+                        .scorecard .hole-num {
+                            background: #e8f4f8;
+                            font-weight: 600;
+                        }
+                        .scorecard .par-row {
+                            background: #f0f0f0;
+                        }
+                        .scorecard .score-row td {
+                            font-weight: 600;
+                            font-size: 16px;
+                        }
+                        .totals {
+                            display: flex;
+                            justify-content: center;
+                            gap: 40px;
+                            margin: 25px 0;
+                            padding: 20px;
+                            background: #f8f9fa;
+                            border-radius: 8px;
+                        }
+                        .total-item {
+                            text-align: center;
+                        }
+                        .total-item .value {
+                            font-size: 32px;
+                            font-weight: 700;
+                            color: #2c3e50;
+                        }
+                        .total-item .label {
+                            font-size: 12px;
+                            color: #666;
+                            margin-top: 5px;
+                        }
+                        .signature-section {
+                            margin-top: 40px;
+                            padding-top: 20px;
+                            border-top: 1px solid #ddd;
+                        }
+                        .signature-grid {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 40px;
+                            margin-top: 20px;
+                        }
+                        .signature-line {
+                            border-bottom: 1px solid #333;
+                            padding-bottom: 5px;
+                            margin-bottom: 5px;
+                        }
+                        .signature-label {
+                            font-size: 12px;
+                            color: #666;
+                        }
+                        .footer {
+                            margin-top: 30px;
+                            text-align: center;
+                            font-size: 11px;
+                            color: #888;
+                        }
+                        @media print {
+                            body { padding: 20px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${content}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => {
+                printWindow.print();
+            }, 300);
+        }
+        
+        function generateScoreDocumentHTML(roundId, playerId, forPrint = false) {
+            const scoreData = league.scores?.[roundId]?.[playerId];
+            const player = league.players?.find(p => p.id === playerId);
+            const round = league.rounds?.find(r => r.id === roundId);
+            const team = player ? league.teams?.find(t => t.id === player.teamId) : null;
+            const pars = league.pars || [3, 3, 3, 3, 3, 3, 3, 3, 3];
+            const holes = scoreData?.holes || [];
+            
+            const totalScore = holes.reduce((sum, h) => sum + (parseInt(h) || 0), 0);
+            const totalPar = pars.reduce((a, b) => a + b, 0);
+            const scoreDiff = totalScore - totalPar;
+            const diffText = scoreDiff === 0 ? 'E' : (scoreDiff > 0 ? '+' + scoreDiff : scoreDiff);
+            
+            const submittedAt = scoreData?.submittedAt ? new Date(scoreData.submittedAt) : null;
+            
+            return `
+                <div class="header">
+                    <h1>Golf Cove - Official Scorecard</h1>
+                    <div class="subtitle">${league.name || 'League Tournament'}</div>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Player Name</label>
+                        <span>${player?.name || 'Unknown'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Team</label>
+                        <span>${team?.name || 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Round</label>
+                        <span>${round?.name || 'Unknown'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Date</label>
+                        <span>${round ? new Date(round.date).toLocaleDateString() : 'Unknown'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Handicap</label>
+                        <span>${player?.handicap || 0}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Submitted</label>
+                        <span>${submittedAt ? submittedAt.toLocaleString() : 'N/A'}</span>
+                    </div>
+                </div>
+                
+                <table class="scorecard">
+                    <tr>
+                        <th>Hole</th>
+                        ${pars.map((_, i) => `<th class="hole-num">${i + 1}</th>`).join('')}
+                        <th style="background: #2c3e50;">Total</th>
+                    </tr>
+                    <tr class="par-row">
+                        <td><strong>Par</strong></td>
+                        ${pars.map(p => `<td>${p}</td>`).join('')}
+                        <td><strong>${totalPar}</strong></td>
+                    </tr>
+                    <tr class="score-row">
+                        <td><strong>Score</strong></td>
+                        ${pars.map((p, i) => {
+                            const score = parseInt(holes[i]) || 0;
+                            const diff = score - p;
+                            let style = '';
+                            if (score > 0) {
+                                if (diff < 0) style = 'color: #27ae60;'; // Under par (birdie/eagle)
+                                else if (diff > 0) style = 'color: #e74c3c;'; // Over par
+                            }
+                            return `<td style="${style}">${score || '-'}</td>`;
+                        }).join('')}
+                        <td style="font-size: 18px;"><strong>${totalScore}</strong></td>
+                    </tr>
+                </table>
+                
+                <div class="totals">
+                    <div class="total-item">
+                        <div class="value">${totalScore}</div>
+                        <div class="label">Total Strokes</div>
+                    </div>
+                    <div class="total-item">
+                        <div class="value">${diffText}</div>
+                        <div class="label">vs Par (${totalPar})</div>
+                    </div>
+                    <div class="total-item">
+                        <div class="value">${Math.max(0, totalScore - (player?.handicap || 0))}</div>
+                        <div class="label">Net Score</div>
+                    </div>
+                </div>
+                
+                ${forPrint ? `
+                <div class="signature-section">
+                    <h4 style="font-size: 14px; margin-bottom: 5px;">Verification</h4>
+                    <div class="signature-grid">
+                        <div>
+                            <div class="signature-line"></div>
+                            <div class="signature-label">Player Signature</div>
+                        </div>
+                        <div>
+                            <div class="signature-line"></div>
+                            <div class="signature-label">Attested By</div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="footer">
+                    <p>Golf Cove • 336 State Street, North Haven, CT 06473 • (203) 390-5994</p>
+                    <p style="margin-top: 5px;">Document generated on ${new Date().toLocaleString()}</p>
+                </div>
+            `;
+        }
+
         function resetLeague() {
             if (!confirm('Delete the entire league? This cannot be undone!')) return;
             if (!confirm('Are you absolutely sure?')) return;

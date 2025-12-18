@@ -58,7 +58,7 @@ const GolfCoveStripe = (function() {
     
     async function fetchConnectionToken() {
         try {
-            const response = await fetch(`${config.functionsUrl}/stripeConnectionToken`);
+            const response = await fetch(`${config.functionsUrl}/createConnectionToken`);
             const data = await response.json();
             return data.secret;
         } catch (error) {
@@ -127,6 +127,7 @@ const GolfCoveStripe = (function() {
         }
         
         try {
+            // Connect to reader (simulated flag only needed for discoverReaders, not connect)
             const connectResult = await terminal.connectReader(reader);
             
             if (connectResult.error) {
