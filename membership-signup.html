@@ -593,6 +593,7 @@
             <div class="membership-type-selector">
                 <button class="type-btn active" onclick="showType('golf')">Golf Memberships</button>
                 <button class="type-btn" onclick="showType('family')">Family Memberships</button>
+                <button class="type-btn" onclick="showType('league')">League & Tournament</button>
             </div>
             
             <!-- Golf Memberships -->
@@ -612,6 +613,8 @@
                         <li><i class="fas fa-check"></i> Priority Booking</li>
                         <li><i class="fas fa-check"></i> MultiSport Access</li>
                         <li><i class="fas fa-check"></i> 3hr Max/Visit</li>
+                        <li><i class="fas fa-check"></i> Up to 3 Guests</li>
+                        <li><i class="fas fa-check"></i> Annual Commitment</li>
                     </ul>
                 </div>
                 
@@ -630,7 +633,9 @@
                         <li><i class="fas fa-check"></i> 10% F&B Discount</li>
                         <li><i class="fas fa-check"></i> Priority Booking</li>
                         <li><i class="fas fa-check"></i> MultiSport Access</li>
-                        <li><i class="fas fa-check"></i> Guest Passes (2/mo)</li>
+                        <li><i class="fas fa-check"></i> 3hr Max/Visit</li>
+                        <li><i class="fas fa-check"></i> Up to 3 Guests</li>
+                        <li><i class="fas fa-check"></i> Annual Commitment</li>
                     </ul>
                 </div>
                 
@@ -648,8 +653,10 @@
                         <li><i class="fas fa-check"></i> 15% F&B Discount</li>
                         <li><i class="fas fa-check"></i> Priority Booking</li>
                         <li><i class="fas fa-check"></i> MultiSport Access</li>
-                        <li><i class="fas fa-check"></i> Guest Passes (4/mo)</li>
+                        <li><i class="fas fa-check"></i> 3hr Max/Visit</li>
+                        <li><i class="fas fa-check"></i> Up to 3 Guests</li>
                         <li><i class="fas fa-check"></i> Locker Included</li>
+                        <li><i class="fas fa-check"></i> Annual Commitment</li>
                     </ul>
                 </div>
             </div>
@@ -671,6 +678,8 @@
                         <li><i class="fas fa-check"></i> 10% F&B Discount</li>
                         <li><i class="fas fa-check"></i> MultiSport Access</li>
                         <li><i class="fas fa-check"></i> Priority Booking</li>
+                        <li><i class="fas fa-check"></i> 3hr Max/Visit</li>
+                        <li><i class="fas fa-check"></i> Annual Commitment</li>
                     </ul>
                 </div>
                 
@@ -689,7 +698,9 @@
                         <li><i class="fas fa-check"></i> $15/hr Peak</li>
                         <li><i class="fas fa-check"></i> 10% F&B Discount</li>
                         <li><i class="fas fa-check"></i> MultiSport Access</li>
-                        <li><i class="fas fa-check"></i> Guest Passes (4/mo)</li>
+                        <li><i class="fas fa-check"></i> Priority Booking</li>
+                        <li><i class="fas fa-check"></i> 3hr Max/Visit</li>
+                        <li><i class="fas fa-check"></i> Annual Commitment</li>
                     </ul>
                 </div>
                 
@@ -707,8 +718,53 @@
                         <li><i class="fas fa-check"></i> Unlimited All Hours</li>
                         <li><i class="fas fa-check"></i> 15% F&B Discount</li>
                         <li><i class="fas fa-check"></i> MultiSport Access</li>
-                        <li><i class="fas fa-check"></i> Guest Passes (6/mo)</li>
+                        <li><i class="fas fa-check"></i> Priority Booking</li>
+                        <li><i class="fas fa-check"></i> 3hr Max/Visit</li>
                         <li><i class="fas fa-check"></i> Private Events Discount</li>
+                        <li><i class="fas fa-check"></i> Annual Commitment</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- League & Tournament Memberships -->
+            <div class="membership-cards" id="league-memberships" style="display: none;">
+                <div class="membership-card" data-id="league-player" data-name="League Player (Individual)" data-price="400" data-type="league" onclick="selectMembership(this)">
+                    <div class="card-header">
+                        <span class="card-name">League Player</span>
+                    </div>
+                    <div class="card-price">
+                        <span class="price-amount">$400</span>
+                        <span class="price-period">/season</span>
+                    </div>
+                    <ul class="card-features">
+                        <li><i class="fas fa-check"></i> Winter 2025-2026 Season Entry</li>
+                        <li><i class="fas fa-check"></i> 2-Man Scramble Format</li>
+                        <li><i class="fas fa-check"></i> Weekly Match Play</li>
+                        <li><i class="fas fa-check"></i> Member Rates on Booking</li>
+                        <li><i class="fas fa-check"></i> 10% Off Food & Beverage</li>
+                        <li><i class="fas fa-check"></i> Handicap Tracking</li>
+                        <li><i class="fas fa-check"></i> Season Awards Eligibility</li>
+                    </ul>
+                </div>
+                
+                <div class="membership-card" data-id="league-team" data-name="League Team (2 Players)" data-price="800" data-type="league" onclick="selectMembership(this)">
+                    <div class="card-header">
+                        <span class="card-name">League Team</span>
+                        <span class="card-badge popular">Best Value</span>
+                    </div>
+                    <div class="card-price">
+                        <span class="price-amount">$800</span>
+                        <span class="price-period">/season</span>
+                    </div>
+                    <ul class="card-features">
+                        <li><i class="fas fa-check"></i> 2-Player Team Entry</li>
+                        <li><i class="fas fa-check"></i> Winter 2025-2026 Season</li>
+                        <li><i class="fas fa-check"></i> 2-Man Scramble Format</li>
+                        <li><i class="fas fa-check"></i> Reserve 2 Hours Weekly</li>
+                        <li><i class="fas fa-check"></i> Member Rates on Booking</li>
+                        <li><i class="fas fa-check"></i> 10% Off Food & Beverage</li>
+                        <li><i class="fas fa-check"></i> Team Stats & Leaderboard</li>
+                        <li><i class="fas fa-check"></i> Masters Championship Eligibility</li>
                     </ul>
                 </div>
             </div>
@@ -860,6 +916,7 @@
             
             document.getElementById('golf-memberships').style.display = type === 'golf' ? 'flex' : 'none';
             document.getElementById('family-memberships').style.display = type === 'family' ? 'flex' : 'none';
+            document.getElementById('league-memberships').style.display = type === 'league' ? 'flex' : 'none';
             
             // Clear selection when switching types
             document.querySelectorAll('.membership-card').forEach(c => c.classList.remove('selected'));

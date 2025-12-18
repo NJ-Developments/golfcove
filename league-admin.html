@@ -2370,7 +2370,14 @@
                         </div>
                         <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
                             <span style="font-size: 12px; color: #ca8a04; font-weight: 600;"><i class="fas fa-key"></i> Team PIN</span>
-                            <span style="font-family: monospace; font-size: 16px; font-weight: 700; color: #333; letter-spacing: 3px;">${teamPin}</span>
+                            <input type="text" value="${teamPin}" 
+                                onchange="updateTeamPin('${team.id}', this.value)"
+                                maxlength="4" pattern="[0-9]{4}" inputmode="numeric"
+                                style="font-family: monospace; font-size: 16px; font-weight: 700; color: #333; letter-spacing: 3px; width: 80px; text-align: center; border: 1px solid transparent; background: transparent; padding: 4px 8px; border-radius: 4px; cursor: text;"
+                                onmouseover="this.style.borderColor='#fef08a'; this.style.background='#fff';"
+                                onmouseout="if(document.activeElement !== this) { this.style.borderColor='transparent'; this.style.background='transparent'; }"
+                                onfocus="this.style.borderColor='#ca8a04'; this.style.background='#fff';"
+                                onblur="this.style.borderColor='transparent'; this.style.background='transparent';">
                         </div>
                         ${players.length === 0 ? '<p style="color: #999; font-size: 13px;">No players yet</p>' : 
                             players.map(p => `
@@ -2665,6 +2672,25 @@
                 team.name = name;
                 saveLeague();
                 renderPins(); // Update player list which shows team names
+            }
+        }
+        
+        function updateTeamPin(teamId, newPin) {
+            const pin = newPin.trim();
+            if (!pin || !/^[0-9]{4}$/.test(pin)) {
+                alert('PIN must be exactly 4 digits');
+                renderTeams();
+                return;
+            }
+            const team = league.teams.find(t => t.id === teamId);
+            if (team) {
+                team.pin = pin;
+                // Also update all players on this team to use the new PIN
+                league.players.filter(p => p.teamId === teamId).forEach(p => {
+                    p.pin = pin;
+                });
+                saveLeague();
+                renderPins();
             }
         }
         
