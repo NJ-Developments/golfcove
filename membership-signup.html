@@ -1001,13 +1001,10 @@
                 const billingCycle = isLeague ? 'seasonal' : 'monthly';
                 
                 // Build success URL with source parameter if present
-                // Stripe will append ?session_id=xxx, so we need to handle that
+                // Backend will add session_id placeholder
                 let successUrl = window.location.origin + '/membership-success.html';
                 if (window._signupSource) {
-                    // Use a placeholder that Stripe won't interfere with
-                    successUrl += '?source=' + window._signupSource + '&session_id={CHECKOUT_SESSION_ID}';
-                } else {
-                    successUrl += '?session_id={CHECKOUT_SESSION_ID}';
+                    successUrl += '?source=' + window._signupSource;
                 }
                 
                 // Call Firebase function to create checkout session

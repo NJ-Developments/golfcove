@@ -1036,7 +1036,9 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
             customerName, 
             customerPhone
           },
-          success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+          success_url: successUrl.includes('?') 
+            ? `${successUrl}&session_id={CHECKOUT_SESSION_ID}`
+            : `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: cancelUrl
         };
       } else {
@@ -1082,7 +1084,9 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
             customerName, customerPhone,
             billingCycle: isSeasonal ? 'seasonal' : billingCycle
           },
-          success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+          success_url: successUrl.includes('?') 
+            ? `${successUrl}&session_id={CHECKOUT_SESSION_ID}`
+            : `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: cancelUrl
         };
 
