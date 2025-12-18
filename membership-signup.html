@@ -889,8 +889,19 @@
         });
         
         function showType(type) {
-            document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.classList.remove('active');
+                // Add active class to the button matching this type
+                if (btn.textContent.toLowerCase().includes(type)) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Fallback: if event exists (clicked), use that
+            if (typeof event !== 'undefined' && event && event.target && event.target.classList) {
+                document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+                event.target.classList.add('active');
+            }
             
             document.getElementById('golf-memberships').style.display = type === 'golf' ? 'flex' : 'none';
             document.getElementById('family-memberships').style.display = type === 'family' ? 'flex' : 'none';

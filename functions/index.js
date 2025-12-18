@@ -1041,7 +1041,11 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
         };
       } else {
         // Legacy: calculate from tier
-        const membershipKey = isFamily ? `family-${tier}` : tier;
+        // Handle tier names - if already prefixed with 'family-' or 'league-', use as-is
+        let membershipKey = tier;
+        if (isFamily && !tier.startsWith('family-')) {
+          membershipKey = `family-${tier}`;
+        }
         const pricing = MEMBERSHIP_PRICES[membershipKey];
 
         if (!pricing) {
