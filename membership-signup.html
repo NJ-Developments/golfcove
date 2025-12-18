@@ -598,7 +598,7 @@
             
             <!-- Golf Memberships -->
             <div class="membership-cards" id="golf-memberships">
-                <div class="membership-card" data-id="par" data-name="Par Membership" data-price="89" data-type="golf" onclick="selectMembership(this)">
+                <div class="membership-card" data-id="par" data-name="Par Membership" data-price="89" data-type="golf" data-stripe-price="" onclick="selectMembership(this)">
                     <div class="card-header">
                         <span class="card-name">Par Membership</span>
                     </div>
@@ -618,7 +618,7 @@
                     </ul>
                 </div>
                 
-                <div class="membership-card" data-id="birdie" data-name="Birdie Membership" data-price="189" data-type="golf" onclick="selectMembership(this)">
+                <div class="membership-card" data-id="birdie" data-name="Birdie Membership" data-price="189" data-type="golf" data-stripe-price="" onclick="selectMembership(this)">
                     <div class="card-header">
                         <span class="card-name">Birdie Membership</span>
                         <span class="card-badge popular">Most Popular</span>
@@ -639,7 +639,7 @@
                     </ul>
                 </div>
                 
-                <div class="membership-card" data-id="eagle" data-name="Eagle Membership" data-price="289" data-type="golf" onclick="selectMembership(this)">
+                <div class="membership-card" data-id="eagle" data-name="Eagle Membership" data-price="289" data-type="golf" data-stripe-price="" onclick="selectMembership(this)">
                     <div class="card-header">
                         <span class="card-name">Eagle Membership</span>
                         <span class="card-badge">Premium</span>
@@ -663,7 +663,7 @@
             
             <!-- Family Memberships -->
             <div class="membership-cards" id="family-memberships" style="display: none;">
-                <div class="membership-card" data-id="family-par" data-name="Family Par" data-price="149" data-type="family" onclick="selectMembership(this)">
+                <div class="membership-card" data-id="family-par" data-name="Family Par" data-price="149" data-type="family" data-stripe-price="" onclick="selectMembership(this)">
                     <div class="card-header">
                         <span class="card-name">Family Par</span>
                     </div>
@@ -683,7 +683,7 @@
                     </ul>
                 </div>
                 
-                <div class="membership-card" data-id="family-birdie" data-name="Family Birdie" data-price="299" data-type="family" onclick="selectMembership(this)">
+                <div class="membership-card" data-id="family-birdie" data-name="Family Birdie" data-price="299" data-type="family" data-stripe-price="" onclick="selectMembership(this)">
                     <div class="card-header">
                         <span class="card-name">Family Birdie</span>
                         <span class="card-badge popular">Best Value</span>
@@ -704,7 +704,7 @@
                     </ul>
                 </div>
                 
-                <div class="membership-card" data-id="family-eagle" data-name="Family Eagle" data-price="449" data-type="family" onclick="selectMembership(this)">
+                <div class="membership-card" data-id="family-eagle" data-name="Family Eagle" data-price="449" data-type="family" data-stripe-price="" onclick="selectMembership(this)">
                     <div class="card-header">
                         <span class="card-name">Family Eagle</span>
                         <span class="card-badge">Premium</span>
@@ -728,7 +728,7 @@
             
             <!-- League & Tournament Memberships -->
             <div class="membership-cards" id="league-memberships" style="display: none;">
-                <div class="membership-card" data-id="league-player" data-name="League Player (Individual)" data-price="400" data-type="league" onclick="selectMembership(this)">
+                <div class="membership-card" data-id="league-player" data-name="League Player (Individual)" data-price="400" data-type="league" data-stripe-price="price_1SfYaxJaljqVA3AD87WvTfCp" onclick="selectMembership(this)">
                     <div class="card-header">
                         <span class="card-name">League Player</span>
                     </div>
@@ -747,7 +747,7 @@
                     </ul>
                 </div>
                 
-                <div class="membership-card" data-id="league-team" data-name="League Team (2 Players)" data-price="800" data-type="league" onclick="selectMembership(this)">
+                <div class="membership-card" data-id="league-team" data-name="League Team (2 Players)" data-price="800" data-type="league" data-stripe-price="" onclick="selectMembership(this)">
                     <div class="card-header">
                         <span class="card-name">League Team</span>
                         <span class="card-badge popular">Best Value</span>
@@ -819,35 +819,13 @@
                     </div>
                 </div>
                 
-                <!-- Card Info -->
+                <!-- Payment Notice - Stripe Checkout handles card collection -->
                 <div class="form-section">
-                    <div class="form-section-title"><i class="fas fa-credit-card"></i> Payment Method</div>
-                    <div class="form-group">
-                        <label>Card Number *</label>
-                        <div class="card-input-wrapper">
-                            <input type="text" id="cardNumber" required placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCardNumber(this)">
-                            <i class="fab fa-cc-visa" id="cardTypeIcon"></i>
-                        </div>
-                        <div class="card-icons">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/200px-Visa_Inc._logo.svg.png" alt="Visa" id="visa-icon">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/200px-Mastercard-logo.svg.png" alt="Mastercard" id="mc-icon">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/American_Express_logo_%282018%29.svg/200px-American_Express_logo_%282018%29.svg.png" alt="Amex" id="amex-icon">
-                        </div>
-                    </div>
-                    <div class="form-row three">
-                        <div class="form-group">
-                            <label>Expiration *</label>
-                            <input type="text" id="expiry" required placeholder="MM/YY" maxlength="5" oninput="formatExpiry(this)">
-                        </div>
-                        <div class="form-group">
-                            <label>CVV *</label>
-                            <input type="text" id="cvv" required placeholder="123" maxlength="4">
-                        </div>
-                        <div class="form-group">
-                            <label>ZIP *</label>
-                            <input type="text" id="zip" required placeholder="12345" maxlength="5">
-                        </div>
-                    </div>
+                    <div class="form-section-title"><i class="fas fa-credit-card"></i> Payment</div>
+                    <p style="color: #666; font-size: 14px; margin: 0;">
+                        <i class="fas fa-lock" style="color: #2d5a27;"></i> 
+                        You'll be redirected to Stripe's secure checkout to complete your payment.
+                    </p>
                 </div>
                 
                 <!-- Agreement -->
@@ -964,41 +942,13 @@
             
             if (selectedMembership) {
                 const total = selectedMembership.price * (1 + TAX_RATE);
-                btn.querySelector('span').textContent = `Pay $${total.toFixed(2)} & Join`;
+                btn.querySelector('span').textContent = `Continue to Payment - $${total.toFixed(2)}`;
             } else {
                 btn.querySelector('span').textContent = 'Select a Membership';
             }
         }
         
-        function formatCardNumber(input) {
-            let value = input.value.replace(/\D/g, '');
-            value = value.replace(/(.{4})/g, '$1 ').trim();
-            input.value = value;
-            
-            // Detect card type
-            const firstDigit = value.charAt(0);
-            const icon = document.getElementById('cardTypeIcon');
-            
-            if (firstDigit === '4') {
-                icon.className = 'fab fa-cc-visa';
-            } else if (firstDigit === '5') {
-                icon.className = 'fab fa-cc-mastercard';
-            } else if (firstDigit === '3') {
-                icon.className = 'fab fa-cc-amex';
-            } else {
-                icon.className = 'fas fa-credit-card';
-            }
-        }
-        
-        function formatExpiry(input) {
-            let value = input.value.replace(/\D/g, '');
-            if (value.length >= 2) {
-                value = value.substring(0, 2) + '/' + value.substring(2);
-            }
-            input.value = value;
-        }
-        
-        function processPayment(e) {
+        async function processPayment(e) {
             e.preventDefault();
             
             if (!selectedMembership) {
@@ -1015,30 +965,57 @@
             btn.classList.add('loading');
             btn.disabled = true;
             
-            // Simulate payment processing
-            setTimeout(() => {
-                btn.classList.remove('loading');
+            try {
+                // Get customer info
+                const customerName = `${document.getElementById('firstName').value} ${document.getElementById('lastName').value}`;
+                const customerEmail = document.getElementById('email').value;
+                const customerPhone = document.getElementById('phone').value;
                 
-                // Show success modal
-                document.getElementById('successModal').classList.add('active');
+                // Get Stripe Price ID if available, otherwise use tier-based pricing
+                const stripePriceId = document.querySelector('.membership-card.selected')?.dataset.stripePrice;
                 
-                // In real implementation, you would:
-                // 1. Send data to Stripe/payment processor
-                // 2. Create customer in your database
-                // 3. Set up recurring billing
-                // 4. Send confirmation email
+                // Determine billing cycle (league is one-time/seasonal)
+                const isLeague = selectedMembership.type === 'league';
+                const billingCycle = isLeague ? 'seasonal' : 'monthly';
                 
-                console.log('Membership signup:', {
-                    membership: selectedMembership,
-                    customer: {
-                        firstName: document.getElementById('firstName').value,
-                        lastName: document.getElementById('lastName').value,
-                        email: document.getElementById('email').value,
-                        phone: document.getElementById('phone').value
-                    }
+                // Call Firebase function to create checkout session
+                const response = await fetch('https://us-central1-golfcove.cloudfunctions.net/createMembershipCheckout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        tier: selectedMembership.id,
+                        isFamily: selectedMembership.type === 'family',
+                        customerName,
+                        customerEmail,
+                        customerPhone,
+                        billingCycle,
+                        stripePriceId: stripePriceId || null,
+                        successUrl: window.location.origin + '/membership-success.html',
+                        cancelUrl: window.location.href
+                    })
                 });
                 
-            }, 2000);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Redirect to Stripe Checkout
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    throw new Error('No checkout URL returned');
+                }
+                
+            } catch (error) {
+                console.error('Payment error:', error);
+                alert('Payment failed: ' + error.message);
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
         }
     </script>
 </body>

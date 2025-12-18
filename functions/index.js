@@ -890,12 +890,17 @@ exports.getPaymentStatus = functions.https.onRequest((req, res) => {
 
 // Membership pricing in cents
 const MEMBERSHIP_PRICES = {
-  par: { monthly: 2999, annual: 29900 },
-  'par-family': { monthly: 4999, annual: 49900 },
-  birdie: { monthly: 4999, annual: 49900 },
-  'birdie-family': { monthly: 7999, annual: 79900 },
-  eagle: { monthly: 7999, annual: 79900 },
-  'eagle-family': { monthly: 11999, annual: 119900 }
+  // Golf Memberships (monthly)
+  par: { monthly: 8900, annual: 89000 },
+  birdie: { monthly: 18900, annual: 189000 },
+  eagle: { monthly: 28900, annual: 289000 },
+  // Family Memberships (monthly)
+  'family-par': { monthly: 14900, annual: 149000 },
+  'family-birdie': { monthly: 29900, annual: 299000 },
+  'family-eagle': { monthly: 44900, annual: 449000 },
+  // League (one-time seasonal)
+  'league-player': { seasonal: 40000 },
+  'league-team': { seasonal: 80000 }
 };
 
 /**
@@ -997,59 +1002,87 @@ exports.createGiftCardCheckout = functions.https.onRequest((req, res) => {
 });
 
 /**
- * Create checkout session for membership (supports subscriptions)
+ * Create checkout session for membership (supports subscriptions and one-time)
  */
 exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
     try {
       const {
         tier, isFamily, customerName, customerEmail,
-        customerPhone, billingCycle, successUrl, cancelUrl
+        customerPhone, billingCycle, successUrl, cancelUrl,
+        stripePriceId // Optional: use Stripe Price ID directly
       } = req.body;
 
-      const membershipKey = isFamily ? `${tier}-family` : tier;
-      const pricing = MEMBERSHIP_PRICES[membershipKey];
+      let sessionConfig;
 
-      if (!pricing) {
-        return res.status(400).json({ error: 'Invalid membership tier' });
-      }
-
-      const amount = billingCycle === 'annual' ? pricing.annual : pricing.monthly;
-      const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
-
-      const sessionConfig = {
-        payment_method_types: ['card'],
-        mode: billingCycle === 'annual' ? 'payment' : 'subscription',
-        customer_email: customerEmail,
-        line_items: [{
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `${tierName}${isFamily ? ' Family' : ''} Membership`,
-              description: billingCycle === 'annual' 
-                ? 'Annual membership - Save 2 months!' 
-                : 'Monthly membership'
-            },
-            unit_amount: amount,
-            ...(billingCycle === 'monthly' && { recurring: { interval: 'month' } })
+      // If a Stripe Price ID is provided, use it directly
+      if (stripePriceId) {
+        const isSubscription = billingCycle === 'monthly';
+        sessionConfig = {
+          payment_method_types: ['card'],
+          mode: isSubscription ? 'subscription' : 'payment',
+          customer_email: customerEmail,
+          line_items: [{
+            price: stripePriceId,
+            quantity: 1
+          }],
+          metadata: {
+            type: tier?.includes('league') ? 'league' : 'membership',
+            tier,
+            customerName, 
+            customerPhone
           },
-          quantity: 1
-        }],
-        metadata: {
-          type: 'membership',
-          tier,
-          isFamily: String(isFamily),
-          customerName, customerPhone,
-          billingCycle
-        },
-        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl
-      };
-
-      if (billingCycle === 'monthly') {
-        sessionConfig.subscription_data = {
-          metadata: { tier, isFamily: String(isFamily), customerName }
+          success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: cancelUrl
         };
+      } else {
+        // Legacy: calculate from tier
+        const membershipKey = isFamily ? `family-${tier}` : tier;
+        const pricing = MEMBERSHIP_PRICES[membershipKey];
+
+        if (!pricing) {
+          return res.status(400).json({ error: 'Invalid membership tier' });
+        }
+
+        // Determine if this is a seasonal (one-time) or subscription
+        const isSeasonal = !!pricing.seasonal;
+        const amount = isSeasonal ? pricing.seasonal : (billingCycle === 'annual' ? pricing.annual : pricing.monthly);
+        const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
+
+        sessionConfig = {
+          payment_method_types: ['card'],
+          mode: isSeasonal || billingCycle === 'annual' ? 'payment' : 'subscription',
+          customer_email: customerEmail,
+          line_items: [{
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `${tierName}${isFamily ? ' Family' : ''} Membership`,
+                description: isSeasonal 
+                  ? 'Winter 2025-2026 League Season'
+                  : (billingCycle === 'annual' ? 'Annual membership - Save 2 months!' : 'Monthly membership')
+              },
+              unit_amount: amount,
+              ...(billingCycle === 'monthly' && !isSeasonal && { recurring: { interval: 'month' } })
+            },
+            quantity: 1
+          }],
+          metadata: {
+            type: isSeasonal ? 'league' : 'membership',
+            tier,
+            isFamily: String(isFamily),
+            customerName, customerPhone,
+            billingCycle: isSeasonal ? 'seasonal' : billingCycle
+          },
+          success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: cancelUrl
+        };
+
+        if (billingCycle === 'monthly' && !isSeasonal) {
+          sessionConfig.subscription_data = {
+            metadata: { tier, isFamily: String(isFamily), customerName }
+          };
+        }
       }
 
       const session = await stripe.checkout.sessions.create(sessionConfig);

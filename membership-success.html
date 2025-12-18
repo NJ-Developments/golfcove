@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Golf Cove! - Membership Confirmed</title>
+    <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .success-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #37b24a, #2d9440);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            animation: scaleIn 0.5s ease-out;
+        }
+        
+        @keyframes scaleIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .success-icon i {
+            font-size: 50px;
+            color: #fff;
+        }
+        
+        .success-card h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+        
+        .success-card .subtitle {
+            color: #37b24a;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .success-card p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .next-steps {
+            background: #f8fdf8;
+            border: 1px solid #d4edda;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: left;
+            margin-bottom: 30px;
+        }
+        
+        .next-steps h3 {
+            color: #2d5a27;
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .next-steps ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .next-steps li {
+            color: #555;
+            font-size: 14px;
+            padding: 8px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .next-steps li i {
+            color: #37b24a;
+            margin-top: 3px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            margin: 5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #37b24a, #2d9440);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(55, 178, 74, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+        
+        .confirmation-number {
+            background: #f0f0f0;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            margin-bottom: 30px;
+        }
+        
+        .logo img {
+            height: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-card">
+        <div class="logo">
+            <img src="images/golfCoveLogo6.png" alt="Golf Cove">
+        </div>
+        
+        <div class="success-icon">
+            <i class="fas fa-check"></i>
+        </div>
+        
+        <h1>Welcome to Golf Cove!</h1>
+        <p class="subtitle" id="membershipType">Membership Confirmed</p>
+        
+        <p>Thank you for joining the Golf Cove family! Your payment has been processed successfully and your membership is now active.</p>
+        
+        <div class="confirmation-number">
+            Confirmation: <span id="confirmationId">Loading...</span>
+        </div>
+        
+        <div class="next-steps">
+            <h3><i class="fas fa-clipboard-list"></i> What's Next?</h3>
+            <ul>
+                <li><i class="fas fa-envelope"></i> Check your email for a confirmation receipt and membership details</li>
+                <li><i class="fas fa-calendar-alt"></i> Book your first session at <a href="https://918booking.com/emb-bookings?course=7" target="_blank">918booking.com</a></li>
+                <li><i class="fas fa-id-card"></i> Visit us to pick up your member card and get a tour of the facility</li>
+                <li><i class="fas fa-utensils"></i> Enjoy your 10% food & beverage discount on every visit!</li>
+            </ul>
+        </div>
+        
+        <div>
+            <a href="https://918booking.com/emb-bookings?course=7" class="btn btn-primary" target="_blank">
+                <i class="fas fa-golf-ball"></i> Book Your First Session
+            </a>
+            <a href="index.html" class="btn btn-secondary">
+                <i class="fas fa-home"></i> Return Home
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        // Get session_id from URL and display confirmation
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        
+        if (sessionId) {
+            // Display shortened confirmation ID
+            const shortId = sessionId.substring(sessionId.length - 12).toUpperCase();
+            document.getElementById('confirmationId').textContent = 'GC-' + shortId;
+            
+            // Optionally fetch session details from backend to show membership type
+            // For now, just show generic success
+        } else {
+            document.getElementById('confirmationId').textContent = 'GC-' + Date.now().toString(36).toUpperCase();
+        }
+    </script>
+</body>
+</html>
