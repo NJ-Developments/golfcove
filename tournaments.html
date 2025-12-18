@@ -495,27 +495,6 @@
             font-size: 18px;
         }
         
-        /* To-par styling */
-        .to-par { 
-            font-weight: 700; 
-            font-size: 16px;
-            padding: 4px 10px;
-            border-radius: 6px;
-            display: inline-block;
-        }
-        .to-par.over { 
-            color: #e74c3c; 
-            background: rgba(231,76,60,0.08);
-        }
-        .to-par.under { 
-            color: #37b24a; 
-            background: rgba(55,178,74,0.08);
-        }
-        .to-par.even { 
-            color: #333; 
-            background: rgba(0,0,0,0.05);
-        }
-        
         /* Stats summary in expanded row */
         .stats-summary {
             display: flex;
@@ -939,7 +918,7 @@
         // Default demo league shown when no league exists
         const defaultLeague = {
             name: 'Golf Cove League',
-            course: { name: 'Golf Cove', holes: 18, pars: Array(18).fill(4) },
+            course: { name: 'Golf Cove', holes: 9 },
             teams: [{ id: 't1', name: 'Demo Team' }],
             players: [
                 { id: 'p1', name: 'Javi', teamId: 't1', handicap: 10 }
@@ -1141,11 +1120,10 @@
         }
 
         function calculateStandings(league) {
-            const holes = league.course?.holes || 18;
-            const frontNine = Math.min(9, holes);
+            const holes = 9; // Front 9 only
+            const frontNine = 9;
             const players = league.players || [];
             const rounds = league.rounds || [];
-            const coursePar = (league.course?.pars || []).reduce((a, b) => a + b, 0) || (holes * 4);
             
             return players.map(player => {
                 let totalGross = 0, totalOut = 0, totalIn = 0, roundsPlayed = 0;
@@ -1156,27 +1134,21 @@
                 rounds.forEach(round => {
                     const ps = league.scores?.[round.id]?.[player.id];
                     if (ps && ps.submitted) {
-                        let gross = 0, out = 0, inScore = 0;
+                        let gross = 0;
                         let holesPlayed = 0;
                         
                         for (let h = 1; h <= frontNine; h++) {
                             const score = ps[h];
                             if (score && score > 0) {
-                                out += score; gross += score; holesPlayed++;
-                            }
-                        }
-                        for (let h = frontNine + 1; h <= holes; h++) {
-                            const score = ps[h];
-                            if (score && score > 0) {
-                                inScore += score; gross += score; holesPlayed++;
+                                gross += score; holesPlayed++;
                             }
                         }
                         
                         // Only count rounds where player actually played (at least 50% of holes)
-                        if (holesPlayed >= Math.ceil(holes / 2)) {
+                        if (holesPlayed >= Math.ceil(frontNine / 2)) {
                             const net = gross - (player.handicap || 0);
-                            totalGross += gross; totalOut += out; totalIn += inScore; roundsPlayed++;
-                            roundDetails.push({ name: round.name, date: round.date, out, in: inScore, gross, net, holesPlayed });
+                            totalGross += gross; roundsPlayed++;
+                            roundDetails.push({ name: round.name, date: round.date, gross, net, holesPlayed });
                             
                             allGross.push(gross);
                             allNet.push(net);
@@ -1190,7 +1162,6 @@
                 const totalNet = totalGross - ((player.handicap || 0) * roundsPlayed);
                 const avgGross = roundsPlayed > 0 ? Math.round((totalGross / roundsPlayed) * 10) / 10 : null;
                 const avgNet = roundsPlayed > 0 ? Math.round((totalNet / roundsPlayed) * 10) / 10 : null;
-                const toPar = roundsPlayed > 0 ? totalGross - (coursePar * roundsPlayed) : null;
                 
                 // Calculate trend (last 3 rounds vs previous 3)
                 let trend = null;
@@ -1208,9 +1179,9 @@
                 
                 return {
                     id: player.id, name: player.name, teamId: player.teamId || null,
-                    handicap: player.handicap || 0, totalOut, totalIn, totalGross, totalNet,
+                    handicap: player.handicap || 0, totalGross, totalNet,
                     roundsPlayed, roundDetails, bestGross, worstGross, bestNet, avgGross, avgNet,
-                    toPar, trend, coursePar
+                    trend
                 };
             });
         }
@@ -1285,8 +1256,6 @@
 
         function renderTable(standings, league, view = 'cumulative-net') {
             const sorted = sortStandings(standings, view);
-            const holes = league.course?.holes || 18;
-            const has18 = holes >= 18;
             
             const getTeamName = (teamId) => (league.teams || []).find(t => t.id === teamId)?.name || '';
 
@@ -1298,12 +1267,6 @@
                 if (trend > 1) return '<span class="trend-up" title="Improving">↑</span>';
                 if (trend < -1) return '<span class="trend-down" title="Declining">↓</span>';
                 return '<span class="trend-flat" title="Steady">→</span>';
-            };
-            
-            const formatToPar = (toPar) => {
-                if (toPar === null) return '-';
-                if (toPar === 0) return 'E';
-                return toPar > 0 ? `+${toPar}` : toPar;
             };
 
             if (view === 'cumulative-gross') {
@@ -1531,15 +1494,14 @@
                     </table>
                 `;
             } else {
-                // Default Net view with key league metrics: gross/net, to-par, rounds, average
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th title="Rounds completed">Rnds</th><th title="Total gross strokes">Gross</th><th class="highlight" title="Total net strokes (after handicap)">Net</th><th title="Total vs course par">Vs Par</th><th title="Average net per round">Avg Net</th><th style="width:40px"></th>`;
+                // Default Net view with key league metrics: gross/net, rounds, average
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th title="Rounds completed">Rnds</th><th title="Total gross strokes">Gross</th><th class="highlight" title="Total net strokes (after handicap)">Net</th><th title="Average net per round">Avg Net</th><th style="width:40px"></th>`;
                 renderRow = (s, posDisplay, posNum) => `
                     <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                     <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                     <td>${s.roundsPlayed}</td>
                     <td>${s.roundsPlayed > 0 ? s.totalGross : '-'}</td>
                     <td><span class="score-cell net">${s.roundsPlayed > 0 ? s.totalNet : '-'}</span></td>
-                    <td class="to-par ${s.toPar !== null ? (s.toPar > 0 ? 'over' : s.toPar < 0 ? 'under' : 'even') : ''}">${formatToPar(s.toPar)}</td>
                     <td>${s.avgNet !== null ? s.avgNet : '-'}</td>
                     <td style="text-align:center">${getTrendIcon(s.trend)}</td>
                 `;
@@ -1617,7 +1579,7 @@
                                                 ${s.roundDetails.map(r => `
                                                 <div class="round-chip">
                                                     <div class="week">${r.name}</div>
-                                                    <div class="scores">${has18 ? `OUT ${r.out} • IN ${r.in} • ` : ''}Gross ${r.gross} → <span class="net-val">Net ${r.net}</span></div>
+                                                    <div class="scores">Gross ${r.gross} → <span class="net-val">Net ${r.net}</span></div>
                                                 </div>
                                             `).join('')}` : '<span style="color:#999">No rounds played yet</span>'}
                                         </div>
