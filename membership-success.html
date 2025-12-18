@@ -833,6 +833,9 @@
             <a href="https://918booking.com/emb-bookings?course=7" class="btn btn-primary" target="_blank" id="bookBtn">
                 <i class="fas fa-golf-ball"></i> Book Your First Session
             </a>
+            <button type="button" class="btn btn-primary" id="createTeamBtn" onclick="showTeamRegistration()" style="display: none;">
+                <i class="fas fa-users"></i> Create Team
+            </button>
             <a href="index.html" class="btn btn-secondary" id="returnHomeBtn">
                 <i class="fas fa-home"></i> Return Home
             </a>
@@ -852,6 +855,25 @@
         // Check if this is a createTeam flow - require team creation
         if (source === 'createTeam') {
             isCreateTeamFlow = true;
+            // Hide Return Home, show Create Team button instead
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('returnHomeBtn').style.display = 'none';
+                document.getElementById('bookBtn').style.display = 'none';
+                document.getElementById('createTeamBtn').style.display = 'inline-block';
+            });
+        }
+        
+        function showTeamRegistration() {
+            document.getElementById('leagueRegistration').style.display = 'block';
+            document.getElementById('regularNextSteps').style.display = 'none';
+            document.getElementById('playerChoice').style.display = 'none';
+            document.getElementById('registrationForm').style.display = 'block';
+            document.getElementById('player2Section').style.display = 'none';
+            document.getElementById('createTeamBtn').style.display = 'none';
+            document.getElementById('membershipType').textContent = 'League Registration';
+            document.getElementById('welcomeText').textContent = 'Complete your team registration below to join the league.';
+            // Scroll to form
+            document.getElementById('leagueRegistration').scrollIntoView({ behavior: 'smooth' });
         }
         
         async function init() {
