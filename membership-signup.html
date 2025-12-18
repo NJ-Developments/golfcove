@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Golf Cove - Membership Signup</title>
+    <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #333;
+        }
+        
+        .header-logo img {
+            height: 45px;
+        }
+        
+        .header-logo span {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #2d5a27;
+        }
+        
+        .header-back {
+            color: #666;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        
+        .header-back:hover {
+            color: #2d5a27;
+        }
+        
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+        }
+        
+        @media (max-width: 900px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Membership Selection */
+        .membership-section {
+            background: #fff;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title i {
+            color: #2d5a27;
+        }
+        
+        .section-subtitle {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+        
+        /* Membership Cards */
+        .membership-type-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+        }
+        
+        .type-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .type-btn.active {
+            background: #2d5a27;
+            color: #fff;
+        }
+        
+        .type-btn:hover:not(.active) {
+            background: #e8e8e8;
+        }
+        
+        .membership-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .membership-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .membership-card:hover {
+            border-color: #2d5a27;
+            background: #f8fdf8;
+        }
+        
+        .membership-card.selected {
+            border-color: #2d5a27;
+            background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e8 100%);
+            box-shadow: 0 4px 15px rgba(45, 90, 39, 0.15);
+        }
+        
+        .membership-card.selected::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #2d5a27;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .card-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .card-badge {
+            background: #ffd700;
+            color: #333;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .card-badge.popular {
+            background: #2d5a27;
+            color: #fff;
+        }
+        
+        .card-price {
+            margin-bottom: 15px;
+        }
+        
+        .price-amount {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #2d5a27;
+        }
+        
+        .price-period {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .card-features {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .card-features li {
+            font-size: 0.85rem;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .card-features li i {
+            color: #2d5a27;
+            font-size: 0.75rem;
+        }
+        
+        /* Payment Section */
+        .payment-section {
+            background: #fff;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .order-summary {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .summary-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .summary-item.total {
+            border-top: 2px solid #ddd;
+            padding-top: 12px;
+            margin-top: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .summary-item.total .amount {
+            color: #2d5a27;
+        }
+        
+        /* Form Styles */
+        .form-section {
+            margin-bottom: 20px;
+        }
+        
+        .form-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: #555;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #2d5a27;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(45, 90, 39, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .form-row.three {
+            grid-template-columns: 2fr 1fr 1fr;
+        }
+        
+        /* Card Input Styling */
+        .card-input-wrapper {
+            position: relative;
+        }
+        
+        .card-input-wrapper i {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+        
+        .card-icons {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .card-icons img {
+            height: 24px;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        
+        .card-icons img.active {
+            opacity: 1;
+        }
+        
+        /* Submit Button */
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #2d5a27 0%, #3d7a35 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .submit-btn:hover {
+            background: linear-gradient(135deg, #234a1f 0%, #2d5a27 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(45, 90, 39, 0.3);
+        }
+        
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .submit-btn.loading {
+            pointer-events: none;
+        }
+        
+        .submit-btn.loading::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Security Notice */
+        .security-notice {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f0f9f0;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #555;
+        }
+        
+        .security-notice i {
+            color: #2d5a27;
+            font-size: 1.2rem;
+        }
+        
+        /* Agreement */
+        .agreement {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .agreement label {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+        }
+        
+        .agreement input {
+            margin-top: 3px;
+            accent-color: #2d5a27;
+        }
+        
+        /* Success Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal {
+            background: #fff;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 450px;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+        
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+        
+        .modal-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #2d5a27 0%, #3d7a35 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        
+        .modal-icon i {
+            font-size: 2.5rem;
+            color: #fff;
+        }
+        
+        .modal h2 {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .modal p {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .modal .btn {
+            padding: 12px 30px;
+            background: #2d5a27;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        /* Error Messages */
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.8rem;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .form-group.error input {
+            border-color: #e74c3c;
+        }
+        
+        .form-group.error .error-message {
+            display: block;
+        }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            .main-container {
+                margin: 20px auto;
+            }
+            
+            .membership-section,
+            .payment-section {
+                padding: 20px;
+            }
+            
+            .form-row,
+            .form-row.three {
+                grid-template-columns: 1fr;
+            }
+            
+            .card-features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <a href="index.html" class="header-logo">
+            <img src="images/golfCoveLogo6.png" alt="Golf Cove">
+            <span>Golf Cove</span>
+        </a>
+        <a href="memberships.html" class="header-back">
+            <i class="fas fa-arrow-left"></i>
+            Back to Memberships
+        </a>
+    </header>
+    
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Left: Membership Selection -->
+        <div class="membership-section">
+            <h1 class="section-title"><i class="fas fa-id-card"></i> Choose Your Membership</h1>
+            <p class="section-subtitle">Select the plan that best fits your game. All memberships include MultiSport Arcade access.</p>
+            
+            <!-- Membership Type Tabs -->
+            <div class="membership-type-selector">
+                <button class="type-btn active" onclick="showType('golf')">Golf Memberships</button>
+                <button class="type-btn" onclick="showType('family')">Family Memberships</button>
+            </div>
+            
+            <!-- Golf Memberships -->
+            <div class="membership-cards" id="golf-memberships">
+                <div class="membership-card" data-id="par" data-name="Par Membership" data-price="89" data-type="golf" onclick="selectMembership(this)">
+                    <div class="card-header">
+                        <span class="card-name">Par Membership</span>
+                    </div>
+                    <div class="card-price">
+                        <span class="price-amount">$89</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <ul class="card-features">
+                        <li><i class="fas fa-check"></i> $15/hr Off-Peak</li>
+                        <li><i class="fas fa-check"></i> $30/hr Peak</li>
+                        <li><i class="fas fa-check"></i> 10% F&B Discount</li>
+                        <li><i class="fas fa-check"></i> Priority Booking</li>
+                        <li><i class="fas fa-check"></i> MultiSport Access</li>
+                        <li><i class="fas fa-check"></i> 3hr Max/Visit</li>
+                    </ul>
+                </div>
+                
+                <div class="membership-card" data-id="birdie" data-name="Birdie Membership" data-price="189" data-type="golf" onclick="selectMembership(this)">
+                    <div class="card-header">
+                        <span class="card-name">Birdie Membership</span>
+                        <span class="card-badge popular">Most Popular</span>
+                    </div>
+                    <div class="card-price">
+                        <span class="price-amount">$189</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <ul class="card-features">
+                        <li><i class="fas fa-check"></i> Unlimited Off-Peak</li>
+                        <li><i class="fas fa-check"></i> $15/hr Peak</li>
+                        <li><i class="fas fa-check"></i> 10% F&B Discount</li>
+                        <li><i class="fas fa-check"></i> Priority Booking</li>
+                        <li><i class="fas fa-check"></i> MultiSport Access</li>
+                        <li><i class="fas fa-check"></i> Guest Passes (2/mo)</li>
+                    </ul>
+                </div>
+                
+                <div class="membership-card" data-id="eagle" data-name="Eagle Membership" data-price="289" data-type="golf" onclick="selectMembership(this)">
+                    <div class="card-header">
+                        <span class="card-name">Eagle Membership</span>
+                        <span class="card-badge">Premium</span>
+                    </div>
+                    <div class="card-price">
+                        <span class="price-amount">$289</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <ul class="card-features">
+                        <li><i class="fas fa-check"></i> Unlimited All Hours</li>
+                        <li><i class="fas fa-check"></i> 15% F&B Discount</li>
+                        <li><i class="fas fa-check"></i> Priority Booking</li>
+                        <li><i class="fas fa-check"></i> MultiSport Access</li>
+                        <li><i class="fas fa-check"></i> Guest Passes (4/mo)</li>
+                        <li><i class="fas fa-check"></i> Locker Included</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Family Memberships -->
+            <div class="membership-cards" id="family-memberships" style="display: none;">
+                <div class="membership-card" data-id="family-par" data-name="Family Par" data-price="149" data-type="family" onclick="selectMembership(this)">
+                    <div class="card-header">
+                        <span class="card-name">Family Par</span>
+                    </div>
+                    <div class="card-price">
+                        <span class="price-amount">$149</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <ul class="card-features">
+                        <li><i class="fas fa-check"></i> Up to 4 Family Members</li>
+                        <li><i class="fas fa-check"></i> $15/hr Off-Peak</li>
+                        <li><i class="fas fa-check"></i> $30/hr Peak</li>
+                        <li><i class="fas fa-check"></i> 10% F&B Discount</li>
+                        <li><i class="fas fa-check"></i> MultiSport Access</li>
+                        <li><i class="fas fa-check"></i> Priority Booking</li>
+                    </ul>
+                </div>
+                
+                <div class="membership-card" data-id="family-birdie" data-name="Family Birdie" data-price="299" data-type="family" onclick="selectMembership(this)">
+                    <div class="card-header">
+                        <span class="card-name">Family Birdie</span>
+                        <span class="card-badge popular">Best Value</span>
+                    </div>
+                    <div class="card-price">
+                        <span class="price-amount">$299</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <ul class="card-features">
+                        <li><i class="fas fa-check"></i> Up to 4 Family Members</li>
+                        <li><i class="fas fa-check"></i> Unlimited Off-Peak</li>
+                        <li><i class="fas fa-check"></i> $15/hr Peak</li>
+                        <li><i class="fas fa-check"></i> 10% F&B Discount</li>
+                        <li><i class="fas fa-check"></i> MultiSport Access</li>
+                        <li><i class="fas fa-check"></i> Guest Passes (4/mo)</li>
+                    </ul>
+                </div>
+                
+                <div class="membership-card" data-id="family-eagle" data-name="Family Eagle" data-price="449" data-type="family" onclick="selectMembership(this)">
+                    <div class="card-header">
+                        <span class="card-name">Family Eagle</span>
+                        <span class="card-badge">Premium</span>
+                    </div>
+                    <div class="card-price">
+                        <span class="price-amount">$449</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <ul class="card-features">
+                        <li><i class="fas fa-check"></i> Up to 6 Family Members</li>
+                        <li><i class="fas fa-check"></i> Unlimited All Hours</li>
+                        <li><i class="fas fa-check"></i> 15% F&B Discount</li>
+                        <li><i class="fas fa-check"></i> MultiSport Access</li>
+                        <li><i class="fas fa-check"></i> Guest Passes (6/mo)</li>
+                        <li><i class="fas fa-check"></i> Private Events Discount</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right: Payment Form -->
+        <div class="payment-section">
+            <h2 class="section-title"><i class="fas fa-credit-card"></i> Payment Details</h2>
+            
+            <!-- Order Summary -->
+            <div class="order-summary">
+                <div class="summary-title"><i class="fas fa-receipt"></i> Order Summary</div>
+                <div class="summary-item">
+                    <span id="selectedPlan">Select a membership</span>
+                    <span id="selectedPrice">$0.00</span>
+                </div>
+                <div class="summary-item">
+                    <span>Setup Fee</span>
+                    <span>$0.00</span>
+                </div>
+                <div class="summary-item">
+                    <span>Tax</span>
+                    <span id="taxAmount">$0.00</span>
+                </div>
+                <div class="summary-item total">
+                    <span>Total Today</span>
+                    <span class="amount" id="totalAmount">$0.00</span>
+                </div>
+            </div>
+            
+            <form id="paymentForm" onsubmit="processPayment(event)">
+                <!-- Personal Info -->
+                <div class="form-section">
+                    <div class="form-section-title"><i class="fas fa-user"></i> Personal Information</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name *</label>
+                            <input type="text" id="firstName" required placeholder="John">
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name *</label>
+                            <input type="text" id="lastName" required placeholder="Smith">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address *</label>
+                        <input type="email" id="email" required placeholder="john@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number *</label>
+                        <input type="tel" id="phone" required placeholder="(555) 123-4567">
+                    </div>
+                </div>
+                
+                <!-- Card Info -->
+                <div class="form-section">
+                    <div class="form-section-title"><i class="fas fa-credit-card"></i> Payment Method</div>
+                    <div class="form-group">
+                        <label>Card Number *</label>
+                        <div class="card-input-wrapper">
+                            <input type="text" id="cardNumber" required placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCardNumber(this)">
+                            <i class="fab fa-cc-visa" id="cardTypeIcon"></i>
+                        </div>
+                        <div class="card-icons">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/200px-Visa_Inc._logo.svg.png" alt="Visa" id="visa-icon">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/200px-Mastercard-logo.svg.png" alt="Mastercard" id="mc-icon">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/American_Express_logo_%282018%29.svg/200px-American_Express_logo_%282018%29.svg.png" alt="Amex" id="amex-icon">
+                        </div>
+                    </div>
+                    <div class="form-row three">
+                        <div class="form-group">
+                            <label>Expiration *</label>
+                            <input type="text" id="expiry" required placeholder="MM/YY" maxlength="5" oninput="formatExpiry(this)">
+                        </div>
+                        <div class="form-group">
+                            <label>CVV *</label>
+                            <input type="text" id="cvv" required placeholder="123" maxlength="4">
+                        </div>
+                        <div class="form-group">
+                            <label>ZIP *</label>
+                            <input type="text" id="zip" required placeholder="12345" maxlength="5">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Agreement -->
+                <div class="agreement">
+                    <label>
+                        <input type="checkbox" id="agreement" required>
+                        <span>I agree to the <a href="#" style="color:#2d5a27;">Terms of Service</a> and authorize Golf Cove to charge my card monthly. Annual commitment required. Cancel anytime after 12 months.</span>
+                    </label>
+                </div>
+                
+                <!-- Submit -->
+                <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                    <i class="fas fa-lock"></i>
+                    <span>Complete Membership</span>
+                </button>
+                
+                <div class="security-notice">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Your payment info is encrypted and secure. We use industry-standard SSL encryption to protect your data.</span>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Success Modal -->
+    <div class="modal-overlay" id="successModal">
+        <div class="modal">
+            <div class="modal-icon">
+                <i class="fas fa-check"></i>
+            </div>
+            <h2>Welcome to Golf Cove!</h2>
+            <p>Your membership is now active. Check your email for confirmation and next steps. We can't wait to see you!</p>
+            <a href="index.html" class="btn">Start Playing</a>
+        </div>
+    </div>
+    
+    <script>
+        let selectedMembership = null;
+        const TAX_RATE = 0.0635; // CT sales tax
+        
+        // Check URL params for pre-selected membership
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const plan = params.get('plan');
+            const type = params.get('type') || 'golf';
+            
+            // Show correct type
+            if (type === 'family') {
+                showType('family');
+            }
+            
+            // Pre-select plan if specified
+            if (plan) {
+                const card = document.querySelector(`[data-id="${plan}"]`);
+                if (card) {
+                    selectMembership(card);
+                }
+            }
+            
+            updateSubmitButton();
+        });
+        
+        function showType(type) {
+            document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('golf-memberships').style.display = type === 'golf' ? 'flex' : 'none';
+            document.getElementById('family-memberships').style.display = type === 'family' ? 'flex' : 'none';
+            
+            // Clear selection when switching types
+            document.querySelectorAll('.membership-card').forEach(c => c.classList.remove('selected'));
+            selectedMembership = null;
+            updateOrderSummary();
+            updateSubmitButton();
+        }
+        
+        function selectMembership(card) {
+            document.querySelectorAll('.membership-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            
+            selectedMembership = {
+                id: card.dataset.id,
+                name: card.dataset.name,
+                price: parseFloat(card.dataset.price),
+                type: card.dataset.type
+            };
+            
+            updateOrderSummary();
+            updateSubmitButton();
+        }
+        
+        function updateOrderSummary() {
+            if (selectedMembership) {
+                const price = selectedMembership.price;
+                const tax = price * TAX_RATE;
+                const total = price + tax;
+                
+                document.getElementById('selectedPlan').textContent = selectedMembership.name;
+                document.getElementById('selectedPrice').textContent = `$${price.toFixed(2)}`;
+                document.getElementById('taxAmount').textContent = `$${tax.toFixed(2)}`;
+                document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
+            } else {
+                document.getElementById('selectedPlan').textContent = 'Select a membership';
+                document.getElementById('selectedPrice').textContent = '$0.00';
+                document.getElementById('taxAmount').textContent = '$0.00';
+                document.getElementById('totalAmount').textContent = '$0.00';
+            }
+        }
+        
+        function updateSubmitButton() {
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = !selectedMembership;
+            
+            if (selectedMembership) {
+                const total = selectedMembership.price * (1 + TAX_RATE);
+                btn.querySelector('span').textContent = `Pay $${total.toFixed(2)} & Join`;
+            } else {
+                btn.querySelector('span').textContent = 'Select a Membership';
+            }
+        }
+        
+        function formatCardNumber(input) {
+            let value = input.value.replace(/\D/g, '');
+            value = value.replace(/(.{4})/g, '$1 ').trim();
+            input.value = value;
+            
+            // Detect card type
+            const firstDigit = value.charAt(0);
+            const icon = document.getElementById('cardTypeIcon');
+            
+            if (firstDigit === '4') {
+                icon.className = 'fab fa-cc-visa';
+            } else if (firstDigit === '5') {
+                icon.className = 'fab fa-cc-mastercard';
+            } else if (firstDigit === '3') {
+                icon.className = 'fab fa-cc-amex';
+            } else {
+                icon.className = 'fas fa-credit-card';
+            }
+        }
+        
+        function formatExpiry(input) {
+            let value = input.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = value.substring(0, 2) + '/' + value.substring(2);
+            }
+            input.value = value;
+        }
+        
+        function processPayment(e) {
+            e.preventDefault();
+            
+            if (!selectedMembership) {
+                alert('Please select a membership plan');
+                return;
+            }
+            
+            if (!document.getElementById('agreement').checked) {
+                alert('Please agree to the terms of service');
+                return;
+            }
+            
+            const btn = document.getElementById('submitBtn');
+            btn.classList.add('loading');
+            btn.disabled = true;
+            
+            // Simulate payment processing
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                
+                // Show success modal
+                document.getElementById('successModal').classList.add('active');
+                
+                // In real implementation, you would:
+                // 1. Send data to Stripe/payment processor
+                // 2. Create customer in your database
+                // 3. Set up recurring billing
+                // 4. Send confirmation email
+                
+                console.log('Membership signup:', {
+                    membership: selectedMembership,
+                    customer: {
+                        firstName: document.getElementById('firstName').value,
+                        lastName: document.getElementById('lastName').value,
+                        email: document.getElementById('email').value,
+                        phone: document.getElementById('phone').value
+                    }
+                });
+                
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
