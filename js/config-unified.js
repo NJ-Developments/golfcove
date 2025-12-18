@@ -138,6 +138,7 @@ const GolfCoveConfig = (function() {
             displayName: 'Par',
             level: 1,
             color: '#22c55e',
+            stripeProductId: 'prod_TcoONUcmaKaH23',
             price: { monthly: 49, annual: 499 },
             stripePrice: { monthly: 4900, annual: 49900 }, // In cents
             discount: 0.10, // 10% off
@@ -164,6 +165,7 @@ const GolfCoveConfig = (function() {
             displayName: 'Birdie',
             level: 2,
             color: '#3b82f6',
+            stripeProductId: 'prod_TcoP9dwzhTxjcm',
             price: { monthly: 79, annual: 799 },
             stripePrice: { monthly: 7900, annual: 79900 },
             discount: 0.15,
@@ -192,6 +194,7 @@ const GolfCoveConfig = (function() {
             displayName: 'Eagle',
             level: 3,
             color: '#f59e0b',
+            stripeProductId: 'prod_TcoPgE9e8pkBQb',
             price: { monthly: 129, annual: 1299 },
             stripePrice: { monthly: 12900, annual: 129900 },
             discount: 0.20,
@@ -225,6 +228,7 @@ const GolfCoveConfig = (function() {
             level: 1,
             color: '#9b59b6',
             isFamily: true,
+            stripeProductId: 'prod_TcoQ34q9DuhHAs',
             price: { monthly: 89, annual: 899 },
             stripePrice: { monthly: 8900, annual: 89900 },
             discount: 0.10,
@@ -254,6 +258,7 @@ const GolfCoveConfig = (function() {
             level: 2,
             color: '#8e44ad',
             isFamily: true,
+            stripeProductId: 'prod_TcoQ6oEZK54MwA',
             price: { monthly: 139, annual: 1399 },
             stripePrice: { monthly: 13900, annual: 139900 },
             discount: 0.15,
@@ -283,6 +288,7 @@ const GolfCoveConfig = (function() {
             level: 3,
             color: '#e74c3c',
             isFamily: true,
+            stripeProductId: 'prod_TcoRSXPK8DytS3',
             price: { monthly: 199, annual: 1999 },
             stripePrice: { monthly: 19900, annual: 199900 },
             discount: 0.20,
@@ -306,6 +312,50 @@ const GolfCoveConfig = (function() {
                 'Up to 6 family members',
                 '10 free hours per month',
                 'Lounge access'
+            ]
+        },
+        league_player: {
+            name: 'League Player',
+            displayName: 'League Player',
+            level: 1,
+            color: '#059669',
+            isLeague: true,
+            stripeProductId: 'prod_TcoDEZBb6T4SUr',
+            price: { seasonal: 400 },
+            stripePrice: { seasonal: 40000 }, // In cents
+            discount: 0.05,
+            benefits: {
+                discountPercent: 5,
+                leagueAccess: true,
+                priorityBooking: false
+            },
+            benefitsList: [
+                'Full season league access',
+                '5% off purchases',
+                'League events & standings'
+            ]
+        },
+        league_team: {
+            name: 'League Team',
+            displayName: 'League Team (2 Players)',
+            level: 2,
+            color: '#047857',
+            isLeague: true,
+            stripeProductId: 'prod_TcoRmgQcPiy7kJ',
+            price: { seasonal: 800 },
+            stripePrice: { seasonal: 80000 }, // In cents
+            discount: 0.10,
+            maxMembers: 2,
+            benefits: {
+                discountPercent: 10,
+                leagueAccess: true,
+                priorityBooking: true
+            },
+            benefitsList: [
+                'Full season for 2 players',
+                '10% off purchases',
+                'Priority league scheduling',
+                'Team standings & stats'
             ]
         }
     };
