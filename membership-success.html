@@ -168,12 +168,41 @@
         
         /* League Registration Form Styles */
         .league-registration {
-            background: linear-gradient(135deg, #059669, #047857);
-            border-radius: 16px;
-            padding: 30px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 0;
             margin-bottom: 30px;
-            color: #fff;
+            color: #333;
             text-align: left;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .league-registration-header {
+            background: linear-gradient(135deg, #059669, #047857);
+            padding: 30px;
+            color: #fff;
+            text-align: center;
+        }
+        
+        .league-registration-header h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: #fff;
+        }
+        
+        .league-registration-header .intro {
+            font-size: 15px;
+            opacity: 0.95;
+            margin: 0;
+        }
+        
+        .league-registration-body {
+            padding: 30px;
         }
         
         .league-registration h2 {
@@ -182,22 +211,46 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            color: #059669;
         }
         
         .league-registration .intro {
             font-size: 14px;
-            opacity: 0.9;
+            color: #666;
             margin-bottom: 25px;
         }
         
         .form-section {
-            background: rgba(255,255,255,0.1);
+            background: #f8faf9;
+            border: 1px solid #e0e7e4;
             border-radius: 12px;
-            padding: 20px;
+            padding: 24px;
             margin-bottom: 20px;
         }
         
         .form-section h4 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #059669;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e0e7e4;
+        }
+        
+        .form-section h4 i {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
             font-size: 14px;
             margin-bottom: 15px;
             display: flex;
@@ -223,72 +276,77 @@
         }
         
         .form-group label {
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 6px;
-            opacity: 0.9;
+            margin-bottom: 8px;
+            color: #374151;
         }
         
         .form-group input {
-            padding: 12px 15px;
-            border: 2px solid rgba(255,255,255,0.2);
-            border-radius: 8px;
-            background: rgba(255,255,255,0.95);
+            padding: 14px 16px;
+            border: 2px solid #e0e7e4;
+            border-radius: 10px;
+            background: #fff;
             color: #333;
-            font-size: 14px;
+            font-size: 15px;
             transition: all 0.2s;
         }
         
         .form-group input:focus {
             outline: none;
-            border-color: #fff;
-            box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+            border-color: #059669;
+            box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1);
         }
         
         .form-group input::placeholder {
-            color: #999;
+            color: #9ca3af;
         }
         
         .pin-group {
             display: flex;
             align-items: center;
             gap: 15px;
+            flex-wrap: wrap;
         }
         
         .pin-group input {
-            width: 120px;
+            width: 140px;
             text-align: center;
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 700;
-            letter-spacing: 8px;
+            letter-spacing: 10px;
             font-family: monospace;
+            padding: 16px;
         }
         
         .pin-group .pin-info {
-            font-size: 12px;
-            opacity: 0.8;
+            font-size: 13px;
+            color: #6b7280;
+            max-width: 280px;
+            line-height: 1.5;
         }
         
         .register-btn {
             width: 100%;
-            padding: 16px;
-            font-size: 16px;
+            padding: 18px;
+            font-size: 17px;
             font-weight: 700;
-            background: #fff;
-            color: #059669;
+            background: linear-gradient(135deg, #059669, #047857);
+            color: #fff;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
         }
         
         .register-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 6px 25px rgba(5, 150, 105, 0.4);
         }
         
         .register-btn:disabled {
@@ -298,10 +356,10 @@
         }
         
         .register-btn .spinner {
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(5, 150, 105, 0.3);
-            border-top-color: #059669;
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             display: none;
@@ -369,70 +427,100 @@
         
         /* League Player Choice Buttons */
         .player-choice {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            border-radius: 16px;
-            padding: 30px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 0;
             margin-bottom: 30px;
-            color: #fff;
+            color: #333;
             text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .player-choice-header {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            padding: 30px;
+            color: #fff;
+        }
+        
+        .player-choice-header h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        
+        .player-choice-header .intro {
+            font-size: 15px;
+            opacity: 0.95;
+            margin: 0;
         }
         
         .player-choice h2 {
             font-size: 22px;
             margin-bottom: 10px;
+            color: #3b82f6;
         }
         
         .player-choice .intro {
             font-size: 14px;
-            opacity: 0.9;
+            color: #666;
             margin-bottom: 25px;
         }
         
         .choice-buttons {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 20px;
+            padding: 30px;
         }
         
         .choice-btn {
-            background: rgba(255,255,255,0.15);
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 12px;
-            padding: 25px 20px;
-            color: #fff;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 30px 24px;
+            color: #333;
             cursor: pointer;
             transition: all 0.2s;
+            text-align: center;
         }
         
         .choice-btn:hover {
-            background: rgba(255,255,255,0.25);
-            border-color: #fff;
-            transform: translateY(-2px);
+            background: #eff6ff;
+            border-color: #3b82f6;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
         }
         
         .choice-btn i {
-            font-size: 32px;
-            margin-bottom: 12px;
+            font-size: 40px;
+            margin-bottom: 16px;
             display: block;
+            color: #3b82f6;
         }
         
         .choice-btn h3 {
-            font-size: 16px;
+            font-size: 18px;
+            font-weight: 700;
             margin-bottom: 8px;
+            color: #1e293b;
         }
         
         .choice-btn p {
-            font-size: 12px;
-            opacity: 0.8;
+            font-size: 13px;
+            color: #64748b;
             margin: 0;
+            line-height: 1.4;
         }
         
         /* Join Team Section */
         .join-team-section {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-            border-radius: 16px;
-            padding: 30px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 0;
             margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
             color: #fff;
             text-align: left;
             display: none;
@@ -444,12 +532,40 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            color: #7c3aed;
         }
         
         .join-team-section .intro {
             font-size: 14px;
-            opacity: 0.9;
+            color: #666;
             margin-bottom: 25px;
+        }
+        
+        .join-team-header {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            padding: 30px;
+            color: #fff;
+            text-align: center;
+        }
+        
+        .join-team-header h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        
+        .join-team-header p {
+            font-size: 15px;
+            opacity: 0.95;
+            margin: 0;
+        }
+        
+        .join-team-body {
+            padding: 30px;
         }
         
         .join-pin-input {
@@ -465,50 +581,52 @@
         }
         
         .join-pin-input .form-group label {
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 6px;
-            opacity: 0.9;
+            margin-bottom: 8px;
+            color: #374151;
             display: block;
         }
         
         .join-pin-input input {
             width: 100%;
-            padding: 14px 18px;
-            border: 2px solid rgba(255,255,255,0.2);
-            border-radius: 8px;
-            background: rgba(255,255,255,0.95);
+            padding: 16px 18px;
+            border: 2px solid #e0e7e4;
+            border-radius: 10px;
+            background: #fff;
             color: #333;
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 6px;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 8px;
             text-align: center;
             font-family: monospace;
         }
         
         .join-pin-input input:focus {
             outline: none;
-            border-color: #fff;
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
         }
         
         .join-btn {
-            padding: 14px 30px;
+            padding: 16px 30px;
             font-size: 16px;
             font-weight: 700;
-            background: #fff;
-            color: #7c3aed;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 8px;
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
         }
         
         .join-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 6px 25px rgba(124, 58, 237, 0.4);
         }
         
         .join-btn:disabled {
@@ -518,73 +636,105 @@
         }
         
         .team-preview {
-            background: rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 20px;
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border: 2px solid #22c55e;
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 24px;
             display: none;
         }
         
-        .team-preview h4 {
-            font-size: 16px;
-            margin-bottom: 15px;
+        .team-found-badge {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 16px;
         }
         
         .team-preview .team-info {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #bbf7d0;
         }
         
         .team-preview .team-name {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 700;
+            color: #166534;
         }
         
         .team-preview .player-count {
             font-size: 14px;
-            opacity: 0.8;
+            color: #16a34a;
+            font-weight: 600;
+            background: #fff;
+            padding: 6px 12px;
+            border-radius: 20px;
         }
         
         .team-preview .current-player {
             font-size: 14px;
-            opacity: 0.9;
-            margin-bottom: 15px;
+            color: #166534;
+            margin-bottom: 20px;
+        }
+        
+        .team-preview .current-player i {
+            color: #22c55e;
+        }
+        
+        .team-preview .form-section {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 20px;
         }
         
         .confirm-join-btn {
             width: 100%;
-            padding: 14px;
+            padding: 16px;
             font-size: 16px;
             font-weight: 700;
-            background: #fff;
-            color: #7c3aed;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
         }
         
         .confirm-join-btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(34, 197, 94, 0.4);
         }
         
         .back-btn {
-            background: transparent;
-            border: 2px solid rgba(255,255,255,0.5);
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 8px;
+            background: #f1f5f9;
+            border: 2px solid #e2e8f0;
+            color: #64748b;
+            padding: 12px 24px;
+            border-radius: 10px;
             cursor: pointer;
             font-size: 14px;
-            margin-top: 15px;
+            font-weight: 600;
+            margin-top: 20px;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .back-btn:hover {
-            border-color: #fff;
-            background: rgba(255,255,255,0.1);
+            background: #e2e8f0;
+            color: #475569;
         }
         
         @media (max-width: 600px) {
@@ -649,161 +799,173 @@
             
             <!-- League Player Choice: Create or Join -->
             <div class="player-choice" id="playerChoice">
-                <h2><i class="fas fa-users"></i> Join or Create a Team</h2>
-                <p class="intro">You've registered as an individual player. Would you like to create a new team or join an existing one?</p>
+                <div class="player-choice-header">
+                    <h2><i class="fas fa-users"></i> Join or Create a Team</h2>
+                    <p class="intro">You've registered as a League Player. Choose how you'd like to join the league.</p>
+                </div>
                 
                 <div class="choice-buttons">
                     <div class="choice-btn" onclick="showCreateTeam()">
                         <i class="fas fa-plus-circle"></i>
                         <h3>Create New Team</h3>
-                        <p>Start a new team and invite a teammate later</p>
+                        <p>Start a new team and your teammate can join later using your team PIN</p>
                     </div>
                     <div class="choice-btn" onclick="showJoinTeam()">
                         <i class="fas fa-sign-in-alt"></i>
                         <h3>Join Existing Team</h3>
-                        <p>Enter team PIN to join your teammate</p>
+                        <p>Enter the 4-digit PIN from your teammate to join their team</p>
                     </div>
                 </div>
             </div>
             
             <!-- Join Team Section -->
             <div class="join-team-section" id="joinTeamSection">
-                <h2><i class="fas fa-sign-in-alt"></i> Join Existing Team</h2>
-                <p class="intro">Enter the 4-digit team PIN shared by your teammate to join their team.</p>
-                
-                <div class="error-message" id="joinErrorMessage"></div>
-                
-                <div class="join-pin-input">
-                    <div class="form-group">
-                        <label>Team PIN</label>
-                        <input type="text" id="joinTeamPin" maxlength="4" pattern="[0-9]{4}" placeholder="0000">
-                    </div>
-                    <button type="button" class="join-btn" onclick="lookupTeam()">
-                        <i class="fas fa-search"></i> Find Team
-                    </button>
+                <div class="join-team-header">
+                    <h2><i class="fas fa-sign-in-alt"></i> Join Existing Team</h2>
+                    <p>Enter the 4-digit team PIN shared by your teammate</p>
                 </div>
                 
-                <!-- Team Preview (shown after PIN lookup) -->
-                <div class="team-preview" id="teamPreview">
-                    <h4><i class="fas fa-check-circle"></i> Team Found!</h4>
-                    <div class="team-info">
-                        <span class="team-name" id="previewTeamName">Team Name</span>
-                        <span class="player-count" id="previewPlayerCount">1/2 players</span>
-                    </div>
-                    <div class="current-player">
-                        <i class="fas fa-user"></i> Current player: <strong id="previewCurrentPlayer">Player 1</strong>
+                <div class="join-team-body">
+                    <div class="error-message" id="joinErrorMessage"></div>
+                    
+                    <div class="join-pin-input">
+                        <div class="form-group">
+                            <label>Team PIN</label>
+                            <input type="text" id="joinTeamPin" maxlength="4" pattern="[0-9]{4}" placeholder="0000">
+                        </div>
+                        <button type="button" class="join-btn" onclick="lookupTeam()">
+                            <i class="fas fa-search"></i> Find Team
+                        </button>
                     </div>
                     
-                    <div class="form-section" style="background: rgba(255,255,255,0.1); margin-bottom: 15px;">
-                        <h4 style="color: #fff; font-size: 14px;"><i class="fas fa-user"></i> Your Information</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label style="color: #fff;">Full Name *</label>
-                                <input type="text" id="joinPlayerName" placeholder="Your name" required>
-                            </div>
-                            <div class="form-group">
-                                <label style="color: #fff;">Handicap</label>
-                                <input type="number" id="joinPlayerHandicap" min="0" max="54" value="0">
-                            </div>
+                    <!-- Team Preview (shown after PIN lookup) -->
+                    <div class="team-preview" id="teamPreview">
+                        <div class="team-found-badge">
+                            <i class="fas fa-check-circle"></i> Team Found!
                         </div>
-                    </div>
-                    
-                    <button type="button" class="confirm-join-btn" onclick="confirmJoinTeam()">
-                        <i class="fas fa-user-plus"></i> Join This Team
-                    </button>
-                </div>
-                
-                <button type="button" class="back-btn" onclick="showPlayerChoice()">
-                    <i class="fas fa-arrow-left"></i> Back to Options
-                </button>
-            </div>
-            
-            <div class="league-registration" id="registrationForm" style="display: none;">
-                <h2><i class="fas fa-users"></i> Complete Your Team Registration</h2>
-                <p class="intro">One more step! Set up your league team below. This info will be used for scoring and standings.</p>
-                
-                <div class="error-message" id="errorMessage"></div>
-                
-                <form id="teamForm" onsubmit="registerTeam(event)">
-                    <!-- Team Info -->
-                    <div class="form-section">
-                        <h4><i class="fas fa-flag"></i> Team Information</h4>
-                        <div class="form-row single">
-                            <div class="form-group">
-                                <label>Team Name *</label>
-                                <input type="text" id="teamName" placeholder="e.g., The Bogey Boys" required>
-                            </div>
+                        <div class="team-info">
+                            <span class="team-name" id="previewTeamName">Team Name</span>
+                            <span class="player-count" id="previewPlayerCount">1/2 players</span>
                         </div>
-                        <div class="form-row single">
-                            <div class="form-group">
-                                <label>Team PIN (4 digits) *</label>
-                                <div class="pin-group">
-                                    <input type="text" id="teamPin" maxlength="4" pattern="[0-9]{4}" placeholder="0000" required>
-                                    <span class="pin-info">This PIN is used to submit scores. Share it with your teammate!</span>
+                        <div class="current-player">
+                            <i class="fas fa-user"></i> Current player: <strong id="previewCurrentPlayer">Player 1</strong>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h4><i class="fas fa-user"></i> Your Information</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Full Name *</label>
+                                    <input type="text" id="joinPlayerName" placeholder="Your name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Handicap</label>
+                                    <input type="number" id="joinPlayerHandicap" min="0" max="54" value="0">
                                 </div>
                             </div>
                         </div>
+                        
+                        <button type="button" class="confirm-join-btn" onclick="confirmJoinTeam()">
+                            <i class="fas fa-user-plus"></i> Join This Team
+                        </button>
                     </div>
                     
-                    <!-- Player 1 -->
-                    <div class="form-section">
-                        <h4><i class="fas fa-user"></i> Player 1 (You)</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Full Name *</label>
-                                <input type="text" id="player1Name" placeholder="Your name" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Handicap</label>
-                                <input type="number" id="player1Handicap" min="0" max="54" value="0" placeholder="0">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" id="player1Email" placeholder="your@email.com">
-                            </div>
-                            <div class="form-group">
-                                <label>Phone</label>
-                                <input type="tel" id="player1Phone" placeholder="(555) 555-5555">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Player 2 (Team only) -->
-                    <div class="form-section" id="player2Section" style="display: none;">
-                        <h4><i class="fas fa-user-friends"></i> Player 2 (Teammate)</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Full Name *</label>
-                                <input type="text" id="player2Name" placeholder="Teammate's name">
-                            </div>
-                            <div class="form-group">
-                                <label>Handicap</label>
-                                <input type="number" id="player2Handicap" min="0" max="54" value="0" placeholder="0">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" id="player2Email" placeholder="teammate@email.com">
-                            </div>
-                            <div class="form-group">
-                                <label>Phone</label>
-                                <input type="tel" id="player2Phone" placeholder="(555) 555-5555">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="register-btn" id="registerBtn">
-                        <span class="btn-text"><i class="fas fa-check-circle"></i> Complete Registration</span>
-                        <span class="spinner"></span>
-                    </button>
-                    
-                    <button type="button" class="back-btn" id="backToChoiceBtn" style="display: none; margin-top: 15px;" onclick="showPlayerChoice()">
+                    <button type="button" class="back-btn" onclick="showPlayerChoice()">
                         <i class="fas fa-arrow-left"></i> Back to Options
                     </button>
-                </form>
+                </div>
+            </div>
+            
+            <div class="league-registration" id="registrationForm" style="display: none;">
+                <div class="league-registration-header">
+                    <h2><i class="fas fa-trophy"></i> Complete Your Team Registration</h2>
+                    <p class="intro">Set up your league team below. This info will be used for scoring and standings.</p>
+                </div>
+                
+                <div class="league-registration-body">
+                    <div class="error-message" id="errorMessage"></div>
+                    
+                    <form id="teamForm" onsubmit="registerTeam(event)">
+                        <!-- Team Info -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-flag"></i> Team Information</h4>
+                            <div class="form-row single">
+                                <div class="form-group">
+                                    <label>Team Name *</label>
+                                    <input type="text" id="teamName" placeholder="e.g., The Bogey Boys" required>
+                                </div>
+                            </div>
+                            <div class="form-row single">
+                                <div class="form-group">
+                                    <label>Team PIN (4 digits) *</label>
+                                    <div class="pin-group">
+                                        <input type="text" id="teamPin" maxlength="4" pattern="[0-9]{4}" placeholder="0000" required>
+                                        <span class="pin-info"><i class="fas fa-info-circle"></i> This PIN is used to submit scores after each round. Share it with your teammate!</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Player 1 -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-user"></i> Player 1 (Captain)</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Full Name *</label>
+                                    <input type="text" id="player1Name" placeholder="Your full name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Handicap Index</label>
+                                    <input type="number" id="player1Handicap" min="0" max="54" value="0" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Email Address</label>
+                                    <input type="email" id="player1Email" placeholder="you@email.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>Phone Number</label>
+                                    <input type="tel" id="player1Phone" placeholder="(203) 555-1234">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Player 2 (Team only) -->
+                        <div class="form-section" id="player2Section" style="display: none;">
+                            <h4><i class="fas fa-user-friends"></i> Player 2 (Teammate)</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Full Name *</label>
+                                    <input type="text" id="player2Name" placeholder="Teammate's full name">
+                                </div>
+                                <div class="form-group">
+                                    <label>Handicap Index</label>
+                                    <input type="number" id="player2Handicap" min="0" max="54" value="0" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Email Address</label>
+                                    <input type="email" id="player2Email" placeholder="teammate@email.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>Phone Number</label>
+                                    <input type="tel" id="player2Phone" placeholder="(203) 555-5678">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="register-btn" id="registerBtn">
+                            <span class="btn-text"><i class="fas fa-check-circle"></i> Complete Registration</span>
+                            <span class="spinner"></span>
+                        </button>
+                        
+                        <button type="button" class="back-btn" id="backToChoiceBtn" style="display: none; margin-top: 15px;" onclick="showPlayerChoice()">
+                            <i class="fas fa-arrow-left"></i> Back to Options
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
         
