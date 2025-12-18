@@ -1127,7 +1127,7 @@
                     <i class="fas fa-home"></i> Dashboard
                 </div>
                 <div class="nav-item" data-section="teams" onclick="showSection('teams')">
-                    <i class="fas fa-users"></i> Teams
+                    <i class="fas fa-users"></i> Player Management
                 </div>
                 <div class="nav-item" data-section="rounds" onclick="showSection('rounds')">
                     <i class="fas fa-flag"></i> Rounds
@@ -1135,22 +1135,10 @@
                 <div class="nav-item" data-section="print" onclick="showSection('print')">
                     <i class="fas fa-print"></i> Print
                 </div>
-                <div class="nav-item" data-section="pins" onclick="showSection('pins')">
-                    <i class="fas fa-key"></i> PINs
-                </div>
                 <div class="nav-divider"></div>
                 <div style="padding:10px 20px;font-size:11px;color:#999;text-transform:uppercase;font-weight:700;">Business Admin</div>
                 <div class="nav-item" data-section="staff" onclick="showSection('staff')">
                     <i class="fas fa-id-badge"></i> Staff Management
-                </div>
-                <div class="nav-item" data-section="timeclock" onclick="showSection('timeclock')">
-                    <i class="fas fa-clock"></i> Time Clock
-                </div>
-                <div class="nav-item" data-section="reports" onclick="showSection('reports')">
-                    <i class="fas fa-chart-bar"></i> Sales Reports
-                </div>
-                <div class="nav-item" data-section="inventory" onclick="showSection('inventory')">
-                    <i class="fas fa-boxes"></i> Inventory
                 </div>
                 <div class="nav-divider"></div>
                 <div class="nav-item" data-section="settings" onclick="showSection('settings')">
@@ -1223,10 +1211,29 @@
             </div>
         </div>
         
-        <!-- Teams Section -->
+        <!-- Player Management Section (Teams & PINs) -->
         <div class="page-section" id="section-teams">
-            <h1 class="page-title"><i class="fas fa-users"></i> Teams</h1>
-            <div class="team-grid" id="teamGrid"></div>
+            <h1 class="page-title"><i class="fas fa-users"></i> Player Management</h1>
+            
+            <!-- Teams -->
+            <div class="card" style="margin-bottom: 20px;">
+                <h3><i class="fas fa-user-friends"></i> Teams</h3>
+                <div class="team-grid" id="teamGrid"></div>
+            </div>
+            
+            <!-- All Players Management -->
+            <div class="card" style="background: linear-gradient(to bottom, #1a1a1a 0%, #2d2d2d 60px, #fff 60px); border: 1px solid #333;">
+                <h3 style="color: #fff; margin-bottom: 8px;"><i class="fas fa-user-edit"></i> All Players</h3>
+                <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin-bottom: 15px;">Manage all players - rename, edit PINs, change handicaps, or remove players.</p>
+                
+                <div class="pin-actions" style="margin-bottom: 15px; background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="generatePinsForAll()"><i class="fas fa-magic"></i> Generate Missing PINs</button>
+                    <button class="btn btn-secondary btn-sm" onclick="printPinSheet()"><i class="fas fa-print"></i> Print PIN Sheet</button>
+                    <div class="pin-stats" id="pinStats" style="font-weight: 600;"></div>
+                </div>
+                
+                <div id="pinList" class="pin-list"></div>
+            </div>
         </div>
         
         <!-- Rounds Section -->
@@ -1302,52 +1309,6 @@
                 <h3><i class="fas fa-download"></i> Export Data</h3>
                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Download all league data as a JSON file.</p>
                 <button class="btn btn-secondary" onclick="exportData()"><i class="fas fa-download"></i> Export JSON</button>
-            </div>
-        </div>
-        
-        <!-- PINs Section -->
-        <div class="page-section" id="section-pins">
-            <h1 class="page-title"><i class="fas fa-key"></i> Player PINs</h1>
-            
-            <div class="card">
-                <h3><i class="fas fa-shield-alt"></i> PIN Management</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">View, generate, and copy player PINs for score entry.</p>
-                
-                <div class="pin-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="generatePinsForAll()"><i class="fas fa-magic"></i> Generate Missing PINs</button>
-                    <button class="btn btn-secondary btn-sm" onclick="printPinSheet()"><i class="fas fa-print"></i> Print PIN Sheet</button>
-                    <div class="pin-stats" id="pinStats"></div>
-                </div>
-                
-                <div class="card" style="padding: 16px; border: 1px dashed #e5e7eb; margin-bottom: 16px;">
-                    <h4 style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 16px;">
-                        <i class="fas fa-edit" style="color:#37b24a;"></i> Set Specific PIN
-                    </h4>
-                    <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: end;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Team</label>
-                            <select id="pinTeamSelect" onchange="handlePinTeamChange()">
-                                <option value="">All Teams</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Player</label>
-                            <select id="pinPlayerSelect">
-                                <option value="">Select a player</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>PIN</label>
-                            <input type="text" id="pinManualInput" maxlength="4" pattern="[0-9]{4}" placeholder="1234" inputmode="numeric">
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <button class="btn btn-sm" onclick="setCustomPin()"><i class="fas fa-save"></i> Save PIN</button>
-                        <button class="btn btn-secondary btn-sm" onclick="fillRandomPin()"><i class="fas fa-dice"></i> Random</button>
-                    </div>
-                </div>
-                
-                <div id="pinList" class="pin-list"></div>
             </div>
         </div>
         
@@ -2021,7 +1982,7 @@
             const round = league.rounds[league.rounds.length - 1];
             if (!round) return;
             
-            const url = window.location.origin + window.location.pathname.replace('league-admin.html', '') + 'score.html?r=' + round.id;
+            const url = 'https://golfcove.web.app/score.html?r=' + round.id;
             document.getElementById('generalQRUrl').textContent = url;
             
             const qrContainer = document.getElementById('generalQRCode');
@@ -2063,7 +2024,7 @@
             // Generate QR code for team (hidden, just for print function to access)
             let qrImg = '';
             if (!isBlank) {
-                const url = window.location.origin + window.location.pathname.replace('league-admin.html', '') + 'score.html?r=' + round.id + '&t=' + teamId;
+                const url = 'https://golfcove.web.app/score.html?r=' + round.id + '&t=' + teamId;
                 const qrContainer = document.getElementById('teamQRPreview');
                 qrContainer.innerHTML = '';
                 new QRCode(qrContainer, {
@@ -2398,8 +2359,14 @@
                 return `
                     <div class="team-card">
                         <div class="team-header">
-                            <span class="team-name">${team.name}</span>
-                            <button class="delete-btn" onclick="deleteTeam('${team.id}')"><i class="fas fa-times"></i></button>
+                            <input type="text" value="${team.name}" 
+                                onchange="renameTeam('${team.id}', this.value)" 
+                                style="flex: 1; font-size: 16px; font-weight: 700; border: 1px solid transparent; background: transparent; padding: 4px 8px; border-radius: 4px; cursor: text;"
+                                onmouseover="this.style.borderColor='#ddd'; this.style.background='#fff';"
+                                onmouseout="if(document.activeElement !== this) { this.style.borderColor='transparent'; this.style.background='transparent'; }"
+                                onfocus="this.style.borderColor='#37b24a'; this.style.background='#fff';"
+                                onblur="this.style.borderColor='transparent'; this.style.background='transparent';">
+                            <button class="delete-btn" onclick="deleteTeam('${team.id}')" title="Delete Team"><i class="fas fa-times"></i></button>
                         </div>
                         <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
                             <span style="font-size: 12px; color: #ca8a04; font-weight: 600;"><i class="fas fa-key"></i> Team PIN</span>
@@ -2478,48 +2445,17 @@
         function renderPins() {
             const list = document.getElementById('pinList');
             const stats = document.getElementById('pinStats');
-            const teamSelect = document.getElementById('pinTeamSelect');
-            const playerSelect = document.getElementById('pinPlayerSelect');
             if (!list) return;
             
             const total = league.players.length;
             const withPin = league.players.filter(p => p.pin).length;
             if (stats) stats.textContent = `${withPin}/${total} players have PINs`;
             
-            // Rebuild team dropdown
-            if (teamSelect) {
-                const currentTeam = teamSelect.value;
-                teamSelect.innerHTML = '<option value="">All Teams</option>' + league.teams
-                    .slice()
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map(t => `<option value="${t.id}">${t.name}</option>`)
-                    .join('');
-                if (currentTeam && league.teams.find(t => t.id === currentTeam)) {
-                    teamSelect.value = currentTeam;
-                }
-            }
-            
-            // Rebuild player dropdown (filtered by team if selected)
-            if (playerSelect) {
-                const selectedTeam = teamSelect?.value || '';
-                const currentPlayer = playerSelect.value;
-                const filteredPlayers = league.players
-                    .filter(p => !selectedTeam || p.teamId === selectedTeam)
-                    .slice()
-                    .sort((a, b) => a.name.localeCompare(b.name));
-                playerSelect.innerHTML = '<option value="">Select a player</option>' + filteredPlayers
-                    .map(p => `<option value="${p.id}">${p.name}${p.pin ? ' (' + p.pin + ')' : ''}</option>`)
-                    .join('');
-                if (currentPlayer && filteredPlayers.find(p => p.id === currentPlayer)) {
-                    playerSelect.value = currentPlayer;
-                }
-            }
-            
             if (total === 0) {
                 list.innerHTML = `
                     <div class="empty-state" style="grid-column: 1 / -1;">
                         <i class="fas fa-users-slash"></i>
-                        <p>No players yet. Add players to generate PINs.</p>
+                        <p>No players yet. Add teams and players first.</p>
                     </div>
                 `;
                 return;
@@ -2528,25 +2464,88 @@
             const players = [...league.players].sort((a, b) => a.name.localeCompare(b.name));
             list.innerHTML = players.map(p => {
                 const team = league.teams.find(t => t.id === p.teamId);
-                const pinDisplay = p.pin ? `<span class="pin-chip">${p.pin}</span>` : '<span style="color:#999;">No PIN</span>';
-                const actions = p.pin
-                    ? `<button class="btn btn-sm btn-secondary" onclick="copyPin('${p.id}')"><i class="fas fa-copy"></i> Copy</button>
-                       <button class="btn btn-sm" onclick="regeneratePin('${p.id}')"><i class="fas fa-sync-alt"></i> Regenerate</button>`
-                    : `<button class="btn btn-sm" onclick="regeneratePin('${p.id}')"><i class="fas fa-key"></i> Create PIN</button>`;
+                const pinValue = p.pin || '';
                 
                 return `
-                    <div class="pin-row">
-                        <div class="info">
-                            <span class="name">${p.name}</span>
-                            <span class="meta">${team ? team.name : 'No team'} ┬╖ HCP ${p.handicap || 0}</span>
+                    <div class="pin-row" style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px; margin-bottom: 8px;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                            <input type="text" value="${p.name}" 
+                                onchange="renamePlayer('${p.id}', this.value)" 
+                                style="flex: 1; min-width: 140px; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600;"
+                                placeholder="Player name">
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <label style="font-size: 11px; color: #888;">HCP</label>
+                                <input type="number" value="${p.handicap || 0}" min="0" max="54"
+                                    onchange="updatePlayerHandicap('${p.id}', this.value)"
+                                    style="width: 55px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; text-align: center;">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <label style="font-size: 11px; color: #888;">PIN</label>
+                                <input type="text" value="${pinValue}" maxlength="4" inputmode="numeric"
+                                    onchange="updatePlayerPin('${p.id}', this.value)"
+                                    style="width: 65px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: monospace; text-align: center; letter-spacing: 2px;"
+                                    placeholder="----">
+                            </div>
+                            <span style="font-size: 12px; color: #888; background: #e5e7eb; padding: 4px 8px; border-radius: 4px;">${team ? team.name : 'No team'}</span>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px; flex-wrap: wrap; justify-content: flex-end;">
-                            ${pinDisplay}
-                            ${actions}
+                        <div style="display: flex; gap: 6px;">
+                            ${pinValue ? `<button class="btn btn-sm btn-secondary" onclick="copyPin('${p.id}')" title="Copy PIN"><i class="fas fa-copy"></i></button>` : ''}
+                            <button class="btn btn-sm btn-secondary" onclick="regeneratePin('${p.id}')" title="${pinValue ? 'Regenerate PIN' : 'Generate PIN'}"><i class="fas fa-key"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick="deletePlayerConfirm('${p.id}')" title="Remove Player"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+        
+        function renamePlayer(playerId, newName) {
+            const name = newName.trim();
+            if (!name) {
+                alert('Player name cannot be empty');
+                renderPins();
+                return;
+            }
+            const player = league.players.find(p => p.id === playerId);
+            if (player) {
+                player.name = name;
+                saveLeague();
+                renderTeams();
+            }
+        }
+        
+        function updatePlayerHandicap(playerId, value) {
+            const handicap = parseInt(value) || 0;
+            const player = league.players.find(p => p.id === playerId);
+            if (player) {
+                player.handicap = handicap;
+                saveLeague();
+                renderTeams();
+            }
+        }
+        
+        function updatePlayerPin(playerId, value) {
+            const pin = value.replace(/\D/g, '').slice(0, 4);
+            const player = league.players.find(p => p.id === playerId);
+            if (player) {
+                if (pin && pin.length !== 4) {
+                    alert('PIN must be exactly 4 digits');
+                    renderPins();
+                    return;
+                }
+                // Check for duplicate PINs
+                if (pin && league.players.some(p => p.id !== playerId && p.pin === pin)) {
+                    alert('This PIN is already in use by another player');
+                    renderPins();
+                    return;
+                }
+                player.pin = pin || null;
+                saveLeague();
+                renderTeams();
+            }
+        }
+        
+        function deletePlayerConfirm(playerId) {
+            deletePlayer(playerId);
         }
         
         function renderParInputs() {
@@ -2654,8 +2653,23 @@
             renderAll();
         }
         
+        function renameTeam(teamId, newName) {
+            const name = newName.trim();
+            if (!name) {
+                alert('Team name cannot be empty');
+                renderTeams();
+                return;
+            }
+            const team = league.teams.find(t => t.id === teamId);
+            if (team) {
+                team.name = name;
+                saveLeague();
+                renderPins(); // Update player list which shows team names
+            }
+        }
+        
         function deleteTeam(id) {
-            if (!confirm('Delete this team?')) return;
+            if (!confirm('Delete this team and remove players from it?')) return;
             league.players.forEach(p => { if (p.teamId === id) p.teamId = null; });
             league.teams = league.teams.filter(t => t.id !== id);
             save();
@@ -2701,7 +2715,7 @@
         }
         
         function deletePlayer(id) {
-            if (!confirm('Remove this player?')) return;
+            if (!confirm('Remove this player? This cannot be undone.')) return;
             league.players = league.players.filter(p => p.id !== id);
             save();
             renderAll();
