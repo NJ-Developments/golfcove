@@ -862,6 +862,19 @@
         async function init() {
             if (!sessionId) {
                 document.getElementById('confirmationId').textContent = 'GC-' + Date.now().toString(36).toUpperCase();
+                
+                // Even without session, if this is createTeam flow, show team registration
+                if (isCreateTeamFlow) {
+                    document.getElementById('leagueRegistration').style.display = 'block';
+                    document.getElementById('regularNextSteps').style.display = 'none';
+                    document.getElementById('membershipType').textContent = 'League Registration';
+                    document.getElementById('welcomeText').textContent = 'Complete your team registration below to join the league.';
+                    document.getElementById('playerChoice').style.display = 'none';
+                    document.getElementById('registrationForm').style.display = 'block';
+                    document.getElementById('player2Section').style.display = 'none';
+                    document.getElementById('bookBtn').style.display = 'none';
+                    document.getElementById('returnHomeBtn').style.display = 'none';
+                }
                 return;
             }
             
