@@ -185,6 +185,12 @@ const TabsSync = (function() {
         return tab ? normalizeTab(tab) : null;
     }
     
+    // Internal: Get direct reference to tab (for modifications)
+    function getTabRef(tabId) {
+        ensureInit();
+        return localTabs.find(t => t.id == tabId || String(t.id) === String(tabId));
+    }
+    
     // Get tab by customer name
     function getTabByCustomer(customerName) {
         if (!customerName) return null;
@@ -296,10 +302,16 @@ const TabsSync = (function() {
     
     // Add items to tab
     async function addItemsToTab(tabId, items, employeeName = 'Staff') {
-        const tab = getTab(tabId);
+        // Get direct reference to tab in localTabs array (not a copy)
+        const tab = getTabRef(tabId);
         if (!tab) {
             console.error('[TabsSync] Tab not found:', tabId);
             return null;
+        }
+        
+        // Ensure items array exists
+        if (!Array.isArray(tab.items)) {
+            tab.items = [];
         }
         
         // Add items locally
@@ -309,7 +321,7 @@ const TabsSync = (function() {
             addedBy: employeeName
         }));
         
-        tab.items = [...(tab.items || []), ...newItems];
+        tab.items = [...tab.items, ...newItems];
         tab.subtotal = tab.items.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 1)), 0);
         tab.tax = tab.subtotal * (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635);
         tab.total = tab.subtotal + tab.tax;

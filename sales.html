@@ -3060,49 +3060,102 @@
         function showInventory() {
             const trackedItems = items.filter(i => i.trackInventory);
             const lowStock = trackedItems.filter(i => i.stock <= 5);
+            const outOfStock = trackedItems.filter(i => i.stock === 0);
+            const totalValue = trackedItems.reduce((sum, i) => sum + (i.stock * i.price), 0);
             
             let html = `
-                <div id="inventoryModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">
-                    <div style="background:#fff;padding:25px;border-radius:12px;max-width:700px;width:95%;max-height:90vh;overflow-y:auto;">
-                        <h3 style="margin:0 0 20px;"><i class="fas fa-boxes"></i> Inventory Management</h3>
+                <div id="inventoryModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;max-width:900px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                        
+                        <!-- Header -->
+                        <div style="background:linear-gradient(135deg, #4a9eb4 0%, #3d8a9a 100%);color:#fff;padding:20px 25px;display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <h2 style="margin:0;font-size:22px;font-weight:600;"><i class="fas fa-boxes"></i> Inventory Management</h2>
+                                <p style="margin:5px 0 0;opacity:0.9;font-size:14px;">Track and manage your stock levels</p>
+                            </div>
+                            <button onclick="closeInventory()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:18px;transition:background 0.2s;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Stats Cards -->
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;padding:20px 25px;background:#f8f9fa;border-bottom:1px solid #e9ecef;">
+                            <div style="background:#fff;padding:15px;border-radius:10px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                                <div style="font-size:28px;font-weight:700;color:#4a9eb4;">${trackedItems.length}</div>
+                                <div style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Products</div>
+                            </div>
+                            <div style="background:#fff;padding:15px;border-radius:10px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                                <div style="font-size:28px;font-weight:700;color:#27ae60;">$${totalValue.toFixed(0)}</div>
+                                <div style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Total Value</div>
+                            </div>
+                            <div style="background:#fff;padding:15px;border-radius:10px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);${lowStock.length > 0 ? 'border:2px solid #f39c12;' : ''}">
+                                <div style="font-size:28px;font-weight:700;color:#f39c12;">${lowStock.length}</div>
+                                <div style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Low Stock</div>
+                            </div>
+                            <div style="background:#fff;padding:15px;border-radius:10px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);${outOfStock.length > 0 ? 'border:2px solid #e74c3c;' : ''}">
+                                <div style="font-size:28px;font-weight:700;color:#e74c3c;">${outOfStock.length}</div>
+                                <div style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Out of Stock</div>
+                            </div>
+                        </div>
                         
                         ${lowStock.length > 0 ? `
-                            <div style="background:#f8d7da;padding:12px;border-radius:8px;margin-bottom:15px;">
-                                <strong style="color:#721c24;"><i class="fas fa-exclamation-triangle"></i> Low Stock Alert:</strong>
-                                <span style="color:#721c24;">${lowStock.map(i => `${i.name} (${i.stock})`).join(', ')}</span>
+                            <div style="background:#fff3cd;padding:12px 25px;border-bottom:1px solid #ffeeba;display:flex;align-items:center;gap:10px;">
+                                <i class="fas fa-exclamation-triangle" style="color:#856404;"></i>
+                                <span style="color:#856404;font-size:14px;"><strong>Low Stock:</strong> ${lowStock.map(i => `${i.name} (${i.stock})`).join(', ')}</span>
                             </div>
                         ` : ''}
                         
-                        <div style="display:flex;gap:10px;margin-bottom:15px;">
-                            <input type="text" id="invSearch" placeholder="Search items..." style="flex:1;padding:10px;border:1px solid #ddd;border-radius:6px;" oninput="filterInventory(this.value)">
-                            <select id="invCategory" style="padding:10px;border:1px solid #ddd;border-radius:6px;" onchange="filterInventory(document.getElementById('invSearch').value)">
+                        <!-- Search & Filter -->
+                        <div style="padding:15px 25px;background:#fff;border-bottom:1px solid #e9ecef;display:flex;gap:12px;flex-wrap:wrap;">
+                            <div style="flex:1;min-width:200px;position:relative;">
+                                <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#999;"></i>
+                                <input type="text" id="invSearch" placeholder="Search items..." style="width:100%;padding:10px 10px 10px 38px;border:1px solid #ddd;border-radius:8px;font-size:14px;" oninput="filterInventory(this.value)">
+                            </div>
+                            <select id="invCategory" style="padding:10px 15px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-width:150px;background:#fff;cursor:pointer;" onchange="filterInventory(document.getElementById('invSearch').value)">
                                 <option value="">All Categories</option>
-                                <option value="food">Food</option>
-                                <option value="beer">Beer</option>
-                                <option value="wine">Wine</option>
-                                <option value="beverage">Beverages</option>
-                                <option value="merch">Merchandise</option>
+                                <option value="food">🍔 Food</option>
+                                <option value="beer">🍺 Beer</option>
+                                <option value="wine">🍷 Wine</option>
+                                <option value="beverage">🥤 Beverages</option>
+                                <option value="merch">👕 Merchandise</option>
+                            </select>
+                            <select id="invStockFilter" style="padding:10px 15px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-width:140px;background:#fff;cursor:pointer;" onchange="filterInventory(document.getElementById('invSearch').value)">
+                                <option value="">All Stock Levels</option>
+                                <option value="low">⚠️ Low Stock (≤5)</option>
+                                <option value="out">❌ Out of Stock</option>
+                                <option value="ok">✅ In Stock</option>
                             </select>
                         </div>
                         
-                        <table style="width:100%;border-collapse:collapse;" id="invTable">
-                            <thead>
-                                <tr style="background:#f8f9fa;">
-                                    <th style="padding:10px;text-align:left;border-bottom:2px solid #ddd;">Item</th>
-                                    <th style="padding:10px;text-align:center;border-bottom:2px solid #ddd;">Category</th>
-                                    <th style="padding:10px;text-align:center;border-bottom:2px solid #ddd;">Stock</th>
-                                    <th style="padding:10px;text-align:center;border-bottom:2px solid #ddd;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="invBody">
-                                ${renderInventoryRows(trackedItems)}
-                            </tbody>
-                        </table>
+                        <!-- Table -->
+                        <div style="flex:1;overflow-y:auto;padding:0;">
+                            <table style="width:100%;border-collapse:collapse;" id="invTable">
+                                <thead style="position:sticky;top:0;background:#f8f9fa;z-index:10;">
+                                    <tr>
+                                        <th style="padding:12px 15px;text-align:left;font-weight:600;font-size:12px;text-transform:uppercase;color:#666;border-bottom:2px solid #e9ecef;">Item</th>
+                                        <th style="padding:12px 15px;text-align:center;font-weight:600;font-size:12px;text-transform:uppercase;color:#666;border-bottom:2px solid #e9ecef;">Category</th>
+                                        <th style="padding:12px 15px;text-align:center;font-weight:600;font-size:12px;text-transform:uppercase;color:#666;border-bottom:2px solid #e9ecef;">Price</th>
+                                        <th style="padding:12px 15px;text-align:center;font-weight:600;font-size:12px;text-transform:uppercase;color:#666;border-bottom:2px solid #e9ecef;">Stock</th>
+                                        <th style="padding:12px 15px;text-align:center;font-weight:600;font-size:12px;text-transform:uppercase;color:#666;border-bottom:2px solid #e9ecef;width:180px;">Adjust</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invBody">
+                                    ${renderInventoryRows(trackedItems)}
+                                </tbody>
+                            </table>
+                        </div>
                         
-                        <div style="display:flex;gap:10px;margin-top:20px;">
-                            <button onclick="closeInventory()" style="flex:1;padding:12px;border:none;background:#95a5a6;color:#fff;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
-                            <button onclick="exportInventory()" style="flex:1;padding:12px;border:none;background:#3498db;color:#fff;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-download"></i> Export CSV</button>
-                            <button onclick="resetInventory()" style="flex:1;padding:12px;border:none;background:#e74c3c;color:#fff;border-radius:6px;cursor:pointer;font-weight:600;"><i class="fas fa-undo"></i> Reset to Default</button>
+                        <!-- Footer Actions -->
+                        <div style="padding:15px 25px;background:#f8f9fa;border-top:1px solid #e9ecef;display:flex;gap:10px;justify-content:flex-end;">
+                            <button onclick="exportInventory()" style="padding:10px 20px;border:1px solid #3498db;background:#fff;color:#3498db;border-radius:8px;cursor:pointer;font-weight:500;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
+                                <i class="fas fa-download"></i> Export CSV
+                            </button>
+                            <button onclick="resetInventory()" style="padding:10px 20px;border:1px solid #e74c3c;background:#fff;color:#e74c3c;border-radius:8px;cursor:pointer;font-weight:500;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                            <button onclick="closeInventory()" style="padding:10px 25px;border:none;background:#4a9eb4;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;transition:all 0.2s;">
+                                Done
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -3111,17 +3164,43 @@
         }
         
         function renderInventoryRows(itemList) {
+            if (itemList.length === 0) {
+                return `<tr><td colspan="5" style="padding:40px;text-align:center;color:#999;"><i class="fas fa-box-open" style="font-size:40px;margin-bottom:10px;display:block;"></i>No items found</td></tr>`;
+            }
             return itemList.map(item => {
-                const stockClass = item.stock <= 5 ? 'color:#e74c3c;font-weight:bold;' : item.stock <= 10 ? 'color:#f39c12;' : '';
+                let statusBadge = '';
+                let rowStyle = '';
+                if (item.stock === 0) {
+                    statusBadge = '<span style="background:#e74c3c;color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;">OUT</span>';
+                    rowStyle = 'background:#fff5f5;';
+                } else if (item.stock <= 5) {
+                    statusBadge = '<span style="background:#f39c12;color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;">LOW</span>';
+                    rowStyle = 'background:#fffbf0;';
+                } else {
+                    statusBadge = `<span style="background:#27ae60;color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;">${item.stock}</span>`;
+                }
+                
+                const categoryIcons = { food: '🍔', beer: '🍺', wine: '🍷', beverage: '🥤', merch: '👕' };
+                const catIcon = categoryIcons[item.category] || '📦';
+                
                 return `
-                    <tr data-category="${item.category}" data-name="${item.name.toLowerCase()}">
-                        <td style="padding:10px;border-bottom:1px solid #eee;">${item.name}</td>
-                        <td style="padding:10px;border-bottom:1px solid #eee;text-align:center;">${item.category}</td>
-                        <td style="padding:10px;border-bottom:1px solid #eee;text-align:center;${stockClass}">${item.stock}</td>
-                        <td style="padding:10px;border-bottom:1px solid #eee;text-align:center;">
-                            <button onclick="adjustStock(${item.id}, -1)" style="padding:5px 10px;border:none;background:#e74c3c;color:#fff;border-radius:4px;cursor:pointer;">-</button>
-                            <button onclick="adjustStock(${item.id}, 1)" style="padding:5px 10px;border:none;background:#27ae60;color:#fff;border-radius:4px;cursor:pointer;margin-left:5px;">+</button>
-                            <button onclick="setStock(${item.id})" style="padding:5px 10px;border:none;background:#3498db;color:#fff;border-radius:4px;cursor:pointer;margin-left:5px;">Set</button>
+                    <tr data-category="${item.category}" data-name="${item.name.toLowerCase()}" data-stock="${item.stock}" style="${rowStyle}transition:background 0.2s;">
+                        <td style="padding:12px 15px;border-bottom:1px solid #eee;">
+                            <div style="font-weight:500;">${item.name}</div>
+                        </td>
+                        <td style="padding:12px 15px;border-bottom:1px solid #eee;text-align:center;">
+                            <span style="background:#f0f0f0;padding:4px 10px;border-radius:6px;font-size:13px;">${catIcon} ${item.category}</span>
+                        </td>
+                        <td style="padding:12px 15px;border-bottom:1px solid #eee;text-align:center;font-weight:500;">$${item.price.toFixed(2)}</td>
+                        <td style="padding:12px 15px;border-bottom:1px solid #eee;text-align:center;">${statusBadge}</td>
+                        <td style="padding:12px 15px;border-bottom:1px solid #eee;text-align:center;">
+                            <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                                <button onclick="adjustStock(${item.id}, -5)" style="width:32px;height:32px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;font-weight:600;color:#e74c3c;" title="-5">-5</button>
+                                <button onclick="adjustStock(${item.id}, -1)" style="width:32px;height:32px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;font-weight:600;color:#e74c3c;">-</button>
+                                <input type="number" value="${item.stock}" onchange="setStockDirect(${item.id}, this.value)" style="width:50px;text-align:center;padding:6px;border:1px solid #ddd;border-radius:6px;font-weight:600;" min="0">
+                                <button onclick="adjustStock(${item.id}, 1)" style="width:32px;height:32px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;font-weight:600;color:#27ae60;">+</button>
+                                <button onclick="adjustStock(${item.id}, 5)" style="width:32px;height:32px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;font-weight:600;color:#27ae60;" title="+5">+5</button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -3130,13 +3209,19 @@
         
         function filterInventory(query) {
             const category = document.getElementById('invCategory').value;
+            const stockFilter = document.getElementById('invStockFilter')?.value || '';
             const rows = document.querySelectorAll('#invBody tr');
             rows.forEach(row => {
                 const name = row.dataset.name;
                 const cat = row.dataset.category;
+                const stock = parseInt(row.dataset.stock) || 0;
                 const matchesSearch = !query || name.includes(query.toLowerCase());
                 const matchesCategory = !category || cat === category;
-                row.style.display = matchesSearch && matchesCategory ? '' : 'none';
+                let matchesStock = true;
+                if (stockFilter === 'low') matchesStock = stock > 0 && stock <= 5;
+                else if (stockFilter === 'out') matchesStock = stock === 0;
+                else if (stockFilter === 'ok') matchesStock = stock > 5;
+                row.style.display = matchesSearch && matchesCategory && matchesStock ? '' : 'none';
             });
         }
         
@@ -3145,10 +3230,26 @@
             if (item) {
                 item.stock = Math.max(0, (item.stock || 0) + delta);
                 saveInventory();
-                // Update display
-                const trackedItems = items.filter(i => i.trackInventory);
-                document.getElementById('invBody').innerHTML = renderInventoryRows(trackedItems);
+                refreshInventoryTable();
+                showToast(`${item.name}: ${delta > 0 ? '+' : ''}${delta} (now ${item.stock})`, delta > 0 ? 'success' : 'warning');
             }
+        }
+        
+        function setStockDirect(itemId, value) {
+            const item = items.find(i => i.id === itemId);
+            if (!item) return;
+            const qty = parseInt(value);
+            if (isNaN(qty) || qty < 0) return;
+            item.stock = qty;
+            saveInventory();
+            refreshInventoryTable();
+            showToast(`${item.name} stock set to ${qty}`, 'success');
+        }
+        
+        function refreshInventoryTable() {
+            const trackedItems = items.filter(i => i.trackInventory);
+            document.getElementById('invBody').innerHTML = renderInventoryRows(trackedItems);
+            filterInventory(document.getElementById('invSearch')?.value || '');
         }
         
         function setStock(itemId) {
@@ -3160,8 +3261,7 @@
             if (isNaN(qty) || qty < 0) return showToast('Invalid quantity', 'error');
             item.stock = qty;
             saveInventory();
-            const trackedItems = items.filter(i => i.trackInventory);
-            document.getElementById('invBody').innerHTML = renderInventoryRows(trackedItems);
+            refreshInventoryTable();
             showToast(`${item.name} stock set to ${qty}`, 'success');
         }
         
