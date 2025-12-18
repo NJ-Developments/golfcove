@@ -1087,19 +1087,30 @@
         function updateDisplayForMembershipType(session) {
             const tier = session.tier || '';
             const type = session.type || '';
+            const amount = session.amountTotal || 0;
             
+            console.log('=== SESSION DEBUG ===');
             console.log('Session tier:', tier);
             console.log('Session type:', type);
+            console.log('Session amount (cents):', amount);
             console.log('isCreateTeamFlow:', isCreateTeamFlow);
+            console.log('Full session:', session);
             
-            if (type === 'league' || tier.includes('league')) {
+            // Determine if this is a league purchase by tier, type, OR amount
+            const isLeaguePurchase = type === 'league' || tier.includes('league') || amount === 40000 || amount === 80000;
+            
+            if (isLeaguePurchase) {
                 // Show league registration
                 document.getElementById('leagueRegistration').style.display = 'block';
                 document.getElementById('regularNextSteps').style.display = 'none';
                 
+                // Determine if it's League Team ($800 = 80000 cents) by tier OR amount
+                isLeagueTeam = tier === 'league-team' || amount === 80000;
+                console.log('isLeagueTeam:', isLeagueTeam);
+                
                 // Update title
                 document.getElementById('membershipType').textContent = 
-                    tier === 'league-team' ? 'League Team Registration' : 'League Player Registration';
+                    isLeagueTeam ? 'League Team Registration' : 'League Player Registration';
                 
                 document.getElementById('welcomeText').textContent = 
                     'Your payment is confirmed! Complete your team registration below to join the league.';
@@ -1115,9 +1126,6 @@
                 if (session.customerPhone) {
                     document.getElementById('player1Phone').value = session.customerPhone;
                 }
-                
-                isLeagueTeam = tier === 'league-team';
-                console.log('isLeagueTeam:', isLeagueTeam);
                 
                 if (isLeagueTeam) {
                     // League Team ($800): Go straight to team creation with BOTH players
