@@ -565,6 +565,10 @@ const stripe = require('stripe')(
   functions.config().stripe?.secret_key || 'sk_test_51ScLeeJaljqVA3ADvCWSrpvAfxZBwtMakgZazEUOLi0PIfWDHPrGSeQU3KmBqxAh8qHHp0O8doTynVLV5PZJsn1R00VRVBF7Z7'
 );
 
+// Supported payment methods for checkout sessions
+// Note: Apple Pay and Google Pay require domain verification in Stripe Dashboard
+const CHECKOUT_PAYMENT_METHODS = ['card', 'link'];
+
 /**
  * Create a PaymentIntent for Stripe Terminal
  * Called when staff clicks "Pay" in the POS
@@ -917,7 +921,7 @@ exports.createBookingCheckout = functions.https.onRequest((req, res) => {
       } = req.body;
 
       const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
+        payment_method_types: CHECKOUT_PAYMENT_METHODS,
         mode: 'payment',
         customer_email: customerEmail,
         line_items: [{
@@ -966,7 +970,7 @@ exports.createGiftCardCheckout = functions.https.onRequest((req, res) => {
       } = req.body;
 
       const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
+        payment_method_types: CHECKOUT_PAYMENT_METHODS,
         mode: 'payment',
         customer_email: purchaserEmail,
         line_items: [{
@@ -1019,7 +1023,7 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
       if (stripePriceId) {
         const isSubscription = billingCycle === 'monthly';
         sessionConfig = {
-          payment_method_types: ['card'],
+          payment_method_types: CHECKOUT_PAYMENT_METHODS,
           mode: isSubscription ? 'subscription' : 'payment',
           customer_email: customerEmail,
           line_items: [{
@@ -1050,7 +1054,7 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
         const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
 
         sessionConfig = {
-          payment_method_types: ['card'],
+          payment_method_types: CHECKOUT_PAYMENT_METHODS,
           mode: isSeasonal || billingCycle === 'annual' ? 'payment' : 'subscription',
           customer_email: customerEmail,
           line_items: [{
@@ -1107,7 +1111,7 @@ exports.createEventCheckout = functions.https.onRequest((req, res) => {
       } = req.body;
 
       const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
+        payment_method_types: CHECKOUT_PAYMENT_METHODS,
         mode: 'payment',
         customer_email: customerEmail,
         line_items: [{
@@ -1164,6 +1168,8 @@ exports.verifyPayment = functions.https.onRequest((req, res) => {
 
 /**
  * Stripe Webhook handler for checkout events
+ * Handles: checkout.session.completed, payment_intent.succeeded, 
+ * subscription events, and refunds
  */
 exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -1178,62 +1184,257 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
   }
 
   const db = admin.firestore();
+  console.log('Webhook received:', event.type);
 
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object;
-      const meta = session.metadata;
+  try {
+    switch (event.type) {
+      // ============ CHECKOUT SESSION COMPLETED ============
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const meta = session.metadata || {};
 
-      // Handle based on payment type
-      if (meta.type === 'booking') {
-        await db.collection('bookings').add({
-          ...meta,
-          customerEmail: session.customer_email,
-          depositPaid: session.amount_total / 100,
-          stripeSessionId: session.id,
-          status: 'confirmed',
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-      } else if (meta.type === 'gift_card') {
-        const code = 'GC-' + Math.random().toString(36).substr(2, 4).toUpperCase() + '-' + 
-                     Math.random().toString(36).substr(2, 4).toUpperCase();
-        await db.collection('gift_cards').add({
-          code,
-          amount: parseFloat(meta.amount),
-          balance: parseFloat(meta.amount),
-          purchaserEmail: meta.purchaserEmail,
-          recipientEmail: meta.recipientEmail || null,
-          stripeSessionId: session.id,
-          status: 'active',
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-      } else if (meta.type === 'membership') {
-        await db.collection('memberships').add({
-          ...meta,
-          customerEmail: session.customer_email,
-          stripeSessionId: session.id,
-          status: 'active',
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-      } else if (meta.type === 'event') {
-        await db.collection('events').add({
-          ...meta,
-          customerEmail: session.customer_email,
-          depositPaid: session.amount_total / 100,
-          stripeSessionId: session.id,
-          status: 'deposit_paid',
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        // Handle based on payment type
+        if (meta.type === 'booking') {
+          await db.collection('bookings').add({
+            ...meta,
+            customerEmail: session.customer_email,
+            depositPaid: session.amount_total / 100,
+            stripeSessionId: session.id,
+            stripeCustomerId: session.customer,
+            status: 'confirmed',
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          console.log('Booking created from checkout:', session.id);
+          
+        } else if (meta.type === 'gift_card') {
+          const code = 'GC-' + Math.random().toString(36).substr(2, 4).toUpperCase() + '-' + 
+                       Math.random().toString(36).substr(2, 4).toUpperCase();
+          await db.collection('gift_cards').add({
+            code,
+            amount: parseFloat(meta.amount),
+            balance: parseFloat(meta.amount),
+            purchaserEmail: meta.purchaserEmail,
+            purchaserName: meta.purchaserName,
+            recipientEmail: meta.recipientEmail || null,
+            recipientName: meta.recipientName || null,
+            message: meta.message || null,
+            stripeSessionId: session.id,
+            status: 'active',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            expiresAt: null // Gift cards don't expire in CT
+          });
+          console.log('Gift card created:', code);
+          
+        } else if (meta.type === 'membership' || meta.type === 'league') {
+          const membershipDoc = {
+            ...meta,
+            customerEmail: session.customer_email,
+            stripeSessionId: session.id,
+            stripeCustomerId: session.customer,
+            stripeSubscriptionId: session.subscription || null,
+            status: 'active',
+            startDate: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+          };
+          
+          // Calculate expiration based on billing cycle
+          if (meta.billingCycle === 'annual') {
+            membershipDoc.expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+          } else if (meta.billingCycle === 'seasonal') {
+            // League season: expires April 30
+            const now = new Date();
+            const expYear = now.getMonth() >= 3 ? now.getFullYear() + 1 : now.getFullYear();
+            membershipDoc.expiresAt = new Date(expYear, 3, 30); // April 30
+          }
+          
+          await db.collection('memberships').add(membershipDoc);
+          console.log('Membership created:', meta.tier);
+          
+        } else if (meta.type === 'event') {
+          await db.collection('events').add({
+            ...meta,
+            customerEmail: session.customer_email,
+            depositPaid: session.amount_total / 100,
+            stripeSessionId: session.id,
+            status: 'deposit_paid',
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          console.log('Event booking created:', session.id);
+        }
+        break;
       }
-      break;
 
-    case 'customer.subscription.deleted':
-      // Handle membership cancellation
-      console.log('Subscription cancelled:', event.data.object.id);
-      break;
+      // ============ PAYMENT INTENT SUCCEEDED (POS Payments) ============
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object;
+        const meta = paymentIntent.metadata || {};
+        
+        // Record POS transaction
+        await db.collection('transactions').add({
+          stripePaymentIntentId: paymentIntent.id,
+          amount: paymentIntent.amount / 100,
+          currency: paymentIntent.currency,
+          status: 'completed',
+          source: meta.source || 'pos',
+          register: meta.register,
+          customerId: meta.customerId || null,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('POS transaction recorded:', paymentIntent.id);
+        break;
+      }
+
+      // ============ PAYMENT INTENT FAILED ============
+      case 'payment_intent.payment_failed': {
+        const paymentIntent = event.data.object;
+        console.error('Payment failed:', paymentIntent.id, paymentIntent.last_payment_error?.message);
+        
+        // Could notify staff or log for review
+        await db.collection('failed_payments').add({
+          stripePaymentIntentId: paymentIntent.id,
+          amount: paymentIntent.amount / 100,
+          error: paymentIntent.last_payment_error?.message,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        break;
+      }
+
+      // ============ SUBSCRIPTION CREATED ============
+      case 'customer.subscription.created': {
+        const subscription = event.data.object;
+        console.log('Subscription created:', subscription.id);
+        
+        // Update membership status
+        const membershipQuery = await db.collection('memberships')
+          .where('stripeCustomerId', '==', subscription.customer)
+          .limit(1)
+          .get();
+        
+        if (!membershipQuery.empty) {
+          await membershipQuery.docs[0].ref.update({
+            stripeSubscriptionId: subscription.id,
+            subscriptionStatus: subscription.status,
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        break;
+      }
+
+      // ============ SUBSCRIPTION UPDATED ============
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        console.log('Subscription updated:', subscription.id, 'Status:', subscription.status);
+        
+        const membershipQuery = await db.collection('memberships')
+          .where('stripeSubscriptionId', '==', subscription.id)
+          .limit(1)
+          .get();
+        
+        if (!membershipQuery.empty) {
+          await membershipQuery.docs[0].ref.update({
+            subscriptionStatus: subscription.status,
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        break;
+      }
+
+      // ============ SUBSCRIPTION CANCELLED/DELETED ============
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        console.log('Subscription cancelled:', subscription.id);
+        
+        const membershipQuery = await db.collection('memberships')
+          .where('stripeSubscriptionId', '==', subscription.id)
+          .limit(1)
+          .get();
+        
+        if (!membershipQuery.empty) {
+          await membershipQuery.docs[0].ref.update({
+            status: 'cancelled',
+            subscriptionStatus: 'cancelled',
+            cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        break;
+      }
+
+      // ============ INVOICE PAYMENT FAILED (Subscription billing failed) ============
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        console.error('Invoice payment failed:', invoice.id, 'Customer:', invoice.customer);
+        
+        // Update membership status to past_due
+        const membershipQuery = await db.collection('memberships')
+          .where('stripeCustomerId', '==', invoice.customer)
+          .where('status', '==', 'active')
+          .limit(1)
+          .get();
+        
+        if (!membershipQuery.empty) {
+          await membershipQuery.docs[0].ref.update({
+            status: 'past_due',
+            lastPaymentFailed: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        
+        // TODO: Send email notification to customer
+        break;
+      }
+
+      // ============ INVOICE PAID (Subscription renewed) ============
+      case 'invoice.paid': {
+        const invoice = event.data.object;
+        console.log('Invoice paid:', invoice.id);
+        
+        // Reactivate membership if it was past_due
+        const membershipQuery = await db.collection('memberships')
+          .where('stripeCustomerId', '==', invoice.customer)
+          .where('status', 'in', ['past_due', 'active'])
+          .limit(1)
+          .get();
+        
+        if (!membershipQuery.empty) {
+          await membershipQuery.docs[0].ref.update({
+            status: 'active',
+            lastPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        break;
+      }
+
+      // ============ REFUND CREATED ============
+      case 'charge.refunded': {
+        const charge = event.data.object;
+        console.log('Refund processed:', charge.id, 'Amount refunded:', charge.amount_refunded);
+        
+        await db.collection('refunds').add({
+          stripeChargeId: charge.id,
+          stripePaymentIntentId: charge.payment_intent,
+          amountRefunded: charge.amount_refunded / 100,
+          reason: charge.refunds?.data[0]?.reason || 'requested_by_customer',
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        break;
+      }
+
+      default:
+        console.log('Unhandled event type:', event.type);
+    }
+
+    res.json({ received: true });
+    
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    // Still return 200 to acknowledge receipt, but log the error
+    res.json({ received: true, error: error.message });
   }
-
-  res.json({ received: true });
 });
 
 /**
@@ -1252,6 +1453,216 @@ exports.createPortalSession = functions.https.onRequest((req, res) => {
       res.json({ url: session.url });
     } catch (error) {
       console.error('Portal session error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Get subscription details for a customer
+ */
+exports.getSubscription = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const { subscriptionId, customerId } = req.query;
+      
+      let subscription;
+      
+      if (subscriptionId) {
+        subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      } else if (customerId) {
+        const subscriptions = await stripe.subscriptions.list({
+          customer: customerId,
+          limit: 1,
+          status: 'all'
+        });
+        subscription = subscriptions.data[0];
+      } else {
+        return res.status(400).json({ error: 'subscriptionId or customerId required' });
+      }
+      
+      if (!subscription) {
+        return res.status(404).json({ error: 'Subscription not found' });
+      }
+      
+      res.json({
+        id: subscription.id,
+        status: subscription.status,
+        currentPeriodStart: subscription.current_period_start,
+        currentPeriodEnd: subscription.current_period_end,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        canceledAt: subscription.canceled_at,
+        plan: {
+          id: subscription.items.data[0]?.price?.id,
+          amount: subscription.items.data[0]?.price?.unit_amount,
+          interval: subscription.items.data[0]?.price?.recurring?.interval
+        }
+      });
+    } catch (error) {
+      console.error('Get subscription error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Cancel a subscription
+ */
+exports.cancelSubscription = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
+    try {
+      const { subscriptionId, cancelImmediately } = req.body;
+      
+      if (!subscriptionId) {
+        return res.status(400).json({ error: 'subscriptionId required' });
+      }
+      
+      let subscription;
+      
+      if (cancelImmediately) {
+        // Cancel immediately
+        subscription = await stripe.subscriptions.cancel(subscriptionId);
+      } else {
+        // Cancel at end of billing period
+        subscription = await stripe.subscriptions.update(subscriptionId, {
+          cancel_at_period_end: true
+        });
+      }
+      
+      res.json({
+        id: subscription.id,
+        status: subscription.status,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        currentPeriodEnd: subscription.current_period_end
+      });
+    } catch (error) {
+      console.error('Cancel subscription error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Reactivate a cancelled subscription (before period end)
+ */
+exports.reactivateSubscription = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
+    try {
+      const { subscriptionId } = req.body;
+      
+      if (!subscriptionId) {
+        return res.status(400).json({ error: 'subscriptionId required' });
+      }
+      
+      const subscription = await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: false
+      });
+      
+      res.json({
+        id: subscription.id,
+        status: subscription.status,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        message: 'Subscription reactivated'
+      });
+    } catch (error) {
+      console.error('Reactivate subscription error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Update subscription to a different plan
+ */
+exports.updateSubscription = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
+    try {
+      const { subscriptionId, newPriceId, prorationBehavior } = req.body;
+      
+      if (!subscriptionId || !newPriceId) {
+        return res.status(400).json({ error: 'subscriptionId and newPriceId required' });
+      }
+      
+      // Get current subscription
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      
+      // Update to new price
+      const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+        items: [{
+          id: subscription.items.data[0].id,
+          price: newPriceId
+        }],
+        proration_behavior: prorationBehavior || 'create_prorations'
+      });
+      
+      res.json({
+        id: updatedSubscription.id,
+        status: updatedSubscription.status,
+        newPriceId: updatedSubscription.items.data[0]?.price?.id,
+        message: 'Subscription updated'
+      });
+    } catch (error) {
+      console.error('Update subscription error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Get or create Stripe customer
+ */
+exports.getOrCreateCustomer = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
+    try {
+      const { email, name, phone, metadata } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'email required' });
+      }
+      
+      // Check if customer exists
+      const existingCustomers = await stripe.customers.list({
+        email: email,
+        limit: 1
+      });
+      
+      if (existingCustomers.data.length > 0) {
+        res.json({
+          customerId: existingCustomers.data[0].id,
+          isNew: false
+        });
+      } else {
+        // Create new customer
+        const customer = await stripe.customers.create({
+          email,
+          name,
+          phone,
+          metadata: metadata || {}
+        });
+        
+        res.json({
+          customerId: customer.id,
+          isNew: true
+        });
+      }
+    } catch (error) {
+      console.error('Get/create customer error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -5555,3 +5966,15 @@ exports.syncChanges = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+// ============================================================
+// STRIPE FUNCTION ALIASES
+// For backward compatibility with client-side code
+// ============================================================
+exports.stripeCreatePaymentIntent = exports.createPaymentIntent;
+exports.stripeCapturePayment = exports.capturePayment;
+exports.stripeCancelPayment = exports.cancelPayment;
+exports.stripeConnectionToken = exports.createConnectionToken;
+exports.stripeRefund = exports.createRefund;
+exports.stripeRegisterReader = exports.registerReader;
+exports.stripeListReaders = exports.listReaders;

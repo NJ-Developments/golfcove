@@ -6,8 +6,10 @@
 const GolfCoveCheckout = (function() {
     'use strict';
     
-    // Firebase Functions base URL
-    const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
+    // Get Functions URL from unified config
+    const getFunctionsUrl = () => 
+        window.GolfCoveConfig?.stripe?.functionsUrl || 
+        'https://us-central1-golfcove.cloudfunctions.net';
     
     // Stripe publishable key (safe for client-side)
     let stripePublicKey = null;
@@ -15,7 +17,13 @@ const GolfCoveCheckout = (function() {
     
     // ============ INITIALIZATION ============
     function init(publicKey) {
-        stripePublicKey = publicKey;
+        // Use provided key or get from config
+        stripePublicKey = publicKey || window.GolfCoveConfig?.stripe?.publicKey;
+        
+        if (!stripePublicKey) {
+            console.warn('Stripe public key not provided');
+            return;
+        }
         
         // Load Stripe.js if not already loaded
         if (!window.Stripe) {
@@ -38,7 +46,7 @@ const GolfCoveCheckout = (function() {
      */
     async function createBookingCheckout(bookingData) {
         try {
-            const response = await fetch(`${FUNCTIONS_URL}/createBookingCheckout`, {
+            const response = await fetch(`${getFunctionsUrl()}/createBookingCheckout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -76,7 +84,7 @@ const GolfCoveCheckout = (function() {
      */
     async function createGiftCardCheckout(giftCardData) {
         try {
-            const response = await fetch(`${FUNCTIONS_URL}/createGiftCardCheckout`, {
+            const response = await fetch(`${getFunctionsUrl()}/createGiftCardCheckout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -110,7 +118,7 @@ const GolfCoveCheckout = (function() {
      */
     async function createMembershipCheckout(membershipData) {
         try {
-            const response = await fetch(`${FUNCTIONS_URL}/createMembershipCheckout`, {
+            const response = await fetch(`${getFunctionsUrl()}/createMembershipCheckout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -143,7 +151,7 @@ const GolfCoveCheckout = (function() {
      */
     async function createEventCheckout(eventData) {
         try {
-            const response = await fetch(`${FUNCTIONS_URL}/createEventCheckout`, {
+            const response = await fetch(`${getFunctionsUrl()}/createEventCheckout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -180,7 +188,7 @@ const GolfCoveCheckout = (function() {
      */
     async function createCustomCheckout(checkoutData) {
         try {
-            const response = await fetch(`${FUNCTIONS_URL}/createCustomCheckout`, {
+            const response = await fetch(`${getFunctionsUrl()}/createCustomCheckout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -265,7 +273,7 @@ const GolfCoveCheckout = (function() {
      */
     async function verifyPayment(sessionId) {
         try {
-            const response = await fetch(`${FUNCTIONS_URL}/verifyPayment`, {
+            const response = await fetch(`${getFunctionsUrl()}/verifyPayment`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId })

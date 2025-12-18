@@ -7,21 +7,25 @@
 const GolfCoveStripe = (function() {
     'use strict';
     
-    // Configuration - loaded from GolfCoveConfig or environment
-    const getConfig = () => ({
-        functionsUrl: window.GolfCoveConfig?.stripe?.functionsUrl || 
-                      'https://us-central1-golfcove.cloudfunctions.net',
-        locationId: window.GolfCoveConfig?.stripe?.locationId || null,
-        simulatedReader: window.GolfCoveConfig?.stripe?.simulatedReader ?? 
-                        (window.location.hostname === 'localhost'),
-        autoReconnect: true,
-        reconnectAttempts: 3,
-        reconnectDelay: 2000,
-        paymentTimeout: 120000, // 2 minutes for customer interaction
-        collectTimeout: 60000   // 1 minute for tap/insert/swipe
-    });
-    
-    const config = getConfig();
+    // Configuration - Use unified config with fallbacks
+    const getConfig = () => {
+        const unified = window.GolfCoveConfig?.stripe;
+        const terminal = unified?.terminal || {};
+        
+        return {
+            functionsUrl: unified?.functionsUrl || 
+                          'https://us-central1-golfcove.cloudfunctions.net',
+            locationId: terminal.locationId || 
+                        localStorage.getItem('gc_stripe_location') || null,
+            simulatedReader: terminal.simulatedReader ?? 
+                            (window.location.hostname === 'localhost'),
+            autoReconnect: terminal.autoReconnect ?? true,
+            reconnectAttempts: terminal.reconnectAttempts ?? 3,
+            reconnectDelay: terminal.reconnectDelay ?? 2000,
+            paymentTimeout: terminal.paymentTimeout ?? 120000, // 2 minutes for customer interaction
+            collectTimeout: terminal.collectTimeout ?? 60000   // 1 minute for tap/insert/swipe
+        };
+    };
     
     // State
     let terminal = null;

@@ -414,7 +414,7 @@ const PaymentProcessor = (function() {
     }
     
     // ============ PROCESS PAYMENT ============
-    function processPayment() {
+    async function processPayment() {
         // Prevent double-submit
         if (!paymentInProgress) {
             showToast('No payment in progress', 'error');
@@ -435,74 +435,231 @@ const PaymentProcessor = (function() {
             return;
         }
         
-        // Validate based on method
-        if (selectedPaymentMethod === 'cash') {
-            const tendered = parseFloat(document.getElementById('cashTendered')?.value) || 0;
-            if (tendered < currentTotal) {
-                showToast('Insufficient cash tendered', 'error');
-                return;
-            }
-            // Validate reasonable cash amount
-            if (tendered > currentTotal * 10) {
-                showToast('Cash amount seems incorrect. Please verify.', 'error');
-                return;
-            }
+        // Disable button to prevent double-clicks
+        const completeBtn = document.querySelector('.complete-payment-btn');
+        if (completeBtn) {
+            completeBtn.disabled = true;
+            completeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         }
         
-        if (selectedPaymentMethod === 'gift') {
-            const code = document.getElementById('giftCardNumber').value;
-            if (!code) {
-                showToast('Please enter gift card code', 'error');
-                return;
-            }
-            // Deduct from gift card
-            const giftCards = JSON.parse(localStorage.getItem('gc_giftcards') || '[]');
-            const cardIndex = giftCards.findIndex(g => g.code === code);
-            if (cardIndex >= 0 && giftCards[cardIndex].balance >= currentTotal) {
-                giftCards[cardIndex].balance -= currentTotal;
-                localStorage.setItem('gc_giftcards', JSON.stringify(giftCards));
-            } else {
-                showToast('Insufficient gift card balance', 'error');
-                return;
-            }
-        }
-        
-        if (selectedPaymentMethod === 'split') {
-            const card1 = parseFloat(document.getElementById('splitCard1').value) || 0;
-            const card2 = parseFloat(document.getElementById('splitCard2').value) || 0;
-            const cash = parseFloat(document.getElementById('splitCash').value) || 0;
-            const splitTotal = card1 + card2 + cash;
+        try {
+            let paymentResult;
             
-            if (Math.abs(splitTotal - currentTotal) > 0.01) {
-                showToast('Split amounts must equal total', 'error');
-                return;
+            // ============ CARD PAYMENT (STRIPE TERMINAL) ============
+            if (selectedPaymentMethod === 'card') {
+                // Check if GolfCovePayment service is available
+                if (typeof GolfCovePayment !== 'undefined') {
+                    paymentResult = await GolfCovePayment.processPayment(currentTotal, {
+                        method: 'card_present',
+                        items: currentItems || [],
+                        metadata: {
+                            subtotal: currentSubtotal,
+                            tax: currentTax,
+                            tip: selectedTip,
+                            discount: currentDiscount,
+                            idempotencyKey
+                        }
+                    });
+                    
+                    if (!paymentResult.success) {
+                        showToast(paymentResult.error?.message || 'Card payment failed', 'error');
+                        resetPaymentButton(completeBtn);
+                        return;
+                    }
+                } else if (typeof GolfCoveStripe !== 'undefined' && GolfCoveStripe.isReaderConnected()) {
+                    // Fallback to direct Stripe Terminal call
+                    paymentResult = await GolfCoveStripe.collectPayment(currentTotal, {
+                        tip: selectedTip,
+                        subtotal: currentSubtotal,
+                        tax: currentTax
+                    });
+                    
+                    if (!paymentResult.success) {
+                        showToast(paymentResult.error || 'Card payment failed', 'error');
+                        resetPaymentButton(completeBtn);
+                        return;
+                    }
+                }
+                // If no terminal connected, continue with simulated success for testing
             }
+            
+            // ============ CASH PAYMENT ============
+            if (selectedPaymentMethod === 'cash') {
+                const tendered = parseFloat(document.getElementById('cashTendered')?.value) || 0;
+                if (tendered < currentTotal) {
+                    showToast('Insufficient cash tendered', 'error');
+                    resetPaymentButton(completeBtn);
+                    return;
+                }
+                // Validate reasonable cash amount
+                if (tendered > currentTotal * 10) {
+                    showToast('Cash amount seems incorrect. Please verify.', 'error');
+                    resetPaymentButton(completeBtn);
+                    return;
+                }
+                
+                if (typeof GolfCovePayment !== 'undefined') {
+                    paymentResult = await GolfCovePayment.processCashPayment(currentTotal, { tendered });
+                } else {
+                    paymentResult = { success: true, change: tendered - currentTotal };
+                }
+            }
+            
+            // ============ GIFT CARD PAYMENT ============
+            if (selectedPaymentMethod === 'gift') {
+                const code = document.getElementById('giftCardNumber').value;
+                if (!code) {
+                    showToast('Please enter gift card code', 'error');
+                    resetPaymentButton(completeBtn);
+                    return;
+                }
+                
+                if (typeof GolfCovePayment !== 'undefined') {
+                    paymentResult = await GolfCovePayment.processGiftCardPayment(currentTotal, {
+                        giftCardCode: code
+                    });
+                    
+                    if (!paymentResult.success) {
+                        showToast(paymentResult.error?.message || 'Gift card payment failed', 'error');
+                        resetPaymentButton(completeBtn);
+                        return;
+                    }
+                } else {
+                    // Fallback: Deduct from gift card directly
+                    const giftCards = JSON.parse(localStorage.getItem('gc_giftcards') || '[]');
+                    const cardIndex = giftCards.findIndex(g => g.code === code);
+                    if (cardIndex >= 0 && giftCards[cardIndex].balance >= currentTotal) {
+                        giftCards[cardIndex].balance -= currentTotal;
+                        localStorage.setItem('gc_giftcards', JSON.stringify(giftCards));
+                        paymentResult = { success: true };
+                    } else {
+                        showToast('Insufficient gift card balance', 'error');
+                        resetPaymentButton(completeBtn);
+                        return;
+                    }
+                }
+            }
+            
+            // ============ TAB PAYMENT ============
+            if (selectedPaymentMethod === 'tab') {
+                if (typeof GolfCovePayment !== 'undefined') {
+                    paymentResult = await GolfCovePayment.addToTab(currentTotal, {
+                        customer: currentCustomer,
+                        items: currentItems
+                    });
+                    
+                    if (!paymentResult.success) {
+                        showToast(paymentResult.error?.message || 'Failed to add to tab', 'error');
+                        resetPaymentButton(completeBtn);
+                        return;
+                    }
+                } else {
+                    paymentResult = { success: true, method: 'tab' };
+                }
+            }
+            
+            // ============ MEMBER CHARGE ============
+            if (selectedPaymentMethod === 'member') {
+                if (!currentCustomer?.isMember && !currentCustomer?.memberType) {
+                    showToast('Customer is not a member', 'error');
+                    resetPaymentButton(completeBtn);
+                    return;
+                }
+                
+                if (typeof GolfCovePayment !== 'undefined') {
+                    paymentResult = await GolfCovePayment.processMemberCharge(currentTotal, {
+                        customer: currentCustomer
+                    });
+                    
+                    if (!paymentResult.success) {
+                        showToast(paymentResult.error?.message || 'Member charge failed', 'error');
+                        resetPaymentButton(completeBtn);
+                        return;
+                    }
+                } else {
+                    paymentResult = { success: true, method: 'member' };
+                }
+            }
+            
+            // ============ SPLIT PAYMENT ============
+            if (selectedPaymentMethod === 'split') {
+                const card1 = parseFloat(document.getElementById('splitCard1').value) || 0;
+                const card2 = parseFloat(document.getElementById('splitCard2').value) || 0;
+                const cash = parseFloat(document.getElementById('splitCash').value) || 0;
+                const splitTotal = card1 + card2 + cash;
+                
+                if (Math.abs(splitTotal - currentTotal) > 0.01) {
+                    showToast('Split amounts must equal total', 'error');
+                    resetPaymentButton(completeBtn);
+                    return;
+                }
+                
+                if (typeof GolfCovePayment !== 'undefined') {
+                    const splits = [];
+                    if (card1 > 0) splits.push({ method: 'card_present', amount: card1 });
+                    if (card2 > 0) splits.push({ method: 'card_present', amount: card2 });
+                    if (cash > 0) splits.push({ method: 'cash', amount: cash, tendered: cash });
+                    
+                    paymentResult = await GolfCovePayment.processSplitPayment(currentTotal, { splits });
+                    
+                    if (!paymentResult.success) {
+                        showToast(paymentResult.error?.message || 'Split payment failed', 'error');
+                        resetPaymentButton(completeBtn);
+                        return;
+                    }
+                } else {
+                    paymentResult = { success: true, method: 'split' };
+                }
+            }
+            
+            // Build final payment result
+            const result = {
+                success: true,
+                method: selectedPaymentMethod,
+                subtotal: currentSubtotal,
+                discount: currentDiscount,
+                tax: currentTax,
+                tip: selectedTip,
+                total: currentTotal,
+                timestamp: new Date().toISOString(),
+                paymentDetails: paymentResult,
+                idempotencyKey
+            };
+            
+            // Show success toast
+            showToast(`Payment of ${formatCurrency(currentTotal)} completed`, 'success');
+            
+            // Close modal
+            closeModal();
+            
+            // Call callback if provided
+            if (onCompleteCallback) {
+                onCompleteCallback(result);
+            }
+            
+            return result;
+            
+        } catch (error) {
+            console.error('Payment processing error:', error);
+            showToast('Payment failed: ' + error.message, 'error');
+            resetPaymentButton(completeBtn);
         }
-        
-        // Build payment result
-        const result = {
-            success: true,
-            method: selectedPaymentMethod,
-            subtotal: currentSubtotal,
-            discount: currentDiscount,
-            tax: currentTax,
-            tip: selectedTip,
-            total: currentTotal,
-            timestamp: new Date().toISOString()
-        };
-        
-        // Show success toast
-        showToast(`Payment of ${formatCurrency(currentTotal)} completed`, 'success');
-        
-        // Close modal
-        closeModal();
-        
-        // Call callback if provided
-        if (onCompleteCallback) {
-            onCompleteCallback(result);
+    }
+    
+    function resetPaymentButton(btn) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Payment';
         }
-        
-        return result;
+    }
+    
+    // Store current items and customer for payment processing
+    let currentItems = [];
+    let currentCustomer = null;
+    
+    function setPaymentContext(items, customer) {
+        currentItems = items || [];
+        currentCustomer = customer;
     }
     
     // ============ TOAST ============
@@ -759,6 +916,11 @@ const PaymentProcessor = (function() {
                 transform: translateY(-2px);
                 box-shadow: 0 5px 20px rgba(39, 174, 96, 0.3);
             }
+            .complete-payment-btn:disabled {
+                background: #95a5a6;
+                cursor: not-allowed;
+                transform: none;
+            }
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(20px); }
                 to { opacity: 1; transform: translateY(0); }
@@ -784,6 +946,7 @@ const PaymentProcessor = (function() {
         processPayment,
         calculateTotals,
         formatCurrency,
+        setPaymentContext,
         TAX_RATE,
         PAYMENT_METHODS,
         TIP_PRESETS

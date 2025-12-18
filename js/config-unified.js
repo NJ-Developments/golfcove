@@ -345,6 +345,58 @@ const GolfCoveConfig = (function() {
         quickAmounts: [1, 5, 10, 20, 50, 100]
     };
     
+    // ============ STRIPE SETTINGS ============
+    // Single source of truth for all Stripe configuration
+    const stripe = {
+        // Public key - safe for client-side (set via environment or replace for production)
+        publicKey: localStorage.getItem('gc_stripe_pk') || 'pk_test_51ScLeeJaljqVA3ADcKsUNYdLQpYj1B2QzKRwJ5O8TjkQJQ7RgHjL9Tg1Z4YBWS5Y3c0wj8RbRE0XlJ7lVjGtRjQ800b1Np5K',
+        
+        // Firebase Functions URL for backend Stripe operations
+        functionsUrl: window.location.hostname === 'localhost'
+            ? 'http://localhost:5001/golfcove/us-central1'
+            : 'https://us-central1-golfcove.cloudfunctions.net',
+        
+        // Terminal configuration
+        terminal: {
+            enabled: true,
+            locationId: localStorage.getItem('gc_stripe_location') || null,
+            simulatedReader: window.location.hostname === 'localhost',
+            autoReconnect: true,
+            reconnectAttempts: 3,
+            reconnectDelay: 2000,
+            paymentTimeout: 120000, // 2 minutes for customer interaction
+            collectTimeout: 60000   // 1 minute for tap/insert/swipe
+        },
+        
+        // Checkout configuration
+        checkout: {
+            successUrl: window.location.origin + '/payment-success.html',
+            cancelUrl: window.location.origin,
+            allowPromoCode: true
+        },
+        
+        // Payment settings
+        currency: 'usd',
+        country: 'US',
+        
+        // Supported payment methods for online checkout
+        paymentMethods: ['card'],
+        
+        // Apple Pay / Google Pay (requires domain verification)
+        walletPayments: {
+            applePay: false, // Enable after domain verification
+            googlePay: false, // Enable after domain verification
+            link: true // Stripe Link (autofill)
+        },
+        
+        // Transaction limits
+        limits: {
+            minAmount: 50, // 50 cents minimum
+            maxAmount: 1000000, // $10,000 maximum
+            maxRefundDays: 90 // Days after payment to allow refund
+        }
+    };
+    
     // ============ HELPER FUNCTIONS ============
     
     /**
@@ -426,6 +478,7 @@ const GolfCoveConfig = (function() {
         api,
         notifications,
         pos,
+        stripe,
         
         // Convenience accessors
         get taxRate() { return pricing.taxRate; },
@@ -442,7 +495,7 @@ const GolfCoveConfig = (function() {
         getFamilyTiers,
         
         // Version
-        version: '2.0.0'
+        version: '2.1.0'
     });
 })();
 

@@ -441,6 +441,134 @@ golfcove/
 
 ---
 
+## Payment System (Stripe Integration)
+
+### Overview
+The Golf Cove payment system is built around Stripe and consists of three main components:
+
+1. **GolfCovePayment** (`payment-service.js`) - Unified payment orchestration layer
+2. **GolfCoveStripe** (`stripe-terminal.js`) - Card reader / in-person payments
+3. **GolfCoveCheckout** (`stripe-checkout.js`) - Online payments via Stripe Checkout
+
+### Configuration
+All Stripe settings are centralized in `config-unified.js`:
+
+```javascript
+GolfCoveConfig.stripe = {
+    publicKey: 'pk_test_...',           // Stripe publishable key
+    functionsUrl: 'https://...',         // Firebase Functions URL
+    terminal: {
+        enabled: true,
+        locationId: 'tml_...',           // Terminal location
+        simulatedReader: false,          // Use simulated reader in dev
+        autoReconnect: true
+    },
+    paymentMethods: ['card', 'link'],    // Supported methods
+    limits: { minAmount: 50, maxAmount: 1000000 }
+};
+```
+
+### GolfCovePayment (Unified Service)
+Single entry point for all payment operations:
+
+```javascript
+// Process any payment type
+await GolfCovePayment.processPayment(amount, {
+    method: 'card_present',  // card_present, card, cash, gift_card, tab, split
+    items: [...],
+    customer: {...}
+});
+
+// Specific payment methods
+await GolfCovePayment.processCashPayment(amount, { tendered: 100 });
+await GolfCovePayment.processGiftCardPayment(amount, { giftCardCode: 'GC-XXXX' });
+await GolfCovePayment.addToTab(amount, { customer, items });
+await GolfCovePayment.processSplitPayment(total, {
+    splits: [
+        { method: 'card_present', amount: 50 },
+        { method: 'cash', amount: 50, tendered: 50 }
+    ]
+});
+
+// Refunds
+await GolfCovePayment.processRefund(paymentIntentId, amount);
+
+// Subscription management
+await GolfCovePayment.createCustomerPortalSession(customerId, returnUrl);
+```
+
+### GolfCoveStripe (Terminal)
+For in-person card payments with physical card readers:
+
+```javascript
+// Initialize
+await GolfCoveStripe.init();
+
+// Discover and connect readers
+const readers = await GolfCoveStripe.discoverReaders();
+await GolfCoveStripe.connectReader(readers[0]);
+
+// Process payment
+const result = await GolfCoveStripe.collectPayment(amount, metadata);
+
+// Refund
+await GolfCoveStripe.processRefund(paymentIntentId, amount);
+```
+
+### GolfCoveCheckout (Online)
+For online payments via Stripe Checkout:
+
+```javascript
+// Initialize
+GolfCoveCheckout.init(publicKey);
+
+// Create checkout sessions
+await GolfCoveCheckout.createBookingCheckout({ ... });
+await GolfCoveCheckout.createGiftCardCheckout({ ... });
+await GolfCoveCheckout.createMembershipCheckout({ ... });
+await GolfCoveCheckout.createEventCheckout({ ... });
+
+// Redirect to checkout
+await GolfCoveCheckout.redirectToCheckout(sessionId);
+
+// Verify payment after redirect
+const status = await GolfCoveCheckout.verifyPayment(sessionId);
+```
+
+### Backend Functions (Firebase)
+Key Stripe endpoints in `functions/index.js`:
+
+| Endpoint | Description |
+|----------|-------------|
+| `createPaymentIntent` | Create payment for Terminal |
+| `capturePayment` | Capture authorized payment |
+| `createRefund` | Issue refund |
+| `createConnectionToken` | Terminal SDK token |
+| `createBookingCheckout` | Booking deposit checkout |
+| `createGiftCardCheckout` | Gift card purchase |
+| `createMembershipCheckout` | Subscription/membership |
+| `createPortalSession` | Customer subscription portal |
+| `getSubscription` | Get subscription details |
+| `cancelSubscription` | Cancel subscription |
+| `stripeWebhook` | Handle Stripe events |
+
+### Webhook Events
+The `stripeWebhook` function handles:
+- `checkout.session.completed` - Creates bookings, gift cards, memberships
+- `payment_intent.succeeded` - Records POS transactions
+- `customer.subscription.*` - Manages membership status
+- `invoice.paid/failed` - Updates payment status
+- `charge.refunded` - Records refunds
+
+### Setting Up Webhooks
+1. Go to Stripe Dashboard > Developers > Webhooks
+2. Add endpoint: `https://us-central1-golfcove.cloudfunctions.net/stripeWebhook`
+3. Select events to listen for
+4. Copy webhook signing secret
+5. Set in Firebase: `firebase functions:config:set stripe.webhook_secret="whsec_..."`
+
+---
+
 ## Deployment
 
 ```bash
@@ -452,6 +580,10 @@ firebase deploy --only hosting
 
 # Deploy only functions
 firebase deploy --only functions
+
+# Set Stripe keys (production)
+firebase functions:config:set stripe.secret_key="sk_live_..."
+firebase functions:config:set stripe.webhook_secret="whsec_..."
 ```
 
 Live URL: https://golfcove.web.app
@@ -460,6 +592,12 @@ Live URL: https://golfcove.web.app
 
 ## Future Improvements
 
+- [x] Unified payment service layer
+- [x] Stripe Terminal integration
+- [x] Webhook handlers for all payment events
+- [x] Subscription management
+- [x] Split payment support
+- [ ] Apple Pay / Google Pay (requires domain verification)
 - [ ] Migrate to IndexedDB for larger datasets
 - [ ] Add Firebase Realtime Database sync
 - [ ] Implement offline mode with service worker
