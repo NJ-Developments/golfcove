@@ -367,6 +367,226 @@
             animation: spin 1s linear infinite;
         }
         
+        /* League Player Choice Buttons */
+        .player-choice {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            color: #fff;
+            text-align: center;
+        }
+        
+        .player-choice h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        
+        .player-choice .intro {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 25px;
+        }
+        
+        .choice-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .choice-btn {
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 25px 20px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .choice-btn:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: #fff;
+            transform: translateY(-2px);
+        }
+        
+        .choice-btn i {
+            font-size: 32px;
+            margin-bottom: 12px;
+            display: block;
+        }
+        
+        .choice-btn h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .choice-btn p {
+            font-size: 12px;
+            opacity: 0.8;
+            margin: 0;
+        }
+        
+        /* Join Team Section */
+        .join-team-section {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            color: #fff;
+            text-align: left;
+            display: none;
+        }
+        
+        .join-team-section h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .join-team-section .intro {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 25px;
+        }
+        
+        .join-pin-input {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        
+        .join-pin-input .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .join-pin-input .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            opacity: 0.9;
+            display: block;
+        }
+        
+        .join-pin-input input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 6px;
+            text-align: center;
+            font-family: monospace;
+        }
+        
+        .join-pin-input input:focus {
+            outline: none;
+            border-color: #fff;
+        }
+        
+        .join-btn {
+            padding: 14px 30px;
+            font-size: 16px;
+            font-weight: 700;
+            background: #fff;
+            color: #7c3aed;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .join-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .join-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .team-preview {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .team-preview h4 {
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .team-preview .team-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .team-preview .team-name {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .team-preview .player-count {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .team-preview .current-player {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+        
+        .confirm-join-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            background: #fff;
+            color: #7c3aed;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .confirm-join-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .back-btn {
+            background: transparent;
+            border: 2px solid rgba(255,255,255,0.5);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 15px;
+            transition: all 0.2s;
+        }
+        
+        .back-btn:hover {
+            border-color: #fff;
+            background: rgba(255,255,255,0.1);
+        }
+        
         @media (max-width: 600px) {
             .success-card {
                 padding: 30px 20px;
@@ -379,6 +599,19 @@
             .pin-group {
                 flex-direction: column;
                 align-items: flex-start;
+            }
+            
+            .choice-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .join-pin-input {
+                flex-direction: column;
+            }
+            
+            .join-btn {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -409,7 +642,83 @@
                 <p>Your team <strong id="registeredTeamName"></strong> has been successfully registered for the league. You'll receive your first tee time assignment by email.</p>
             </div>
             
-            <div class="league-registration" id="registrationForm">
+            <div class="success-message" id="joinSuccess">
+                <h4><i class="fas fa-user-plus"></i> You've Joined the Team!</h4>
+                <p>Welcome to <strong id="joinedTeamName"></strong>! Your teammate will be notified. Get ready for league night!</p>
+            </div>
+            
+            <!-- League Player Choice: Create or Join -->
+            <div class="player-choice" id="playerChoice">
+                <h2><i class="fas fa-users"></i> Join or Create a Team</h2>
+                <p class="intro">You've registered as an individual player. Would you like to create a new team or join an existing one?</p>
+                
+                <div class="choice-buttons">
+                    <div class="choice-btn" onclick="showCreateTeam()">
+                        <i class="fas fa-plus-circle"></i>
+                        <h3>Create New Team</h3>
+                        <p>Start a new team and invite a teammate later</p>
+                    </div>
+                    <div class="choice-btn" onclick="showJoinTeam()">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <h3>Join Existing Team</h3>
+                        <p>Enter team PIN to join your teammate</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Join Team Section -->
+            <div class="join-team-section" id="joinTeamSection">
+                <h2><i class="fas fa-sign-in-alt"></i> Join Existing Team</h2>
+                <p class="intro">Enter the 4-digit team PIN shared by your teammate to join their team.</p>
+                
+                <div class="error-message" id="joinErrorMessage"></div>
+                
+                <div class="join-pin-input">
+                    <div class="form-group">
+                        <label>Team PIN</label>
+                        <input type="text" id="joinTeamPin" maxlength="4" pattern="[0-9]{4}" placeholder="0000">
+                    </div>
+                    <button type="button" class="join-btn" onclick="lookupTeam()">
+                        <i class="fas fa-search"></i> Find Team
+                    </button>
+                </div>
+                
+                <!-- Team Preview (shown after PIN lookup) -->
+                <div class="team-preview" id="teamPreview">
+                    <h4><i class="fas fa-check-circle"></i> Team Found!</h4>
+                    <div class="team-info">
+                        <span class="team-name" id="previewTeamName">Team Name</span>
+                        <span class="player-count" id="previewPlayerCount">1/2 players</span>
+                    </div>
+                    <div class="current-player">
+                        <i class="fas fa-user"></i> Current player: <strong id="previewCurrentPlayer">Player 1</strong>
+                    </div>
+                    
+                    <div class="form-section" style="background: rgba(255,255,255,0.1); margin-bottom: 15px;">
+                        <h4 style="color: #fff; font-size: 14px;"><i class="fas fa-user"></i> Your Information</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label style="color: #fff;">Full Name *</label>
+                                <input type="text" id="joinPlayerName" placeholder="Your name" required>
+                            </div>
+                            <div class="form-group">
+                                <label style="color: #fff;">Handicap</label>
+                                <input type="number" id="joinPlayerHandicap" min="0" max="54" value="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="confirm-join-btn" onclick="confirmJoinTeam()">
+                        <i class="fas fa-user-plus"></i> Join This Team
+                    </button>
+                </div>
+                
+                <button type="button" class="back-btn" onclick="showPlayerChoice()">
+                    <i class="fas fa-arrow-left"></i> Back to Options
+                </button>
+            </div>
+            
+            <div class="league-registration" id="registrationForm" style="display: none;">
                 <h2><i class="fas fa-users"></i> Complete Your Team Registration</h2>
                 <p class="intro">One more step! Set up your league team below. This info will be used for scoring and standings.</p>
                 
@@ -490,6 +799,10 @@
                         <span class="btn-text"><i class="fas fa-check-circle"></i> Complete Registration</span>
                         <span class="spinner"></span>
                     </button>
+                    
+                    <button type="button" class="back-btn" id="backToChoiceBtn" style="display: none; margin-top: 15px;" onclick="showPlayerChoice()">
+                        <i class="fas fa-arrow-left"></i> Back to Options
+                    </button>
                 </form>
             </div>
         </div>
@@ -560,6 +873,9 @@
             }
         }
         
+        let isLeagueTeam = false;
+        let foundTeam = null;
+        
         function updateDisplayForMembershipType(session) {
             const tier = session.tier || '';
             const type = session.type || '';
@@ -579,6 +895,7 @@
                 // Pre-fill player 1 info from checkout
                 if (session.customerName) {
                     document.getElementById('player1Name').value = session.customerName;
+                    document.getElementById('joinPlayerName').value = session.customerName;
                 }
                 if (session.customerEmail) {
                     document.getElementById('player1Email').value = session.customerEmail;
@@ -587,10 +904,18 @@
                     document.getElementById('player1Phone').value = session.customerPhone;
                 }
                 
-                // Show player 2 section for team purchase
-                if (tier === 'league-team') {
+                isLeagueTeam = tier === 'league-team';
+                
+                if (isLeagueTeam) {
+                    // League Team: Go straight to team creation
+                    document.getElementById('playerChoice').style.display = 'none';
+                    document.getElementById('registrationForm').style.display = 'block';
                     document.getElementById('player2Section').style.display = 'block';
                     document.getElementById('player2Name').required = true;
+                } else {
+                    // League Player: Show choice (create or join)
+                    document.getElementById('playerChoice').style.display = 'block';
+                    document.getElementById('registrationForm').style.display = 'none';
                 }
                 
                 // Update booking button for league
@@ -600,6 +925,130 @@
                 // Regular membership
                 const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
                 document.getElementById('membershipType').textContent = tierName + ' Membership Active';
+            }
+        }
+        
+        function showPlayerChoice() {
+            document.getElementById('playerChoice').style.display = 'block';
+            document.getElementById('registrationForm').style.display = 'none';
+            document.getElementById('joinTeamSection').style.display = 'none';
+            document.getElementById('teamPreview').style.display = 'none';
+            document.getElementById('joinErrorMessage').classList.remove('show');
+            foundTeam = null;
+        }
+        
+        function showCreateTeam() {
+            document.getElementById('playerChoice').style.display = 'none';
+            document.getElementById('registrationForm').style.display = 'block';
+            document.getElementById('joinTeamSection').style.display = 'none';
+            document.getElementById('backToChoiceBtn').style.display = 'block';
+            // For individual player, don't show player 2 section
+            document.getElementById('player2Section').style.display = 'none';
+        }
+        
+        function showJoinTeam() {
+            document.getElementById('playerChoice').style.display = 'none';
+            document.getElementById('registrationForm').style.display = 'none';
+            document.getElementById('joinTeamSection').style.display = 'block';
+            document.getElementById('teamPreview').style.display = 'none';
+            document.getElementById('joinTeamPin').value = '';
+            foundTeam = null;
+        }
+        
+        async function lookupTeam() {
+            const pin = document.getElementById('joinTeamPin').value;
+            const errorDiv = document.getElementById('joinErrorMessage');
+            
+            if (!/^[0-9]{4}$/.test(pin)) {
+                errorDiv.textContent = 'Please enter a valid 4-digit PIN';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            errorDiv.classList.remove('show');
+            
+            try {
+                // Query Firebase for team with this PIN
+                const response = await fetch(`${FUNCTIONS_URL}/lookupTeamByPin?pin=${pin}`);
+                const data = await response.json();
+                
+                if (!data.success || !data.team) {
+                    errorDiv.textContent = 'No team found with that PIN. Check with your teammate.';
+                    errorDiv.classList.add('show');
+                    return;
+                }
+                
+                const team = data.team;
+                
+                // Check if team is full
+                if (team.playerCount >= 2) {
+                    errorDiv.textContent = 'This team already has 2 players. Each team can only have 2 members.';
+                    errorDiv.classList.add('show');
+                    return;
+                }
+                
+                // Show team preview
+                foundTeam = team;
+                document.getElementById('previewTeamName').textContent = team.name;
+                document.getElementById('previewPlayerCount').textContent = `${team.playerCount}/2 players`;
+                document.getElementById('previewCurrentPlayer').textContent = team.player1Name || 'Player 1';
+                document.getElementById('teamPreview').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Lookup error:', error);
+                errorDiv.textContent = 'Error looking up team. Please try again.';
+                errorDiv.classList.add('show');
+            }
+        }
+        
+        async function confirmJoinTeam() {
+            if (!foundTeam) return;
+            
+            const playerName = document.getElementById('joinPlayerName').value.trim();
+            const playerHandicap = document.getElementById('joinPlayerHandicap').value || 0;
+            const errorDiv = document.getElementById('joinErrorMessage');
+            
+            if (!playerName) {
+                errorDiv.textContent = 'Please enter your name';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${FUNCTIONS_URL}/joinLeagueTeam`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        teamId: foundTeam.id,
+                        playerName: playerName,
+                        playerEmail: sessionData?.customerEmail || '',
+                        playerPhone: sessionData?.customerPhone || '',
+                        playerHandicap: playerHandicap,
+                        sessionId: sessionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Success!
+                document.getElementById('joinTeamSection').style.display = 'none';
+                document.getElementById('joinedTeamName').textContent = foundTeam.name;
+                document.getElementById('joinSuccess').classList.add('show');
+                document.getElementById('leagueNextSteps').style.display = 'block';
+                
+                // Show tournament link
+                document.getElementById('bookBtn').href = 'tournaments.html';
+                document.getElementById('bookBtn').innerHTML = '<i class="fas fa-trophy"></i> View League Standings';
+                document.getElementById('bookBtn').style.display = 'inline-block';
+                
+            } catch (error) {
+                console.error('Join error:', error);
+                errorDiv.textContent = error.message || 'Failed to join team. Please try again.';
+                errorDiv.classList.add('show');
             }
         }
         

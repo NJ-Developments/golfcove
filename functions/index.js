@@ -6419,3 +6419,176 @@ exports.registerLeagueTeam = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+// ============ LOOKUP TEAM BY PIN ============
+exports.lookupTeamByPin = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      const pin = req.query.pin;
+      
+      if (!pin || !/^[0-9]{4}$/.test(pin)) {
+        return res.status(400).json({ error: 'Invalid PIN format' });
+      }
+
+      const db = admin.database();
+      
+      // Find team with this PIN
+      const teamsSnapshot = await db.ref('league/teams')
+        .orderByChild('pin')
+        .equalTo(pin)
+        .once('value');
+      
+      if (!teamsSnapshot.exists()) {
+        return res.json({ success: false, team: null });
+      }
+
+      // Get the first matching team
+      let team = null;
+      teamsSnapshot.forEach(snap => {
+        team = { id: snap.key, ...snap.val() };
+        return true; // break after first
+      });
+
+      if (!team) {
+        return res.json({ success: false, team: null });
+      }
+
+      // Count players on this team
+      const playersSnapshot = await db.ref('league/players')
+        .orderByChild('teamId')
+        .equalTo(team.id)
+        .once('value');
+      
+      let playerCount = 0;
+      let player1Name = '';
+      
+      playersSnapshot.forEach(snap => {
+        playerCount++;
+        if (!player1Name) {
+          player1Name = snap.val().name || 'Player 1';
+        }
+      });
+
+      res.json({
+        success: true,
+        team: {
+          id: team.id,
+          name: team.name,
+          playerCount: playerCount,
+          player1Name: player1Name
+          // Note: Don't expose the PIN back
+        }
+      });
+
+    } catch (error) {
+      console.error('Lookup team error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+// ============ JOIN LEAGUE TEAM ============
+exports.joinLeagueTeam = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      const {
+        teamId,
+        playerName,
+        playerEmail,
+        playerPhone,
+        playerHandicap,
+        sessionId
+      } = req.body;
+
+      // Validate required fields
+      if (!teamId || !playerName) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const db = admin.database();
+
+      // Get the team
+      const teamSnapshot = await db.ref(`league/teams/${teamId}`).once('value');
+      if (!teamSnapshot.exists()) {
+        return res.status(404).json({ error: 'Team not found' });
+      }
+
+      const team = teamSnapshot.val();
+
+      // Count current players
+      const playersSnapshot = await db.ref('league/players')
+        .orderByChild('teamId')
+        .equalTo(teamId)
+        .once('value');
+      
+      let playerCount = 0;
+      playersSnapshot.forEach(() => playerCount++);
+
+      if (playerCount >= 2) {
+        return res.status(400).json({ error: 'This team already has 2 players' });
+      }
+
+      // Verify the session if provided (optional for join)
+      if (sessionId) {
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (!session || session.payment_status !== 'paid') {
+          return res.status(400).json({ error: 'Invalid or unpaid session' });
+        }
+        
+        // Must be league-player purchase
+        const tier = session.metadata?.tier;
+        if (tier !== 'league-player') {
+          return res.status(400).json({ error: 'Only league-player purchases can join existing teams' });
+        }
+      }
+
+      // Generate player ID
+      const playerId = 'p' + Date.now() + Math.random().toString(36).substr(2, 5);
+
+      // Create the player
+      await db.ref(`league/players/${playerId}`).set({
+        id: playerId,
+        name: playerName,
+        email: playerEmail || '',
+        phone: playerPhone || '',
+        teamId: teamId,
+        handicap: parseInt(playerHandicap) || 0,
+        pin: team.pin,
+        joinedExisting: true,
+        createdAt: Date.now()
+      });
+
+      // Log in Firestore
+      if (sessionId) {
+        const firestore = admin.firestore();
+        await firestore.collection('league_joins').doc(playerId).set({
+          playerId,
+          playerName,
+          teamId,
+          teamName: team.name,
+          sessionId,
+          joinedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+
+      res.json({
+        success: true,
+        playerId,
+        teamName: team.name,
+        message: `Successfully joined ${team.name}!`
+      });
+
+    } catch (error) {
+      console.error('Join team error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});

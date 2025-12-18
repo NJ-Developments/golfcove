@@ -720,6 +720,213 @@
         }
         .admin-footer a:hover { color: #37b24a; }
 
+        /* Create Team Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal-content {
+            background: #fff;
+            border-radius: 20px;
+            max-width: 550px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: #fff;
+            padding: 25px 30px;
+            border-radius: 20px 20px 0 0;
+            position: relative;
+        }
+        .modal-header h2 {
+            font-size: 24px;
+            margin: 0 0 5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .modal-header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-close:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
+        .modal-body {
+            padding: 30px;
+        }
+        .membership-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .membership-option {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .membership-option:hover {
+            border-color: #059669;
+            background: #f0fdf4;
+        }
+        .membership-option.selected {
+            border-color: #059669;
+            background: #ecfdf5;
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+        }
+        .membership-option .option-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .membership-option .option-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .membership-option .option-price {
+            font-size: 24px;
+            font-weight: 800;
+            color: #059669;
+        }
+        .membership-option .option-desc {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .membership-option .check-icon {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .membership-option.selected .check-icon {
+            background: #059669;
+            border-color: #059669;
+            color: #fff;
+        }
+        .membership-option .check-icon i {
+            font-size: 12px;
+            opacity: 0;
+        }
+        .membership-option.selected .check-icon i {
+            opacity: 1;
+        }
+        .modal-btn {
+            width: 100%;
+            padding: 16px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: #fff;
+        }
+        .modal-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(5, 150, 105, 0.3);
+        }
+        .modal-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .modal-footer-note {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #888;
+        }
+        .modal-footer-note i {
+            margin-right: 5px;
+            color: #059669;
+        }
+        .benefits-list {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-top: 10px;
+        }
+        .benefits-list li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 13px;
+            color: #555;
+        }
+        .benefits-list li i {
+            color: #059669;
+            font-size: 12px;
+        }
+        .create-team-btn {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+        }
+        .create-team-btn:hover {
+            background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
+        }
+
         /* Refresh indicator */
         .refresh-note {
             text-align: center;
@@ -1040,6 +1247,7 @@
                     ${seasonBadge}
                     ${roundInfoHTML}
                     <div class="hero-actions" style="display:flex; flex-direction:column; gap:10px; align-items:center; max-width:320px; margin: 0 auto;">
+                        <button onclick="openCreateTeamModal()" class="join-league-btn create-team-btn" style="width:100%; text-align:center; border:none;"><i class="fas fa-plus-circle"></i> Create a Team</button>
                         <a href="score.html" class="join-league-btn" style="width:100%; text-align:center;"><i class="fas fa-users"></i> Enter Team Score</a>
                         <a href="schedule.html" class="view-schedule-btn" style="width:100%; text-align:center;"><i class="fas fa-calendar-alt"></i> View Schedule</a>
                     </div>
@@ -1635,7 +1843,124 @@
 
         init();
         setInterval(init, 30000);
+
+        // =====================
+        // Create Team Modal
+        // =====================
+        let selectedMembershipTier = null;
+
+        function openCreateTeamModal() {
+            document.getElementById('createTeamModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCreateTeamModal() {
+            document.getElementById('createTeamModal').classList.remove('open');
+            document.body.style.overflow = '';
+            selectedMembershipTier = null;
+            document.querySelectorAll('.membership-option').forEach(opt => opt.classList.remove('selected'));
+            document.getElementById('purchaseBtn').disabled = true;
+        }
+
+        function selectMembershipOption(tier, element) {
+            selectedMembershipTier = tier;
+            document.querySelectorAll('.membership-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            document.getElementById('purchaseBtn').disabled = false;
+        }
+
+        async function proceedToPurchase() {
+            if (!selectedMembershipTier) {
+                alert('Please select a membership option');
+                return;
+            }
+
+            const btn = document.getElementById('purchaseBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
+
+            // Redirect to membership signup with the tier pre-selected
+            const tierParam = selectedMembershipTier === 'team' ? 'league-team' : 'league-player';
+            window.location.href = `membership-signup.html?tier=${tierParam}&type=league`;
+        }
+
+        // Close modal on overlay click
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeCreateTeamModal();
+            }
+        });
+
+        // Close modal on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeCreateTeamModal();
+            }
+        });
     </script>
+
+    <!-- Create Team Modal -->
+    <div class="modal-overlay" id="createTeamModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-trophy"></i> Join the League</h2>
+                <p>Purchase a league membership to create your team</p>
+                <button class="modal-close" onclick="closeCreateTeamModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="membership-options">
+                    <!-- League Player Option -->
+                    <div class="membership-option" onclick="selectMembershipOption('player', this)">
+                        <div class="check-icon"><i class="fas fa-check"></i></div>
+                        <div class="option-header">
+                            <div class="option-title">
+                                <i class="fas fa-user" style="color: #059669;"></i>
+                                League Player
+                            </div>
+                            <div class="option-price">$400</div>
+                        </div>
+                        <div class="option-desc">
+                            Single player registration for the full season. Perfect if you have a teammate who will register separately.
+                        </div>
+                        <ul class="benefits-list">
+                            <li><i class="fas fa-check"></i> Full season access</li>
+                            <li><i class="fas fa-check"></i> 5% off all purchases</li>
+                            <li><i class="fas fa-check"></i> League events & standings</li>
+                        </ul>
+                    </div>
+
+                    <!-- League Team Option -->
+                    <div class="membership-option" onclick="selectMembershipOption('team', this)">
+                        <div class="check-icon"><i class="fas fa-check"></i></div>
+                        <div class="option-header">
+                            <div class="option-title">
+                                <i class="fas fa-users" style="color: #059669;"></i>
+                                League Team
+                            </div>
+                            <div class="option-price">$800</div>
+                        </div>
+                        <div class="option-desc">
+                            Register both players at once! Includes 2 player spots and team registration for the full season.
+                        </div>
+                        <ul class="benefits-list">
+                            <li><i class="fas fa-check"></i> Full season for 2 players</li>
+                            <li><i class="fas fa-check"></i> 10% off all purchases</li>
+                            <li><i class="fas fa-check"></i> Priority league scheduling</li>
+                            <li><i class="fas fa-check"></i> Team standings & stats</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button class="modal-btn modal-btn-primary" id="purchaseBtn" onclick="proceedToPurchase()" disabled>
+                    <i class="fas fa-credit-card"></i> Continue to Checkout
+                </button>
+
+                <div class="modal-footer-note">
+                    <i class="fas fa-shield-alt"></i> Secure payment powered by Stripe
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 

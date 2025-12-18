@@ -869,19 +869,24 @@
         // Check URL params for pre-selected membership
         document.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
-            const plan = params.get('plan');
+            const plan = params.get('plan') || params.get('tier'); // Support both 'plan' and 'tier'
             const type = params.get('type') || 'golf';
             
-            // Show correct type
-            if (type === 'family') {
-                showType('family');
+            // Show correct type first
+            if (type === 'family' || type === 'league') {
+                showType(type);
             }
             
             // Pre-select plan if specified
             if (plan) {
                 const card = document.querySelector(`[data-id="${plan}"]`);
                 if (card) {
-                    selectMembership(card);
+                    // Small delay to ensure type switch completed
+                    setTimeout(() => {
+                        selectMembership(card);
+                        // Scroll to the selected card
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
                 }
             }
             
