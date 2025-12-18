@@ -421,11 +421,11 @@ golfcove/
 
 ```html
 <!-- Load modules in order -->
-<script src="js/config.js"></script>
+<script src="js/config-unified.js"></script>
 <script src="js/database.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/toast.js"></script>
-<script src="js/customers.js"></script>
+<script src="js/customer-manager.js"></script>
 <script src="js/employees.js"></script>
 <script src="js/gift-cards.js"></script>
 <script src="js/promotions.js"></script>
@@ -435,6 +435,8 @@ golfcove/
 <script src="js/reports.js"></script>
 <script src="js/pin-system.js"></script>
 <script src="js/stripe-terminal.js"></script>
+<script src="js/stripe-checkout.js"></script>
+<script src="js/payment-service.js"></script>
 <script src="js/menu-data.js"></script>
 <script src="js/app.js"></script>
 ```

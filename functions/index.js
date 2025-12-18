@@ -2776,7 +2776,7 @@ exports.tabs = functions.https.onRequest((req, res) => {
         
         case 'POST': {
           // Create new tab or add items to existing tab
-          const { action = 'create', tabId, customerId, customerName, items, employeeId, employeeName, notes, bayNumber } = req.body;
+          const { action = 'create', tabId, customerId, customerName, stripeCustomerId, items, employeeId, employeeName, notes, bayNumber, isMember, memberType, memberDiscount } = req.body;
           
           if (action === 'addItems' && tabId) {
             // Add items to existing tab
@@ -2820,6 +2820,10 @@ exports.tabs = functions.https.onRequest((req, res) => {
             id: newTabId,
             customerId: customerId || null,
             customer: customerName || 'Guest',
+            stripeCustomerId: stripeCustomerId || null, // For Stripe payment processing
+            isMember: isMember || false,
+            memberType: memberType || null,
+            memberDiscount: memberDiscount || 0,
             items: initialItems,
             subtotal: itemsTotal,
             tax: itemsTotal * TAX_RATE,

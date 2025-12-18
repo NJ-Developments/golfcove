@@ -2,12 +2,15 @@
 // GOLF COVE - TABS SYNC MODULE
 // Real-time tab synchronization across all POS terminals
 // Uses Firebase backend with localStorage fallback
+// Integrates with Stripe for customer payment processing
 // ============================================================
 
 const TabsSync = (function() {
     'use strict';
     
-    const API_BASE = 'https://us-central1-golfcove.cloudfunctions.net';
+    // Use config for API URL, fallback to hardcoded
+    const getApiBase = () => window.GolfCoveConfig?.stripe?.functionsUrl || 
+                             'https://us-central1-golfcove-d3c46.cloudfunctions.net';
     const LOCAL_KEY = 'gc_tabs';
     const SYNC_INTERVAL = 30000; // Sync every 30 seconds
     
@@ -90,7 +93,7 @@ const TabsSync = (function() {
     // ============ SERVER SYNC ============
     async function syncWithServer() {
         try {
-            const response = await fetch(`${API_BASE}/tabs?status=open`);
+            const response = await fetch(`${getApiBase()}/tabs?status=open`);
             if (!response.ok) throw new Error('Sync failed');
             
             const data = await response.json();
@@ -122,16 +125,20 @@ const TabsSync = (function() {
     
     async function pushTabToServer(tab) {
         try {
-            const response = await fetch(`${API_BASE}/tabs`, {
+            const response = await fetch(`${getApiBase()}/tabs`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     customerId: tab.customerId,
                     customerName: tab.customer,
+                    stripeCustomerId: tab.stripeCustomerId, // For Stripe payments
                     items: tab.items,
                     employeeName: tab.openedBy,
                     notes: tab.notes,
-                    bayNumber: tab.bayNumber
+                    bayNumber: tab.bayNumber,
+                    isMember: tab.isMember,
+                    memberType: tab.memberType,
+                    memberDiscount: tab.memberDiscount
                 })
             });
             
@@ -239,12 +246,22 @@ const TabsSync = (function() {
         let isVIP = false;
         let memberType = null;
         let memberDiscount = 0;
+        let stripeCustomerId = null;
         
         if (customer && typeof GolfCoveCustomers !== 'undefined') {
             isMember = GolfCoveCustomers.isActiveMember(customer);
             isVIP = GolfCoveCustomers.isVIP(customer);
             memberType = customer.memberType;
             memberDiscount = GolfCoveCustomers.getMemberDiscount(customer);
+            stripeCustomerId = customer.stripeCustomerId || null;
+        }
+        
+        // Also check if customer has a Stripe ID via CustomerManager
+        if (!stripeCustomerId && customerId && typeof GolfCoveCustomerManager !== 'undefined') {
+            const localCustomer = GolfCoveCustomerManager.get(customerId);
+            if (localCustomer?.stripeCustomerId) {
+                stripeCustomerId = localCustomer.stripeCustomerId;
+            }
         }
         
         const newTab = {
@@ -252,6 +269,7 @@ const TabsSync = (function() {
             version: 1, // Version for optimistic locking
             customerId: customerId || (customer ? customer.id : null),
             customer: customerName || 'Guest',
+            stripeCustomerId: stripeCustomerId, // For Stripe payment processing
             // Member info
             isMember: isMember,
             isVIP: isVIP,
@@ -336,7 +354,7 @@ const TabsSync = (function() {
         // Sync to server
         if (isOnline && !tab.isLocalOnly) {
             try {
-                await fetch(`${API_BASE}/tabs`, {
+                await fetch(`${getApiBase()}/tabs`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -383,7 +401,7 @@ const TabsSync = (function() {
         // Sync to server
         if (isOnline && !tab.isLocalOnly) {
             try {
-                await fetch(`${API_BASE}/tabs?tabId=${tabId}`, {
+                await fetch(`${getApiBase()}/tabs?tabId=${tabId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -430,7 +448,7 @@ const TabsSync = (function() {
         // Sync to server
         if (isOnline) {
             try {
-                await fetch(`${API_BASE}/tabs?tabId=${tabId}`, {
+                await fetch(`${getApiBase()}/tabs?tabId=${tabId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -484,7 +502,7 @@ const TabsSync = (function() {
         // Sync to server
         if (isOnline) {
             try {
-                await fetch(`${API_BASE}/tabs?tabId=${tabId}`, {
+                await fetch(`${getApiBase()}/tabs?tabId=${tabId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

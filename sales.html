@@ -17,6 +17,8 @@
     <script src="js/firebase-sync.js"></script>
     <script src="js/pin-system.js"></script>
     <script src="js/membership-system.js"></script>
+    <script src="js/validation-schemas.js"></script>
+    <script src="js/customer-manager.js"></script>
     <script src="js/customers.js"></script>
     <script src="js/tabs-sync.js"></script>
     <script src="js/cash-drawer.js"></script>
@@ -1137,16 +1139,10 @@
             checkLogin();
         }
         
-        // Log time entry
+        // Log time entry - DISABLED: Timeclock feature temporarily removed
         function logTimeEntry(type) {
-            const timeLog = JSON.parse(localStorage.getItem('gc_timeclock') || '[]');
-            timeLog.push({
-                staffId: currentUser.id,
-                staffName: currentUser.name,
-                type: type,
-                timestamp: new Date().toISOString()
-            });
-            localStorage.setItem('gc_timeclock', JSON.stringify(timeLog));
+            // TODO: Re-enable when timeclock is moved to Firebase
+            console.log('Timeclock disabled -', type, currentUser?.name);
         }
         
         // Check permission
