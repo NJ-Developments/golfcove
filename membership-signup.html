@@ -1000,12 +1000,11 @@
                 const isLeague = selectedMembership.type === 'league';
                 const billingCycle = isLeague ? 'seasonal' : 'monthly';
                 
-                // Build success URL with source parameter if present
-                // Backend will add session_id placeholder
-                let successUrl = window.location.origin + '/membership-success.html';
+                // Store source in localStorage (backend will add session_id to URL)
                 if (window._signupSource) {
-                    successUrl += '?source=' + window._signupSource;
+                    localStorage.setItem('signupSource', window._signupSource);
                 }
+                let successUrl = window.location.origin + '/membership-success.html';
                 
                 // Call Firebase function to create checkout session
                 const response = await fetch('https://us-central1-golfcove.cloudfunctions.net/createMembershipCheckout', {

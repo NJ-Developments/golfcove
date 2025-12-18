@@ -1013,10 +1013,20 @@
         let sessionData = null;
         let isCreateTeamFlow = false;
         
-        // Get session_id and source from URL
+        // Get session_id from URL (may have duplicates due to backend bug, get first valid one)
         const urlParams = new URLSearchParams(window.location.search);
-        const sessionId = urlParams.get('session_id');
-        const source = urlParams.get('source');
+        let sessionId = urlParams.get('session_id');
+        // Handle malformed URL with duplicate session_id
+        if (sessionId && sessionId.includes('?')) {
+            sessionId = sessionId.split('?')[0];
+        }
+        
+        // Get source from URL or localStorage
+        let source = urlParams.get('source') || localStorage.getItem('signupSource');
+        // Clean up localStorage after reading
+        if (localStorage.getItem('signupSource')) {
+            localStorage.removeItem('signupSource');
+        }
         
         // Check if this is a createTeam flow - require team creation
         if (source === 'createTeam') {
