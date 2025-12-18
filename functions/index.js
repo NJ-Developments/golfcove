@@ -6257,3 +6257,165 @@ exports.deletePaymentMethod = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+/**
+ * Get checkout session details
+ * Used to determine membership type after successful payment
+ */
+exports.getCheckoutSession = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const sessionId = req.query.session_id || req.body?.session_id;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: 'Session ID required' });
+      }
+
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      res.json({
+        success: true,
+        session: {
+          id: session.id,
+          customerEmail: session.customer_email,
+          customerName: session.metadata?.customerName,
+          customerPhone: session.metadata?.customerPhone,
+          type: session.metadata?.type,
+          tier: session.metadata?.tier,
+          status: session.payment_status,
+          amountTotal: session.amount_total
+        }
+      });
+    } catch (error) {
+      console.error('Get checkout session error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Register a league team after successful payment
+ * Creates team and players in the Realtime Database
+ */
+exports.registerLeagueTeam = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      const {
+        sessionId,
+        teamName,
+        player1Name,
+        player1Email,
+        player1Phone,
+        player1Handicap,
+        player2Name,
+        player2Email,
+        player2Phone,
+        player2Handicap,
+        pin
+      } = req.body;
+
+      // Validate required fields
+      if (!sessionId || !teamName || !player1Name || !pin) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      // Validate PIN format
+      if (!/^[0-9]{4}$/.test(pin)) {
+        return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
+      }
+
+      // Verify the session exists and is for a league purchase
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (!session || session.payment_status !== 'paid') {
+        return res.status(400).json({ error: 'Invalid or unpaid session' });
+      }
+
+      const tier = session.metadata?.tier;
+      if (!tier?.includes('league')) {
+        return res.status(400).json({ error: 'This session is not for a league purchase' });
+      }
+
+      const isTeamPurchase = tier === 'league-team';
+
+      // Check if this session has already been used to register a team
+      const db = admin.database();
+      const existingTeamSnapshot = await db.ref('league/teams')
+        .orderByChild('stripeSessionId')
+        .equalTo(sessionId)
+        .once('value');
+      
+      if (existingTeamSnapshot.exists()) {
+        return res.status(400).json({ error: 'A team has already been registered with this purchase' });
+      }
+
+      // Generate IDs
+      const teamId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
+      const player1Id = 'p' + Date.now() + Math.random().toString(36).substr(2, 5);
+      const player2Id = 'p' + (Date.now() + 1) + Math.random().toString(36).substr(2, 5);
+
+      // Create team
+      await db.ref(`league/teams/${teamId}`).set({
+        id: teamId,
+        name: teamName,
+        pin: pin,
+        stripeSessionId: sessionId,
+        tier: tier,
+        createdAt: Date.now()
+      });
+
+      // Create player 1
+      await db.ref(`league/players/${player1Id}`).set({
+        id: player1Id,
+        name: player1Name,
+        email: player1Email || session.customer_email,
+        phone: player1Phone || session.metadata?.customerPhone,
+        teamId: teamId,
+        handicap: parseInt(player1Handicap) || 0,
+        pin: pin,
+        createdAt: Date.now()
+      });
+
+      // Create player 2 if this is a team purchase
+      if (isTeamPurchase && player2Name) {
+        await db.ref(`league/players/${player2Id}`).set({
+          id: player2Id,
+          name: player2Name,
+          email: player2Email || '',
+          phone: player2Phone || '',
+          teamId: teamId,
+          handicap: parseInt(player2Handicap) || 0,
+          pin: pin,
+          createdAt: Date.now()
+        });
+      }
+
+      // Also store in Firestore for linking
+      const firestore = admin.firestore();
+      await firestore.collection('league_registrations').doc(sessionId).set({
+        sessionId,
+        teamId,
+        teamName,
+        tier,
+        player1: { id: player1Id, name: player1Name, email: player1Email || session.customer_email },
+        player2: isTeamPurchase && player2Name ? { id: player2Id, name: player2Name, email: player2Email } : null,
+        registeredAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      res.json({
+        success: true,
+        teamId,
+        teamName,
+        players: isTeamPurchase ? [player1Name, player2Name] : [player1Name],
+        message: 'Team registered successfully!'
+      });
+
+    } catch (error) {
+      console.error('Register league team error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});

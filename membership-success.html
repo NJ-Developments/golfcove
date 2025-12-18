@@ -25,7 +25,7 @@
             border-radius: 20px;
             padding: 50px;
             text-align: center;
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
@@ -119,6 +119,8 @@
             text-decoration: none;
             transition: all 0.2s;
             margin: 5px;
+            border: none;
+            cursor: pointer;
         }
         
         .btn-primary {
@@ -140,6 +142,12 @@
             background: #e8e8e8;
         }
         
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
         .confirmation-number {
             background: #f0f0f0;
             padding: 12px 20px;
@@ -157,6 +165,222 @@
         .logo img {
             height: 60px;
         }
+        
+        /* League Registration Form Styles */
+        .league-registration {
+            background: linear-gradient(135deg, #059669, #047857);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            color: #fff;
+            text-align: left;
+        }
+        
+        .league-registration h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .league-registration .intro {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 25px;
+        }
+        
+        .form-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-section h4 {
+            font-size: 14px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0.9;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .form-row.single {
+            grid-template-columns: 1fr;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            opacity: 0.9;
+        }
+        
+        .form-group input {
+            padding: 12px 15px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #fff;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+        }
+        
+        .form-group input::placeholder {
+            color: #999;
+        }
+        
+        .pin-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .pin-group input {
+            width: 120px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 8px;
+            font-family: monospace;
+        }
+        
+        .pin-group .pin-info {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .register-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            background: #fff;
+            color: #059669;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .register-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .register-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .register-btn .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(5, 150, 105, 0.3);
+            border-top-color: #059669;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        
+        .register-btn.loading .spinner {
+            display: block;
+        }
+        
+        .register-btn.loading .btn-text {
+            display: none;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .success-message.show {
+            display: block;
+        }
+        
+        .success-message h4 {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+            font-size: 14px;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .loading-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .loading-state i {
+            font-size: 40px;
+            margin-bottom: 15px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @media (max-width: 600px) {
+            .success-card {
+                padding: 30px 20px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .pin-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
     </style>
 </head>
 <body>
@@ -172,13 +396,106 @@
         <h1>Welcome to Golf Cove!</h1>
         <p class="subtitle" id="membershipType">Membership Confirmed</p>
         
-        <p>Thank you for joining the Golf Cove family! Your payment has been processed successfully and your membership is now active.</p>
+        <p id="welcomeText">Thank you for joining the Golf Cove family! Your payment has been processed successfully and your membership is now active.</p>
         
         <div class="confirmation-number">
             Confirmation: <span id="confirmationId">Loading...</span>
         </div>
         
-        <div class="next-steps">
+        <!-- League Team Registration (shown only for league purchases) -->
+        <div id="leagueRegistration" style="display: none;">
+            <div class="success-message" id="registrationSuccess">
+                <h4><i class="fas fa-trophy"></i> Team Registered!</h4>
+                <p>Your team <strong id="registeredTeamName"></strong> has been successfully registered for the league. You'll receive your first tee time assignment by email.</p>
+            </div>
+            
+            <div class="league-registration" id="registrationForm">
+                <h2><i class="fas fa-users"></i> Complete Your Team Registration</h2>
+                <p class="intro">One more step! Set up your league team below. This info will be used for scoring and standings.</p>
+                
+                <div class="error-message" id="errorMessage"></div>
+                
+                <form id="teamForm" onsubmit="registerTeam(event)">
+                    <!-- Team Info -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-flag"></i> Team Information</h4>
+                        <div class="form-row single">
+                            <div class="form-group">
+                                <label>Team Name *</label>
+                                <input type="text" id="teamName" placeholder="e.g., The Bogey Boys" required>
+                            </div>
+                        </div>
+                        <div class="form-row single">
+                            <div class="form-group">
+                                <label>Team PIN (4 digits) *</label>
+                                <div class="pin-group">
+                                    <input type="text" id="teamPin" maxlength="4" pattern="[0-9]{4}" placeholder="0000" required>
+                                    <span class="pin-info">This PIN is used to submit scores. Share it with your teammate!</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Player 1 -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-user"></i> Player 1 (You)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Full Name *</label>
+                                <input type="text" id="player1Name" placeholder="Your name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Handicap</label>
+                                <input type="number" id="player1Handicap" min="0" max="54" value="0" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="player1Email" placeholder="your@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Phone</label>
+                                <input type="tel" id="player1Phone" placeholder="(555) 555-5555">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Player 2 (Team only) -->
+                    <div class="form-section" id="player2Section" style="display: none;">
+                        <h4><i class="fas fa-user-friends"></i> Player 2 (Teammate)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Full Name *</label>
+                                <input type="text" id="player2Name" placeholder="Teammate's name">
+                            </div>
+                            <div class="form-group">
+                                <label>Handicap</label>
+                                <input type="number" id="player2Handicap" min="0" max="54" value="0" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="player2Email" placeholder="teammate@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Phone</label>
+                                <input type="tel" id="player2Phone" placeholder="(555) 555-5555">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="register-btn" id="registerBtn">
+                        <span class="btn-text"><i class="fas fa-check-circle"></i> Complete Registration</span>
+                        <span class="spinner"></span>
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Regular Membership Next Steps -->
+        <div class="next-steps" id="regularNextSteps">
             <h3><i class="fas fa-clipboard-list"></i> What's Next?</h3>
             <ul>
                 <li><i class="fas fa-envelope"></i> Check your email for a confirmation receipt and membership details</li>
@@ -188,8 +505,19 @@
             </ul>
         </div>
         
+        <!-- League Next Steps (shown after registration) -->
+        <div class="next-steps" id="leagueNextSteps" style="display: none;">
+            <h3><i class="fas fa-clipboard-list"></i> What's Next?</h3>
+            <ul>
+                <li><i class="fas fa-envelope"></i> Check your email for league schedule and tee time assignments</li>
+                <li><i class="fas fa-calendar-alt"></i> League nights are <strong>Wednesdays</strong> starting at 5:00 PM</li>
+                <li><i class="fas fa-mobile-alt"></i> Use your 4-digit PIN to submit scores after each round</li>
+                <li><i class="fas fa-trophy"></i> Track standings at <a href="tournaments.html">golfcovect.com/tournaments</a></li>
+            </ul>
+        </div>
+        
         <div>
-            <a href="https://918booking.com/emb-bookings?course=7" class="btn btn-primary" target="_blank">
+            <a href="https://918booking.com/emb-bookings?course=7" class="btn btn-primary" target="_blank" id="bookBtn">
                 <i class="fas fa-golf-ball"></i> Book Your First Session
             </a>
             <a href="index.html" class="btn btn-secondary">
@@ -199,20 +527,160 @@
     </div>
     
     <script>
-        // Get session_id from URL and display confirmation
+        const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
+        let sessionData = null;
+        
+        // Get session_id from URL
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
         
-        if (sessionId) {
+        async function init() {
+            if (!sessionId) {
+                document.getElementById('confirmationId').textContent = 'GC-' + Date.now().toString(36).toUpperCase();
+                return;
+            }
+            
             // Display shortened confirmation ID
             const shortId = sessionId.substring(sessionId.length - 12).toUpperCase();
             document.getElementById('confirmationId').textContent = 'GC-' + shortId;
             
-            // Optionally fetch session details from backend to show membership type
-            // For now, just show generic success
-        } else {
-            document.getElementById('confirmationId').textContent = 'GC-' + Date.now().toString(36).toUpperCase();
+            try {
+                // Fetch session details to determine membership type
+                const response = await fetch(`${FUNCTIONS_URL}/getCheckoutSession?session_id=${sessionId}`);
+                const data = await response.json();
+                
+                if (data.success && data.session) {
+                    sessionData = data.session;
+                    
+                    // Update display based on membership type
+                    updateDisplayForMembershipType(sessionData);
+                }
+            } catch (error) {
+                console.error('Error fetching session:', error);
+            }
         }
+        
+        function updateDisplayForMembershipType(session) {
+            const tier = session.tier || '';
+            const type = session.type || '';
+            
+            if (type === 'league' || tier.includes('league')) {
+                // Show league registration
+                document.getElementById('leagueRegistration').style.display = 'block';
+                document.getElementById('regularNextSteps').style.display = 'none';
+                
+                // Update title
+                document.getElementById('membershipType').textContent = 
+                    tier === 'league-team' ? 'League Team Registration' : 'League Player Registration';
+                
+                document.getElementById('welcomeText').textContent = 
+                    'Your payment is confirmed! Complete your team registration below to join the league.';
+                
+                // Pre-fill player 1 info from checkout
+                if (session.customerName) {
+                    document.getElementById('player1Name').value = session.customerName;
+                }
+                if (session.customerEmail) {
+                    document.getElementById('player1Email').value = session.customerEmail;
+                }
+                if (session.customerPhone) {
+                    document.getElementById('player1Phone').value = session.customerPhone;
+                }
+                
+                // Show player 2 section for team purchase
+                if (tier === 'league-team') {
+                    document.getElementById('player2Section').style.display = 'block';
+                    document.getElementById('player2Name').required = true;
+                }
+                
+                // Update booking button for league
+                document.getElementById('bookBtn').style.display = 'none';
+                
+            } else {
+                // Regular membership
+                const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
+                document.getElementById('membershipType').textContent = tierName + ' Membership Active';
+            }
+        }
+        
+        async function registerTeam(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('registerBtn');
+            const errorDiv = document.getElementById('errorMessage');
+            
+            // Validate PIN
+            const pin = document.getElementById('teamPin').value;
+            if (!/^[0-9]{4}$/.test(pin)) {
+                errorDiv.textContent = 'Please enter a valid 4-digit PIN';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            // Validate player 2 for team purchase
+            const isTeam = sessionData.tier === 'league-team';
+            if (isTeam && !document.getElementById('player2Name').value.trim()) {
+                errorDiv.textContent = 'Please enter your teammate\'s name';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            btn.classList.add('loading');
+            btn.disabled = true;
+            errorDiv.classList.remove('show');
+            
+            try {
+                const payload = {
+                    sessionId: sessionId,
+                    teamName: document.getElementById('teamName').value.trim(),
+                    player1Name: document.getElementById('player1Name').value.trim(),
+                    player1Email: document.getElementById('player1Email').value.trim(),
+                    player1Phone: document.getElementById('player1Phone').value.trim(),
+                    player1Handicap: document.getElementById('player1Handicap').value || 0,
+                    pin: pin
+                };
+                
+                if (isTeam) {
+                    payload.player2Name = document.getElementById('player2Name').value.trim();
+                    payload.player2Email = document.getElementById('player2Email').value.trim();
+                    payload.player2Phone = document.getElementById('player2Phone').value.trim();
+                    payload.player2Handicap = document.getElementById('player2Handicap').value || 0;
+                }
+                
+                const response = await fetch(`${FUNCTIONS_URL}/registerLeagueTeam`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Success!
+                document.getElementById('registrationForm').style.display = 'none';
+                document.getElementById('registrationSuccess').classList.add('show');
+                document.getElementById('registeredTeamName').textContent = data.teamName;
+                document.getElementById('leagueNextSteps').style.display = 'block';
+                
+                // Show tournament link
+                document.getElementById('bookBtn').href = 'tournaments.html';
+                document.getElementById('bookBtn').innerHTML = '<i class="fas fa-trophy"></i> View League Standings';
+                document.getElementById('bookBtn').style.display = 'inline-block';
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                errorDiv.textContent = error.message || 'Registration failed. Please try again.';
+                errorDiv.classList.add('show');
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+        
+        // Initialize on load
+        init();
     </script>
 </body>
 </html>
