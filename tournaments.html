@@ -1879,9 +1879,9 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
 
-            // Redirect to membership signup with the tier pre-selected
+            // Redirect to membership signup with the tier pre-selected and source flag
             const tierParam = selectedMembershipTier === 'team' ? 'league-team' : 'league-player';
-            window.location.href = `membership-signup.html?tier=${tierParam}&type=league`;
+            window.location.href = `membership-signup.html?tier=${tierParam}&type=league&source=createTeam`;
         }
 
         // Close modal on overlay click

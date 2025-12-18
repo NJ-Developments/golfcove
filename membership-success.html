@@ -829,11 +829,11 @@
             </ul>
         </div>
         
-        <div>
+        <div id="actionButtons">
             <a href="https://918booking.com/emb-bookings?course=7" class="btn btn-primary" target="_blank" id="bookBtn">
                 <i class="fas fa-golf-ball"></i> Book Your First Session
             </a>
-            <a href="index.html" class="btn btn-secondary">
+            <a href="index.html" class="btn btn-secondary" id="returnHomeBtn">
                 <i class="fas fa-home"></i> Return Home
             </a>
         </div>
@@ -842,10 +842,22 @@
     <script>
         const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
         let sessionData = null;
+        let isCreateTeamFlow = false;
         
-        // Get session_id from URL
+        // Get session_id and source from URL
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
+        const source = urlParams.get('source');
+        
+        // Check if this is a createTeam flow - require team creation
+        if (source === 'createTeam') {
+            isCreateTeamFlow = true;
+            // Hide the Return Home and Book buttons until team is registered
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('returnHomeBtn').style.display = 'none';
+                document.getElementById('bookBtn').style.display = 'none';
+            });
+        }
         
         async function init() {
             if (!sessionId) {
@@ -912,6 +924,11 @@
                     document.getElementById('registrationForm').style.display = 'block';
                     document.getElementById('player2Section').style.display = 'block';
                     document.getElementById('player2Name').required = true;
+                } else if (isCreateTeamFlow) {
+                    // League Player from Create Team flow - go straight to team creation
+                    document.getElementById('playerChoice').style.display = 'none';
+                    document.getElementById('registrationForm').style.display = 'block';
+                    document.getElementById('player2Section').style.display = 'none';
                 } else {
                     // League Player: Show choice (create or join)
                     document.getElementById('playerChoice').style.display = 'block';
@@ -1040,10 +1057,11 @@
                 document.getElementById('joinSuccess').classList.add('show');
                 document.getElementById('leagueNextSteps').style.display = 'block';
                 
-                // Show tournament link
+                // Show tournament link and Return Home button
                 document.getElementById('bookBtn').href = 'tournaments.html';
                 document.getElementById('bookBtn').innerHTML = '<i class="fas fa-trophy"></i> View League Standings';
                 document.getElementById('bookBtn').style.display = 'inline-block';
+                document.getElementById('returnHomeBtn').style.display = 'inline-block';
                 
             } catch (error) {
                 console.error('Join error:', error);
@@ -1114,10 +1132,11 @@
                 document.getElementById('registeredTeamName').textContent = data.teamName;
                 document.getElementById('leagueNextSteps').style.display = 'block';
                 
-                // Show tournament link
+                // Show tournament link and Return Home button
                 document.getElementById('bookBtn').href = 'tournaments.html';
                 document.getElementById('bookBtn').innerHTML = '<i class="fas fa-trophy"></i> View League Standings';
                 document.getElementById('bookBtn').style.display = 'inline-block';
+                document.getElementById('returnHomeBtn').style.display = 'inline-block';
                 
             } catch (error) {
                 console.error('Registration error:', error);
