@@ -1003,6 +1003,8 @@
             localStorage.removeItem('signupSource');
         }
         
+        let isCreateTeamSolo = false;
+        
         // Check if this is a createTeam flow - require team creation
         if (source === 'createTeam') {
             isCreateTeamFlow = true;
@@ -1011,6 +1013,15 @@
                 document.getElementById('returnHomeBtn').style.display = 'none';
                 document.getElementById('bookBtn').style.display = 'none';
                 document.getElementById('createTeamBtn').style.display = 'inline-block';
+            });
+        }
+        
+        // Check if this is a createTeamSolo flow - create team with just yourself
+        if (source === 'createTeamSolo') {
+            isCreateTeamSolo = true;
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('returnHomeBtn').style.display = 'none';
+                document.getElementById('bookBtn').style.display = 'none';
             });
         }
         
@@ -1136,21 +1147,33 @@
                     document.getElementById('returnHomeBtn').style.display = 'none';
                     document.getElementById('createTeamBtn').style.display = 'none';
                 } else {
-                    // League Player ($400): Show join team section
-                    console.log('Showing join team section for League Player');
-                    if (isJoinTeamFlow) {
+                    // League Player ($400): Either create team solo or join existing team
+                    console.log('League Player flow - isCreateTeamSolo:', isCreateTeamSolo, 'isJoinTeamFlow:', isJoinTeamFlow);
+                    
+                    if (isCreateTeamSolo) {
+                        // Create team with just yourself - teammate joins later via PIN
+                        document.getElementById('playerChoice').style.display = 'none';
+                        document.getElementById('joinTeamSection').style.display = 'none';
+                        document.getElementById('registrationForm').style.display = 'block';
+                        document.getElementById('player2Section').style.display = 'none';
+                        document.getElementById('player2Name').required = false;
+                        // Update title
+                        document.getElementById('membershipType').textContent = 'Create Your Team';
+                        document.getElementById('welcomeText').textContent = 
+                            'Your payment is confirmed! Create your team below. Your teammate can join later using your team PIN.';
+                    } else if (isJoinTeamFlow) {
                         // Came from "Join Team" button - go straight to join team section
                         document.getElementById('playerChoice').style.display = 'none';
                         document.getElementById('joinTeamSection').style.display = 'block';
                         document.getElementById('registrationForm').style.display = 'none';
                         document.getElementById('player2Section').style.display = 'none';
                     } else {
-                        // Normal flow - also go to join team (since $400 is for joining)
+                        // Normal flow - go to join team section
                         document.getElementById('playerChoice').style.display = 'none';
                         document.getElementById('joinTeamSection').style.display = 'block';
                         document.getElementById('registrationForm').style.display = 'none';
                     }
-                    // Hide buttons until team is joined
+                    // Hide buttons until team is created/joined
                     document.getElementById('bookBtn').style.display = 'none';
                     document.getElementById('returnHomeBtn').style.display = 'none';
                 }
