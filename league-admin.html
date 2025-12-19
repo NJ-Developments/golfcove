@@ -215,35 +215,6 @@
             display: block;
         }
         
-        /* Logout button */
-        #desktopLogoutBtn {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            background: #e74c3c;
-            color: #fff;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            display: none;
-            gap: 8px;
-            align-items: center;
-            transition: all 0.3s;
-            z-index: 1500;
-            box-shadow: 0 2px 10px rgba(231,76,60,0.3);
-        }
-        #desktopLogoutBtn:hover { background: #c0392b; }
-        @media (max-width: 767px) {
-            #desktopLogoutBtn {
-                top: 12px;
-                right: 12px;
-                padding: 9px 14px;
-                font-size: 13px;
-            }
-        }
-        
         /* Page Sections */
         .page-section {
             display: none;
@@ -1069,16 +1040,6 @@
     </style>
 </head>
 <body>
-    <!-- Top Bar -->
-    <div class="top-bar">
-        <div class="container">
-            <div class="top-bar-left">
-                <a href="tel:2033905994"><i class="fas fa-phone"></i> 203.390.5994</a>
-                <a href="https://maps.google.com/?q=336+State+Street,+North+Haven,+CT+06473" target="_blank"><i class="fas fa-map-marker-alt"></i> 336 STATE STREET, NORTH HAVEN, CT</a>
-            </div>
-        </div>
-    </div>
-
     <!-- Header -->
     <header>
         <div class="header-main">
@@ -1277,32 +1238,33 @@
                 <button class="btn" onclick="printScorecards()" id="printBtn" disabled><i class="fas fa-print"></i> Print Scorecards</button>
             </div>
             
-            <div class="card">
-                <h3><i class="fas fa-qrcode"></i> General Scoring Link</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">A general link for anyone to enter scores (useful for posting online).</p>
-                <div id="generalQRCode" style="text-align: center; margin: 15px 0;"></div>
-                <p style="text-align: center; font-size: 12px; color: #888; word-break: break-all;" id="generalQRUrl"></p>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-                    <button class="btn btn-sm" onclick="copyGeneralUrl()"><i class="fas fa-copy"></i> Copy Link</button>
-                    <button class="btn btn-sm" onclick="printQRPoster()"><i class="fas fa-print"></i> Print QR Poster</button>
-                </div>
-                
-                <!-- QR Poster Preview -->
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-                    <p style="font-size: 13px; font-weight: 600; color: #333; margin-bottom: 10px; text-align: center;">Poster Preview (for golf rooms)</p>
-                    <div style="background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%); border-radius: 8px; padding: 15px; max-width: 200px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                        <img src="images/golfcovelogo.png" alt="Golf Cove" style="width: 60px; display: block; margin: 0 auto 8px;">
-                        <p style="color: #37b24a; font-size: 10px; font-weight: 700; text-align: center; margin-bottom: 5px; text-transform: uppercase;">Enter Your Score</p>
-                        <div style="background: #fff; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://golfcove.web.app/score.html&color=1a1a1a&bgcolor=ffffff" alt="QR" style="width: 100%; display: block;">
-                        </div>
-                        <p style="color: #fff; font-size: 7px; text-align: center; opacity: 0.8;">1. Scan  2. Enter PIN  3. Submit</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="card">
+                    <h3><i class="fas fa-qrcode"></i> General Scoring Link</h3>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">A general link for anyone to enter scores (useful for posting online).</p>
+                    <div id="generalQRCode" style="text-align: center; margin: 15px 0;"></div>
+                    <p style="text-align: center; font-size: 12px; color: #888; word-break: break-all;" id="generalQRUrl"></p>
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                        <button class="btn btn-sm" onclick="copyGeneralUrl()"><i class="fas fa-copy"></i> Copy Link</button>
+                        <a href="qr-poster.html" target="_blank" class="btn btn-sm" style="text-decoration: none;"><i class="fas fa-print"></i> Print QR Poster</a>
                     </div>
-                    <p style="font-size: 11px; color: #888; text-align: center; margin-top: 10px;">Click "Print QR Poster" to get a full-size 8.5x11" version</p>
+                    
+                    <!-- QR Poster Preview -->
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                        <p style="font-size: 13px; font-weight: 600; color: #333; margin-bottom: 10px; text-align: center;">Poster Preview (for golf rooms)</p>
+                        <div style="background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%); border-radius: 8px; padding: 15px; max-width: 200px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <img src="images/golfcovelogo.png" alt="Golf Cove" style="width: 60px; display: block; margin: 0 auto 8px;">
+                            <p style="color: #37b24a; font-size: 10px; font-weight: 700; text-align: center; margin-bottom: 5px; text-transform: uppercase;">Enter Your Score</p>
+                            <div style="background: #fff; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://golfcove.web.app/score.html&color=1a1a1a&bgcolor=ffffff" alt="QR" style="width: 100%; display: block;">
+                            </div>
+                            <p style="color: #fff; font-size: 7px; text-align: center; opacity: 0.8;">1. Scan  2. Enter PIN  3. Submit</p>
+                        </div>
+                        <p style="font-size: 11px; color: #888; text-align: center; margin-top: 10px;">Click "Print QR Poster" to get a full-size 8.5x11" version</p>
+                    </div>
                 </div>
-            </div>
                 
-            <div class="card">
+                <div class="card">
                 <h3><i class="fas fa-key"></i> Print Player PINs</h3>
                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print a sheet with each player's personal PIN for score entry.</p>
                 <button class="btn" onclick="printPinSheet()" style="width: 100%;"><i class="fas fa-print"></i> Print PIN Sheet</button>
@@ -1656,11 +1618,6 @@
     <!-- Mobile FAB for sidebar -->
     <button class="mobile-admin-toggle" id="mobileAdminToggle" onclick="toggleMobileSidebar()">
         <i class="fas fa-bars"></i>
-    </button>
-    
-    <!-- Logout Button (Desktop) -->
-    <button id="desktopLogoutBtn" onclick="handleLogout()">
-        <i class="fas fa-sign-out-alt"></i> <span>Sign Out</span>
     </button>
 
     <!-- Login Screen -->
@@ -2169,7 +2126,6 @@
             if (user) {
                 currentUser = user;
                 document.getElementById('loginContainer').classList.remove('active');
-                document.getElementById('desktopLogoutBtn').style.display = 'block';
                 initAdmin();
             } else {
                 currentUser = null;
@@ -2178,7 +2134,6 @@
                 document.getElementById('loginContainer').classList.add('active');
                 document.getElementById('setupContainer').classList.remove('active');
                 document.getElementById('adminWrapper').style.display = 'none';
-                document.getElementById('desktopLogoutBtn').style.display = 'none';
                 document.getElementById('mobileAdminToggle').style.display = 'none';
                 setTimeout(() => {
                     document.getElementById('adminEmail')?.focus();
@@ -4265,7 +4220,14 @@
                 else if (section === 'inventory') loadInventory();
                 else if (section === 'settings') loadStripeSettings();
                 else if (section === 'scoredocs') loadScoreDocuments();
-                else if (section === 'customers') renderCustomers();
+                else if (section === 'customers') {
+                    // Load customers from cache or sync from Stripe if empty
+                    if (stripeCustomersCache.length === 0) {
+                        syncStripeCustomers();
+                    } else {
+                        renderCustomers();
+                    }
+                }
             } catch (err) {
                 console.error('[showSection] Error:', err);
             }
