@@ -1256,7 +1256,7 @@
                     ${seasonBadge}
                     ${roundInfoHTML}
                     <div class="hero-actions" style="display:flex; flex-direction:column; gap:10px; align-items:center; max-width:320px; margin: 0 auto;">
-                        <button onclick="openJoinLeagueModal()" class="join-league-btn create-team-btn" style="width:100%; text-align:center; border:none;"><i class="fas fa-trophy"></i> Join League</button>
+                        <button onclick="openJoinLeagueModal()" class="join-league-btn create-team-btn" style="width:100%; text-align:center; border:none; color: white;"><i class="fas fa-trophy"></i> Join League</button>
                         <a href="score.html" class="join-league-btn" style="width:100%; text-align:center;"><i class="fas fa-users"></i> Enter Team Score</a>
                         <a href="schedule.html" class="view-schedule-btn" style="width:100%; text-align:center;"><i class="fas fa-calendar-alt"></i> View Schedule</a>
                     </div>
@@ -1961,9 +1961,9 @@
     <!-- Join League Choice Modal -->
     <div class="modal-overlay" id="joinLeagueModal">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857);">
-                <h2><i class="fas fa-trophy"></i> Join the League</h2>
-                <p>Choose how you'd like to participate</p>
+            <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: white;">
+                <h2 style="color: white;"><i class="fas fa-trophy"></i> Join the League</h2>
+                <p style="color: white;">Choose how you'd like to participate</p>
                 <button class="modal-close" onclick="closeJoinLeagueModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -1973,23 +1973,21 @@
                             <i class="fas fa-plus-circle" style="color: #059669;"></i>
                             Create a Team
                         </div>
-                        <div class="option-price">from $400</div>
                     </div>
                     <div class="option-desc">
-                        Start a new team. Choose to register both players at once ($800) or just yourself ($400) and have your teammate join later.
+                        Start a new team and invite your teammate to join.
                     </div>
                 </div>
 
-                <div class="membership-option" onclick="openJoinTeamModal()" style="cursor:pointer; border-color: #3b82f6;">
+                <div class="membership-option" onclick="openJoinTeamModal()" style="cursor:pointer; border-color: #059669;">
                     <div class="option-header">
                         <div class="option-title">
-                            <i class="fas fa-sign-in-alt" style="color: #3b82f6;"></i>
+                            <i class="fas fa-sign-in-alt" style="color: #059669;"></i>
                             Join Existing Team
                         </div>
-                        <div class="option-price">$400</div>
                     </div>
                     <div class="option-desc">
-                        Join a team that your teammate has already created. You'll need their 4-digit team PIN.
+                        Join a team that your teammate has already created using their team PIN.
                     </div>
                 </div>
             </div>
@@ -1999,9 +1997,9 @@
     <!-- Create Team Modal -->
     <div class="modal-overlay" id="createTeamModal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-plus-circle"></i> Create a Team</h2>
-                <p>Choose your membership tier</p>
+            <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: white;">
+                <h2 style="color: white;"><i class="fas fa-plus-circle"></i> Create a Team</h2>
+                <p style="color: white;">Choose your membership tier</p>
                 <button class="modal-close" onclick="closeCreateTeamModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -2057,16 +2055,16 @@
     <!-- Join Team Modal -->
     <div class="modal-overlay" id="joinTeamModal">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
-                <h2><i class="fas fa-sign-in-alt"></i> Join a Team</h2>
-                <p>Purchase League Player membership and join an existing team</p>
+            <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: white;">
+                <h2 style="color: white;"><i class="fas fa-sign-in-alt"></i> Join a Team</h2>
+                <p style="color: white;">Purchase League Player membership and join an existing team</p>
                 <button class="modal-close" onclick="closeJoinTeamModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="membership-option selected" style="cursor:default; border-color: #3b82f6;">
+                <div class="membership-option selected" style="cursor:default; border-color: #059669;">
                     <div class="option-header">
                         <div class="option-title">
-                            <i class="fas fa-user" style="color: #3b82f6;"></i>
+                            <i class="fas fa-user" style="color: #059669;"></i>
                             League Player
                         </div>
                         <div class="option-price">$400</div>
@@ -2076,13 +2074,13 @@
                     </div>
                     <ul class="benefits-list">
                         <li><i class="fas fa-check"></i> Full season access</li>
-                        <li><i class="fas fa-check"></i> 5% off all purchases</li>
+                        <li><i class="fas fa-check"></i> 10% off all purchases</li>
                         <li><i class="fas fa-check"></i> League events & standings</li>
-                        <li><i class="fas fa-info-circle" style="color: #3b82f6;"></i> You'll enter your team's PIN after purchase</li>
+                        <li><i class="fas fa-info-circle" style="color: #059669;"></i> You'll enter your team's PIN after purchase</li>
                     </ul>
                 </div>
 
-                <button class="modal-btn modal-btn-primary" id="joinTeamBtn" onclick="proceedToJoinTeam()" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                <button class="modal-btn modal-btn-primary" id="joinTeamBtn" onclick="proceedToJoinTeam()" style="background: linear-gradient(135deg, #059669, #047857);">
                     <i class="fas fa-credit-card"></i> Purchase & Join Team - $400
                 </button>
 
