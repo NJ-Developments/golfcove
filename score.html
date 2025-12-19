@@ -1627,9 +1627,8 @@
             `;
             document.body.appendChild(modal);
             
-            // Store team pin and players data for verification
+            // Store team PIN for verification
             modal.dataset.teamPin = team.pin || '';
-            modal.dataset.players = JSON.stringify(players.map(p => ({ id: p.id, pin: p.pin })));
             
             setTimeout(() => {
                 const input = document.getElementById('teamPinInput');
@@ -1661,15 +1660,11 @@
                 return;
             }
             
-            // Get team PIN and players from modal data
+            // Get team PIN from modal data
             const teamPin = modal.dataset.teamPin || '';
-            const players = JSON.parse(modal.dataset.players || '[]');
             
-            // Check if PIN matches team PIN OR any player in the team
-            const matchingPlayer = players.find(p => p.pin === pin);
-            const isTeamPinMatch = teamPin && pin === teamPin;
-            
-            if (isTeamPinMatch || matchingPlayer) {
+            // Check if PIN matches team PIN
+            if (pin === teamPin) {
                 closeTeamPinModal();
                 // Select the first player - scores apply to team
                 const teamPlayers = (league.players || []).filter(p => p.teamId === teamId);
@@ -1739,10 +1734,14 @@
                 submitBtn && (submitBtn.disabled = true);
                 await ensureAuth();
                 
-                // Create new team
+                // Generate a unique PIN for the team
+                const teamPin = generatePin();
+                
+                // Create new team with PIN
                 const newTeam = {
                     id: 't' + Date.now() + Math.random().toString(36).substr(2, 5),
-                    name: teamName
+                    name: teamName,
+                    pin: teamPin
                 };
                 
                 const teamResult = await leagueRef.child('teams').transaction((teams) => {
@@ -1761,19 +1760,21 @@
                 league.teams = teamResult.snapshot.val() || [];
                 const teamId = newTeam.id;
                 
-                // Create both players
+                // Create both players with team PIN
                 const player1 = {
                     id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
                     name: player1Name,
                     handicap: player1Handicap,
-                    teamId
+                    teamId,
+                    pin: teamPin
                 };
                 
                 const player2 = {
                     id: 'p' + (Date.now() + 1) + Math.random().toString(36).substr(2, 5),
                     name: player2Name,
                     handicap: player2Handicap,
-                    teamId
+                    teamId,
+                    pin: teamPin
                 };
                 
                 // Add both players in a transaction
@@ -1819,6 +1820,15 @@
                     <div class="success-icon"><i class="fas fa-check-circle"></i></div>
                     <h2>Team Created!</h2>
                     <p style="font-size: 18px; font-weight: 600; color: #37b24a; margin-bottom: 8px;">${team.name}</p>
+                    
+                    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 16px; margin: 16px 0; border: 2px solid #f59e0b;">
+                        <div style="text-align: center; margin-bottom: 8px;">
+                            <i class="fas fa-key" style="color: #d97706; font-size: 20px;"></i>
+                            <span style="color: #92400e; font-weight: 700; font-size: 14px; margin-left: 6px;">YOUR TEAM PIN</span>
+                        </div>
+                        <div style="text-align: center; font-size: 36px; font-weight: 800; letter-spacing: 10px; color: #92400e;">${team.pin}</div>
+                        <p style="text-align: center; font-size: 11px; color: #b45309; margin-top: 8px;"><i class="fas fa-exclamation-triangle"></i> Save this PIN! You'll need it to access your scorecard.</p>
+                    </div>
                     
                     <div style="background: #f8f9fa; border-radius: 12px; padding: 16px; margin: 16px 0;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
