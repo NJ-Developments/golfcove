@@ -1317,9 +1317,8 @@
                 return;
             }
             
-            // Validate player 2 for team purchase
-            const isTeam = sessionData.tier === 'league-team';
-            if (isTeam && !document.getElementById('player2Name').value.trim()) {
+            // Validate player 2 for team purchase (use global isLeagueTeam which checks tier AND amount)
+            if (isLeagueTeam && !document.getElementById('player2Name').value.trim()) {
                 errorDiv.textContent = 'Please enter your teammate\'s name';
                 errorDiv.classList.add('show');
                 return;
@@ -1340,7 +1339,8 @@
                     pin: pin
                 };
                 
-                if (isTeam) {
+                // Include player 2 data for team purchase
+                if (isLeagueTeam) {
                     payload.player2Name = document.getElementById('player2Name').value.trim();
                     payload.player2Email = document.getElementById('player2Email').value.trim();
                     payload.player2Phone = document.getElementById('player2Phone').value.trim();
