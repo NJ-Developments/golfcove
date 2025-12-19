@@ -1782,6 +1782,43 @@
         </div>
     </div>
 
+    <!-- Link Player Modal (for legacy unlinked players) -->
+    <div class="modal" id="linkPlayerModal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-link" style="color: #1976d2;"></i> Link Player to Customer</h3>
+                <button class="close" onclick="closeModal('linkPlayerModal')">&times;</button>
+            </div>
+            <form onsubmit="linkPlayerToCustomer(event)">
+                <input type="hidden" id="linkPlayerId">
+                
+                <div style="background: #fff3e0; border: 1px solid #ffcc02; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                    <div style="font-size: 13px; color: #e65100;">
+                        <i class="fas fa-exclamation-triangle"></i> This player was added before customer linking was required.
+                        Link them to an existing Stripe customer to enable member benefits and sync.
+                    </div>
+                </div>
+                
+                <div style="background: #f5f5f5; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                    <div style="font-weight: 600; font-size: 14px;"><i class="fas fa-user"></i> Player: <span id="linkPlayerName"></span></div>
+                </div>
+                
+                <div class="form-group" style="position: relative;">
+                    <label><i class="fas fa-search"></i> Search Customers</label>
+                    <input type="text" id="linkCustomerSearch" placeholder="Type name or email..." autocomplete="off">
+                    <div id="linkCustomerResults" style="display:none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ddd; border-radius: 0 0 8px 8px; max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
+                    <input type="hidden" id="linkCustomerStripeId">
+                </div>
+                
+                <div id="linkSelectedCustomer" style="display: none; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 12px; margin-bottom: 15px;"></div>
+                
+                <button type="submit" class="btn btn-block" id="linkPlayerBtn" disabled style="opacity: 0.5;">
+                    <i class="fas fa-link"></i> Link Player to Customer
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- View Scores Modal -->
     <div class="modal" id="scoresModal">
         <div class="modal-content">
@@ -2683,7 +2720,17 @@
             
             const total = league.players.length;
             const withPin = league.players.filter(p => p.pin).length;
-            if (stats) stats.textContent = `${withPin}/${total} players have PINs`;
+            const linked = league.players.filter(p => p.stripeCustomerId).length;
+            const members = league.players.filter(p => p.isMember).length;
+            
+            if (stats) {
+                let statsHtml = `<span style="color:#333;">${total} players</span>`;
+                if (members > 0) {
+                    statsHtml += ` • <span style="color:#f39c12;">${members} members</span>`;
+                }
+                statsHtml += ` • <span style="color:#635bff;">${linked} linked</span>`;
+                stats.innerHTML = statsHtml;
+            }
             
             if (total === 0) {
                 list.innerHTML = `
@@ -2711,15 +2758,17 @@
                 }
                 if (isLinked) {
                     statusBadges += `<span style="background:#635bff;color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700;margin-left:4px;" title="Linked to Stripe"><i class="fab fa-stripe-s"></i></span>`;
+                } else {
+                    statusBadges += `<span style="background:#f44336;color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700;margin-left:4px;" title="Not linked to Stripe - added before customer requirement"><i class="fas fa-unlink"></i> Legacy</span>`;
                 }
                 
                 return `
-                    <div class="pin-row" style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; background: ${isMember ? 'linear-gradient(135deg, #f8f9fa, #fff8e1)' : '#f9fafb'}; border-radius: 8px; margin-bottom: 8px; ${isMember ? 'border-left: 3px solid ' + tierColor : ''}">
+                    <div class="pin-row" style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; background: ${isMember ? 'linear-gradient(135deg, #f8f9fa, #fff8e1)' : (isLinked ? '#f9fafb' : '#fff5f5')}; border-radius: 8px; margin-bottom: 8px; ${isMember ? 'border-left: 3px solid ' + tierColor : (!isLinked ? 'border-left: 3px solid #f44336' : '')}">
                         <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-                            <input type="text" value="${p.name}" 
-                                onchange="renamePlayer('${p.id}', this.value)" 
-                                style="flex: 1; min-width: 140px; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600;"
-                                placeholder="Player name">
+                            <input type="text" value="${p.name}" ${!isLinked ? '' : 'readonly'} 
+                                ${!isLinked ? `onchange="renamePlayer('${p.id}', this.value)"` : ''}
+                                style="flex: 1; min-width: 140px; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600; ${isLinked ? 'background: #f5f5f5; cursor: default;' : ''}"
+                                placeholder="Player name" ${isLinked ? 'title="Name synced from Stripe customer"' : ''}>
                             ${statusBadges ? `<div style="display:flex;align-items:center;gap:4px;">${statusBadges}</div>` : ''}
                             <div style="display: flex; align-items: center; gap: 4px;">
                                 <label style="font-size: 11px; color: #888;">HCP</label>
@@ -2737,6 +2786,7 @@
                             <span style="font-size: 12px; color: #888; background: #e5e7eb; padding: 4px 8px; border-radius: 4px;">${team ? team.name : 'No team'}</span>
                         </div>
                         <div style="display: flex; gap: 6px;">
+                            ${!isLinked ? `<button class="btn btn-sm" style="background:#1976d2;color:#fff;" onclick="openLinkPlayerModal('${p.id}')" title="Link to Stripe Customer"><i class="fas fa-link"></i></button>` : ''}
                             ${pinValue ? `<button class="btn btn-sm btn-secondary" onclick="copyPin('${p.id}')" title="Copy PIN"><i class="fas fa-copy"></i></button>` : ''}
                             <button class="btn btn-sm btn-secondary" onclick="regeneratePin('${p.id}')" title="${pinValue ? 'Regenerate PIN' : 'Generate PIN'}"><i class="fas fa-key"></i></button>
                             <button class="btn btn-sm btn-danger" onclick="deletePlayerConfirm('${p.id}')" title="Remove Player"><i class="fas fa-trash"></i></button>
@@ -2794,6 +2844,144 @@
         
         function deletePlayerConfirm(playerId) {
             deletePlayer(playerId);
+        }
+        
+        // ============ LINK LEGACY PLAYER TO STRIPE CUSTOMER ============
+        function openLinkPlayerModal(playerId) {
+            const player = league.players.find(p => p.id === playerId);
+            if (!player) return;
+            
+            document.getElementById('linkPlayerId').value = playerId;
+            document.getElementById('linkPlayerName').textContent = player.name;
+            document.getElementById('linkCustomerSearch').value = '';
+            document.getElementById('linkCustomerStripeId').value = '';
+            document.getElementById('linkCustomerResults').style.display = 'none';
+            document.getElementById('linkSelectedCustomer').style.display = 'none';
+            document.getElementById('linkPlayerBtn').disabled = true;
+            document.getElementById('linkPlayerBtn').style.opacity = '0.5';
+            
+            openModal('linkPlayerModal');
+            setupLinkCustomerSearch();
+        }
+        
+        function setupLinkCustomerSearch() {
+            const searchInput = document.getElementById('linkCustomerSearch');
+            const resultsDiv = document.getElementById('linkCustomerResults');
+            
+            // Remove old listeners
+            const newSearch = searchInput.cloneNode(true);
+            searchInput.parentNode.replaceChild(newSearch, searchInput);
+            
+            newSearch.addEventListener('input', function() {
+                const val = this.value.toLowerCase().trim();
+                if (val.length < 2) {
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Exclude already-linked players
+                const existingStripeIds = new Set(league.players.filter(p => p.stripeCustomerId).map(p => p.stripeCustomerId));
+                
+                const matches = stripeCustomersCache.filter(c => {
+                    if (existingStripeIds.has(c.stripeId) || existingStripeIds.has(c.id)) return false;
+                    const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+                    return fullName.includes(val) || (c.email && c.email.toLowerCase().includes(val));
+                }).slice(0, 8);
+                
+                if (matches.length === 0) {
+                    resultsDiv.innerHTML = '<div style="padding: 12px; color: #888; font-size: 13px; text-align: center;">No matching customers found.</div>';
+                    resultsDiv.style.display = 'block';
+                    return;
+                }
+                
+                resultsDiv.innerHTML = matches.map((c, idx) => {
+                    const isMember = isActiveMember(c);
+                    const initials = ((c.firstName || '')[0] || '') + ((c.lastName || '')[0] || '');
+                    const tierColor = isMember ? getMemberTierColor(c.memberType) : '#4a90a4';
+                    
+                    return `
+                        <div onclick="selectLinkCustomer(${idx})" style="padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: ${tierColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px;">${initials.toUpperCase()}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 14px;">${c.firstName || ''} ${c.lastName || ''}</div>
+                                <div style="font-size: 12px; color: #888;">${c.email || 'No email'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                resultsDiv._matches = matches;
+                resultsDiv.style.display = 'block';
+            });
+            
+            newSearch.addEventListener('blur', function() {
+                setTimeout(() => { resultsDiv.style.display = 'none'; }, 200);
+            });
+        }
+        
+        function selectLinkCustomer(index) {
+            const resultsDiv = document.getElementById('linkCustomerResults');
+            const matches = resultsDiv._matches || [];
+            const customer = matches[index];
+            if (!customer) return;
+            
+            document.getElementById('linkCustomerStripeId').value = customer.stripeId || customer.id;
+            document.getElementById('linkCustomerSearch').value = '';
+            resultsDiv.style.display = 'none';
+            
+            const isMember = isActiveMember(customer);
+            const tierName = isMember ? getMemberTierName(customer.memberType) : null;
+            const tierColor = isMember ? getMemberTierColor(customer.memberType) : '#4a90a4';
+            const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            
+            const selectedDiv = document.getElementById('linkSelectedCustomer');
+            selectedDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-check-circle" style="color: #4caf50; font-size: 18px;"></i>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600;">${fullName}</div>
+                        <div style="font-size: 12px; color: #666;">${customer.email || ''}</div>
+                        ${isMember ? `<span style="background:${tierColor};color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-top:4px;display:inline-block;">${tierName}</span>` : ''}
+                    </div>
+                </div>
+            `;
+            selectedDiv.style.display = 'block';
+            
+            document.getElementById('linkPlayerBtn').disabled = false;
+            document.getElementById('linkPlayerBtn').style.opacity = '1';
+        }
+        
+        function linkPlayerToCustomer(e) {
+            e.preventDefault();
+            const playerId = document.getElementById('linkPlayerId').value;
+            const stripeId = document.getElementById('linkCustomerStripeId').value;
+            
+            if (!playerId || !stripeId) return;
+            
+            const player = league.players.find(p => p.id === playerId);
+            const customer = stripeCustomersCache.find(c => c.stripeId === stripeId || c.id === stripeId);
+            
+            if (!player || !customer) return;
+            
+            // Update player with customer data
+            player.stripeCustomerId = stripeId;
+            player.name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || player.name;
+            player.email = customer.email || player.email;
+            player.isMember = isActiveMember(customer);
+            player.memberType = customer.memberType || null;
+            player.isLeague = true;
+            
+            // Update customer's league status in Stripe
+            if (!customer.isLeague) {
+                updateCustomerLeagueStatus(stripeId, true);
+            }
+            
+            save();
+            closeModal('linkPlayerModal');
+            renderPins();
+            renderTeams();
+            
+            alert(`Successfully linked ${player.name} to their Stripe customer profile!`);
         }
         
         function renderParInputs() {
@@ -3432,6 +3620,116 @@
             const pinInput = document.getElementById('pinManualInput');
             if (!pinInput) return;
             pinInput.value = generatePin();
+        }
+        
+        // Sync member status from Stripe for all league players
+        async function syncMemberStatus() {
+            const statusDiv = document.getElementById('playerSyncStatus');
+            const msgSpan = document.getElementById('playerSyncMessage');
+            
+            statusDiv.style.display = 'block';
+            msgSpan.textContent = 'Syncing member status from Stripe...';
+            
+            try {
+                // Refresh Stripe customer cache
+                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.customers) {
+                        stripeCustomersCache = data.customers.map(c => ({
+                            id: c.stripeId,
+                            stripeId: c.stripeId,
+                            stripeCustomerId: c.stripeId,
+                            firstName: c.firstName || '',
+                            lastName: c.lastName || '',
+                            email: c.email || '',
+                            phone: c.phone || '',
+                            memberType: c.memberType || null,
+                            memberExpiry: c.memberExpiry || null,
+                            isLeague: c.isLeague === 'true' || c.isLeague === true,
+                            created: c.created
+                        }));
+                        // Update localStorage cache
+                        localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
+                        console.log(`[LeagueAdmin] Refreshed ${stripeCustomersCache.length} customers from Stripe`);
+                    }
+                }
+            } catch (e) {
+                console.warn('[LeagueAdmin] Error refreshing customers:', e);
+            }
+            
+            // Now sync each player's member status
+            let updated = 0;
+            let unlinked = 0;
+            
+            league.players.forEach(player => {
+                if (player.stripeCustomerId) {
+                    // Find matching Stripe customer
+                    const customer = stripeCustomersCache.find(c => 
+                        c.stripeId === player.stripeCustomerId || c.id === player.stripeCustomerId
+                    );
+                    
+                    if (customer) {
+                        const newIsMember = isActiveMember(customer);
+                        const newMemberType = customer.memberType || null;
+                        
+                        // Update if changed
+                        if (player.isMember !== newIsMember || player.memberType !== newMemberType) {
+                            player.isMember = newIsMember;
+                            player.memberType = newMemberType;
+                            player.isLeague = customer.isLeague || true;
+                            updated++;
+                        }
+                        
+                        // Also update name/email if they've changed
+                        const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+                        if (fullName && fullName !== player.name) {
+                            player.name = fullName;
+                            updated++;
+                        }
+                        if (customer.email && customer.email !== player.email) {
+                            player.email = customer.email;
+                        }
+                    } else {
+                        // Customer was deleted from Stripe
+                        unlinked++;
+                    }
+                } else {
+                    unlinked++;
+                }
+            });
+            
+            if (updated > 0 || unlinked > 0) {
+                save();
+            }
+            
+            renderPins();
+            renderTeams();
+            
+            // Show summary
+            const linkedCount = league.players.filter(p => p.stripeCustomerId).length;
+            const memberCount = league.players.filter(p => p.isMember).length;
+            
+            if (updated > 0) {
+                msgSpan.textContent = `✓ Synced! ${updated} player(s) updated. ${linkedCount}/${league.players.length} linked to Stripe, ${memberCount} active members.`;
+                statusDiv.style.background = '#e8f5e9';
+                statusDiv.style.borderColor = '#a5d6a7';
+                statusDiv.style.color = '#2e7d32';
+            } else {
+                msgSpan.textContent = `✓ All players up to date. ${linkedCount}/${league.players.length} linked to Stripe, ${memberCount} active members.`;
+                statusDiv.style.background = '#e3f2fd';
+                statusDiv.style.borderColor = '#90caf9';
+                statusDiv.style.color = '#1565c0';
+            }
+            
+            if (unlinked > 0) {
+                msgSpan.textContent += ` (${unlinked} not linked to Stripe)`;
+            }
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
         }
         
         function generatePinsForAll() {
