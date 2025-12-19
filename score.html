@@ -875,7 +875,26 @@
         }
         
         function saveProfile(id) {
-            localStorage.setItem('golfcove_profile', JSON.stringify({ playerId: id }));
+            const player = league.players.find(p => p.id === id);
+            const team = player && player.teamId ? league.teams.find(t => t.id === player.teamId) : null;
+            localStorage.setItem('golfcove_profile', JSON.stringify({ 
+                playerId: id,
+                teamId: player?.teamId || null,
+                teamName: team?.name || null,
+                playerName: player?.name || null,
+                lastVisit: new Date().toISOString()
+            }));
+        }
+        
+        function getSavedTeam() {
+            const profile = getSavedProfile();
+            if (!profile || !profile.teamId) return null;
+            // Verify team still exists
+            const team = (league.teams || []).find(t => t.id === profile.teamId);
+            if (!team) return null;
+            const players = (league.players || []).filter(p => p.teamId === profile.teamId);
+            if (players.length === 0) return null;
+            return { team, players, profile };
         }
         
         function toggleMenu() {
@@ -1037,16 +1056,53 @@
             let html = '';
             
             if (!playerId || document.getElementById('showingSelect')) {
+                // Check if returning player has a saved team
+                const savedTeam = getSavedTeam();
+                let continueAsHtml = '';
+                
+                if (savedTeam) {
+                    const { team, players, profile } = savedTeam;
+                    const playerNames = players.map(p => p.name).join(' & ');
+                    const combinedHcp = players.reduce((sum, p) => sum + (p.handicap || 0), 0);
+                    // Check submission status for current round
+                    const isSubmitted = players.some(p => league.scores?.[roundId]?.[p.id]?.submitted);
+                    const hasScores = players.some(p => {
+                        const scores = league.scores?.[roundId]?.[p.id];
+                        return scores && Object.keys(scores).some(k => !isNaN(parseInt(k)));
+                    });
+                    
+                    continueAsHtml = `
+                        <div class="option-card" onclick="quickLoginTeam('${team.id}')" style="border-color: #37b24a; background: linear-gradient(145deg, #f0fff4 0%, #fff 100%);">
+                            <div class="option-icon" style="background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);"><i class="fas fa-bolt"></i></div>
+                            <div class="option-text">
+                                <div class="option-title" style="color: #37b24a;">Continue as ${team.name}</div>
+                                <div class="option-desc">${playerNames} • HCP ${combinedHcp}</div>
+                                ${isSubmitted ? '<span style="background:#37b24a;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-top:4px;display:inline-block;"><i class="fas fa-check"></i> Submitted</span>' : 
+                                  hasScores ? '<span style="background:#f59e0b;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-top:4px;display:inline-block;">In Progress</span>' : ''}
+                            </div>
+                            <i class="fas fa-chevron-right" style="opacity:1;transform:none;"></i>
+                        </div>
+                        
+                        <div style="display:flex;align-items:center;gap:10px;margin:15px 0;">
+                            <div style="flex:1;height:1px;background:#e8e8e8;"></div>
+                            <span style="color:#888;font-size:12px;">or</span>
+                            <div style="flex:1;height:1px;background:#e8e8e8;"></div>
+                        </div>
+                    `;
+                }
+                
                 html = `
                     <div class="welcome-screen">
                         <h2>Welcome to ${league.name}</h2>
                         <p class="welcome-desc">2-Man Scramble - One Scorecard Per Team</p>
                         
+                        ${continueAsHtml}
+                        
                         <div class="option-card" onclick="showExistingTeams()">
                             <div class="option-icon"><i class="fas fa-users"></i></div>
                             <div class="option-text">
-                                <div class="option-title">Select Your Team</div>
-                                <div class="option-desc">Login to enter scores for your team</div>
+                                <div class="option-title">${savedTeam ? 'Switch Team' : 'Select Your Team'}</div>
+                                <div class="option-desc">${savedTeam ? 'Choose a different team' : 'Login to enter scores for your team'}</div>
                             </div>
                             <i class="fas fa-chevron-right"></i>
                         </div>
@@ -1530,13 +1586,74 @@
                 });
             }
             
+            // Add search if more than 5 teams
+            const searchHtml = teamsWithPlayers.length > 5 ? `
+                <input type="text" id="teamSearchInput" placeholder="Search teams or players..." 
+                    oninput="filterTeams(this.value)"
+                    style="width:100%;padding:12px 15px;border:2px solid #e8e8e8;border-radius:10px;font-size:14px;margin-bottom:15px;">
+            ` : '';
+            
             container.innerHTML = `
                 <div class="browse-players">
                     <h2><i class="fas fa-list"></i> Select Your Team</h2>
-                    <div class="teams-list" style="margin-top:16px;">${teamsHtml}</div>
+                    ${searchHtml}
+                    <div class="teams-list" id="teamsListContainer" style="margin-top:16px;">${teamsHtml}</div>
                     <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
                 </div>
             `;
+            
+            // Store teams data for filtering
+            window.teamsForFilter = teamsWithPlayers;
+        }
+        
+        function filterTeams(searchTerm) {
+            const container = document.getElementById('teamsListContainer');
+            const term = searchTerm.toLowerCase().trim();
+            
+            let filteredTeams = window.teamsForFilter || [];
+            if (term) {
+                filteredTeams = filteredTeams.filter(team => {
+                    const teamName = team.name.toLowerCase();
+                    const playerNames = team.players.map(p => p.name.toLowerCase()).join(' ');
+                    return teamName.includes(term) || playerNames.includes(term);
+                });
+            }
+            
+            if (filteredTeams.length === 0) {
+                container.innerHTML = `<div style="text-align:center;padding:30px;color:#888;"><i class="fas fa-search" style="font-size:24px;margin-bottom:10px;display:block;"></i>No teams match "${searchTerm}"</div>`;
+                return;
+            }
+            
+            let teamsHtml = '';
+            filteredTeams.forEach(team => {
+                const playerNames = team.players.map(p => p.name).join(' & ');
+                const combinedHcp = team.players.reduce((sum, p) => sum + (p.handicap || 0), 0);
+                const hasScores = team.players.some(p => {
+                    const scores = league.scores?.[roundId]?.[p.id];
+                    return scores && Object.keys(scores).some(k => !isNaN(parseInt(k)));
+                });
+                const isSubmitted = team.players.some(p => league.scores?.[roundId]?.[p.id]?.submitted);
+                
+                teamsHtml += `
+                    <div class="team-card" onclick="selectTeam('${team.id}')" style="cursor:pointer; background:#fff; border:2px solid ${isSubmitted ? '#37b24a' : '#e8e8e8'}; border-radius:12px; padding:16px; margin-bottom:12px; transition: all 0.2s;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-weight:700; color:#1a1a2e; font-size:16px;"><i class="fas fa-users" style="color:#37b24a;"></i> ${team.name}</div>
+                                <div style="color:#666; font-size:14px; margin-top:4px;">${playerNames}</div>
+                                <div style="color:#888; font-size:12px; margin-top:2px;">Combined HCP: ${combinedHcp}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                ${isSubmitted ? '<span style="background:#37b24a; color:#fff; padding:4px 8px; border-radius:6px; font-size:11px;"><i class="fas fa-check"></i> Submitted</span>' : 
+                                  hasScores ? '<span style="background:#f59e0b; color:#fff; padding:4px 8px; border-radius:6px; font-size:11px;">In Progress</span>' : 
+                                  '<span style="background:#6b7280; color:#fff; padding:4px 8px; border-radius:6px; font-size:11px;">Not Started</span>'}
+                                <i class="fas fa-chevron-right" style="color:#ccc; margin-left:12px;"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = teamsHtml;
         }
         
         function selectTeam(teamId) {
@@ -1582,6 +1699,9 @@
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
+                    <p style="text-align:center;margin-top:15px;">
+                        <a href="#" onclick="showForgotPin(event)" style="color:#888;font-size:12px;text-decoration:none;"><i class="fas fa-question-circle"></i> Forgot your PIN?</a>
+                    </p>
                 </div>
             `;
             document.body.appendChild(modal);
@@ -1601,6 +1721,25 @@
                     this.style.boxShadow = 'none';
                 });
             }, 100);
+        }
+        
+        function showForgotPin(e) {
+            e.preventDefault();
+            const errorEl = document.getElementById('teamPinError');
+            errorEl.innerHTML = '<i class="fas fa-info-circle"></i> Contact an admin or staff member to retrieve your team PIN.';
+            errorEl.style.display = 'block';
+            errorEl.style.color = '#1976d2';
+            errorEl.style.background = '#e3f2fd';
+            errorEl.style.borderLeftColor = '#1976d2';
+        }
+        
+        function quickLoginTeam(teamId) {
+            const team = (league.teams || []).find(t => t.id === teamId);
+            const players = (league.players || []).filter(p => p.teamId === teamId);
+            if (players.length > 0 && team) {
+                const playerNames = players.map(p => p.name).join(' & ');
+                promptTeamPin(teamId, team, playerNames, players);
+            }
         }
         
         function closeTeamPinModal() {
