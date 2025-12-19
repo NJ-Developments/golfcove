@@ -1338,7 +1338,8 @@
         function calculateStandings(league) {
             const holes = 9; // Front 9 only
             const frontNine = 9;
-            const players = league.players || [];
+            // Only include players that belong to a team (filter out orphaned players)
+            const players = (league.players || []).filter(p => p.teamId);
             const rounds = league.rounds || [];
             
             return players.map(player => {
