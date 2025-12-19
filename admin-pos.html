@@ -1261,13 +1261,28 @@
                         
                         if (activeSub) {
                             isMember = true;
-                            memberExpires = new Date(activeSub.currentPeriodEnd * 1000).toISOString();
-                            // Determine tier from plan name
+                            memberExpires = activeSub.currentPeriodEnd 
+                                ? new Date(activeSub.currentPeriodEnd * 1000).toISOString()
+                                : null;
+                            // Determine tier from plan name or direct tier value
                             const plan = (activeSub.plan || '').toLowerCase();
-                            if (plan.includes('eagle')) memberType = plan.includes('family') ? 'family_eagle' : 'eagle';
-                            else if (plan.includes('birdie')) memberType = plan.includes('family') ? 'family_birdie' : 'birdie';
-                            else if (plan.includes('par')) memberType = plan.includes('family') ? 'family_par' : 'par';
-                            else memberType = 'par'; // Default to Par for unknown plans
+                            if (plan.includes('eagle') || plan === 'eagle') memberType = plan.includes('family') ? 'family_eagle' : 'eagle';
+                            else if (plan.includes('birdie') || plan === 'birdie') memberType = plan.includes('family') ? 'family_birdie' : 'birdie';
+                            else if (plan.includes('par') || plan === 'par') memberType = plan.includes('family') ? 'family_par' : 'par';
+                            else if (plan.includes('league')) memberType = 'league';
+                            else if (plan.includes('corporate')) memberType = 'corporate';
+                            else memberType = plan || 'par'; // Use the plan name or default to Par
+                        }
+                        
+                        // Also check metadata for membership tier (Stripe stores as 'tier' not 'memberType')
+                        if (!isMember && (c.metadata?.tier || c.metadata?.memberType)) {
+                            const tier = (c.metadata?.tier || c.metadata?.memberType || '').toLowerCase();
+                            // Only mark as member for actual membership tiers (not league-player which is just league access)
+                            if (tier && tier !== 'league-player' && tier !== 'league-team') {
+                                isMember = true;
+                                memberType = tier;
+                                memberExpires = c.metadata.memberExpires || null;
+                            }
                         }
                         
                         return {
