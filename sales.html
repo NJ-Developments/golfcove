@@ -911,6 +911,107 @@
             return '$' + (typeof amount === 'number' ? amount.toFixed(2) : parseFloat(amount || 0).toFixed(2));
         }
         
+        // ============ MEMBER DISCOUNT HELPERS ============
+        // Check if customer is an active member
+        function isActiveMember(customer) {
+            if (!customer || !customer.isMember) return false;
+            if (!customer.memberExpires) return false;
+            return new Date(customer.memberExpires) > new Date();
+        }
+        
+        // Get member discount percentage based on tier
+        function getMemberDiscount(memberType) {
+            const discounts = {
+                'eagle': 15, 'family_eagle': 15,
+                'birdie': 10, 'family_birdie': 10,
+                'par': 10, 'family_par': 10,
+                'corporate': 20, 'monthly': 10, 'annual': 10
+            };
+            return discounts[memberType] || 10;
+        }
+        
+        // Get tier display name
+        function getMemberTierName(memberType) {
+            const names = {
+                'eagle': 'Eagle', 'family_eagle': 'Eagle Family',
+                'birdie': 'Birdie', 'family_birdie': 'Birdie Family',
+                'par': 'Par', 'family_par': 'Par Family',
+                'corporate': 'Corporate', 'monthly': 'Monthly', 'annual': 'Annual'
+            };
+            return names[memberType] || 'Member';
+        }
+        
+        // Get tier color for badges
+        function getMemberTierColor(memberType) {
+            const colors = {
+                'eagle': '#9b59b6', 'family_eagle': '#9b59b6',
+                'birdie': '#f39c12', 'family_birdie': '#f39c12',
+                'par': '#27ae60', 'family_par': '#27ae60',
+                'corporate': '#2c3e50'
+            };
+            return colors[memberType] || '#27ae60';
+        }
+        
+        // Apply member discount to all items
+        function applyMemberDiscountToSale() {
+            if (!selectedCustomer || !isActiveMember(selectedCustomer)) return;
+            
+            const discountPercent = getMemberDiscount(selectedCustomer.memberType);
+            saleItems.forEach(item => {
+                if (item.discount < discountPercent) {
+                    item.discount = discountPercent;
+                }
+            });
+            memberDiscountApplied = true;
+            renderSaleItems();
+        }
+        
+        // Load customers from Stripe (synced via admin-pos) or localStorage
+        async function loadCustomers() {
+            // First try to load from localStorage (cached from admin-pos sync)
+            try {
+                const cached = localStorage.getItem('gc_customers');
+                if (cached) {
+                    stripeCustomersCache = JSON.parse(cached);
+                    console.log(`[Sales] Loaded ${stripeCustomersCache.length} customers from cache`);
+                    return stripeCustomersCache;
+                }
+            } catch (e) {
+                console.warn('[Sales] Error loading customer cache:', e);
+            }
+            
+            // If no cache, try to fetch from API
+            try {
+                const FUNCTIONS_URL = window.GolfCoveConfig?.stripe?.functionsUrl || 'https://us-central1-golfcove.cloudfunctions.net';
+                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.customers) {
+                        stripeCustomersCache = data.customers.map(c => ({
+                            id: c.stripeId,
+                            stripeId: c.stripeId,
+                            stripeCustomerId: c.stripeId,
+                            firstName: c.firstName || '',
+                            lastName: c.lastName || '',
+                            email: c.email || '',
+                            phone: c.phone || '',
+                            isMember: c.isMember || false,
+                            memberType: c.memberType || null,
+                            memberExpires: c.memberExpires || null,
+                            isLeague: c.isLeague || false,
+                            ...c
+                        }));
+                        localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
+                        console.log(`[Sales] Synced ${stripeCustomersCache.length} customers from Stripe`);
+                    }
+                }
+            } catch (e) {
+                console.warn('[Sales] Could not sync customers from API:', e);
+            }
+            
+            return stripeCustomersCache;
+        }
+
         // ============ STAFF MANAGEMENT ============
         // Staff is now loaded from centralized gc_employees (synced with Firebase)
         const defaultStaff = [
@@ -997,6 +1098,11 @@
         let currentUser = JSON.parse(sessionStorage.getItem('gc_currentUser') || 'null');
         let enteredPin = '';
         let selectedStaffId = null;
+        
+        // ============ CUSTOMER & MEMBER STATE ============
+        let stripeCustomersCache = []; // In-memory cache of Stripe customers (synced from admin-pos)
+        let selectedCustomer = null;   // Currently selected customer object
+        let memberDiscountApplied = false; // Track if member discount is active
         
         // Check if logged in
         function checkLogin() {
@@ -1299,6 +1405,9 @@
                 TabsSync.init();
             }
             
+            // Load customers from Stripe/cache
+            await loadCustomers();
+            
             // Update tax labels dynamically from config
             document.querySelectorAll('[data-tax-label]').forEach(el => {
                 el.textContent = getTaxLabel();
@@ -1560,6 +1669,30 @@
             const tax = calculateTax(subtotal);
             const total = subtotal + tax;
             
+            // Calculate member discount amount if applied
+            const discountRow = document.getElementById('discountRow');
+            if (memberDiscountApplied && selectedCustomer && isActiveMember(selectedCustomer)) {
+                const originalSubtotal = saleItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
+                const discountAmt = originalSubtotal - subtotal;
+                const discountPercent = getMemberDiscount(selectedCustomer.memberType);
+                
+                if (discountRow) {
+                    discountRow.style.display = 'flex';
+                    document.getElementById('discountAmt').textContent = `-$${discountAmt.toFixed(2)} (${discountPercent}% ${getMemberTierName(selectedCustomer.memberType)})`;
+                }
+            } else if (discountRow) {
+                // Check if any manual discounts are applied
+                const hasManualDiscount = saleItems.some(i => i.discount > 0);
+                if (hasManualDiscount) {
+                    const originalSubtotal = saleItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
+                    const discountAmt = originalSubtotal - subtotal;
+                    discountRow.style.display = discountAmt > 0 ? 'flex' : 'none';
+                    document.getElementById('discountAmt').textContent = `-$${discountAmt.toFixed(2)}`;
+                } else {
+                    discountRow.style.display = 'none';
+                }
+            }
+            
             document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
             document.getElementById('taxAmt').textContent = '$' + tax.toFixed(2);
             document.getElementById('totalDue').textContent = '$' + total.toFixed(2);
@@ -1779,21 +1912,27 @@
             }
         }
         
-        // Find customer record by name
+        // Find customer record by name (uses Stripe cache first)
         function findCustomerRecord(customerName) {
             if (!customerName || customerName === 'Walk-in') return null;
             
-            const customers = typeof GolfCoveCustomers !== 'undefined' 
-                ? GolfCoveCustomers.getAll() 
-                : JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            // If we have a selected customer already, use that
+            if (selectedCustomer) return selectedCustomer;
+            
+            // Otherwise search in Stripe cache or localStorage
+            const customers = stripeCustomersCache.length > 0 
+                ? stripeCustomersCache 
+                : (typeof GolfCoveCustomers !== 'undefined' 
+                    ? GolfCoveCustomers.getAll() 
+                    : JSON.parse(localStorage.getItem('gc_customers') || '[]'));
             
             const nameParts = customerName.trim().split(' ');
             const firstName = nameParts[0];
             const lastName = nameParts.slice(1).join(' ');
             
             return customers.find(c => 
-                c.firstName?.toLowerCase() === firstName?.toLowerCase() &&
-                c.lastName?.toLowerCase() === lastName?.toLowerCase()
+                (c.firstName || '').toLowerCase() === firstName?.toLowerCase() &&
+                (c.lastName || '').toLowerCase() === lastName?.toLowerCase()
             );
         }
         
@@ -2181,6 +2320,8 @@
         function clearSale() {
             if (saleItems.length === 0) return;
             saleItems = [];
+            selectedCustomer = null;
+            memberDiscountApplied = false;
             document.getElementById('customerName').value = '';
             renderSaleItems();
             showToast('Sale cleared');
@@ -2832,33 +2973,56 @@
             const val = this.value.toLowerCase().trim();
             if (val.length < 2) {
                 customerAutocomplete.classList.remove('show');
+                selectedCustomer = null; // Clear selection when typing
                 return;
             }
             
-            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            // Use Stripe customers cache (synced from admin-pos or API)
+            const allCustomers = stripeCustomersCache.length > 0 
+                ? stripeCustomersCache 
+                : JSON.parse(localStorage.getItem('gc_customers') || '[]');
+                
             const matches = allCustomers.filter(c => {
-                const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
+                const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
                 return fullName.includes(val) || (c.email && c.email.toLowerCase().includes(val)) || (c.phone && c.phone.includes(val));
-            }).slice(0, 8);
+            }).slice(0, 10);
             
             if (matches.length === 0) {
                 customerAutocomplete.classList.remove('show');
                 return;
             }
             
-            customerAutocomplete.innerHTML = matches.map(c => {
-                const isMember = c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date();
-                const initials = (c.firstName[0] || '') + (c.lastName[0] || '');
+            customerAutocomplete.innerHTML = matches.map((c, idx) => {
+                const isMember = isActiveMember(c);
+                const initials = ((c.firstName || '')[0] || '') + ((c.lastName || '')[0] || '');
+                const discount = isMember ? getMemberDiscount(c.memberType) : 0;
+                const tierName = isMember ? getMemberTierName(c.memberType) : '';
+                const tierColor = isMember ? getMemberTierColor(c.memberType) : '';
+                
+                let memberBadge = '';
+                let avatarClass = 'avatar';
+                if (isMember) {
+                    avatarClass += ' member';
+                    memberBadge = `<span class="member-tag" style="background:${tierColor};">${tierName.toUpperCase()}</span>`;
+                }
+                
+                const subtitle = isMember 
+                    ? `${tierName} Member - ${discount}% discount` 
+                    : (c.email || c.phone || 'Customer');
+                
                 return `
-                    <div class="autocomplete-item" onclick="selectCustomerAutocomplete('${c.firstName} ${c.lastName}', ${isMember})">
-                        <div class="avatar ${isMember ? 'member' : ''}">${initials.toUpperCase()}</div>
+                    <div class="autocomplete-item" data-customer-index="${idx}" onclick="selectCustomerFromList(${idx})">
+                        <div class="${avatarClass}" ${isMember ? `style="background:${tierColor};"` : ''}>${initials.toUpperCase()}</div>
                         <div class="info">
-                            <div class="name">${c.firstName} ${c.lastName}${isMember ? '<span class="member-tag">MEMBER</span>' : ''}</div>
-                            <div class="meta">${c.email || c.phone || 'No contact'}</div>
+                            <div class="name">${c.firstName || ''} ${c.lastName || ''}${memberBadge}</div>
+                            <div class="meta">${subtitle}</div>
                         </div>
                     </div>
                 `;
             }).join('');
+            
+            // Store matches for selection
+            customerAutocomplete._matches = matches;
             customerAutocomplete.classList.add('show');
         });
         
@@ -2866,67 +3030,145 @@
             setTimeout(() => customerAutocomplete.classList.remove('show'), 200);
         });
         
+        // Select customer from autocomplete list (stores full customer object)
+        function selectCustomerFromList(index) {
+            const matches = customerAutocomplete._matches || [];
+            const customer = matches[index];
+            
+            if (!customer) return;
+            
+            selectedCustomer = customer;
+            customerInput.value = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            customerAutocomplete.classList.remove('show');
+            
+            const isMember = isActiveMember(customer);
+            if (isMember) {
+                const discount = getMemberDiscount(customer.memberType);
+                const tierName = getMemberTierName(customer.memberType);
+                showToast(`${tierName} Member: ${discount}% discount applied!`, 'success');
+                
+                // Auto-apply member discount to all items
+                saleItems.forEach(item => {
+                    if (item.discount < discount) item.discount = discount;
+                });
+                memberDiscountApplied = true;
+                renderSaleItems();
+            } else {
+                memberDiscountApplied = false;
+            }
+        }
+        
+        // Legacy function for backwards compatibility
         function selectCustomerAutocomplete(name, isMember) {
             customerInput.value = name;
             customerAutocomplete.classList.remove('show');
-            if (isMember) {
-                showToast(`Member: ${name} - 10% discount applied!`, 'success');
-                // Auto-apply member discount
+            
+            // Try to find and set full customer object
+            const allCustomers = stripeCustomersCache.length > 0 
+                ? stripeCustomersCache 
+                : JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const nameParts = name.trim().split(' ');
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(' ');
+            
+            selectedCustomer = allCustomers.find(c => 
+                (c.firstName || '').toLowerCase() === firstName.toLowerCase() &&
+                (c.lastName || '').toLowerCase() === lastName.toLowerCase()
+            ) || null;
+            
+            if (isMember && selectedCustomer) {
+                const discount = getMemberDiscount(selectedCustomer.memberType);
+                showToast(`Member: ${name} - ${discount}% discount applied!`, 'success');
                 saleItems.forEach(item => {
-                    if (item.discount < 10) item.discount = 10;
+                    if (item.discount < discount) item.discount = discount;
                 });
+                memberDiscountApplied = true;
                 renderSaleItems();
             }
         }
         
-        // ============ START TAB ============
-        function startTab() {
-            if (saleItems.length === 0) {
-                // Just create empty tab
-                const customer = document.getElementById('customerName').value || 'Walk-in';
-                const tabName = prompt('Tab name:', customer);
-                if (!tabName) return;
-                
-                const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
-                tabs.push({
-                    id: Date.now(),
-                    customer: tabName,
-                    employee: getCurrentUserName(),
-                    amount: 0,
-                    subtotal: 0,
-                    items: [],
-                    table: 'Tab',
-                    createdAt: new Date().toISOString()
-                });
-                localStorage.setItem('gc_tabs', JSON.stringify(tabs));
-                showToast(`Tab started for ${tabName}`);
-                return;
-            }
-            
-            const customer = document.getElementById('customerName').value || 'Walk-in';
-            const tabName = prompt('Tab name:', customer);
+        // ============ START TAB (MEMBER-AWARE) ============
+        async function startTab() {
+            const customerName = document.getElementById('customerName').value.trim() || 'Walk-in';
+            const tabName = prompt('Tab name:', customerName);
             if (!tabName) return;
             
-            const subtotal = saleItems.reduce((sum, item) => sum + (item.price * item.qty * (1 - item.discount / 100)), 0);
-            const total = subtotal * (1 + getTaxRate());
+            // Get customer object for member info
+            const customer = selectedCustomer || findCustomerByName(customerName);
+            const isMember = customer ? isActiveMember(customer) : false;
+            const memberType = customer?.memberType || null;
+            const memberDiscount = isMember ? getMemberDiscount(memberType) / 100 : 0; // As decimal
             
-            const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
-            tabs.push({
-                id: Date.now(),
-                customer: tabName,
-                employee: getCurrentUserName(),
-                amount: total,
-                subtotal: subtotal,
-                items: [...saleItems],
-                table: 'Tab',
-                createdAt: new Date().toISOString()
-            });
-            localStorage.setItem('gc_tabs', JSON.stringify(tabs));
+            // Format items for tab
+            const tabItems = saleItems.map(item => ({
+                name: item.name,
+                price: (parseFloat(item.price) || 0) * (1 - (item.discount || 0) / 100),
+                qty: parseInt(item.qty) || 1,
+                category: item.category || 'misc'
+            }));
             
-            saleItems = [];
-            document.getElementById('customerName').value = '';
-            renderSaleItems();
-            showToast(`Tab started for ${tabName} - $${total.toFixed(2)}`);
+            const employeeName = getCurrentUserName();
+            const itemsTotal = tabItems.reduce((sum, i) => sum + (i.price * i.qty), 0);
+            
+            try {
+                if (typeof TabsSync !== 'undefined' && TabsSync.createTab) {
+                    // Use TabsSync for synced tabs - pass customer object for member info
+                    await TabsSync.createTab(tabName, customer?.stripeId || customer?.stripeCustomerId, tabItems, employeeName);
+                    showToast(`Tab started for ${tabName}${isMember ? ` (${getMemberTierName(memberType)} - ${Math.round(memberDiscount * 100)}% discount)` : ''}`);
+                } else {
+                    // Fallback: create tab in localStorage with member info
+                    const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
+                    tabs.push({
+                        id: Date.now().toString(),
+                        customer: tabName,
+                        customerId: customer?.id || null,
+                        stripeCustomerId: customer?.stripeId || customer?.stripeCustomerId || null,
+                        employee: employeeName,
+                        openedBy: employeeName,
+                        amount: itemsTotal,
+                        total: itemsTotal,
+                        subtotal: itemsTotal,
+                        items: tabItems,
+                        table: 'Tab',
+                        isMember: isMember,
+                        memberType: memberType,
+                        memberDiscount: memberDiscount,
+                        createdAt: new Date().toISOString(),
+                        openedAt: new Date().toISOString()
+                    });
+                    localStorage.setItem('gc_tabs', JSON.stringify(tabs));
+                    showToast(`Tab started for ${tabName}${isMember ? ` (${getMemberTierName(memberType)} Member)` : ''}`);
+                }
+                
+                // Clear sale
+                saleItems = [];
+                selectedCustomer = null;
+                memberDiscountApplied = false;
+                document.getElementById('customerName').value = '';
+                renderSaleItems();
+                renderOpenTabs();
+            } catch (error) {
+                console.error('Error creating tab:', error);
+                showToast('Failed to create tab', 'error');
+            }
+        }
+        
+        // Helper to find customer by name
+        function findCustomerByName(name) {
+            if (!name || name === 'Walk-in') return null;
+            
+            const allCustomers = stripeCustomersCache.length > 0 
+                ? stripeCustomersCache 
+                : JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            
+            const nameParts = name.trim().split(' ');
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(' ');
+            
+            return allCustomers.find(c => 
+                (c.firstName || '').toLowerCase() === firstName.toLowerCase() &&
+                (c.lastName || '').toLowerCase() === lastName.toLowerCase()
+            ) || null;
         }
         
         // ============ TOAST ============

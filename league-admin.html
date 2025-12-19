@@ -1192,7 +1192,7 @@
                 <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Common tasks for league management</p>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
-                    <button class="btn" onclick="showSection('teams'); openModal('addTeamModal')" style="justify-content: center;">
+                    <button class="btn" onclick="showSection('teams'); openAddTeamModal()" style="justify-content: center;">
                         <i class="fas fa-users"></i> Add Team
                     </button>
                     <button class="btn" onclick="showSection('rounds')" style="justify-content: center;">
@@ -1225,14 +1225,19 @@
             </div>
             
             <!-- All Players Management -->
-            <div class="card" style="background: linear-gradient(to bottom, #1a1a1a 0%, #2d2d2d 60px, #fff 60px); border: 1px solid #333;">
+            <div class="card" style="background: linear-gradient(to bottom, #1a1a1a 0%, #2d2d2d 80px, #fff 80px); border: 1px solid #333;">
                 <h3 style="color: #fff; margin-bottom: 8px;"><i class="fas fa-user-edit"></i> All Players</h3>
-                <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin-bottom: 15px;">Manage all players - rename, edit PINs, change handicaps, or remove players.</p>
+                <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin-bottom: 15px;">Manage all league players - edit PINs, handicaps, or remove players. Players must be linked to Stripe customers.</p>
                 
-                <div class="pin-actions" style="margin-bottom: 15px; background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                <div class="pin-actions" style="margin-bottom: 15px; background: #f8f9fa; padding: 12px; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                    <button class="btn btn-secondary btn-sm" onclick="syncMemberStatus()" title="Refresh member status from Stripe"><i class="fas fa-sync-alt"></i> Sync Members</button>
                     <button class="btn btn-secondary btn-sm" onclick="generatePinsForAll()"><i class="fas fa-magic"></i> Generate Missing PINs</button>
                     <button class="btn btn-secondary btn-sm" onclick="printPinSheet()"><i class="fas fa-print"></i> Print PIN Sheet</button>
-                    <div class="pin-stats" id="pinStats" style="font-weight: 600;"></div>
+                    <div class="pin-stats" id="pinStats" style="font-weight: 600; margin-left: auto;"></div>
+                </div>
+                
+                <div id="playerSyncStatus" style="display: none; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 10px 15px; margin-bottom: 15px; font-size: 13px; color: #1565c0;">
+                    <i class="fas fa-info-circle"></i> <span id="playerSyncMessage"></span>
                 </div>
                 
                 <div id="pinList" class="pin-list"></div>
@@ -1647,22 +1652,59 @@
 
     <!-- Add Player Modal -->
     <div class="modal" id="addPlayerModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 450px;">
             <div class="modal-header">
                 <h3>Add Player to <span id="modalTeamName"></span></h3>
                 <button class="close" onclick="closeModal('addPlayerModal')">&times;</button>
             </div>
             <form onsubmit="addPlayerToTeam(event)">
                 <input type="hidden" id="addPlayerTeamId">
-                <div class="form-group">
-                    <label>Player Name</label>
-                    <input type="text" id="addPlayerName" required placeholder="John Smith">
+                <input type="hidden" id="addPlayerStripeId" required>
+                
+                <!-- Info Banner -->
+                <div style="background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                    <div style="font-size: 13px; color: #1565c0;">
+                        <i class="fas fa-info-circle"></i> League players must be registered customers. Search below to find them.
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Handicap</label>
-                    <input type="number" id="addPlayerHcp" value="0" min="0" max="54">
+                
+                <!-- Customer Search (Required) -->
+                <div class="form-group" style="position: relative;">
+                    <label><i class="fas fa-search"></i> Search Customers <span style="color: #e53935;">*</span></label>
+                    <input type="text" id="playerCustomerSearch" placeholder="Type name or email to find customer..." autocomplete="off" style="margin-bottom: 0;" required>
+                    <div id="playerCustomerResults" style="display:none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; max-height: 250px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
                 </div>
-                <button type="submit" class="btn btn-block"><i class="fas fa-plus"></i> Add Player</button>
+                
+                <!-- Selected Customer Display -->
+                <div id="selectedPlayerInfo" style="display: none; background: linear-gradient(135deg, #f5f5f5, #fff); border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div id="selectedPlayerAvatar" style="width: 45px; height: 45px; border-radius: 50%; background: #4a90a4; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px;"></div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; font-size: 15px;" id="selectedPlayerName"></div>
+                            <div style="font-size: 12px; color: #666;" id="selectedPlayerEmail"></div>
+                            <div id="selectedPlayerBadges" style="margin-top: 4px;"></div>
+                        </div>
+                        <button type="button" onclick="clearSelectedPlayer()" style="background: none; border: none; color: #999; cursor: pointer; font-size: 18px;" title="Clear selection">&times;</button>
+                    </div>
+                </div>
+                
+                <!-- Handicap (only shows after customer selected) -->
+                <div id="handicapSection" style="display: none;">
+                    <div class="form-group">
+                        <label>Handicap</label>
+                        <input type="number" id="addPlayerHcp" value="0" min="0" max="54">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-block" id="addPlayerBtn" disabled style="opacity: 0.5;">
+                    <i class="fas fa-plus"></i> Add Player to Team
+                </button>
+                
+                <div style="text-align: center; margin-top: 12px;">
+                    <a href="customers.html" target="_blank" style="font-size: 12px; color: #1976d2;">
+                        <i class="fas fa-external-link-alt"></i> Need to add a new customer first?
+                    </a>
+                </div>
             </form>
         </div>
     </div>
@@ -1680,27 +1722,50 @@
                     <input type="text" id="newTeamName" required placeholder="The Eagles">
                 </div>
                 
+                <!-- Player 1 (Required) -->
                 <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
-                    <div style="font-weight: 600; color: #37b24a; margin-bottom: 12px; font-size: 14px;"><i class="fas fa-user"></i> Player 1</div>
-                    <div class="form-group" style="margin-bottom: 10px;">
-                        <label>Name</label>
-                        <input type="text" id="newTeamPlayer1Name" required placeholder="John Smith">
+                    <div style="font-weight: 600; color: #37b24a; margin-bottom: 12px; font-size: 14px;">
+                        <i class="fas fa-user"></i> Player 1 (Required)
                     </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Handicap</label>
-                        <input type="number" id="newTeamPlayer1Hcp" value="0" min="0" max="54">
+                    <div class="form-group" style="position: relative; margin-bottom: 10px;">
+                        <label>Search Customer</label>
+                        <input type="text" id="teamPlayer1Search" placeholder="Search by name or email..." autocomplete="off">
+                        <input type="hidden" id="teamPlayer1StripeId">
+                        <div id="teamPlayer1Results" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-radius:8px; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+                    </div>
+                    <div id="teamPlayer1Info" style="display: none; background: #fff; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-bottom: 10px;"></div>
+                    <div id="teamPlayer1HcpSection" style="display: none;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Handicap</label>
+                            <input type="number" id="newTeamPlayer1Hcp" value="0" min="0" max="54">
+                        </div>
                     </div>
                 </div>
                 
+                <!-- Player 2 (Required) -->
                 <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
-                    <div style="font-weight: 600; color: #0ea5e9; margin-bottom: 12px; font-size: 14px;"><i class="fas fa-user"></i> Player 2</div>
-                    <div class="form-group" style="margin-bottom: 10px;">
-                        <label>Name</label>
-                        <input type="text" id="newTeamPlayer2Name" required placeholder="Jane Doe">
+                    <div style="font-weight: 600; color: #0ea5e9; margin-bottom: 12px; font-size: 14px;">
+                        <i class="fas fa-user"></i> Player 2 (Required)
                     </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Handicap</label>
-                        <input type="number" id="newTeamPlayer2Hcp" value="0" min="0" max="54">
+                    <div class="form-group" style="position: relative; margin-bottom: 10px;">
+                        <label>Search Customer</label>
+                        <input type="text" id="teamPlayer2Search" placeholder="Search by name or email..." autocomplete="off">
+                        <input type="hidden" id="teamPlayer2StripeId">
+                        <div id="teamPlayer2Results" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-radius:8px; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+                    </div>
+                    <div id="teamPlayer2Info" style="display: none; background: #fff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; margin-bottom: 10px;"></div>
+                    <div id="teamPlayer2HcpSection" style="display: none;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Handicap</label>
+                            <input type="number" id="newTeamPlayer2Hcp" value="0" min="0" max="54">
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: #fff3e0; border: 1px solid #ffcc02; border-radius: 10px; padding: 12px; margin-bottom: 16px;">
+                    <div style="font-size: 12px; color: #e65100; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Players must be existing customers. <a href="customers.html" target="_blank" style="color: #e65100; font-weight: 600;">Add new customer</a> if needed.</span>
                     </div>
                 </div>
                 
@@ -1712,7 +1777,7 @@
                     </div>
                 </div>
                 
-                <button type="submit" class="btn btn-block"><i class="fas fa-plus"></i> Create Team</button>
+                <button type="submit" id="createTeamBtn" class="btn btn-block" disabled style="opacity: 0.5;"><i class="fas fa-plus"></i> Create Team</button>
             </form>
         </div>
     </div>
@@ -1749,6 +1814,97 @@
         let league = null;
         let currentUser = null;
         let leagueListener = null;
+        
+        // ============ STRIPE CUSTOMER INTEGRATION ============
+        const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
+        let stripeCustomersCache = []; // In-memory cache of Stripe customers
+        
+        // Load customers from Stripe/cache
+        async function loadStripeCustomers() {
+            // First try to load from localStorage (cached from admin-pos sync)
+            try {
+                const cached = localStorage.getItem('gc_customers');
+                if (cached) {
+                    stripeCustomersCache = JSON.parse(cached);
+                    console.log(`[LeagueAdmin] Loaded ${stripeCustomersCache.length} customers from cache`);
+                    return stripeCustomersCache;
+                }
+            } catch (e) {
+                console.warn('[LeagueAdmin] Error loading customer cache:', e);
+            }
+            
+            // If no cache, try to fetch from API
+            try {
+                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.customers) {
+                        stripeCustomersCache = data.customers.map(c => ({
+                            id: c.stripeId,
+                            stripeId: c.stripeId,
+                            stripeCustomerId: c.stripeId,
+                            firstName: c.firstName || '',
+                            lastName: c.lastName || '',
+                            email: c.email || '',
+                            phone: c.phone || '',
+                            isMember: c.isMember || false,
+                            isLeague: c.isLeague || false,
+                            memberType: c.memberType || null,
+                            memberExpires: c.memberExpires || null,
+                            ...c
+                        }));
+                        localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
+                        console.log(`[LeagueAdmin] Synced ${stripeCustomersCache.length} customers from Stripe`);
+                    }
+                }
+            } catch (e) {
+                console.warn('[LeagueAdmin] Could not sync customers from API:', e);
+            }
+            
+            return stripeCustomersCache;
+        }
+        
+        // Check if customer is an active member
+        function isActiveMember(customer) {
+            if (!customer || !customer.isMember) return false;
+            if (!customer.memberExpires) return false;
+            return new Date(customer.memberExpires) > new Date();
+        }
+        
+        // Get member tier display name
+        function getMemberTierName(memberType) {
+            const names = {
+                'eagle': 'Eagle', 'family_eagle': 'Eagle Family',
+                'birdie': 'Birdie', 'family_birdie': 'Birdie Family',
+                'par': 'Par', 'family_par': 'Par Family',
+                'corporate': 'Corporate', 'monthly': 'Monthly', 'annual': 'Annual'
+            };
+            return names[memberType] || 'Member';
+        }
+        
+        // Get member tier color
+        function getMemberTierColor(memberType) {
+            const colors = {
+                'eagle': '#9b59b6', 'family_eagle': '#9b59b6',
+                'birdie': '#f39c12', 'family_birdie': '#f39c12',
+                'par': '#27ae60', 'family_par': '#27ae60',
+                'corporate': '#2c3e50'
+            };
+            return colors[memberType] || '#27ae60';
+        }
+        
+        // Find customer by name
+        function findCustomerByName(name) {
+            if (!name) return null;
+            const nameParts = name.trim().split(' ');
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(' ');
+            
+            return stripeCustomersCache.find(c => 
+                (c.firstName || '').toLowerCase() === firstName.toLowerCase() &&
+                (c.lastName || '').toLowerCase() === lastName.toLowerCase()
+            ) || null;
+        }
         
         // Rate limiting
         const rateLimits = {
@@ -1892,9 +2048,12 @@
             }
         }
         
-        function initAdmin() {
+        async function initAdmin() {
             // Avoid stacking listeners on re-login
             detachLeagueListener();
+            
+            // Load Stripe customers for member lookups
+            await loadStripeCustomers();
             
             leagueListener = (snapshot) => {
                 league = snapshot.val();
@@ -2432,15 +2591,31 @@
                                 onblur="this.style.borderColor='transparent'; this.style.background='transparent';">
                         </div>
                         ${players.length === 0 ? '<p style="color: #999; font-size: 13px;">No players yet</p>' : 
-                            players.map(p => `
-                                <div class="player">
-                                    <span class="player-name">${p.name}</span>
-                                    <div class="player-meta">
-                                        <span class="hcp">HCP ${p.handicap}</span>
-                                        <button class="delete-btn" onclick="deletePlayer('${p.id}')"><i class="fas fa-times"></i></button>
+                            players.map(p => {
+                                // Check member/league status
+                                const isMember = p.isMember || false;
+                                const isLinked = p.stripeCustomerId ? true : false;
+                                const memberType = p.memberType;
+                                const tierColor = isMember ? getMemberTierColor(memberType) : '#3498db';
+                                
+                                let badges = '';
+                                if (isMember) {
+                                    badges += `<span style="background:${tierColor};color:#fff;font-size:9px;padding:2px 5px;border-radius:8px;font-weight:700;margin-left:4px;">${getMemberTierName(memberType).toUpperCase()}</span>`;
+                                }
+                                if (isLinked && !isMember) {
+                                    badges += `<span style="background:#3498db;color:#fff;font-size:9px;padding:2px 5px;border-radius:8px;font-weight:700;margin-left:4px;"><i class="fab fa-stripe-s"></i></span>`;
+                                }
+                                
+                                return `
+                                    <div class="player">
+                                        <span class="player-name">${p.name}${badges}</span>
+                                        <div class="player-meta">
+                                            <span class="hcp">HCP ${p.handicap || 0}</span>
+                                            <button class="delete-btn" onclick="deletePlayer('${p.id}')"><i class="fas fa-times"></i></button>
+                                        </div>
                                     </div>
-                                </div>
-                            `).join('')
+                                `;
+                            }).join('')
                         }
                         ${canAddPlayer ? `
                         <button class="add-player-btn" onclick="openAddPlayerModal('${team.id}', '${team.name.replace(/'/g, "\\'")}')">
@@ -2454,7 +2629,7 @@
             }).join('');
             
             html += `
-                <div class="add-team-card" onclick="openModal('addTeamModal')">
+                <div class="add-team-card" onclick="openAddTeamModal()">
                     <i class="fas fa-plus"></i>
                     <span style="color: #888;">Add Team</span>
                 </div>
@@ -2525,13 +2700,27 @@
                 const team = league.teams.find(t => t.id === p.teamId);
                 const pinValue = p.pin || '';
                 
+                // Member/League status badges
+                const isMember = p.isMember || false;
+                const isLinked = p.stripeCustomerId ? true : false;
+                const tierColor = isMember ? getMemberTierColor(p.memberType) : '#3498db';
+                
+                let statusBadges = '';
+                if (isMember) {
+                    statusBadges += `<span style="background:${tierColor};color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700;"><i class="fas fa-star"></i> ${getMemberTierName(p.memberType)}</span>`;
+                }
+                if (isLinked) {
+                    statusBadges += `<span style="background:#635bff;color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700;margin-left:4px;" title="Linked to Stripe"><i class="fab fa-stripe-s"></i></span>`;
+                }
+                
                 return `
-                    <div class="pin-row" style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px; margin-bottom: 8px;">
+                    <div class="pin-row" style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; background: ${isMember ? 'linear-gradient(135deg, #f8f9fa, #fff8e1)' : '#f9fafb'}; border-radius: 8px; margin-bottom: 8px; ${isMember ? 'border-left: 3px solid ' + tierColor : ''}">
                         <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
                             <input type="text" value="${p.name}" 
                                 onchange="renamePlayer('${p.id}', this.value)" 
                                 style="flex: 1; min-width: 140px; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600;"
                                 placeholder="Player name">
+                            ${statusBadges ? `<div style="display:flex;align-items:center;gap:4px;">${statusBadges}</div>` : ''}
                             <div style="display: flex; align-items: center; gap: 4px;">
                                 <label style="font-size: 11px; color: #888;">HCP</label>
                                 <input type="number" value="${p.handicap || 0}" min="0" max="54"
@@ -2655,17 +2844,202 @@
         }
         
         // Teams
+        // Setup team player search (for Add Team modal)
+        function setupTeamPlayerSearch(playerNum) {
+            const searchInput = document.getElementById(`teamPlayer${playerNum}Search`);
+            const resultsDiv = document.getElementById(`teamPlayer${playerNum}Results`);
+            const infoDiv = document.getElementById(`teamPlayer${playerNum}Info`);
+            const hcpSection = document.getElementById(`teamPlayer${playerNum}HcpSection`);
+            const stripeIdInput = document.getElementById(`teamPlayer${playerNum}StripeId`);
+            
+            // Remove old listeners
+            const newSearch = searchInput.cloneNode(true);
+            searchInput.parentNode.replaceChild(newSearch, searchInput);
+            
+            newSearch.addEventListener('input', function() {
+                const val = this.value.toLowerCase().trim();
+                if (val.length < 2) {
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Get the other player's Stripe ID to exclude from results
+                const otherPlayerNum = playerNum === 1 ? 2 : 1;
+                const otherStripeId = document.getElementById(`teamPlayer${otherPlayerNum}StripeId`)?.value || '';
+                
+                // Also exclude existing league players
+                const existingStripeIds = new Set(league.players.filter(p => p.stripeCustomerId).map(p => p.stripeCustomerId));
+                
+                const matches = stripeCustomersCache.filter(c => {
+                    const stripeId = c.stripeId || c.id;
+                    // Exclude other player selection and existing league players
+                    if (stripeId === otherStripeId || existingStripeIds.has(stripeId)) return false;
+                    
+                    const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+                    return fullName.includes(val) || (c.email && c.email.toLowerCase().includes(val));
+                }).slice(0, 10);
+                
+                if (matches.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div style="padding: 15px; text-align: center;">
+                            <div style="color: #888; font-size: 13px; margin-bottom: 8px;">No matching customers found.</div>
+                            <a href="customers.html" target="_blank" style="font-size: 12px; color: #1976d2;">
+                                <i class="fas fa-plus"></i> Add new customer
+                            </a>
+                        </div>
+                    `;
+                    resultsDiv.style.display = 'block';
+                    return;
+                }
+                
+                resultsDiv.innerHTML = matches.map((c, idx) => {
+                    const isMember = isActiveMember(c);
+                    const initials = ((c.firstName || '')[0] || '') + ((c.lastName || '')[0] || '');
+                    const tierColor = isMember ? getMemberTierColor(c.memberType) : '#4a90a4';
+                    const tierName = isMember ? getMemberTierName(c.memberType) : '';
+                    
+                    let badges = '';
+                    if (isMember) {
+                        badges += `<span style="background:${tierColor};color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:6px;">${tierName.toUpperCase()}</span>`;
+                    }
+                    if (c.isLeague) {
+                        badges += `<span style="background:#3498db;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:6px;">LEAGUE</span>`;
+                    }
+                    
+                    return `
+                        <div onclick="selectTeamPlayer(${playerNum}, ${idx})" style="padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; transition: background 0.15s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: ${tierColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px;">${initials.toUpperCase()}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 14px;">${c.firstName || ''} ${c.lastName || ''}${badges}</div>
+                                <div style="font-size: 12px; color: #888;">${c.email || c.phone || 'No contact'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Store matches for selection
+                resultsDiv._matches = matches;
+                resultsDiv.style.display = 'block';
+            });
+            
+            newSearch.addEventListener('blur', function() {
+                setTimeout(() => { resultsDiv.style.display = 'none'; }, 200);
+            });
+        }
+        
+        // Select team player from search results
+        function selectTeamPlayer(playerNum, index) {
+            const resultsDiv = document.getElementById(`teamPlayer${playerNum}Results`);
+            const matches = resultsDiv._matches || [];
+            const customer = matches[index];
+            
+            if (!customer) return;
+            
+            // Store the Stripe ID
+            document.getElementById(`teamPlayer${playerNum}StripeId`).value = customer.stripeId || customer.id || '';
+            document.getElementById(`teamPlayer${playerNum}Search`).value = '';
+            resultsDiv.style.display = 'none';
+            
+            // Show player info
+            const infoDiv = document.getElementById(`teamPlayer${playerNum}Info`);
+            const isMember = isActiveMember(customer);
+            const tierName = isMember ? getMemberTierName(customer.memberType) : null;
+            const tierColor = isMember ? getMemberTierColor(customer.memberType) : '#4a90a4';
+            const initials = ((customer.firstName || '')[0] || '') + ((customer.lastName || '')[0] || '');
+            const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            
+            let badges = '';
+            if (isMember) {
+                badges = `<span style="background:${tierColor};color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;margin-left:8px;">${tierName.toUpperCase()}</span>`;
+            }
+            
+            infoDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: ${tierColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">${initials.toUpperCase()}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 14px;">${fullName}${badges}</div>
+                        <div style="font-size: 12px; color: #888;">${customer.email || 'Customer'}</div>
+                    </div>
+                    <button type="button" onclick="clearTeamPlayer(${playerNum})" style="background: none; border: none; color: #999; cursor: pointer; font-size: 16px; padding: 5px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            infoDiv.style.display = 'block';
+            
+            // Show handicap section
+            document.getElementById(`teamPlayer${playerNum}HcpSection`).style.display = 'block';
+            
+            // Check if both players are selected
+            checkTeamFormComplete();
+        }
+        
+        // Clear team player selection
+        function clearTeamPlayer(playerNum) {
+            document.getElementById(`teamPlayer${playerNum}StripeId`).value = '';
+            document.getElementById(`teamPlayer${playerNum}Info`).style.display = 'none';
+            document.getElementById(`teamPlayer${playerNum}HcpSection`).style.display = 'none';
+            document.getElementById(`teamPlayer${playerNum}Search`).value = '';
+            document.getElementById(`teamPlayer${playerNum}Search`).focus();
+            checkTeamFormComplete();
+        }
+        
+        // Check if Add Team form is complete
+        function checkTeamFormComplete() {
+            const player1Id = document.getElementById('teamPlayer1StripeId')?.value || '';
+            const player2Id = document.getElementById('teamPlayer2StripeId')?.value || '';
+            const createBtn = document.getElementById('createTeamBtn');
+            
+            if (player1Id && player2Id) {
+                createBtn.disabled = false;
+                createBtn.style.opacity = '1';
+            } else {
+                createBtn.disabled = true;
+                createBtn.style.opacity = '0.5';
+            }
+        }
+        
+        // Open Add Team modal
+        function openAddTeamModal() {
+            // Reset form
+            document.getElementById('newTeamName').value = '';
+            document.getElementById('teamPlayer1Search').value = '';
+            document.getElementById('teamPlayer1StripeId').value = '';
+            document.getElementById('teamPlayer1Info').style.display = 'none';
+            document.getElementById('teamPlayer1HcpSection').style.display = 'none';
+            document.getElementById('newTeamPlayer1Hcp').value = '0';
+            document.getElementById('teamPlayer2Search').value = '';
+            document.getElementById('teamPlayer2StripeId').value = '';
+            document.getElementById('teamPlayer2Info').style.display = 'none';
+            document.getElementById('teamPlayer2HcpSection').style.display = 'none';
+            document.getElementById('newTeamPlayer2Hcp').value = '0';
+            document.getElementById('newTeamPin').value = '';
+            document.getElementById('createTeamBtn').disabled = true;
+            document.getElementById('createTeamBtn').style.opacity = '0.5';
+            
+            openModal('addTeamModal');
+            
+            // Setup player searches
+            setupTeamPlayerSearch(1);
+            setupTeamPlayerSearch(2);
+        }
+        
         function addTeam(e) {
             e.preventDefault();
             const name = document.getElementById('newTeamName').value.trim();
-            const player1Name = document.getElementById('newTeamPlayer1Name').value.trim();
+            const player1StripeId = document.getElementById('teamPlayer1StripeId').value.trim();
             const player1Hcp = parseInt(document.getElementById('newTeamPlayer1Hcp').value) || 0;
-            const player2Name = document.getElementById('newTeamPlayer2Name').value.trim();
+            const player2StripeId = document.getElementById('teamPlayer2StripeId').value.trim();
             const player2Hcp = parseInt(document.getElementById('newTeamPlayer2Hcp').value) || 0;
             const pin = document.getElementById('newTeamPin').value.trim();
             
-            if (!name || !player1Name || !player2Name) {
-                alert('Please fill in all required fields');
+            if (!name) {
+                alert('Please enter a team name');
+                return;
+            }
+            
+            if (!player1StripeId || !player2StripeId) {
+                alert('Please select both players from existing customers');
                 return;
             }
             
@@ -2674,39 +3048,60 @@
                 return;
             }
             
-            if (player1Name.toLowerCase() === player2Name.toLowerCase()) {
-                alert('Player names must be different');
+            if (player1StripeId === player2StripeId) {
+                alert('Please select different customers for each player');
                 return;
             }
+            
+            // Get customer data from cache
+            const player1 = stripeCustomersCache.find(c => c.stripeId === player1StripeId || c.id === player1StripeId);
+            const player2 = stripeCustomersCache.find(c => c.stripeId === player2StripeId || c.id === player2StripeId);
+            
+            if (!player1 || !player2) {
+                alert('Customer not found. Please search and select again.');
+                return;
+            }
+            
+            const player1Name = `${player1.firstName || ''} ${player1.lastName || ''}`.trim();
+            const player2Name = `${player2.firstName || ''} ${player2.lastName || ''}`.trim();
             
             // Create team with PIN
             const teamId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
             league.teams.push({ id: teamId, name, pin });
             
-            // Create both players with the same PIN
+            // Create player 1 linked to Stripe customer
+            const player1IsMember = isActiveMember(player1);
             league.players.push({
                 id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
                 name: player1Name,
                 teamId,
                 handicap: player1Hcp,
-                pin: pin
+                pin: pin,
+                email: player1.email || null,
+                stripeCustomerId: player1StripeId,
+                isMember: player1IsMember,
+                isLeague: true,
+                memberType: player1.memberType || null
             });
             
+            // Create player 2 linked to Stripe customer
+            const player2IsMember = isActiveMember(player2);
             league.players.push({
                 id: 'p' + (Date.now() + 1) + Math.random().toString(36).substr(2, 5),
                 name: player2Name,
                 teamId,
                 handicap: player2Hcp,
-                pin: pin
+                pin: pin,
+                email: player2.email || null,
+                stripeCustomerId: player2StripeId,
+                isMember: player2IsMember,
+                isLeague: true,
+                memberType: player2.memberType || null
             });
             
-            // Clear form
-            document.getElementById('newTeamName').value = '';
-            document.getElementById('newTeamPlayer1Name').value = '';
-            document.getElementById('newTeamPlayer1Hcp').value = '0';
-            document.getElementById('newTeamPlayer2Name').value = '';
-            document.getElementById('newTeamPlayer2Hcp').value = '0';
-            document.getElementById('newTeamPin').value = '';
+            // Update customers' isLeague flag in Stripe
+            if (!player1.isLeague) updateCustomerLeagueStatus(player1StripeId, true);
+            if (!player2.isLeague) updateCustomerLeagueStatus(player2StripeId, true);
             
             save();
             closeModal('addTeamModal');
@@ -2758,19 +3153,180 @@
         // Players
         function openAddPlayerModal(teamId, teamName) {
             document.getElementById('addPlayerTeamId').value = teamId;
+            document.getElementById('addPlayerStripeId').value = '';
             document.getElementById('modalTeamName').textContent = teamName;
-            document.getElementById('addPlayerName').value = '';
             document.getElementById('addPlayerHcp').value = '0';
+            document.getElementById('playerCustomerSearch').value = '';
+            document.getElementById('playerCustomerResults').style.display = 'none';
+            document.getElementById('selectedPlayerInfo').style.display = 'none';
+            document.getElementById('handicapSection').style.display = 'none';
+            document.getElementById('addPlayerBtn').disabled = true;
+            document.getElementById('addPlayerBtn').style.opacity = '0.5';
             openModal('addPlayerModal');
+            
+            // Setup customer search
+            setupPlayerCustomerSearch();
+        }
+        
+        // Clear selected player
+        function clearSelectedPlayer() {
+            document.getElementById('addPlayerStripeId').value = '';
+            document.getElementById('selectedPlayerInfo').style.display = 'none';
+            document.getElementById('handicapSection').style.display = 'none';
+            document.getElementById('addPlayerBtn').disabled = true;
+            document.getElementById('addPlayerBtn').style.opacity = '0.5';
+            document.getElementById('playerCustomerSearch').value = '';
+            document.getElementById('playerCustomerSearch').focus();
+        }
+        
+        // Customer search for add player modal
+        function setupPlayerCustomerSearch() {
+            const searchInput = document.getElementById('playerCustomerSearch');
+            const resultsDiv = document.getElementById('playerCustomerResults');
+            
+            // Remove old listeners
+            const newSearch = searchInput.cloneNode(true);
+            searchInput.parentNode.replaceChild(newSearch, searchInput);
+            
+            newSearch.addEventListener('input', function() {
+                const val = this.value.toLowerCase().trim();
+                if (val.length < 2) {
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Filter out customers already in the league
+                const existingStripeIds = new Set(league.players.filter(p => p.stripeCustomerId).map(p => p.stripeCustomerId));
+                
+                const matches = stripeCustomersCache.filter(c => {
+                    // Exclude already-added players
+                    if (existingStripeIds.has(c.stripeId) || existingStripeIds.has(c.id)) return false;
+                    
+                    const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+                    return fullName.includes(val) || (c.email && c.email.toLowerCase().includes(val));
+                }).slice(0, 10);
+                
+                if (matches.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div style="padding: 15px; text-align: center;">
+                            <div style="color: #888; font-size: 13px; margin-bottom: 8px;">No matching customers found.</div>
+                            <a href="customers.html" target="_blank" style="font-size: 12px; color: #1976d2;">
+                                <i class="fas fa-plus"></i> Add new customer
+                            </a>
+                        </div>
+                    `;
+                    resultsDiv.style.display = 'block';
+                    return;
+                }
+                
+                resultsDiv.innerHTML = matches.map((c, idx) => {
+                    const isMember = isActiveMember(c);
+                    const isLeague = c.isLeague || false;
+                    const initials = ((c.firstName || '')[0] || '') + ((c.lastName || '')[0] || '');
+                    const tierName = isMember ? getMemberTierName(c.memberType) : '';
+                    const tierColor = isMember ? getMemberTierColor(c.memberType) : '#4a90a4';
+                    
+                    let badges = '';
+                    if (isMember) {
+                        badges += `<span style="background:${tierColor};color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:6px;">${tierName.toUpperCase()}</span>`;
+                    }
+                    if (isLeague) {
+                        badges += `<span style="background:#3498db;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:6px;">LEAGUE</span>`;
+                    }
+                    
+                    return `
+                        <div onclick="selectPlayerCustomer(${idx})" style="padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; transition: background 0.15s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: ${isMember ? tierColor : '#4a90a4'}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px;">${initials.toUpperCase()}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 14px;">${c.firstName || ''} ${c.lastName || ''}${badges}</div>
+                                <div style="font-size: 12px; color: #888;">${c.email || c.phone || 'No contact'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Store matches for selection
+                resultsDiv._matches = matches;
+                resultsDiv.style.display = 'block';
+            });
+            
+            newSearch.addEventListener('blur', function() {
+                setTimeout(() => { resultsDiv.style.display = 'none'; }, 200);
+            });
+        }
+        
+        // Select a customer from search results
+        function selectPlayerCustomer(index) {
+            const resultsDiv = document.getElementById('playerCustomerResults');
+            const matches = resultsDiv._matches || [];
+            const customer = matches[index];
+            
+            if (!customer) return;
+            
+            // Store the Stripe ID
+            document.getElementById('addPlayerStripeId').value = customer.stripeId || customer.id || '';
+            document.getElementById('playerCustomerSearch').value = '';
+            resultsDiv.style.display = 'none';
+            
+            // Show selected player info
+            const selectedDiv = document.getElementById('selectedPlayerInfo');
+            const isMember = isActiveMember(customer);
+            const tierName = isMember ? getMemberTierName(customer.memberType) : null;
+            const tierColor = isMember ? getMemberTierColor(customer.memberType) : '#4a90a4';
+            const initials = ((customer.firstName || '')[0] || '') + ((customer.lastName || '')[0] || '');
+            const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            
+            let badges = '';
+            if (isMember) {
+                badges = `<span style="background:${tierColor};color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;margin-left:8px;">${tierName.toUpperCase()}</span>`;
+            }
+            if (customer.isLeague) {
+                badges += `<span style="background:#3498db;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;margin-left:4px;">LEAGUE</span>`;
+            }
+            
+            selectedDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: ${tierColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;">${initials.toUpperCase()}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 15px; color: #333;">${fullName}${badges}</div>
+                        <div style="font-size: 12px; color: #888; margin-top: 2px;">${customer.email || customer.phone || 'Customer'}</div>
+                    </div>
+                    <button type="button" onclick="clearSelectedPlayer()" style="background: none; border: none; color: #999; cursor: pointer; font-size: 18px; padding: 5px;" title="Change selection">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            selectedDiv.style.display = 'block';
+            
+            // Show handicap section
+            document.getElementById('handicapSection').style.display = 'block';
+            
+            // Enable the submit button
+            document.getElementById('addPlayerBtn').disabled = false;
+            document.getElementById('addPlayerBtn').style.opacity = '1';
         }
         
         function addPlayerToTeam(e) {
             e.preventDefault();
             const teamId = document.getElementById('addPlayerTeamId').value;
-            const name = document.getElementById('addPlayerName').value.trim();
+            const stripeId = document.getElementById('addPlayerStripeId').value.trim();
             const handicap = parseInt(document.getElementById('addPlayerHcp').value) || 0;
             
-            if (!name) return;
+            // Require Stripe customer selection
+            if (!stripeId) {
+                alert('Please select a customer to add as a player.');
+                return;
+            }
+            
+            // Get customer data from cache
+            const customer = stripeCustomersCache.find(c => c.stripeId === stripeId || c.id === stripeId);
+            if (!customer) {
+                alert('Customer not found. Please search and select again.');
+                return;
+            }
+            
+            const name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            const email = customer.email || '';
             
             // Check if team already has 2 players
             const existingPlayers = league.players.filter(p => p.teamId === teamId);
@@ -2783,14 +3339,52 @@
             const team = league.teams.find(t => t.id === teamId);
             const teamPin = team?.pin || (existingPlayers.length > 0 ? existingPlayers[0].pin : null);
             
+            // Get member info from customer
+            const isMember = isActiveMember(customer);
+            
             league.players.push({
                 id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
-                name, teamId, handicap,
+                name, 
+                teamId, 
+                handicap,
+                email: email || null,
+                stripeCustomerId: stripeId,
+                isMember: isMember,
+                isLeague: true, // Mark as league player
+                memberType: customer.memberType || null,
                 pin: teamPin  // Use team PIN
             });
+            
+            // Update customer's isLeague flag in Stripe
+            if (!customer.isLeague) {
+                updateCustomerLeagueStatus(stripeId, true);
+            }
+            
             save();
             closeModal('addPlayerModal');
             renderAll();
+        }
+        
+        // Update customer's league status in Stripe
+        async function updateCustomerLeagueStatus(stripeCustomerId, isLeague) {
+            try {
+                const response = await fetch(`${FUNCTIONS_URL}/updateCustomerMetadata`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customerId: stripeCustomerId,
+                        metadata: { isLeague: isLeague ? 'true' : 'false' }
+                    })
+                });
+                if (response.ok) {
+                    console.log('[LeagueAdmin] Updated customer league status:', stripeCustomerId);
+                    // Update local cache
+                    const cached = stripeCustomersCache.find(c => c.stripeId === stripeCustomerId);
+                    if (cached) cached.isLeague = isLeague;
+                }
+            } catch (e) {
+                console.warn('[LeagueAdmin] Could not update customer metadata:', e);
+            }
         }
         
         function deletePlayer(id) {
