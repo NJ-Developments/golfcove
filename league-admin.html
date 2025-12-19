@@ -3862,7 +3862,7 @@
             }
         }
         
-        // ============ STAFF MANAGEMENT ============
+        // ============ STAFF MANAGEMENT (Firebase Synced) ============
         const defaultStaffList = [
             { id: 1, name: 'EJ Sattelberger', pin: '9999', role: 'manager', color: '#3498db', active: true },
             { id: 2, name: 'Manager', pin: '9999', role: 'manager', color: '#e67e22', active: true },
@@ -3870,7 +3870,35 @@
             { id: 4, name: 'Staff', pin: '9999', role: 'server', color: '#27ae60', active: true }
         ];
         
-        function loadStaffList() {
+        // Sync employees to Firebase (unified PIN storage)
+        async function syncEmployeesToFirebase(employees) {
+            try {
+                const employeesRef = firebase.database().ref('employees/golfcove');
+                await employeesRef.set(employees);
+                console.log('Staff PINs synced to Firebase');
+            } catch (error) {
+                console.error('Failed to sync employees:', error);
+            }
+        }
+        
+        // Pull employees from Firebase on load
+        async function loadEmployeesFromFirebase() {
+            try {
+                const snapshot = await firebase.database().ref('employees/golfcove').once('value');
+                const employees = snapshot.val();
+                if (employees && Array.isArray(employees) && employees.length > 0) {
+                    localStorage.setItem('gc_employees', JSON.stringify(employees));
+                    console.log('Loaded employees from Firebase');
+                }
+            } catch (error) {
+                console.warn('Could not load employees from Firebase:', error);
+            }
+        }
+        
+        async function loadStaffList() {
+            // First try to pull from Firebase
+            await loadEmployeesFromFirebase();
+            
             let staff = JSON.parse(localStorage.getItem('gc_employees') || 'null') || defaultStaffList;
             // Ensure staff has required properties for display
             staff = staff.map((s, i) => ({
@@ -3935,6 +3963,7 @@
             });
             
             localStorage.setItem('gc_employees', JSON.stringify(staff));
+            syncEmployeesToFirebase(staff);
             loadStaffList();
         }
         
@@ -3950,6 +3979,7 @@
             if (newRole) member.role = newRole.toLowerCase();
             
             localStorage.setItem('gc_employees', JSON.stringify(staff));
+            syncEmployeesToFirebase(staff);
             loadStaffList();
         }
         
@@ -3966,6 +3996,7 @@
             
             member.pin = newPin;
             localStorage.setItem('gc_employees', JSON.stringify(staff));
+            syncEmployeesToFirebase(staff);
             loadStaffList();
             alert('PIN updated successfully');
         }
@@ -3977,6 +4008,7 @@
             
             member.active = member.active === false ? true : false;
             localStorage.setItem('gc_employees', JSON.stringify(staff));
+            syncEmployeesToFirebase(staff);
             loadStaffList();
         }
         

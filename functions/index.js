@@ -1828,6 +1828,7 @@ exports.syncCustomers = functions.https.onRequest((req, res) => {
 /**
  * Get customers from Stripe (the source of truth)
  * Returns all Stripe customers with their subscription/payment info
+ * Also cross-references Firestore memberships for complete data
  */
 exports.getStripeCustomers = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
@@ -1835,7 +1836,8 @@ exports.getStripeCustomers = functions.https.onRequest((req, res) => {
       const { limit = 100, starting_after, email } = req.query;
       
       const params = {
-        limit: Math.min(parseInt(limit) || 100, 100)
+        limit: Math.min(parseInt(limit) || 100, 100),
+        expand: ['data.subscriptions'] // Include subscription data
       };
       
       if (starting_after) {
@@ -1848,22 +1850,70 @@ exports.getStripeCustomers = functions.https.onRequest((req, res) => {
       
       const customers = await stripe.customers.list(params);
       
+      // Also get active memberships from Firestore (for non-subscription purchases)
+      const db = admin.firestore();
+      const membershipsSnapshot = await db.collection('memberships')
+        .where('status', '==', 'active')
+        .get();
+      
+      // Build a map of email -> membership for quick lookup
+      const membershipsByEmail = {};
+      const membershipsByCustomerId = {};
+      membershipsSnapshot.forEach(doc => {
+        const m = doc.data();
+        if (m.customerEmail) {
+          membershipsByEmail[m.customerEmail.toLowerCase()] = m;
+        }
+        if (m.stripeCustomerId) {
+          membershipsByCustomerId[m.stripeCustomerId] = m;
+        }
+      });
+      
       // Format customers for the frontend
-      const formattedCustomers = customers.data.map(c => ({
-        id: c.id,
-        email: c.email,
-        name: c.name,
-        phone: c.phone,
-        created: c.created,
-        metadata: c.metadata,
-        // Include subscription status if available
-        subscriptions: c.subscriptions?.data?.map(s => ({
+      const formattedCustomers = customers.data.map(c => {
+        // Check Stripe subscriptions first
+        const stripeSubs = c.subscriptions?.data?.filter(s => s.status === 'active') || [];
+        
+        // Also check Firestore memberships
+        const firestoreMembership = membershipsByCustomerId[c.id] || 
+                                     membershipsByEmail[c.email?.toLowerCase()];
+        
+        // Build subscription list from both sources
+        const subscriptions = stripeSubs.map(s => ({
           id: s.id,
           status: s.status,
-          plan: s.plan?.nickname || s.items?.data?.[0]?.price?.nickname,
+          plan: s.plan?.nickname || s.items?.data?.[0]?.price?.nickname || s.items?.data?.[0]?.price?.product,
           currentPeriodEnd: s.current_period_end
-        })) || []
-      }));
+        }));
+        
+        // If no Stripe subscription but has Firestore membership, add it
+        if (subscriptions.length === 0 && firestoreMembership) {
+          const expiresAt = firestoreMembership.expiresAt?.toDate?.() || 
+                           firestoreMembership.expiresAt || 
+                           firestoreMembership.currentPeriodEnd?.toDate?.();
+          const isActive = !expiresAt || new Date(expiresAt) > new Date();
+          
+          if (isActive) {
+            subscriptions.push({
+              id: firestoreMembership.stripeSubscriptionId || `firestore_${doc?.id}`,
+              status: 'active',
+              plan: firestoreMembership.tier || firestoreMembership.memberType || 'member',
+              currentPeriodEnd: expiresAt ? Math.floor(new Date(expiresAt).getTime() / 1000) : null,
+              source: 'firestore'
+            });
+          }
+        }
+        
+        return {
+          id: c.id,
+          email: c.email,
+          name: c.name,
+          phone: c.phone,
+          created: c.created,
+          metadata: c.metadata,
+          subscriptions
+        };
+      });
       
       res.json({ 
         customers: formattedCustomers, 
