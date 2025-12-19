@@ -1223,6 +1223,7 @@
         let cart = [];
         let currentDiscount = 0;
         let currentCartCustomer = null;  // Track customer for member discount
+        let currentCartCustomerIsMember = false; // Track if current cart customer is a member
         let memberDiscountApplied = false; // Track if auto-discount was applied
         let selectedBookingId = null;
         let selectedTabId = null;
@@ -1465,6 +1466,11 @@
                 // Timeclock disabled - TODO: Re-enable when moved to Firebase
                 console.log('Timeclock disabled - lock:', currentEmployee.name);
             }
+        }
+        
+        // Get current logged-in employee name
+        function getCurrentUserName() {
+            return currentEmployee ? currentEmployee.name : 'Staff';
         }
         
         // Handle keyboard input for PIN
@@ -2167,7 +2173,7 @@
             const trans = transactions[index];
             if (!trans) return;
             
-            if (!confirm(`Refund $${trans.amount.toFixed(2)} to ${trans.customer}?\\n\\nThis action cannot be undone.`)) return;
+            if (!confirm(`Refund $${trans.amount.toFixed(2)} to ${trans.customer}?\n\nThis action cannot be undone.`)) return;
             
             // Record refund
             const refund = {
@@ -2435,7 +2441,7 @@
         
         function applyDiscount() {
             if (cart.length === 0) return showToast('Add items first', 'error');
-            const discountType = prompt('Enter discount:\\n- Percentage (e.g., "10%")\\n- Dollar amount (e.g., "5")\\n- Or cancel');
+            const discountType = prompt('Enter discount:\n- Percentage (e.g., "10%")\n- Dollar amount (e.g., "5")\n- Or cancel');
             if (!discountType) return;
             
             const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -4635,38 +4641,6 @@
         bookingCustomerInput.addEventListener('blur', function() {
             setTimeout(() => { bookingAutocomplete.style.display = 'none'; }, 250);
         });
-        
-        // Select customer by ID (new unified function)
-        function selectBookingCustomerById(customerId) {
-            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const customer = allCustomers.find(c => c.id === customerId);
-            
-            if (!customer) return;
-            
-            const name = `${customer.firstName} ${customer.lastName}`;
-            bookingCustomerInput.value = name;
-            document.getElementById('bookingCustomerId').value = customerId;
-            bookingAutocomplete.style.display = 'none';
-            
-            // Auto-fill contact info
-            if (customer.phone) document.getElementById('bookingPhone').value = customer.phone;
-            if (customer.email) document.getElementById('bookingEmail').value = customer.email;
-            
-            const now = new Date();
-            const isMember = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > now;
-            
-            if (isMember) {
-                selectedBookingCustomerTier = customer.memberType;
-                updateBookingMemberBadge(customer);
-                const isVIP = customer.memberType && (customer.memberType.includes('eagle') || customer.memberType.includes('birdie'));
-                showToast(`${isVIP ? '⭐ VIP ' : ''}${name} selected`, 'success');
-            } else {
-                selectedBookingCustomerTier = null;
-                document.getElementById('bookingMemberBadge').style.display = 'none';
-            }
-            
-            updateBookingPrice();
-        }
         
         // Create quick customer from booking modal
         function createQuickCustomerFromBooking(searchVal) {
