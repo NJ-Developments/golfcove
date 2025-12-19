@@ -1256,7 +1256,7 @@
                     ${seasonBadge}
                     ${roundInfoHTML}
                     <div class="hero-actions" style="display:flex; flex-direction:column; gap:10px; align-items:center; max-width:320px; margin: 0 auto;">
-                        <button onclick="openCreateTeamModal()" class="join-league-btn create-team-btn" style="width:100%; text-align:center; border:none;"><i class="fas fa-plus-circle"></i> Create a Team</button>
+                        <button onclick="openJoinLeagueModal()" class="join-league-btn create-team-btn" style="width:100%; text-align:center; border:none;"><i class="fas fa-trophy"></i> Join League</button>
                         <a href="score.html" class="join-league-btn" style="width:100%; text-align:center;"><i class="fas fa-users"></i> Enter Team Score</a>
                         <a href="schedule.html" class="view-schedule-btn" style="width:100%; text-align:center;"><i class="fas fa-calendar-alt"></i> View Schedule</a>
                     </div>
@@ -1854,114 +1854,236 @@
         setInterval(init, 30000);
 
         // =====================
-        // Create Team Modal
+        // Join League Modal System
         // =====================
-        let selectedMembershipTier = null;
+        let selectedCreateTier = 'team'; // 'team' ($800) or 'player' ($400)
+
+        function openJoinLeagueModal() {
+            document.getElementById('joinLeagueModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeJoinLeagueModal() {
+            document.getElementById('joinLeagueModal').classList.remove('open');
+            document.body.style.overflow = '';
+        }
 
         function openCreateTeamModal() {
+            closeJoinLeagueModal();
             document.getElementById('createTeamModal').classList.add('open');
             document.body.style.overflow = 'hidden';
+            // Reset selection to team
+            selectCreateTier('team');
         }
 
         function closeCreateTeamModal() {
             document.getElementById('createTeamModal').classList.remove('open');
             document.body.style.overflow = '';
-            selectedMembershipTier = null;
-            document.querySelectorAll('.membership-option').forEach(opt => opt.classList.remove('selected'));
-            document.getElementById('purchaseBtn').disabled = true;
         }
 
-        function selectMembershipOption(tier, element) {
-            selectedMembershipTier = tier;
-            document.querySelectorAll('.membership-option').forEach(opt => opt.classList.remove('selected'));
-            element.classList.add('selected');
-            document.getElementById('purchaseBtn').disabled = false;
+        function openJoinTeamModal() {
+            closeJoinLeagueModal();
+            document.getElementById('joinTeamModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
         }
 
-        async function proceedToPurchase() {
-            if (!selectedMembershipTier) {
-                alert('Please select a membership option');
-                return;
+        function closeJoinTeamModal() {
+            document.getElementById('joinTeamModal').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function selectCreateTier(tier) {
+            selectedCreateTier = tier;
+            const teamOption = document.getElementById('tierOptionTeam');
+            const playerOption = document.getElementById('tierOptionPlayer');
+            const btn = document.getElementById('createTeamBtn');
+            
+            if (tier === 'team') {
+                teamOption.classList.add('selected');
+                teamOption.style.borderColor = '#059669';
+                playerOption.classList.remove('selected');
+                playerOption.style.borderColor = '#e5e5e5';
+                btn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase & Create Team - $800';
+            } else {
+                playerOption.classList.add('selected');
+                playerOption.style.borderColor = '#3b82f6';
+                teamOption.classList.remove('selected');
+                teamOption.style.borderColor = '#e5e5e5';
+                btn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase & Create Team - $400';
             }
+        }
 
-            const btn = document.getElementById('purchaseBtn');
+        function proceedToCreateTeam() {
+            const btn = document.getElementById('createTeamBtn');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
+            
+            if (selectedCreateTier === 'team') {
+                // League Team ($800) - register both players
+                window.location.href = 'membership-signup.html?tier=league-team&type=league&source=createTeam';
+            } else {
+                // League Player ($400) - create team solo, teammate joins later
+                window.location.href = 'membership-signup.html?tier=league-player&type=league&source=createTeamSolo';
+            }
+        }
 
-            // Redirect to membership signup with the tier pre-selected and source flag
-            const tierParam = selectedMembershipTier === 'team' ? 'league-team' : 'league-player';
-            window.location.href = `membership-signup.html?tier=${tierParam}&type=league&source=createTeam`;
+        function proceedToJoinTeam() {
+            const btn = document.getElementById('joinTeamBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
+            // League Player ($400) - join existing team
+            window.location.href = 'membership-signup.html?tier=league-player&type=league&source=joinTeam';
         }
 
         // Close modal on overlay click
         document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('modal-overlay')) {
+            if (e.target.id === 'joinLeagueModal') {
+                closeJoinLeagueModal();
+            }
+            if (e.target.id === 'createTeamModal') {
                 closeCreateTeamModal();
+            }
+            if (e.target.id === 'joinTeamModal') {
+                closeJoinTeamModal();
             }
         });
 
         // Close modal on escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
+                closeJoinLeagueModal();
                 closeCreateTeamModal();
+                closeJoinTeamModal();
             }
         });
     </script>
+
+    <!-- Join League Choice Modal -->
+    <div class="modal-overlay" id="joinLeagueModal">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857);">
+                <h2><i class="fas fa-trophy"></i> Join the League</h2>
+                <p>Choose how you'd like to participate</p>
+                <button class="modal-close" onclick="closeJoinLeagueModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="membership-option" onclick="openCreateTeamModal()" style="cursor:pointer; margin-bottom: 15px;">
+                    <div class="option-header">
+                        <div class="option-title">
+                            <i class="fas fa-plus-circle" style="color: #059669;"></i>
+                            Create a Team
+                        </div>
+                        <div class="option-price">from $400</div>
+                    </div>
+                    <div class="option-desc">
+                        Start a new team. Choose to register both players at once ($800) or just yourself ($400) and have your teammate join later.
+                    </div>
+                </div>
+
+                <div class="membership-option" onclick="openJoinTeamModal()" style="cursor:pointer; border-color: #3b82f6;">
+                    <div class="option-header">
+                        <div class="option-title">
+                            <i class="fas fa-sign-in-alt" style="color: #3b82f6;"></i>
+                            Join Existing Team
+                        </div>
+                        <div class="option-price">$400</div>
+                    </div>
+                    <div class="option-desc">
+                        Join a team that your teammate has already created. You'll need their 4-digit team PIN.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Create Team Modal -->
     <div class="modal-overlay" id="createTeamModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2><i class="fas fa-trophy"></i> Join the League</h2>
-                <p>Purchase a league membership to create your team</p>
+                <h2><i class="fas fa-plus-circle"></i> Create a Team</h2>
+                <p>Choose your membership tier</p>
                 <button class="modal-close" onclick="closeCreateTeamModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="membership-options">
-                    <!-- League Player Option -->
-                    <div class="membership-option" onclick="selectMembershipOption('player', this)">
-                        <div class="check-icon"><i class="fas fa-check"></i></div>
-                        <div class="option-header">
-                            <div class="option-title">
-                                <i class="fas fa-user" style="color: #059669;"></i>
-                                League Player
-                            </div>
-                            <div class="option-price">$400</div>
+                <!-- $800 Team Option -->
+                <div class="membership-option selected" id="tierOptionTeam" onclick="selectCreateTier('team')" style="cursor:pointer; margin-bottom: 15px; border-color: #059669;">
+                    <div class="option-header">
+                        <div class="option-title">
+                            <i class="fas fa-users" style="color: #059669;"></i>
+                            League Team
                         </div>
-                        <div class="option-desc">
-                            Single player registration for the full season. Perfect if you have a teammate who will register separately.
-                        </div>
-                        <ul class="benefits-list">
-                            <li><i class="fas fa-check"></i> Full season access</li>
-                            <li><i class="fas fa-check"></i> 5% off all purchases</li>
-                            <li><i class="fas fa-check"></i> League events & standings</li>
-                        </ul>
+                        <div class="option-price">$800</div>
                     </div>
-
-                    <!-- League Team Option -->
-                    <div class="membership-option" onclick="selectMembershipOption('team', this)">
-                        <div class="check-icon"><i class="fas fa-check"></i></div>
-                        <div class="option-header">
-                            <div class="option-title">
-                                <i class="fas fa-users" style="color: #059669;"></i>
-                                League Team
-                            </div>
-                            <div class="option-price">$800</div>
-                        </div>
-                        <div class="option-desc">
-                            Register both players at once! Includes 2 player spots and team registration for the full season.
-                        </div>
-                        <ul class="benefits-list">
-                            <li><i class="fas fa-check"></i> Full season for 2 players</li>
-                            <li><i class="fas fa-check"></i> 10% off all purchases</li>
-                            <li><i class="fas fa-check"></i> Priority league scheduling</li>
-                            <li><i class="fas fa-check"></i> Team standings & stats</li>
-                        </ul>
+                    <div class="option-desc">
+                        Register both players at once. Best value!
                     </div>
+                    <ul class="benefits-list">
+                        <li><i class="fas fa-check"></i> Full season for 2 players</li>
+                        <li><i class="fas fa-check"></i> 10% off all purchases</li>
+                        <li><i class="fas fa-check"></i> Add both teammates after purchase</li>
+                    </ul>
                 </div>
 
-                <button class="modal-btn modal-btn-primary" id="purchaseBtn" onclick="proceedToPurchase()" disabled>
-                    <i class="fas fa-credit-card"></i> Continue to Checkout
+                <!-- $400 Individual Option -->
+                <div class="membership-option" id="tierOptionPlayer" onclick="selectCreateTier('player')" style="cursor:pointer; border-color: #e5e5e5;">
+                    <div class="option-header">
+                        <div class="option-title">
+                            <i class="fas fa-user" style="color: #3b82f6;"></i>
+                            League Player
+                        </div>
+                        <div class="option-price">$400</div>
+                    </div>
+                    <div class="option-desc">
+                        Create team with just yourself. Teammate pays $400 and joins later with your team PIN.
+                    </div>
+                    <ul class="benefits-list">
+                        <li><i class="fas fa-check"></i> Full season for yourself</li>
+                        <li><i class="fas fa-check"></i> 10% off all purchases</li>
+                        <li><i class="fas fa-check"></i> Share PIN for teammate to join</li>
+                    </ul>
+                </div>
+
+                <button class="modal-btn modal-btn-primary" id="createTeamBtn" onclick="proceedToCreateTeam()">
+                    <i class="fas fa-credit-card"></i> Purchase & Create Team - $800
+                </button>
+
+                <div class="modal-footer-note">
+                    <i class="fas fa-shield-alt"></i> Secure payment powered by Stripe
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Join Team Modal -->
+    <div class="modal-overlay" id="joinTeamModal">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                <h2><i class="fas fa-sign-in-alt"></i> Join a Team</h2>
+                <p>Purchase League Player membership and join an existing team</p>
+                <button class="modal-close" onclick="closeJoinTeamModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="membership-option selected" style="cursor:default; border-color: #3b82f6;">
+                    <div class="option-header">
+                        <div class="option-title">
+                            <i class="fas fa-user" style="color: #3b82f6;"></i>
+                            League Player
+                        </div>
+                        <div class="option-price">$400</div>
+                    </div>
+                    <div class="option-desc">
+                        Join an existing team using the 4-digit PIN from your teammate. They must have already created the team.
+                    </div>
+                    <ul class="benefits-list">
+                        <li><i class="fas fa-check"></i> Full season access</li>
+                        <li><i class="fas fa-check"></i> 5% off all purchases</li>
+                        <li><i class="fas fa-check"></i> League events & standings</li>
+                        <li><i class="fas fa-info-circle" style="color: #3b82f6;"></i> You'll enter your team's PIN after purchase</li>
+                    </ul>
+                </div>
+
+                <button class="modal-btn modal-btn-primary" id="joinTeamBtn" onclick="proceedToJoinTeam()" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                    <i class="fas fa-credit-card"></i> Purchase & Join Team - $400
                 </button>
 
                 <div class="modal-footer-note">

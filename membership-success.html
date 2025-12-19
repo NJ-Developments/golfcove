@@ -871,7 +871,7 @@
                         </button>
                     </div>
                     
-                    <button type="button" class="back-btn" onclick="showPlayerChoice()">
+                    <button type="button" class="back-btn" id="joinBackBtn" onclick="showPlayerChoice()" style="display: none;">
                         <i class="fas fa-arrow-left"></i> Back to Options
                     </button>
                 </div>
@@ -986,6 +986,7 @@
         const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
         let sessionData = null;
         let isCreateTeamFlow = false;
+        let isJoinTeamFlow = false;
         
         // Get session_id from URL (may have duplicates due to backend bug, get first valid one)
         const urlParams = new URLSearchParams(window.location.search);
@@ -1002,6 +1003,8 @@
             localStorage.removeItem('signupSource');
         }
         
+        let isCreateTeamSolo = false;
+        
         // Check if this is a createTeam flow - require team creation
         if (source === 'createTeam') {
             isCreateTeamFlow = true;
@@ -1010,6 +1013,24 @@
                 document.getElementById('returnHomeBtn').style.display = 'none';
                 document.getElementById('bookBtn').style.display = 'none';
                 document.getElementById('createTeamBtn').style.display = 'inline-block';
+            });
+        }
+        
+        // Check if this is a createTeamSolo flow - create team with just yourself
+        if (source === 'createTeamSolo') {
+            isCreateTeamSolo = true;
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('returnHomeBtn').style.display = 'none';
+                document.getElementById('bookBtn').style.display = 'none';
+            });
+        }
+        
+        // Check if this is a joinTeam flow - go straight to join team section
+        if (source === 'joinTeam') {
+            isJoinTeamFlow = true;
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('returnHomeBtn').style.display = 'none';
+                document.getElementById('bookBtn').style.display = 'none';
             });
         }
         
@@ -1078,6 +1099,7 @@
             console.log('Session type:', type);
             console.log('Session amount (cents):', amount);
             console.log('isCreateTeamFlow:', isCreateTeamFlow);
+            console.log('isJoinTeamFlow:', isJoinTeamFlow);
             console.log('Full session:', session);
             
             // Determine if this is a league purchase by tier, type, OR amount
@@ -1092,12 +1114,13 @@
                 isLeagueTeam = tier === 'league-team' || amount === 80000;
                 console.log('isLeagueTeam:', isLeagueTeam);
                 
-                // Update title
+                // Update title and welcome text based on flow
                 document.getElementById('membershipType').textContent = 
-                    isLeagueTeam ? 'League Team Registration' : 'League Player Registration';
+                    isLeagueTeam ? 'League Team Registration' : 'Join a Team';
                 
-                document.getElementById('welcomeText').textContent = 
-                    'Your payment is confirmed! Complete your team registration below to join the league.';
+                document.getElementById('welcomeText').textContent = isLeagueTeam 
+                    ? 'Your payment is confirmed! Enter both players\' information below to create your team.'
+                    : 'Your payment is confirmed! Enter the 4-digit team PIN from your teammate to join their team.';
                 
                 // Pre-fill player 1 info from checkout
                 if (session.customerName) {
@@ -1119,23 +1142,36 @@
                     document.getElementById('registrationForm').style.display = 'block';
                     document.getElementById('player2Section').style.display = 'block';
                     document.getElementById('player2Name').required = true;
-                    // Hide buttons until team is created
+                    // Hide all action buttons until team is created
                     document.getElementById('bookBtn').style.display = 'none';
                     document.getElementById('returnHomeBtn').style.display = 'none';
+                    document.getElementById('createTeamBtn').style.display = 'none';
                 } else {
-                    // League Player ($400): Show choice (create or join)
-                    console.log('Showing player choice');
-                    if (isCreateTeamFlow) {
-                        // Came from "Create Team" button - go straight to team creation
+                    // League Player ($400): Either create team solo or join existing team
+                    console.log('League Player flow - isCreateTeamSolo:', isCreateTeamSolo, 'isJoinTeamFlow:', isJoinTeamFlow);
+                    
+                    if (isCreateTeamSolo) {
+                        // Create team with just yourself - teammate joins later via PIN
                         document.getElementById('playerChoice').style.display = 'none';
                         document.getElementById('joinTeamSection').style.display = 'none';
                         document.getElementById('registrationForm').style.display = 'block';
                         document.getElementById('player2Section').style.display = 'none';
-                    } else {
-                        // Normal flow - show choice to create or join
-                        document.getElementById('playerChoice').style.display = 'block';
+                        document.getElementById('player2Name').required = false;
+                        // Update title
+                        document.getElementById('membershipType').textContent = 'Create Your Team';
+                        document.getElementById('welcomeText').textContent = 
+                            'Your payment is confirmed! Create your team below. Your teammate can join later using your team PIN.';
+                    } else if (isJoinTeamFlow) {
+                        // Came from "Join Team" button - go straight to join team section
+                        document.getElementById('playerChoice').style.display = 'none';
+                        document.getElementById('joinTeamSection').style.display = 'block';
                         document.getElementById('registrationForm').style.display = 'none';
-                        document.getElementById('joinTeamSection').style.display = 'none';
+                        document.getElementById('player2Section').style.display = 'none';
+                    } else {
+                        // Normal flow - go to join team section
+                        document.getElementById('playerChoice').style.display = 'none';
+                        document.getElementById('joinTeamSection').style.display = 'block';
+                        document.getElementById('registrationForm').style.display = 'none';
                     }
                     // Hide buttons until team is created/joined
                     document.getElementById('bookBtn').style.display = 'none';

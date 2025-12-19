@@ -6603,8 +6603,8 @@ exports.registerLeagueTeam = functions.https.onRequest((req, res) => {
       await db.ref(`league/players/${player1Id}`).set({
         id: player1Id,
         name: player1Name,
-        email: player1Email || session.customer_email,
-        phone: player1Phone || session.metadata?.customerPhone,
+        email: player1Email || session.customer_email || '',
+        phone: player1Phone || session.metadata?.customerPhone || '',
         teamId: teamId,
         handicap: parseInt(player1Handicap) || 0,
         pin: pin,
@@ -6632,8 +6632,8 @@ exports.registerLeagueTeam = functions.https.onRequest((req, res) => {
         teamId,
         teamName,
         tier,
-        player1: { id: player1Id, name: player1Name, email: player1Email || session.customer_email },
-        player2: isTeamPurchase && player2Name ? { id: player2Id, name: player2Name, email: player2Email } : null,
+        player1: { id: player1Id, name: player1Name, email: player1Email || session.customer_email || '' },
+        player2: isTeamPurchase && player2Name ? { id: player2Id, name: player2Name, email: player2Email || '' } : null,
         registeredAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
