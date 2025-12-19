@@ -1269,40 +1269,30 @@
                 <button class="btn" onclick="printScorecards()" id="printBtn" disabled><i class="fas fa-print"></i> Print Scorecards</button>
             </div>
             
-<<<<<<< HEAD
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div class="card">
                     <h3><i class="fas fa-qrcode"></i> General Scoring Link</h3>
-                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">A general link for anyone to enter scores.</p>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">A general link for anyone to enter scores (useful for posting online).</p>
                     <div id="generalQRCode" style="text-align: center; margin: 15px 0;"></div>
                     <p style="text-align: center; font-size: 12px; color: #888; word-break: break-all;" id="generalQRUrl"></p>
                     <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
                         <button class="btn btn-sm" onclick="copyGeneralUrl()"><i class="fas fa-copy"></i> Copy Link</button>
+                        <a href="qr-poster.html" target="_blank" class="btn btn-sm" style="text-decoration: none;"><i class="fas fa-print"></i> Print QR Poster</a>
                     </div>
-=======
-            <div class="card">
-                <h3><i class="fas fa-qrcode"></i> General Scoring Link</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">A general link for anyone to enter scores (useful for posting online).</p>
-                <div id="generalQRCode" style="text-align: center; margin: 15px 0;"></div>
-                <p style="text-align: center; font-size: 12px; color: #888; word-break: break-all;" id="generalQRUrl"></p>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-                    <button class="btn btn-sm" onclick="copyGeneralUrl()"><i class="fas fa-copy"></i> Copy Link</button>
-                    <a href="qr-poster.html" target="_blank" class="btn btn-sm" style="text-decoration: none;"><i class="fas fa-print"></i> Print QR Poster</a>
-                </div>
-                
-                <!-- QR Poster Preview -->
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-                    <p style="font-size: 13px; font-weight: 600; color: #333; margin-bottom: 10px; text-align: center;">Poster Preview (for golf rooms)</p>
-                    <div style="background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%); border-radius: 8px; padding: 15px; max-width: 200px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                        <img src="images/golfcovelogo.png" alt="Golf Cove" style="width: 60px; display: block; margin: 0 auto 8px;">
-                        <p style="color: #37b24a; font-size: 10px; font-weight: 700; text-align: center; margin-bottom: 5px; text-transform: uppercase;">Enter Your Score</p>
-                        <div style="background: #fff; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://golfcove.web.app/score.html&color=1a1a1a&bgcolor=ffffff" alt="QR" style="width: 100%; display: block;">
+                    
+                    <!-- QR Poster Preview -->
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                        <p style="font-size: 13px; font-weight: 600; color: #333; margin-bottom: 10px; text-align: center;">Poster Preview (for golf rooms)</p>
+                        <div style="background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%); border-radius: 8px; padding: 15px; max-width: 200px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <img src="images/golfcovelogo.png" alt="Golf Cove" style="width: 60px; display: block; margin: 0 auto 8px;">
+                            <p style="color: #37b24a; font-size: 10px; font-weight: 700; text-align: center; margin-bottom: 5px; text-transform: uppercase;">Enter Your Score</p>
+                            <div style="background: #fff; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://golfcove.web.app/score.html&color=1a1a1a&bgcolor=ffffff" alt="QR" style="width: 100%; display: block;">
+                            </div>
+                            <p style="color: #fff; font-size: 7px; text-align: center; opacity: 0.8;">1. Scan  2. Enter PIN  3. Submit</p>
                         </div>
-                        <p style="color: #fff; font-size: 7px; text-align: center; opacity: 0.8;">1. Scan  2. Enter PIN  3. Submit</p>
+                        <p style="font-size: 11px; color: #888; text-align: center; margin-top: 10px;">Click "Print QR Poster" to get a full-size 8.5x11" version</p>
                     </div>
-                    <p style="font-size: 11px; color: #888; text-align: center; margin-top: 10px;">Click "Print QR Poster" to get a full-size 8.5x11" version</p>
->>>>>>> 7a8a1665c4c41f1d3183b931db6368633822ab19
                 </div>
                 
                 <div class="card">
@@ -1940,6 +1930,7 @@
                 id: c.id,
                 stripeId: c.id,
                 stripeCustomerId: c.id,
+                name: c.name || '',
                 firstName,
                 lastName,
                 email: c.email || '',
@@ -1972,6 +1963,11 @@
                 const cached = localStorage.getItem('gc_customers');
                 if (cached) {
                     stripeCustomersCache = JSON.parse(cached);
+                    // Ensure name field exists (older cache may not have it)
+                    stripeCustomersCache = stripeCustomersCache.map(c => ({
+                        ...c,
+                        name: c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim() || ''
+                    }));
                     console.log(`[LeagueAdmin] Loaded ${stripeCustomersCache.length} customers from cache`);
                     return stripeCustomersCache;
                 }
@@ -2932,7 +2928,13 @@
             const searchTerm = (document.getElementById('customerSearch')?.value || '').toLowerCase();
             const memberTypeFilter = document.getElementById('memberTypeFilter')?.value || 'all';
             
-            if (!grid) return;
+            console.log('[renderCustomers] Grid element:', grid);
+            console.log('[renderCustomers] Customer cache:', stripeCustomersCache.length, 'customers');
+            
+            if (!grid) {
+                console.warn('[renderCustomers] customerGrid not found!');
+                return;
+            }
             
             updateCustomerStats();
             
@@ -2975,6 +2977,10 @@
             const startIdx = (customerPage - 1) * customersPerPage;
             const pageCustomers = customers.slice(startIdx, startIdx + customersPerPage);
             
+            console.log('[renderCustomers] After filtering:', customers.length, 'customers');
+            console.log('[renderCustomers] Page customers:', pageCustomers.length);
+            console.log('[renderCustomers] First customer:', pageCustomers[0]);
+            
             // Update bulk selection bar visibility
             document.getElementById('bulkSelectionBar').style.display = selectedCustomers.size > 0 ? 'block' : 'none';
             document.getElementById('selectedCount').textContent = `${selectedCustomers.size} selected`;
@@ -3016,6 +3022,9 @@
                     </div>
                 `;
             }).join('');
+            
+            console.log('[renderCustomers] Grid HTML length:', grid.innerHTML.length);
+            console.log('[renderCustomers] Grid children:', grid.children.length);
             
             // Pagination
             if (totalPages > 1) {
@@ -4089,6 +4098,8 @@
         
         function renderParInputs() {
             const container = document.getElementById('parInputsContainer');
+            if (!container) return; // Exit if container doesn't exist
+            
             const holes = league.course?.holes || 9;
             const pars = league.course?.pars || Array(holes).fill(4);
             
@@ -4115,30 +4126,42 @@
         }
         
         function showSection(section) {
-            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            console.log('[showSection] Switching to:', section);
             
-            document.getElementById('section-' + section).classList.add('active');
-            document.querySelector(`[data-section="${section}"]`).classList.add('active');
-            
-            // Close sidebar on mobile
-            document.getElementById('adminSidebar').classList.remove('mobile-open');
-            document.getElementById('mobileSidebarOverlay').classList.remove('open');
-            
-            // Render content for admin sections
-            if (section === 'staff') loadStaffList();
-            else if (section === 'reports') loadSalesReports();
-            else if (section === 'timeclock') loadTimeclock();
-            else if (section === 'inventory') loadInventory();
-            else if (section === 'settings') loadStripeSettings();
-            else if (section === 'scoredocs') loadScoreDocuments();
-            else if (section === 'customers') {
-                // Load customers from cache or sync from Stripe if empty
-                if (stripeCustomersCache.length === 0) {
-                    syncStripeCustomers();
-                } else {
-                    renderCustomers();
+            try {
+                document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                
+                const sectionEl = document.getElementById('section-' + section);
+                const navEl = document.querySelector(`[data-section="${section}"]`);
+                
+                console.log('[showSection] Section element:', sectionEl);
+                console.log('[showSection] Nav element:', navEl);
+                
+                if (sectionEl) sectionEl.classList.add('active');
+                if (navEl) navEl.classList.add('active');
+                
+                // Close sidebar on mobile
+                document.getElementById('adminSidebar').classList.remove('mobile-open');
+                document.getElementById('mobileSidebarOverlay').classList.remove('open');
+                
+                // Render content for admin sections
+                if (section === 'staff') loadStaffList();
+                else if (section === 'reports') loadSalesReports();
+                else if (section === 'timeclock') loadTimeclock();
+                else if (section === 'inventory') loadInventory();
+                else if (section === 'settings') loadStripeSettings();
+                else if (section === 'scoredocs') loadScoreDocuments();
+                else if (section === 'customers') {
+                    // Load customers from cache or sync from Stripe if empty
+                    if (stripeCustomersCache.length === 0) {
+                        syncStripeCustomers();
+                    } else {
+                        renderCustomers();
+                    }
                 }
+            } catch (err) {
+                console.error('[showSection] Error:', err);
             }
         }
         
