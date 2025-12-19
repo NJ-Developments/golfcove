@@ -960,9 +960,60 @@
                     }
                 }
 
-                // Get current round if not specified
+                // Get current round based on today's date if not specified
                 if (!roundId && league.rounds.length > 0) {
-                    roundId = league.rounds[league.rounds.length - 1].id;
+                    const today = new Date();
+                    today.setHours(12, 0, 0, 0); // Use noon to avoid timezone edge cases
+                    
+                    // Helper to parse date strings safely (handles YYYY-MM-DD format)
+                    function parseDate(dateStr) {
+                        if (!dateStr) return null;
+                        // If it's already a date object or timestamp
+                        if (dateStr instanceof Date) return dateStr;
+                        // Parse YYYY-MM-DD format without timezone issues
+                        const parts = dateStr.split('-');
+                        if (parts.length === 3) {
+                            return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+                        }
+                        return new Date(dateStr);
+                    }
+                    
+                    // Find round that matches today's date
+                    let currentRound = null;
+                    for (const r of league.rounds) {
+                        if (r.startDate && r.endDate) {
+                            const start = parseDate(r.startDate);
+                            const end = parseDate(r.endDate);
+                            start.setHours(0, 0, 0, 0);
+                            end.setHours(23, 59, 59, 999);
+                            if (today >= start && today <= end) {
+                                currentRound = r;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If no current round, find next upcoming round
+                    if (!currentRound) {
+                        const upcomingRounds = league.rounds.filter(r => {
+                            if (!r.startDate) return false;
+                            const start = parseDate(r.startDate);
+                            start.setHours(0, 0, 0, 0);
+                            return start > today;
+                        }).sort((a, b) => parseDate(a.startDate) - parseDate(b.startDate));
+                        
+                        console.log('Upcoming rounds:', upcomingRounds.map(r => r.name + ' - ' + r.startDate));
+                        
+                        if (upcomingRounds.length > 0) {
+                            currentRound = upcomingRounds[0];
+                        } else {
+                            // Fall back to most recent round
+                            currentRound = league.rounds[league.rounds.length - 1];
+                        }
+                    }
+                    
+                    console.log('Selected round:', currentRound?.name, currentRound?.startDate);
+                    roundId = currentRound.id;
                 }
 
                 const round = league.rounds.find(r => r.id === roundId);
@@ -1009,12 +1060,24 @@
                 const holes = 9; // Front 9 only
                 const round = league.rounds.find(r => r.id === roundId) || league.rounds[league.rounds.length - 1] || null;
                 let roundDate = '';
+                
+                // Helper to format date without timezone issues
+                function formatDateSafe(dateStr) {
+                    if (!dateStr) return '';
+                    const parts = dateStr.split('-');
+                    if (parts.length === 3) {
+                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        return `${months[parseInt(parts[1]) - 1]} ${parseInt(parts[2])}, ${parts[0]}`;
+                    }
+                    return new Date(dateStr).toLocaleDateString();
+                }
+                
                 if (round?.startDate && round?.endDate) {
-                    const start = new Date(round.startDate).toLocaleDateString();
-                    const end = new Date(round.endDate).toLocaleDateString();
+                    const start = formatDateSafe(round.startDate);
+                    const end = formatDateSafe(round.endDate);
                     roundDate = `${start} - ${end}`;
                 } else if (round?.date) {
-                    roundDate = new Date(round.date).toLocaleDateString();
+                    roundDate = formatDateSafe(round.date);
                 }
                 const team = currentPlayer ? (league.teams || []).find(t => t.id === currentPlayer.teamId) : null;
                 const teamMembers = currentPlayer && currentPlayer.teamId 
@@ -1881,6 +1944,28 @@
         }
 
         function submit() {
+            // Validate we're within the round's date range
+            const round = league.rounds.find(r => r.id === roundId);
+            if (round && round.startDate && round.endDate) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const start = new Date(round.startDate);
+                const end = new Date(round.endDate);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+                
+                if (today < start) {
+                    const startFormatted = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    alert(`This round hasn't started yet. Score submission opens on ${startFormatted}.`);
+                    return;
+                }
+                if (today > end) {
+                    const endFormatted = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    alert(`This round has ended. Score submission closed on ${endFormatted}.`);
+                    return;
+                }
+            }
+            
             const scores = getScores();
             const requiredHoles = league.course?.holes || 9;
             

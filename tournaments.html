@@ -920,11 +920,11 @@
             font-size: 12px;
         }
         .create-team-btn {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+            background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%) !important;
+            box-shadow: 0 4px 15px rgba(55, 178, 74, 0.3);
         }
         .create-team-btn:hover {
-            background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
+            background: linear-gradient(135deg, #2d9440 0%, #268738 100%) !important;
         }
 
         /* Refresh indicator */
@@ -1209,9 +1209,32 @@
             cachedStandings = calculateStandings(league);
             const hasPlayers = (league.players || []).length > 0;
 
+            // Helper to parse date strings safely (handles YYYY-MM-DD format without timezone issues)
+            function parseDate(dateStr) {
+                if (!dateStr) return null;
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+                }
+                return new Date(dateStr);
+            }
+            
+            // Helper to format date safely
+            function formatDateSafe(dateStr, options = {}) {
+                if (!dateStr) return '';
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    let result = `${months[parseInt(parts[1]) - 1]} ${parseInt(parts[2])}`;
+                    if (options.year) result += `, ${parts[0]}`;
+                    return result;
+                }
+                return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(options.year ? {year: 'numeric'} : {}) });
+            }
+
             // Find current round based on today's date
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Reset time to midnight for accurate date comparison
+            today.setHours(12, 0, 0, 0); // Use noon to avoid timezone edge cases
             
             const rounds = league.rounds || [];
             let currentRound = null;
@@ -1219,8 +1242,8 @@
             // First, try to find a round whose date range includes today
             for (const round of rounds) {
                 if (round.startDate && round.endDate) {
-                    const start = new Date(round.startDate);
-                    const end = new Date(round.endDate);
+                    const start = parseDate(round.startDate);
+                    const end = parseDate(round.endDate);
                     start.setHours(0, 0, 0, 0);
                     end.setHours(23, 59, 59, 999);
                     
@@ -1231,21 +1254,37 @@
                 }
             }
             
-            // If no current round found, use the most recent one (last in array)
+            // If no current round found, find the next upcoming round
             if (!currentRound && rounds.length > 0) {
-                currentRound = rounds[rounds.length - 1];
+                const upcomingRounds = rounds.filter(r => {
+                    if (!r.startDate) return false;
+                    const start = parseDate(r.startDate);
+                    start.setHours(0, 0, 0, 0);
+                    return start > today;
+                }).sort((a, b) => parseDate(a.startDate) - parseDate(b.startDate));
+                
+                if (upcomingRounds.length > 0) {
+                    currentRound = upcomingRounds[0];
+                } else {
+                    // Fall back to most recent round
+                    currentRound = rounds[rounds.length - 1];
+                }
             }
             
             let roundInfoHTML = '';
             const seasonBadge = league.season ? `<div class="season-badge"><i class="fas fa-calendar-alt"></i> ${league.season}</div>` : '';
             
             if (currentRound) {
-                const startDate = currentRound.startDate ? new Date(currentRound.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-                const endDate = currentRound.endDate ? new Date(currentRound.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                const startDate = currentRound.startDate ? formatDateSafe(currentRound.startDate) : '';
+                const endDate = currentRound.endDate ? formatDateSafe(currentRound.endDate, { year: true }) : '';
                 const dateDisplay = startDate && endDate ? `${startDate} - ${endDate}` : '';
                 
+                // Only show course separately if it's not already in the round name
+                const roundNameHasCourse = currentRound.name && currentRound.name.includes(' - ');
+                const courseDisplay = !roundNameHasCourse && currentRound.course ? ' &bull; ' + currentRound.course : '';
+                
                 roundInfoHTML = `
-                    <div class="hero-subtitle">${currentRound.name}${(currentRound.course || league.course?.name) ? ' &bull; ' + (currentRound.course || league.course?.name) : ''}</div>
+                    <div class="hero-subtitle">${currentRound.name}${courseDisplay}</div>
                     ${dateDisplay ? `<div class="hero-dates">${dateDisplay}</div>` : ''}
                 `;
             }

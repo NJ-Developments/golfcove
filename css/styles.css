@@ -2685,7 +2685,7 @@ footer {
         opacity: 0;
         transform: none;
         box-shadow: none;
-        background: var(--bg-light);
+        background: #2a2f36;
         border-radius: 0;
         transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
         padding: 0;
@@ -2706,6 +2706,7 @@ footer {
     
     .dropdown-menu li a:hover {
         color: var(--primary-green);
+        background: rgba(55, 178, 74, 0.1);
     }
     
     .nav-menu .btn-book {

@@ -1246,6 +1246,14 @@
                 <h3><i class="fas fa-list"></i> All Rounds</h3>
                 <div id="roundsList"></div>
             </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-calendar-alt"></i> Import Winter 2025 Schedule</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">One-click import of the full Winter 2025 league schedule (15 rounds including playoffs).</p>
+                <button type="button" class="btn" onclick="importWinter2025Schedule()" style="background: #37b24a;">
+                    <i class="fas fa-file-import"></i> Import Schedule
+                </button>
+            </div>
         </div>
         
         <!-- Print Section -->
@@ -1269,17 +1277,6 @@
                 <button class="btn" onclick="printScorecards()" id="printBtn" disabled><i class="fas fa-print"></i> Print Scorecards</button>
             </div>
             
-<<<<<<< HEAD
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div class="card">
-                    <h3><i class="fas fa-qrcode"></i> General Scoring Link</h3>
-                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">A general link for anyone to enter scores.</p>
-                    <div id="generalQRCode" style="text-align: center; margin: 15px 0;"></div>
-                    <p style="text-align: center; font-size: 12px; color: #888; word-break: break-all;" id="generalQRUrl"></p>
-                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-                        <button class="btn btn-sm" onclick="copyGeneralUrl()"><i class="fas fa-copy"></i> Copy Link</button>
-                    </div>
-=======
             <div class="card">
                 <h3><i class="fas fa-qrcode"></i> General Scoring Link</h3>
                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">A general link for anyone to enter scores (useful for posting online).</p>
@@ -1287,7 +1284,7 @@
                 <p style="text-align: center; font-size: 12px; color: #888; word-break: break-all;" id="generalQRUrl"></p>
                 <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
                     <button class="btn btn-sm" onclick="copyGeneralUrl()"><i class="fas fa-copy"></i> Copy Link</button>
-                    <a href="qr-poster.html" target="_blank" class="btn btn-sm" style="text-decoration: none;"><i class="fas fa-print"></i> Print QR Poster</a>
+                    <button class="btn btn-sm" onclick="printQRPoster()"><i class="fas fa-print"></i> Print QR Poster</button>
                 </div>
                 
                 <!-- QR Poster Preview -->
@@ -1302,18 +1299,17 @@
                         <p style="color: #fff; font-size: 7px; text-align: center; opacity: 0.8;">1. Scan  2. Enter PIN  3. Submit</p>
                     </div>
                     <p style="font-size: 11px; color: #888; text-align: center; margin-top: 10px;">Click "Print QR Poster" to get a full-size 8.5x11" version</p>
->>>>>>> 7a8a1665c4c41f1d3183b931db6368633822ab19
                 </div>
+            </div>
                 
-                <div class="card">
-                    <h3><i class="fas fa-key"></i> Print Player PINs</h3>
-                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print a sheet with each player's personal PIN for score entry.</p>
-                    <button class="btn" onclick="printPinSheet()" style="width: 100%;"><i class="fas fa-print"></i> Print PIN Sheet</button>
-                    <div style="margin-top: 15px;"></div>
-                    <h3 style="margin-top: 10px;"><i class="fas fa-download"></i> Export Data</h3>
-                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Download all league data as a JSON file.</p>
-                    <button class="btn btn-secondary" onclick="exportData()" style="width: 100%;"><i class="fas fa-download"></i> Export JSON</button>
-                </div>
+            <div class="card">
+                <h3><i class="fas fa-key"></i> Print Player PINs</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print a sheet with each player's personal PIN for score entry.</p>
+                <button class="btn" onclick="printPinSheet()" style="width: 100%;"><i class="fas fa-print"></i> Print PIN Sheet</button>
+                <div style="margin-top: 15px;"></div>
+                <h3 style="margin-top: 10px;"><i class="fas fa-download"></i> Export Data</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Download all league data as a JSON file.</p>
+                <button class="btn btn-secondary" onclick="exportData()" style="width: 100%;"><i class="fas fa-download"></i> Export JSON</button>
             </div>
         </div>
         
@@ -1524,6 +1520,13 @@
                 </div>
                 <input type="file" id="importDataFile" accept=".json" style="display:none;" onchange="handleDataImport(event)">
             </div>
+            
+            <!-- League Reset -->
+            <div class="card" style="border-left:4px solid #c0392b;">
+                <h3><i class="fas fa-trophy" style="color:#c0392b;"></i> League Management</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Reset the entire league including teams, players, rounds, and scores. <strong style="color:#e74c3c;">This cannot be undone!</strong></p>
+                <button class="btn" style="background:#c0392b;" onclick="resetLeague()"><i class="fas fa-trash-alt"></i> Reset League</button>
+            </div>
         </div>
 
         <!-- Staff Management Section -->
@@ -1707,10 +1710,6 @@
                             <option value="18">18 Holes</option>
                         </select>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Course Name</label>
-                    <input type="text" id="courseName" required placeholder="Golf Cove">
                 </div>
                 <button type="submit" class="btn btn-block" style="margin-top: 10px;">
                     <i class="fas fa-check"></i> Create League
@@ -2263,13 +2262,12 @@
         function createLeague(e) {
             e.preventDefault();
             const name = document.getElementById('leagueName').value.trim();
-            const courseName = document.getElementById('courseName').value.trim();
             const holes = parseInt(document.getElementById('holes').value);
             
             league = {
                 id: 'league_' + Date.now(),
                 name,
-                course: { name: courseName, holes, pars: Array(holes).fill(4) },
+                course: { name: 'TBD', holes, pars: Array(holes).fill(4) },
                 teams: [], players: [], rounds: [], scores: {},
                 createdAt: new Date().toISOString()
             };
@@ -2319,13 +2317,71 @@
                 return;
             }
             
-            const round = league.rounds[league.rounds.length - 1];
+            // Helper to parse date strings safely (handles YYYY-MM-DD format without timezone issues)
+            function parseDate(dateStr) {
+                if (!dateStr) return null;
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+                }
+                return new Date(dateStr);
+            }
+            
+            // Helper to format date safely
+            function formatDateSafe(dateStr, options = { month: 'short', day: 'numeric' }) {
+                if (!dateStr) return '';
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    let result = `${months[parseInt(parts[1]) - 1]} ${parseInt(parts[2])}`;
+                    if (options.year) result += `, ${parts[0]}`;
+                    return result;
+                }
+                return new Date(dateStr).toLocaleDateString('en-US', options);
+            }
+            
+            // Find current round based on today's date
+            const today = new Date();
+            today.setHours(12, 0, 0, 0);
+            
+            let round = null;
+            for (const r of league.rounds) {
+                if (r.startDate && r.endDate) {
+                    const start = parseDate(r.startDate);
+                    const end = parseDate(r.endDate);
+                    start.setHours(0, 0, 0, 0);
+                    end.setHours(23, 59, 59, 999);
+                    if (today >= start && today <= end) {
+                        round = r;
+                        break;
+                    }
+                }
+            }
+            
+            // If no current round found, show the most recent or upcoming round
+            if (!round) {
+                // Find next upcoming round
+                const upcomingRounds = league.rounds.filter(r => {
+                    if (!r.startDate) return false;
+                    const start = parseDate(r.startDate);
+                    start.setHours(0, 0, 0, 0);
+                    return start > today;
+                }).sort((a, b) => parseDate(a.startDate) - parseDate(b.startDate));
+                
+                if (upcomingRounds.length > 0) {
+                    round = upcomingRounds[0];
+                } else {
+                    // Fall back to most recent round
+                    round = league.rounds[league.rounds.length - 1];
+                }
+            }
+            
             const scored = league.players.filter(p => (league.scores || {})[round.id]?.[p.id]?.submitted).length;
             const total = league.players.length;
             
-            const startDate = round.startDate ? new Date(round.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-            const endDate = round.endDate ? new Date(round.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-            const dateDisplay = startDate && endDate ? `${startDate} - ${endDate}` : (round.date ? new Date(round.date).toLocaleDateString() : 'No date');
+            const startDate = round.startDate ? formatDateSafe(round.startDate) : '';
+            const endDate = round.endDate ? formatDateSafe(round.endDate, { month: 'short', day: 'numeric', year: true }) : '';
+            const dateDisplay = startDate && endDate ? `${startDate} - ${endDate}` : (round.date ? formatDateSafe(round.date) : 'No date');
             
             container.innerHTML = `
                 <div class="round-status">
@@ -2713,6 +2769,13 @@
             const url = document.getElementById('generalQRUrl').textContent;
             navigator.clipboard.writeText(url);
             alert('Link copied!');
+        }
+        
+        function printQRPoster() {
+            const posterWindow = window.open('qr-poster.html', '_blank');
+            posterWindow.onload = function() {
+                posterWindow.print();
+            };
         }
         
         function renderTeams() {
@@ -3126,6 +3189,7 @@
                             <div><div style="font-size: 24px; font-weight: 700;">${avgNet || '-'}</div><div style="font-size: 11px; color: #888;">Avg Net</div></div>
                         </div>
                         ${team ? `<div style="margin-top: 10px; font-size: 13px; color: #666;"><i class="fas fa-users"></i> Team: <strong>${team.name}</strong></div>` : ''}
+                        <button class="btn btn-sm btn-danger" style="margin-top: 12px;" onclick="document.getElementById('customerProfileModal').remove(); removeFromLeague('${linkedPlayer.id}')"><i class="fas fa-user-minus"></i> Remove from League</button>
                     </div>
                 `;
             }
@@ -3359,6 +3423,45 @@
             `;
             
             document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        async function removeFromLeague(playerId) {
+            const player = league.players.find(p => p.id === playerId);
+            if (!player) {
+                alert('Player not found');
+                return;
+            }
+            
+            const team = league.teams.find(t => t.id === player.teamId);
+            const teamName = team ? team.name : 'the league';
+            
+            if (!confirm(`Remove ${player.name} from ${teamName}? This will also delete their scores.`)) {
+                return;
+            }
+            
+            try {
+                // Remove player from the array
+                league.players = league.players.filter(p => p.id !== playerId);
+                
+                // Remove their scores from all rounds
+                if (league.scores) {
+                    for (const roundId in league.scores) {
+                        if (league.scores[roundId] && league.scores[roundId][playerId]) {
+                            delete league.scores[roundId][playerId];
+                        }
+                    }
+                }
+                
+                await save();
+                renderTeams();
+                renderCustomers();
+                renderPins();
+                
+                alert(`${player.name} has been removed from the league.`);
+            } catch (error) {
+                console.error('Error removing from league:', error);
+                alert('Failed to remove player: ' + error.message);
+            }
         }
         
         async function confirmAddToLeague(customerId) {
@@ -4957,6 +5060,45 @@
             }).catch(() => {
                 alert('Could not copy PIN. Please try again.');
             });
+        }
+        
+        // Import Winter 2025 League Schedule
+        function importWinter2025Schedule() {
+            if (!confirm('This will import the Winter 2025 league schedule (15 rounds). Continue?')) return;
+            
+            const schedule = [
+                { name: 'Week 1 - Kapalua Bay', startDate: '2026-01-05', endDate: '2026-01-11' },
+                { name: 'Week 2 - Kapalua Plantation', startDate: '2026-01-12', endDate: '2026-01-18' },
+                { name: 'Week 3 - Spanish Bay', startDate: '2026-01-19', endDate: '2026-01-25' },
+                { name: 'Week 4 - Torrey Pines', startDate: '2026-01-26', endDate: '2026-02-01' },
+                { name: 'Week 5 - Scottsdale North', startDate: '2026-02-02', endDate: '2026-02-08' },
+                { name: 'Week 6 - Pebble Beach', startDate: '2026-02-09', endDate: '2026-02-15' },
+                { name: 'Week 7 - Spyglass', startDate: '2026-02-16', endDate: '2026-02-22' },
+                { name: 'Week 8 - PGA National', startDate: '2026-02-23', endDate: '2026-03-01' },
+                { name: 'Week 9 - Bay Hill', startDate: '2026-03-02', endDate: '2026-03-08' },
+                { name: 'Week 10 - Grand National', startDate: '2026-03-09', endDate: '2026-03-15' },
+                { name: 'Playoffs - Round of 16 (Panther Lake)', startDate: '2026-03-16', endDate: '2026-03-22' },
+                { name: 'Playoffs - Quarterfinals (Innisbrook)', startDate: '2026-03-23', endDate: '2026-03-29' },
+                { name: 'Playoffs - Semifinals', startDate: '2026-03-30', endDate: '2026-04-05' },
+                { name: 'Playoffs - Championship', startDate: '2026-04-09', endDate: '2026-04-12' },
+                { name: 'Awards/Round Robin - Masters', startDate: '2026-04-09', endDate: '2026-04-12' }
+            ];
+            
+            schedule.forEach(round => {
+                const newRound = {
+                    id: 'r' + Date.now() + Math.random().toString(36).substr(2, 5),
+                    name: round.name,
+                    startDate: round.startDate,
+                    endDate: round.endDate,
+                    finalized: false,
+                    createdAt: new Date().toISOString()
+                };
+                league.rounds.push(newRound);
+            });
+            
+            save();
+            renderAll();
+            alert('Successfully imported 15 rounds for Winter 2025 season!');
         }
         
         // Rounds
