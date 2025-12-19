@@ -832,7 +832,7 @@
     
     <script>
         let selectedMembership = null;
-        const TAX_RATE = 0.0635; // CT sales tax
+        const TAX_RATE = window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635; // Use config with fallback
         
         // Check URL params for pre-selected membership
         document.addEventListener('DOMContentLoaded', () => {
