@@ -351,6 +351,29 @@
             .hole-title { font-size: 15px; }
         }
         
+        /* Score Summary - Mobile responsive */
+        @media (max-width: 420px) {
+            .score-summary {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .score-summary .item {
+                padding: 12px 4px;
+            }
+            .score-summary .item .label {
+                font-size: 9px;
+                letter-spacing: 0.5px;
+            }
+            .score-summary .item .value {
+                font-size: 18px;
+            }
+            .score-summary.nine-holes .item {
+                padding: 10px 4px;
+            }
+            .score-summary.nine-holes .item .value {
+                font-size: 20px;
+            }
+        }
+        
         /* Score Summary */
         .score-summary {
             display: grid;
