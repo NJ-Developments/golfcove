@@ -1137,6 +1137,8 @@
             const app = document.getElementById('app');
             app.innerHTML = '<div style="text-align:center;padding:60px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#37b24a;"></i><p style="margin-top:15px;color:#666;">Loading standings...</p></div>';
             
+            console.log('Init called, connecting to Firebase...');
+            
             // Timeout fallback - if Firebase doesn't respond in 5 seconds, show default
             const timeout = setTimeout(() => {
                 console.log('Firebase timeout - using default league');
@@ -1144,29 +1146,36 @@
             }, 5000);
             
             // Listen for real-time updates from Firebase
-            leagueRef.on('value', (snapshot) => {
+            try {
+                leagueRef.on('value', (snapshot) => {
+                    clearTimeout(timeout);
+                    console.log('Firebase connected! Data:', snapshot.val());
+                    let league = snapshot.val();
+                    
+                    // Use default league if none exists
+                    if (!league) {
+                        console.log('No league data found, using default');
+                        league = defaultLeague;
+                    } else {
+                        // Convert Firebase objects to arrays (Firebase stores arrays as objects)
+                        league.players = league.players ? Object.values(league.players) : [];
+                        league.rounds = league.rounds ? Object.values(league.rounds) : [];
+                        league.teams = league.teams ? Object.values(league.teams) : [];
+                        league.scores = league.scores || {};
+                    }
+                    
+                    renderLeague(league);
+                }, (error) => {
+                    clearTimeout(timeout);
+                    console.error('Firebase error:', error);
+                    // Fallback to default league on error
+                    renderLeague(defaultLeague);
+                });
+            } catch (err) {
                 clearTimeout(timeout);
-                console.log('Firebase connected! Data:', snapshot.val());
-                let league = snapshot.val();
-                
-                // Use default league if none exists
-                if (!league) {
-                    league = defaultLeague;
-                } else {
-                    // Ensure arrays exist (Firebase returns undefined for empty arrays)
-                    league.players = league.players || [];
-                    league.rounds = league.rounds || [];
-                    league.teams = league.teams || [];
-                    league.scores = league.scores || {};
-                }
-                
-                renderLeague(league);
-            }, (error) => {
-                clearTimeout(timeout);
-                console.error('Firebase error:', error);
-                // Fallback to default league on error
+                console.error('Firebase init error:', err);
                 renderLeague(defaultLeague);
-            });
+            }
         }
         
         function renderLeague(league) {
