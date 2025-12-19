@@ -1882,43 +1882,40 @@
 
         function submit() {
             const scores = getScores();
+            const requiredHoles = league.course?.holes || 9;
             
-            // Count valid scores - check all properties, not just 1-18
+            // Count valid scores for each hole 1 through requiredHoles
             let filled = 0;
-            const validScores = [];
-            for (let key in scores) {
-                const score = scores[key];
-                // Skip metadata properties
-                if (key === 'submitted' || key === 'submittedAt') continue;
-                
-                // Parse the score value - might be string or number
+            const missingHoles = [];
+            
+            for (let h = 1; h <= requiredHoles; h++) {
+                const score = scores[h] || scores[String(h)];
                 const scoreValue = typeof score === 'string' ? parseInt(score) : score;
                 
-                // Count numeric scores > 0
                 if (scoreValue && !isNaN(scoreValue) && scoreValue > 0) {
                     filled++;
-                    validScores.push({ hole: key, score: scoreValue });
+                } else {
+                    missingHoles.push(h);
                 }
             }
 
             console.log('Score validation:', { 
-                rawScores: scores, 
-                validScores, 
+                scores, 
                 filled, 
-                total: league.course.holes,
+                requiredHoles,
+                missingHoles,
                 playerId,
                 roundId
             });
 
-            if (filled === 0) {
-                alert('Please enter at least one score before submitting.');
-                return;
-            }
-
-            if (filled < league.course.holes) {
-                if (!confirm(`You entered ${filled}/${league.course.holes} holes. Submit anyway?`)) {
-                    return;
+            // Require ALL holes to be filled
+            if (filled < requiredHoles) {
+                if (missingHoles.length <= 3) {
+                    alert(`Please enter scores for hole${missingHoles.length > 1 ? 's' : ''} ${missingHoles.join(', ')} before submitting.`);
+                } else {
+                    alert(`Please enter all ${requiredHoles} hole scores before submitting. You're missing ${missingHoles.length} holes.`);
                 }
+                return;
             }
 
             // Check if player needs to create a PIN

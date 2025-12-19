@@ -1117,12 +1117,6 @@
                 <div class="season" id="sidebarSeason"></div>
             </div>
             <div class="admin-nav">
-                <a href="tournaments.html" class="nav-item back-link">
-                    <i class="fas fa-trophy"></i> View Leaderboard
-                </a>
-                <a href="schedule.html" class="nav-item back-link">
-                    <i class="fas fa-calendar-alt"></i> View Schedule
-                </a>
                 <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
                     <i class="fas fa-home"></i> Dashboard
                 </div>
@@ -1132,31 +1126,16 @@
                 <div class="nav-item" data-section="rounds" onclick="showSection('rounds')">
                     <i class="fas fa-flag"></i> Rounds
                 </div>
-                <div class="nav-item" data-section="scoredocs" onclick="showSection('scoredocs')">
-                    <i class="fas fa-file-alt"></i> Score Documents
-                </div>
                 <div class="nav-item" data-section="print" onclick="showSection('print')">
-                    <i class="fas fa-print"></i> Print
+                    <i class="fas fa-print"></i> Print & Documents
                 </div>
-                <div class="nav-divider"></div>
-                <div style="padding:10px 20px;font-size:11px;color:#999;text-transform:uppercase;font-weight:700;">Business Admin</div>
                 <div class="nav-item" data-section="customers" onclick="showSection('customers')">
-                    <i class="fas fa-address-book" style="color:#635bff;"></i> Customer Management
+                    <i class="fas fa-users"></i> Customers
                 </div>
-                <a href="admin-pos.html" class="nav-item" style="text-decoration: none;">
-                    <i class="fas fa-cash-register"></i> POS Admin
-                </a>
-                <div class="nav-item" data-section="staff" onclick="showSection('staff')">
-                    <i class="fas fa-id-badge"></i> Staff Management
-                </div>
-                <div class="nav-divider"></div>
                 <div class="nav-item" data-section="settings" onclick="showSection('settings')">
                     <i class="fas fa-cog"></i> Settings
                 </div>
-                <div class="nav-item danger" onclick="resetLeague()">
-                    <i class="fas fa-trash"></i> Reset League
-                </div>
-                <div class="admin-nav-divider"></div>
+                <div class="nav-divider"></div>
                 <div class="nav-item danger" onclick="handleLogout()">
                     <i class="fas fa-sign-out-alt"></i> Sign Out
                 </div>
@@ -1207,12 +1186,6 @@
                     <button class="btn btn-secondary" onclick="showSection('print')" style="justify-content: center;">
                         <i class="fas fa-print"></i> Print Scorecards
                     </button>
-                    <a href="tournaments.html" class="btn btn-secondary" style="justify-content: center; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-trophy"></i> View Leaderboard
-                    </a>
-                    <a href="schedule.html" class="btn btn-secondary" style="justify-content: center; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-calendar-alt"></i> View Schedule
-                    </a>
                     <button class="btn btn-secondary" onclick="exportData()" style="justify-content: center;">
                         <i class="fas fa-download"></i> Export Data
                     </button>
@@ -1225,7 +1198,7 @@
             <h1 class="page-title"><i class="fas fa-users"></i> Teams & Players</h1>
             
             <!-- Quick Actions -->
-            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: none;">
+            <div class="card" style="margin-bottom: 20px;">
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
                     <button class="btn btn-sm" style="background: #37b24a;" onclick="openAddTeamModal()"><i class="fas fa-plus"></i> New Team</button>
                     <button class="btn btn-secondary btn-sm" onclick="syncMemberStatus()" title="Refresh member status from Stripe"><i class="fas fa-sync-alt"></i> Sync Members</button>
@@ -1233,9 +1206,9 @@
                     <button class="btn btn-secondary btn-sm" onclick="printPinSheet()"><i class="fas fa-print"></i> Print PINs</button>
                     <button class="btn btn-secondary btn-sm" onclick="exportTeamsCSV(); document.getElementById('exportModal')?.remove();"><i class="fas fa-download"></i> Export Teams</button>
                     <button class="btn btn-secondary btn-sm" onclick="cleanupOrphanedPlayers()" title="Remove players without a team"><i class="fas fa-broom"></i> Cleanup</button>
-                    <div id="pinStats" style="font-weight: 600; margin-left: auto; color: #fff;"></div>
+                    <div id="pinStats" style="font-size: 13px; margin-left: auto; color: #666;"></div>
                 </div>
-                <div id="playerSyncStatus" style="display: none; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 10px 15px; margin-top: 12px; font-size: 13px; color: #1565c0;">
+                <div id="playerSyncStatus" style="display: none; background: #f0f9ff; padding: 10px; margin-top: 12px; font-size: 13px; color: #0369a1; border-radius: 6px;">
                     <i class="fas fa-info-circle"></i> <span id="playerSyncMessage"></span>
                 </div>
             </div>
@@ -1283,10 +1256,11 @@
         
         <!-- Print Section -->
         <div class="page-section" id="section-print">
-            <h1 class="page-title"><i class="fas fa-print"></i> Print</h1>
+            <h1 class="page-title"><i class="fas fa-print"></i> Print & Documents</h1>
             
+            <!-- Print Blank Scorecards -->
             <div class="card">
-                <h3><i class="fas fa-id-card"></i> Print Scorecards</h3>
+                <h3><i class="fas fa-id-card"></i> Print Blank Scorecards</h3>
                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print blank scorecards for teams or generic use.</p>
                 <div class="print-grid">
                     <select id="printTeamSelect" onchange="updatePrintPreview()">
@@ -1301,69 +1275,25 @@
                 <button class="btn" onclick="printScorecards()" id="printBtn" disabled><i class="fas fa-print"></i> Print Scorecards</button>
             </div>
             
-            <div class="card">
-                <h3><i class="fas fa-qrcode"></i> General Scoring Link</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">A general link for anyone to enter scores (useful for posting online).</p>
-                <div id="generalQRCode" style="text-align: center; margin: 15px 0;"></div>
-                <p style="text-align: center; font-size: 12px; color: #888; word-break: break-all;" id="generalQRUrl"></p>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-                    <button class="btn btn-sm" onclick="copyGeneralUrl()"><i class="fas fa-copy"></i> Copy Link</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="card">
+                    <h3><i class="fas fa-qrcode"></i> General Scoring Link</h3>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">A general link for anyone to enter scores.</p>
+                    <div id="generalQRCode" style="text-align: center; margin: 15px 0;"></div>
+                    <p style="text-align: center; font-size: 12px; color: #888; word-break: break-all;" id="generalQRUrl"></p>
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                        <button class="btn btn-sm" onclick="copyGeneralUrl()"><i class="fas fa-copy"></i> Copy Link</button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="card">
-                <h3><i class="fas fa-key"></i> Print Player PINs</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print a sheet with each player's personal PIN for score entry.</p>
-                <button class="btn" onclick="printPinSheet()"><i class="fas fa-print"></i> Print PIN Sheet</button>
-            </div>
-            
-            <div class="card">
-                <h3><i class="fas fa-download"></i> Export Data</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Download all league data as a JSON file.</p>
-                <button class="btn btn-secondary" onclick="exportData()"><i class="fas fa-download"></i> Export JSON</button>
-            </div>
-        </div>
-        
-        <!-- Score Documents Section -->
-        <div class="page-section" id="section-scoredocs">
-            <h1 class="page-title"><i class="fas fa-file-alt"></i> Score Documents</h1>
-            
-            <div class="card">
-                <h3><i class="fas fa-filter"></i> Filter Documents</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
-                    <div>
-                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Round</label>
-                        <select id="filterRound" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                            <option value="">All Rounds</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Team</label>
-                        <select id="filterTeam" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                            <option value="">All Teams</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Date Range</label>
-                        <select id="filterDateRange" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                            <option value="">All Time</option>
-                            <option value="today">Today</option>
-                            <option value="week">This Week</option>
-                            <option value="month">This Month</option>
-                        </select>
-                    </div>
-                    <button class="btn" onclick="loadScoreDocuments()"><i class="fas fa-search"></i> Search</button>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h3><i class="fas fa-clipboard-list"></i> Submitted Scorecards</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">View and print individual player scorecards from tournament rounds.</p>
-                <div id="scoreDocsList" style="min-height: 200px;">
-                    <div style="text-align: center; color: #999; padding: 40px;">
-                        <i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 15px;"></i>
-                        <p>No score documents found. Submitted scorecards will appear here.</p>
-                    </div>
+                
+                <div class="card">
+                    <h3><i class="fas fa-key"></i> Print Player PINs</h3>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print a sheet with each player's personal PIN for score entry.</p>
+                    <button class="btn" onclick="printPinSheet()" style="width: 100%;"><i class="fas fa-print"></i> Print PIN Sheet</button>
+                    <div style="margin-top: 15px;"></div>
+                    <h3 style="margin-top: 10px;"><i class="fas fa-download"></i> Export Data</h3>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Download all league data as a JSON file.</p>
+                    <button class="btn btn-secondary" onclick="exportData()" style="width: 100%;"><i class="fas fa-download"></i> Export JSON</button>
                 </div>
             </div>
         </div>
@@ -1373,43 +1303,126 @@
             <div id="scoreDocPrintContent"></div>
         </div>
         
-        <!-- Customer Management Section -->
+        <!-- Membership Management Section -->
         <div class="page-section" id="section-customers">
-            <h1 class="page-title"><i class="fas fa-address-book"></i> Customer Management</h1>
+            <h1 class="page-title"><i class="fas fa-users"></i> Customers</h1>
+            
+            <!-- Customer & Membership Stats -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; color: #1a1a2e;" id="statTotalCustomers">0</div>
+                            <div style="font-size: 12px; color: #888;">Total Customers</div>
+                        </div>
+                        <i class="fas fa-users" style="font-size: 20px; color: #1a1a2e; opacity: 0.5;"></i>
+                    </div>
+                </div>
+                <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; color: #9b59b6;" id="statEagleMembers">0</div>
+                            <div style="font-size: 12px; color: #888;">Eagle</div>
+                        </div>
+                        <i class="fas fa-crown" style="font-size: 20px; color: #9b59b6; opacity: 0.5;"></i>
+                    </div>
+                </div>
+                <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; color: #f39c12;" id="statBirdieMembers">0</div>
+                            <div style="font-size: 12px; color: #888;">Birdie</div>
+                        </div>
+                        <i class="fas fa-star" style="font-size: 20px; color: #f39c12; opacity: 0.5;"></i>
+                    </div>
+                </div>
+                <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; color: #27ae60;" id="statParMembers">0</div>
+                            <div style="font-size: 12px; color: #888;">Par</div>
+                        </div>
+                        <i class="fas fa-golf-ball" style="font-size: 20px; color: #27ae60; opacity: 0.5;"></i>
+                    </div>
+                </div>
+                <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; color: #3498db;" id="statTotalMembers">0</div>
+                            <div style="font-size: 12px; color: #888;">Active Members</div>
+                        </div>
+                        <i class="fas fa-id-card" style="font-size: 20px; color: #3498db; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
             
             <!-- Quick Actions -->
-            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #635bff 0%, #4a47cc 100%); border: none;">
+            <div class="card" style="margin-bottom: 20px;">
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-                    <button class="btn btn-sm" style="background: #fff; color: #635bff;" onclick="syncStripeCustomers()"><i class="fas fa-sync-alt"></i> Sync from Stripe</button>
-                    <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: #fff;" onclick="openAddCustomerModal()"><i class="fas fa-plus"></i> Add Customer</button>
-                    <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: #fff;" onclick="exportCustomersCSV(); document.getElementById('exportModal')?.remove();"><i class="fas fa-download"></i> Export CSV</button>
-                    <a href="https://dashboard.stripe.com/customers" target="_blank" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: #fff; text-decoration: none;"><i class="fab fa-stripe-s"></i> Stripe Dashboard</a>
-                    <div id="customerStats" style="font-weight: 600; margin-left: auto; color: #fff;"></div>
+                    <button class="btn btn-sm" onclick="syncStripeCustomers()"><i class="fas fa-sync-alt"></i> Sync Stripe</button>
+                    <a href="membership-signup.html" target="_blank" class="btn btn-sm btn-secondary" style="text-decoration: none;"><i class="fas fa-user-plus"></i> New Member</a>
+                    <button class="btn btn-sm btn-secondary" onclick="exportCustomersCSV()"><i class="fas fa-download"></i> Export</button>
+                    <a href="https://dashboard.stripe.com/subscriptions" target="_blank" class="btn btn-sm btn-secondary" style="text-decoration: none;"><i class="fab fa-stripe-s"></i> Subscriptions</a>
+                    <div id="customerStats" style="font-size: 13px; margin-left: auto; color: #666;"></div>
                 </div>
-                <div id="customerSyncStatus" style="display: none; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 10px 15px; margin-top: 12px; font-size: 13px; color: #635bff;">
+                <div id="customerSyncStatus" style="display: none; background: #f0f9ff; padding: 10px; margin-top: 12px; font-size: 13px; color: #0369a1; border-radius: 6px;">
                     <i class="fas fa-info-circle"></i> <span id="customerSyncMessage"></span>
                 </div>
             </div>
             
-            <!-- Customer Grid -->
-            <div class="card">
-                <h3><i class="fas fa-users"></i> All Customers</h3>
-                <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Customers synced from Stripe. Members and league players are highlighted.</p>
-                
-                <!-- Filter/Search -->
-                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                    <input type="text" id="customerSearch" placeholder="Search customers..." 
-                        oninput="renderCustomers()"
-                        style="flex: 1; min-width: 200px; padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
-                    <select id="customerFilter" onchange="renderCustomers()" style="padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
-                        <option value="all">All Customers</option>
-                        <option value="members">Members Only</option>
-                        <option value="league">League Players Only</option>
-                        <option value="no-subscription">No Subscription</option>
-                    </select>
+            <!-- Customers List -->
+            <div class="card" style="padding: 0; overflow: hidden;">
+                <!-- Tabs -->
+                <div style="display: flex; border-bottom: 1px solid #e5e7eb;">
+                    <button class="customer-tab" onclick="setCustomerTab('all')" id="tabAll" style="flex: 1; padding: 12px; border: none; background: none; font-weight: 600; cursor: pointer; border-bottom: 2px solid #1a1a2e; color: #1a1a2e; font-size: 13px;">
+                        All Customers <span id="tabCountAll" style="background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:8px;font-size:10px;margin-left:4px;">0</span>
+                    </button>
+                    <button class="customer-tab" onclick="setCustomerTab('members')" id="tabMembers" style="flex: 1; padding: 12px; border: none; background: none; font-weight: 500; cursor: pointer; color: #888; font-size: 13px; border-bottom: 2px solid transparent;">
+                        Members <span id="tabCountMembers" style="background:#e5e7eb;color:#666;padding:2px 6px;border-radius:8px;font-size:10px;margin-left:4px;">0</span>
+                    </button>
+                    <button class="customer-tab" onclick="setCustomerTab('league')" id="tabLeague" style="flex: 1; padding: 12px; border: none; background: none; font-weight: 500; cursor: pointer; color: #888; font-size: 13px; border-bottom: 2px solid transparent;">
+                        League <span id="tabCountLeague" style="background:#e5e7eb;color:#666;padding:2px 6px;border-radius:8px;font-size:10px;margin-left:4px;">0</span>
+                    </button>
+                    <button class="customer-tab" onclick="setCustomerTab('inactive')" id="tabInactive" style="flex: 1; padding: 12px; border: none; background: none; font-weight: 500; cursor: pointer; color: #888; font-size: 13px; border-bottom: 2px solid transparent;">
+                        Non-Members <span id="tabCountInactive" style="background:#e5e7eb;color:#666;padding:2px 6px;border-radius:8px;font-size:10px;margin-left:4px;">0</span>
+                    </button>
                 </div>
                 
-                <div class="customer-grid" id="customerGrid" style="display: grid; gap: 12px;"></div>
+                <div style="padding: 15px 20px;">
+                    <!-- Search & Filter -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <input type="text" id="customerSearch" placeholder="Search by name, email, or phone..." 
+                            oninput="renderCustomers()"
+                            style="flex: 1; min-width: 200px; padding: 10px 15px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                        <select id="memberTypeFilter" onchange="renderCustomers()" style="padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;">
+                            <option value="all">All Tiers</option>
+                            <option value="eagle">Eagle</option>
+                            <option value="birdie">Birdie</option>
+                            <option value="par">Par</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Bulk Selection Bar -->
+                    <div id="bulkSelectionBar" style="display: none; background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 15px; margin-bottom: 15px;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="selectAllCustomers" onchange="toggleSelectAll(this.checked)">
+                                <span style="font-weight: 600; color: #333;">Select All</span>
+                            </label>
+                            <span id="selectedCount" style="color: #666;">0 selected</span>
+                            <div style="margin-left: auto; display: flex; gap: 8px;">
+                                <button class="btn btn-sm btn-secondary" onclick="bulkExport()"><i class="fas fa-download"></i></button>
+                                <button class="btn btn-sm btn-danger" onclick="bulkDelete()"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Member List -->
+                    <div id="customerGrid" style="display: grid; gap: 6px;"></div>
+                    
+                    <!-- Pagination -->
+                    <div id="customerPagination" style="display: flex; justify-content: center; gap: 6px; margin-top: 15px;"></div>
+                </div>
             </div>
         </div>
         
@@ -1444,13 +1457,6 @@
                     </div>
                 </div>
                 <button class="btn" onclick="saveBusinessSettings()" style="margin-top:15px;"><i class="fas fa-save"></i> Save Business Details</button>
-            </div>
-            
-            <div class="card">
-                <h3><i class="fas fa-golf-ball"></i> Course Pars</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Set the par for each hole.</p>
-                <div id="parInputsContainer"></div>
-                <button class="btn" onclick="savePars()" style="margin-top: 15px;"><i class="fas fa-check"></i> Save Pars</button>
             </div>
             
             <!-- Stripe Payment Settings -->
@@ -1678,8 +1684,8 @@
                     <div class="form-group">
                         <label>Holes</label>
                         <select id="holes">
-                            <option value="9">9 Holes</option>
-                            <option value="18" selected>18 Holes</option>
+                            <option value="9" selected>9 Holes</option>
+                            <option value="18">18 Holes</option>
                         </select>
                     </div>
                 </div>
@@ -2351,7 +2357,7 @@
             // Show preview even when no team selected (blank preview)
             const isBlank = !teamId || teamId === 'blank';
             const team = (teamId && teamId !== 'blank') ? league.teams.find(t => t.id === teamId) : null;
-            const holes = league.course?.holes || 18;
+            const holes = league.course?.holes || 9;
             const pars = league.course?.pars || Array(holes).fill(4);
             const frontNine = Math.min(9, holes);
             const has18 = holes >= 18;
@@ -2836,17 +2842,93 @@
         
         // ============ CUSTOMER MANAGEMENT ============
         
+        // Customer management state
+        let customerTab = 'all';
+        let customerPage = 1;
+        let sortBy = 'name';
+        const customersPerPage = 25;
+        let selectedCustomers = new Set();
+        
+        function setCustomerTab(tab) {
+            customerTab = tab;
+            customerPage = 1;
+            selectedCustomers.clear();
+            
+            // Update tab styles - clean monochrome
+            document.querySelectorAll('.customer-tab').forEach(t => {
+                t.style.borderBottom = '2px solid transparent';
+                t.style.color = '#888';
+                t.style.fontWeight = '500';
+            });
+            const activeTab = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            if (activeTab) {
+                activeTab.style.borderBottom = '2px solid #1a1a2e';
+                activeTab.style.color = '#1a1a2e';
+                activeTab.style.fontWeight = '600';
+            }
+            
+            renderCustomers();
+        }
+        
+        function updateCustomerStats() {
+            const total = stripeCustomersCache.length;
+            const members = stripeCustomersCache.filter(c => c.isMember).length;
+            const leaguePlayers = stripeCustomersCache.filter(c => c.isLeague).length;
+            const inactive = stripeCustomersCache.filter(c => !c.isMember && !c.isLeague).length;
+            
+            // Count by tier
+            const eagle = stripeCustomersCache.filter(c => c.memberType?.includes('eagle')).length;
+            const birdie = stripeCustomersCache.filter(c => c.memberType?.includes('birdie')).length;
+            const par = stripeCustomersCache.filter(c => c.memberType?.includes('par')).length;
+            
+            // Update total customers stat
+            const totalCustomersEl = document.getElementById('statTotalCustomers');
+            if (totalCustomersEl) totalCustomersEl.textContent = total;
+            
+            // Update membership tier stats
+            const eagleEl = document.getElementById('statEagleMembers');
+            const birdieEl = document.getElementById('statBirdieMembers');
+            const parEl = document.getElementById('statParMembers');
+            if (eagleEl) eagleEl.textContent = eagle;
+            if (birdieEl) birdieEl.textContent = birdie;
+            if (parEl) parEl.textContent = par;
+            
+            // Update stat cards
+            const totalMembersEl = document.getElementById('statTotalMembers');
+            if (totalMembersEl) totalMembersEl.textContent = members;
+            
+            // Update tab counts
+            const tabAll = document.getElementById('tabCountAll');
+            const tabMembers = document.getElementById('tabCountMembers');
+            const tabLeague = document.getElementById('tabCountLeague');
+            const tabInactive = document.getElementById('tabCountInactive');
+            if (tabAll) tabAll.textContent = total;
+            if (tabMembers) tabMembers.textContent = members;
+            if (tabLeague) tabLeague.textContent = leaguePlayers;
+            if (tabInactive) tabInactive.textContent = inactive;
+        }
+        
         function renderCustomers() {
             const grid = document.getElementById('customerGrid');
-            const stats = document.getElementById('customerStats');
             const searchTerm = (document.getElementById('customerSearch')?.value || '').toLowerCase();
-            const filter = document.getElementById('customerFilter')?.value || 'all';
+            const memberTypeFilter = document.getElementById('memberTypeFilter')?.value || 'all';
             
             if (!grid) return;
             
-            // Filter customers
+            updateCustomerStats();
+            
+            // Filter by tab
             let customers = [...stripeCustomersCache];
             
+            if (customerTab === 'members') {
+                customers = customers.filter(c => c.isMember);
+            } else if (customerTab === 'league') {
+                customers = customers.filter(c => c.isLeague);
+            } else if (customerTab === 'inactive') {
+                customers = customers.filter(c => !c.isMember && !c.isLeague);
+            }
+            
+            // Filter by search
             if (searchTerm) {
                 customers = customers.filter(c => 
                     (c.name || '').toLowerCase().includes(searchTerm) ||
@@ -2855,62 +2937,323 @@
                 );
             }
             
-            if (filter === 'members') {
-                customers = customers.filter(c => c.isMember);
-            } else if (filter === 'league') {
-                customers = customers.filter(c => c.isLeague);
-            } else if (filter === 'no-subscription') {
-                customers = customers.filter(c => !c.isMember && !c.isLeague);
+            // Filter by member type
+            if (memberTypeFilter !== 'all') {
+                customers = customers.filter(c => c.memberType === memberTypeFilter);
             }
             
-            // Update stats
-            if (stats) {
-                const total = stripeCustomersCache.length;
-                const members = stripeCustomersCache.filter(c => c.isMember).length;
-                const leaguePlayers = stripeCustomersCache.filter(c => c.isLeague).length;
-                stats.innerHTML = `<span>${total} customers</span> • <span style="color:#ffd700;">${members} members</span> • <span style="color:#37b24a;">${leaguePlayers} league</span>`;
-            }
+            // Sort
+            customers.sort((a, b) => {
+                if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+                if (sortBy === 'recent') return (b.created || 0) - (a.created || 0);
+                if (sortBy === 'spent') return (b.totalSpent || 0) - (a.totalSpent || 0);
+                if (sortBy === 'visits') return (b.visits || 0) - (a.visits || 0);
+                return 0;
+            });
             
-            if (customers.length === 0) {
+            // Pagination
+            const totalPages = Math.ceil(customers.length / customersPerPage);
+            const startIdx = (customerPage - 1) * customersPerPage;
+            const pageCustomers = customers.slice(startIdx, startIdx + customersPerPage);
+            
+            // Update bulk selection bar visibility
+            document.getElementById('bulkSelectionBar').style.display = selectedCustomers.size > 0 ? 'block' : 'none';
+            document.getElementById('selectedCount').textContent = `${selectedCustomers.size} selected`;
+            
+            if (pageCustomers.length === 0) {
                 grid.innerHTML = `
-                    <div class="empty-state" style="padding: 40px; text-align: center;">
-                        <i class="fas fa-users-slash" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
-                        <p style="color: #888;">${searchTerm || filter !== 'all' ? 'No customers match your filters.' : 'No customers yet. Click "Sync from Stripe" to load customers.'}</p>
+                    <div style="padding: 60px; text-align: center;">
+                        <i class="fas fa-users" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
+                        <p style="color: #888; font-size: 14px;">${searchTerm ? 'No customers match your search.' : 'No customers yet.'}</p>
+                        <button class="btn btn-sm" onclick="syncStripeCustomers()" style="margin-top: 10px;"><i class="fas fa-sync-alt"></i> Sync from Stripe</button>
                     </div>
                 `;
+                document.getElementById('customerPagination').innerHTML = '';
                 return;
             }
             
-            grid.innerHTML = customers.map(c => {
-                const tierColor = c.isMember ? getMemberTierColor(c.memberType) : (c.isLeague ? '#37b24a' : '#6b7280');
-                const tierName = c.isMember ? getMemberTierName(c.memberType) : (c.isLeague ? 'League' : 'Customer');
-                
-                // Check if linked to a league player
-                const linkedPlayer = league.players.find(p => p.stripeCustomerId === c.id);
+            grid.innerHTML = pageCustomers.map(c => {
+                const tierColor = getMemberTierColor(c.memberType);
+                const tierName = c.isMember ? getMemberTierName(c.memberType) : (c.isLeague ? 'League' : '');
+                const initials = getInitials(c.name || c.email || 'NA');
+                const isSelected = selectedCustomers.has(c.id);
+                const avatarBg = c.isMember ? tierColor : (c.isLeague ? '#37b24a' : '#6b7280');
                 
                 return `
-                    <div class="customer-row" style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: center; padding: 15px; background: ${c.isMember || c.isLeague ? 'linear-gradient(135deg, #f8f9fa, #fff)' : '#fff'}; border-radius: 10px; border: 1px solid ${c.isMember || c.isLeague ? tierColor + '40' : '#e5e7eb'}; border-left: 4px solid ${tierColor};">
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <span style="font-weight: 700; font-size: 15px; color: #1a1a2e;">${c.name || 'No Name'}</span>
-                                <span style="background: ${tierColor}; color: #fff; font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: 700;">${tierName.toUpperCase()}</span>
-                                ${linkedPlayer ? `<span style="background: #10b981; color: #fff; font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: 700;"><i class="fas fa-link"></i> In League</span>` : ''}
+                    <div onclick="openCustomerProfile('${c.id}')" style="display: flex; align-items: center; gap: 12px; padding: 12px 15px; background: ${isSelected ? '#f0f0f0' : '#fff'}; border-radius: 8px; border: 1px solid ${isSelected ? '#999' : '#e5e7eb'}; cursor: pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='${isSelected ? '#f0f0f0' : '#fff'}'">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleCustomerSelect('${c.id}')" style="width: 16px; height: 16px; cursor: pointer;">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: ${avatarBg}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0;">${initials}</div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-weight: 600; font-size: 14px; color: #1a1a2e;">${c.name || 'No Name'}</span>
+                                ${tierName ? `<span style="background: ${avatarBg}; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${tierName}</span>` : ''}
                             </div>
-                            <div style="display: flex; gap: 15px; flex-wrap: wrap; font-size: 13px; color: #666;">
-                                ${c.email ? `<span><i class="fas fa-envelope" style="color: #888; width: 16px;"></i> ${c.email}</span>` : ''}
-                                ${c.phone ? `<span><i class="fas fa-phone" style="color: #888; width: 16px;"></i> ${c.phone}</span>` : ''}
-                            </div>
-                            ${c.subscriptionStatus ? `<div style="font-size: 11px; color: #888;"><i class="fas fa-credit-card"></i> ${c.subscriptionStatus}</div>` : ''}
+                            <div style="font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.email || c.phone || '-'}</div>
                         </div>
-                        <div style="display: flex; gap: 6px;">
-                            ${!linkedPlayer && c.isLeague ? `<button class="btn btn-sm" style="background:#10b981;color:#fff;" onclick="addCustomerToLeague('${c.id}')" title="Add to League"><i class="fas fa-user-plus"></i></button>` : ''}
-                            <button class="btn btn-sm" style="background:#635bff;color:#fff;" onclick="editCustomer('${c.id}')" title="Edit Customer"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-secondary" onclick="viewCustomerDetails('${c.id}')" title="View Details"><i class="fas fa-eye"></i></button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteCustomer('${c.id}')" title="Delete Customer"><i class="fas fa-trash"></i></button>
+                        <div style="display: flex; gap: 4px;" onclick="event.stopPropagation();">
+                            ${c.isMember ? `<button class="btn btn-sm btn-secondary" onclick="manageMembership('${c.id}')" title="Manage Membership"><i class="fas fa-id-card"></i></button>` : `<button class="btn btn-sm" onclick="addMembership('${c.id}')" title="Add Membership" style="background: #27ae60; color: #fff;"><i class="fas fa-plus"></i></button>`}
+                            <button class="btn btn-sm btn-secondary" onclick="editCustomer('${c.id}')" title="Edit"><i class="fas fa-edit"></i></button>
                         </div>
                     </div>
                 `;
             }).join('');
+            
+            // Pagination
+            if (totalPages > 1) {
+                let pagHtml = '';
+                if (customerPage > 1) {
+                    pagHtml += `<button class="btn btn-sm btn-secondary" onclick="customerPage=${customerPage-1}; renderCustomers()"><i class="fas fa-chevron-left"></i></button>`;
+                }
+                pagHtml += `<span style="padding: 0 10px; font-size: 13px; color: #666;">${customerPage} / ${totalPages}</span>`;
+                if (customerPage < totalPages) {
+                    pagHtml += `<button class="btn btn-sm btn-secondary" onclick="customerPage=${customerPage+1}; renderCustomers()"><i class="fas fa-chevron-right"></i></button>`;
+                }
+                document.getElementById('customerPagination').innerHTML = pagHtml;
+            } else {
+                document.getElementById('customerPagination').innerHTML = '';
+            }
+        }
+        
+        function getInitials(name) {
+            if (!name) return 'NA';
+            const parts = name.trim().split(' ');
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+        
+        function toggleCustomerSelect(customerId) {
+            if (selectedCustomers.has(customerId)) {
+                selectedCustomers.delete(customerId);
+            } else {
+                selectedCustomers.add(customerId);
+            }
+            renderCustomers();
+        }
+        
+        function toggleSelectAll(checked) {
+            const searchTerm = (document.getElementById('customerSearch')?.value || '').toLowerCase();
+            let customers = [...stripeCustomersCache];
+            
+            if (customerTab === 'members') customers = customers.filter(c => c.isMember);
+            else if (customerTab === 'league') customers = customers.filter(c => c.isLeague);
+            else if (customerTab === 'inactive') customers = customers.filter(c => !c.isMember && !c.isLeague);
+            
+            if (searchTerm) {
+                customers = customers.filter(c => 
+                    (c.name || '').toLowerCase().includes(searchTerm) ||
+                    (c.email || '').toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (checked) {
+                customers.forEach(c => selectedCustomers.add(c.id));
+            } else {
+                selectedCustomers.clear();
+            }
+            renderCustomers();
+        }
+        
+        function openCustomerProfile(customerId) {
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            const linkedPlayer = league.players.find(p => p.stripeCustomerId === customerId);
+            const team = linkedPlayer ? league.teams.find(t => t.id === linkedPlayer.teamId) : null;
+            const tierColor = customer.isMember ? getMemberTierColor(customer.memberType) : (customer.isLeague ? '#37b24a' : '#6b7280');
+            const tierName = customer.isMember ? getMemberTierName(customer.memberType) : (customer.isLeague ? 'League' : 'Customer');
+            const initials = getInitials(customer.name || customer.email || 'NA');
+            const createdDate = customer.created ? new Date(customer.created * 1000).toLocaleDateString() : '-';
+            
+            // Get player scores if linked
+            let scoresHtml = '';
+            if (linkedPlayer) {
+                let totalRounds = 0, avgNet = 0;
+                league.rounds.forEach(round => {
+                    const score = (league.scores || {})[round.id]?.[linkedPlayer.id];
+                    if (score && score.submitted) {
+                        totalRounds++;
+                        avgNet += score.net || 0;
+                    }
+                });
+                if (totalRounds > 0) avgNet = Math.round(avgNet / totalRounds);
+                
+                scoresHtml = `
+                    <div style="margin-top: 20px; background: #f0fff4; border: 1px solid #37b24a40; border-radius: 10px; padding: 15px;">
+                        <h4 style="color: #37b24a; margin-bottom: 10px;"><i class="fas fa-trophy"></i> League Stats</h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+                            <div><div style="font-size: 24px; font-weight: 700;">${totalRounds}</div><div style="font-size: 11px; color: #888;">Rounds</div></div>
+                            <div><div style="font-size: 24px; font-weight: 700;">${linkedPlayer.handicap || 0}</div><div style="font-size: 11px; color: #888;">Handicap</div></div>
+                            <div><div style="font-size: 24px; font-weight: 700;">${avgNet || '-'}</div><div style="font-size: 11px; color: #888;">Avg Net</div></div>
+                        </div>
+                        ${team ? `<div style="margin-top: 10px; font-size: 13px; color: #666;"><i class="fas fa-users"></i> Team: <strong>${team.name}</strong></div>` : ''}
+                    </div>
+                `;
+            }
+            
+            const modalHtml = `
+                <div id="customerProfileModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;overflow-y:auto;">
+                    <div style="background:#fff;border-radius:20px;max-width:600px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;">
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, ${tierColor}, ${tierColor}dd); color: #fff; padding: 30px; border-radius: 20px 20px 0 0; position: relative;">
+                            <button onclick="document.getElementById('customerProfileModal').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 18px;">&times;</button>
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 28px;">${initials}</div>
+                                <div>
+                                    <div style="font-size: 24px; font-weight: 700;">${customer.name || 'No Name'}</div>
+                                    <div style="opacity: 0.9; font-size: 14px;">${tierName} • Since ${createdDate}</div>
+                                    ${customer.subscriptionStatus ? `<div style="opacity: 0.8; font-size: 12px; margin-top: 4px;"><i class="fas fa-credit-card"></i> ${customer.subscriptionStatus}</div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Body -->
+                        <div style="padding: 25px;">
+                            <!-- Contact Info -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                                    <div style="font-size: 11px; color: #888; margin-bottom: 4px;">EMAIL</div>
+                                    <div style="font-weight: 600;">${customer.email || '-'}</div>
+                                    ${customer.email ? `<a href="mailto:${customer.email}" style="font-size: 12px; color: #635bff;"><i class="fas fa-envelope"></i> Send Email</a>` : ''}
+                                </div>
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                                    <div style="font-size: 11px; color: #888; margin-bottom: 4px;">PHONE</div>
+                                    <div style="font-weight: 600;">${customer.phone || '-'}</div>
+                                    ${customer.phone ? `<a href="tel:${customer.phone}" style="font-size: 12px; color: #635bff;"><i class="fas fa-phone"></i> Call</a>` : ''}
+                                </div>
+                            </div>
+                            
+                            <!-- Membership Section -->
+                            ${customer.isMember ? `
+                                <div style="background: linear-gradient(135deg, ${tierColor}10, ${tierColor}05); border: 1px solid ${tierColor}40; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                                    <h4 style="color: ${tierColor}; margin-bottom: 10px;"><i class="fas fa-crown"></i> ${tierName} Membership</h4>
+                                    <div style="font-size: 13px; color: #666;">
+                                        Status: <strong style="color: #37b24a;">Active</strong>
+                                    </div>
+                                    <button class="btn btn-sm btn-danger" onclick="cancelMembership('${customerId}')" style="margin-top: 10px;"><i class="fas fa-times"></i> Cancel Membership</button>
+                                </div>
+                            ` : `
+                                <div style="background: #f8f9fa; border: 1px dashed #ddd; border-radius: 10px; padding: 15px; margin-bottom: 20px; text-align: center;">
+                                    <p style="color: #888; margin-bottom: 10px;">No active membership</p>
+                                    <button class="btn btn-sm" style="background: #f39c12;" onclick="addMembership('${customerId}')"><i class="fas fa-crown"></i> Add Membership</button>
+                                </div>
+                            `}
+                            
+                            <!-- League Section -->
+                            ${scoresHtml}
+                            
+                            ${!linkedPlayer ? `
+                                <div style="margin-top: 20px; background: #f8f9fa; border: 1px dashed #ddd; border-radius: 10px; padding: 15px; text-align: center;">
+                                    <p style="color: #888; margin-bottom: 10px;">Not in league</p>
+                                    <button class="btn btn-sm" style="background: #37b24a;" onclick="document.getElementById('customerProfileModal').remove(); addCustomerToLeague('${customerId}')"><i class="fas fa-user-plus"></i> Add to League</button>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Notes -->
+                            <div style="margin-top: 20px;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 8px;"><i class="fas fa-sticky-note"></i> Notes</label>
+                                <textarea id="customerNotes" placeholder="Add notes about this customer..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px;">${customer.notes || ''}</textarea>
+                                <button class="btn btn-sm" onclick="saveCustomerNotes('${customerId}')" style="margin-top: 8px;"><i class="fas fa-save"></i> Save Notes</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer Actions -->
+                        <div style="padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn" style="background: #635bff;" onclick="document.getElementById('customerProfileModal').remove(); editCustomer('${customerId}')"><i class="fas fa-edit"></i> Edit</button>
+                            <a href="https://dashboard.stripe.com/customers/${customerId}" target="_blank" class="btn btn-secondary" style="text-decoration: none;"><i class="fab fa-stripe-s"></i> View in Stripe</a>
+                            <button class="btn btn-danger" style="margin-left: auto;" onclick="document.getElementById('customerProfileModal').remove(); deleteCustomer('${customerId}')"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function openBulkActionsModal() {
+            document.getElementById('bulkSelectionBar').style.display = 'block';
+            document.getElementById('selectAllCustomers').checked = false;
+            selectedCustomers.clear();
+            renderCustomers();
+        }
+        
+        async function bulkAddToLeague() {
+            if (selectedCustomers.size === 0) {
+                alert('No customers selected');
+                return;
+            }
+            alert(`Adding ${selectedCustomers.size} customers to league... (Feature coming soon)`);
+        }
+        
+        function bulkExport() {
+            if (selectedCustomers.size === 0) {
+                alert('No customers selected');
+                return;
+            }
+            const customers = stripeCustomersCache.filter(c => selectedCustomers.has(c.id));
+            let csv = 'Name,Email,Phone,Member Type,Is League\n';
+            customers.forEach(c => {
+                csv += `"${c.name || ''}","${c.email || ''}","${c.phone || ''}","${c.memberType || ''}","${c.isLeague ? 'Yes' : 'No'}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'selected_customers.csv';
+            a.click();
+            selectedCustomers.clear();
+            renderCustomers();
+        }
+        
+        async function bulkDelete() {
+            if (selectedCustomers.size === 0) {
+                alert('No customers selected');
+                return;
+            }
+            if (!confirm(`Delete ${selectedCustomers.size} customers? This cannot be undone.`)) return;
+            
+            let deleted = 0;
+            for (const customerId of selectedCustomers) {
+                try {
+                    await fetch(`${FUNCTIONS_URL}/deleteStripeCustomer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ customerId })
+                    });
+                    deleted++;
+                } catch (e) {
+                    console.error('Delete error:', e);
+                }
+            }
+            
+            selectedCustomers.clear();
+            await syncStripeCustomers();
+            alert(`Deleted ${deleted} customers.`);
+        }
+        
+        async function saveCustomerNotes(customerId) {
+            const notes = document.getElementById('customerNotes')?.value || '';
+            try {
+                await fetch(`${FUNCTIONS_URL}/updateStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerId, metadata: { notes } })
+                });
+                alert('Notes saved!');
+            } catch (e) {
+                alert('Failed to save notes: ' + e.message);
+            }
+        }
+        
+        function addMembership(customerId) {
+            alert('Redirect to membership signup with pre-filled customer. Feature coming soon.');
+            window.open(`membership-signup.html?customer=${customerId}`, '_blank');
+        }
+        
+        function cancelMembership(customerId) {
+            if (!confirm('Cancel this membership? The customer will lose access to member benefits.')) return;
+            alert('Membership cancellation feature coming soon. Please cancel via Stripe Dashboard.');
+            window.open(`https://dashboard.stripe.com/customers/${customerId}`, '_blank');
         }
         
         async function syncStripeCustomers() {
@@ -3166,6 +3509,219 @@
                 errorDiv.style.display = 'block';
                 errorDiv.style.color = '#f44336';
                 errorDiv.style.background = '#ffebee';
+            }
+        }
+        
+        function manageMembership(customerId) {
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            const tierColor = getMemberTierColor(customer.memberType);
+            const tierName = getMemberTierName(customer.memberType);
+            
+            let modalHtml = `
+                <div id="manageMembershipModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="color:#1a1a2e;"><i class="fas fa-id-card" style="color:${tierColor};"></i> Manage Membership</h3>
+                            <button onclick="document.getElementById('manageMembershipModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">&times;</button>
+                        </div>
+                        
+                        <div style="background:#f8f9fa;border-radius:12px;padding:20px;margin-bottom:20px;">
+                            <div style="display:flex;align-items:center;gap:15px;margin-bottom:15px;">
+                                <div style="width:50px;height:50px;border-radius:50%;background:${tierColor};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;">${getInitials(customer.name || 'NA')}</div>
+                                <div>
+                                    <div style="font-weight:600;font-size:16px;">${customer.name || 'No Name'}</div>
+                                    <div style="color:#666;font-size:13px;">${customer.email || ''}</div>
+                                </div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                                <div style="background:#fff;padding:12px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:11px;color:#888;margin-bottom:4px;">Current Tier</div>
+                                    <span style="background:${tierColor};color:#fff;padding:4px 12px;border-radius:6px;font-weight:600;font-size:13px;">${tierName}</span>
+                                </div>
+                                <div style="background:#fff;padding:12px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:11px;color:#888;margin-bottom:4px;">Status</div>
+                                    <span style="color:#27ae60;font-weight:600;font-size:13px;"><i class="fas fa-check-circle"></i> Active</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block;margin-bottom:8px;font-weight:600;font-size:13px;">Change Membership Tier</label>
+                            <select id="newMemberTier" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                                <option value="eagle" ${customer.memberType?.includes('eagle') ? 'selected' : ''}>🦅 Eagle - Premium ($199/mo)</option>
+                                <option value="birdie" ${customer.memberType?.includes('birdie') ? 'selected' : ''}>🐦 Birdie - Standard ($99/mo)</option>
+                                <option value="par" ${customer.memberType?.includes('par') ? 'selected' : ''}>⛳ Par - Basic ($49/mo)</option>
+                            </select>
+                        </div>
+                        
+                        <div id="membershipError" style="display:none;color:#f44336;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:8px;"></div>
+                        
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <button onclick="saveMembershipChange('${customerId}')" class="btn" style="background:#635bff;"><i class="fas fa-save"></i> Save Changes</button>
+                            <div style="display:flex;gap:10px;">
+                                <button onclick="cancelMembership('${customerId}')" class="btn" style="flex:1;background:#e74c3c;"><i class="fas fa-ban"></i> Cancel Membership</button>
+                                <button type="button" onclick="document.getElementById('manageMembershipModal').remove()" class="btn btn-secondary" style="flex:1;"><i class="fas fa-times"></i> Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function addMembership(customerId) {
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            let modalHtml = `
+                <div id="addMembershipModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="color:#1a1a2e;"><i class="fas fa-user-plus" style="color:#27ae60;"></i> Add Membership</h3>
+                            <button onclick="document.getElementById('addMembershipModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">&times;</button>
+                        </div>
+                        
+                        <div style="background:#f8f9fa;border-radius:12px;padding:15px;margin-bottom:20px;">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div style="width:40px;height:40px;border-radius:50%;background:#6b7280;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;">${getInitials(customer.name || 'NA')}</div>
+                                <div>
+                                    <div style="font-weight:600;">${customer.name || 'No Name'}</div>
+                                    <div style="color:#666;font-size:13px;">${customer.email || ''}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block;margin-bottom:8px;font-weight:600;font-size:13px;">Select Membership Tier</label>
+                            <div style="display:flex;flex-direction:column;gap:10px;">
+                                <label style="display:flex;align-items:center;gap:12px;padding:15px;border:2px solid #ddd;border-radius:10px;cursor:pointer;" onclick="this.querySelector('input').checked=true;document.querySelectorAll('#addMembershipModal label[style]').forEach(l=>l.style.borderColor='#ddd');this.style.borderColor='#9b59b6';">
+                                    <input type="radio" name="memberTier" value="eagle" style="width:18px;height:18px;">
+                                    <div style="flex:1;">
+                                        <div style="font-weight:600;color:#9b59b6;">🦅 Eagle Membership</div>
+                                        <div style="font-size:12px;color:#666;">Unlimited rounds, range, lessons • $199/mo</div>
+                                    </div>
+                                </label>
+                                <label style="display:flex;align-items:center;gap:12px;padding:15px;border:2px solid #ddd;border-radius:10px;cursor:pointer;" onclick="this.querySelector('input').checked=true;document.querySelectorAll('#addMembershipModal label[style]').forEach(l=>l.style.borderColor='#ddd');this.style.borderColor='#f39c12';">
+                                    <input type="radio" name="memberTier" value="birdie" style="width:18px;height:18px;">
+                                    <div style="flex:1;">
+                                        <div style="font-weight:600;color:#f39c12;">🐦 Birdie Membership</div>
+                                        <div style="font-size:12px;color:#666;">10 rounds, unlimited range • $99/mo</div>
+                                    </div>
+                                </label>
+                                <label style="display:flex;align-items:center;gap:12px;padding:15px;border:2px solid #ddd;border-radius:10px;cursor:pointer;" onclick="this.querySelector('input').checked=true;document.querySelectorAll('#addMembershipModal label[style]').forEach(l=>l.style.borderColor='#ddd');this.style.borderColor='#27ae60';">
+                                    <input type="radio" name="memberTier" value="par" checked style="width:18px;height:18px;">
+                                    <div style="flex:1;">
+                                        <div style="font-weight:600;color:#27ae60;">⛳ Par Membership</div>
+                                        <div style="font-size:12px;color:#666;">5 rounds, range access • $49/mo</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div id="addMembershipError" style="display:none;color:#f44336;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:8px;"></div>
+                        
+                        <div style="display:flex;gap:10px;">
+                            <button onclick="createMembership('${customerId}')" class="btn" style="flex:1;background:#27ae60;"><i class="fas fa-check"></i> Create Membership</button>
+                            <button type="button" onclick="document.getElementById('addMembershipModal').remove()" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        async function saveMembershipChange(customerId) {
+            const newTier = document.getElementById('newMemberTier').value;
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            try {
+                await db.ref('stripe_customers/' + customerId).update({
+                    memberType: newTier,
+                    memberTypeUpdated: new Date().toISOString()
+                });
+                
+                const idx = stripeCustomersCache.findIndex(c => c.id === customerId);
+                if (idx !== -1) {
+                    stripeCustomersCache[idx].memberType = newTier;
+                }
+                
+                document.getElementById('manageMembershipModal').remove();
+                showToast('Membership tier updated!', 'success');
+                updateCustomerStats();
+                renderCustomers();
+            } catch (error) {
+                console.error('Error updating membership:', error);
+                const errDiv = document.getElementById('membershipError');
+                errDiv.textContent = 'Failed to update membership. Please try again.';
+                errDiv.style.display = 'block';
+            }
+        }
+        
+        async function cancelMembership(customerId) {
+            if (!confirm('Are you sure you want to cancel this membership? This cannot be undone.')) return;
+            
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            try {
+                await db.ref('stripe_customers/' + customerId).update({
+                    isMember: false,
+                    memberType: null,
+                    membershipCancelledAt: new Date().toISOString()
+                });
+                
+                const idx = stripeCustomersCache.findIndex(c => c.id === customerId);
+                if (idx !== -1) {
+                    stripeCustomersCache[idx].isMember = false;
+                    stripeCustomersCache[idx].memberType = null;
+                }
+                
+                document.getElementById('manageMembershipModal').remove();
+                showToast('Membership cancelled', 'info');
+                updateCustomerStats();
+                renderCustomers();
+            } catch (error) {
+                console.error('Error cancelling membership:', error);
+                showToast('Failed to cancel membership', 'error');
+            }
+        }
+        
+        async function createMembership(customerId) {
+            const selectedTier = document.querySelector('input[name="memberTier"]:checked')?.value;
+            if (!selectedTier) {
+                const errDiv = document.getElementById('addMembershipError');
+                errDiv.textContent = 'Please select a membership tier.';
+                errDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                await db.ref('stripe_customers/' + customerId).update({
+                    isMember: true,
+                    memberType: selectedTier,
+                    memberSince: new Date().toISOString()
+                });
+                
+                const idx = stripeCustomersCache.findIndex(c => c.id === customerId);
+                if (idx !== -1) {
+                    stripeCustomersCache[idx].isMember = true;
+                    stripeCustomersCache[idx].memberType = selectedTier;
+                }
+                
+                document.getElementById('addMembershipModal').remove();
+                showToast('Membership created!', 'success');
+                updateCustomerStats();
+                renderCustomers();
+            } catch (error) {
+                console.error('Error creating membership:', error);
+                const errDiv = document.getElementById('addMembershipError');
+                errDiv.textContent = 'Failed to create membership. Please try again.';
+                errDiv.style.display = 'block';
             }
         }
         
@@ -3514,7 +4070,7 @@
         
         function renderParInputs() {
             const container = document.getElementById('parInputsContainer');
-            const holes = league.course?.holes || 18;
+            const holes = league.course?.holes || 9;
             const pars = league.course?.pars || Array(holes).fill(4);
             
             let html = '<div class="par-grid">';
@@ -4399,7 +4955,7 @@
             
             document.getElementById('scoresModalTitle').textContent = round.name + ' Scores';
             
-            const holes = league.course?.holes || 18;
+            const holes = league.course?.holes || 9;
             const scores = league.players.map(p => {
                 const ps = (league.scores || {})[roundId]?.[p.id];
                 const handicap = p.handicap || 0;
@@ -4439,7 +4995,7 @@
         
         // Settings
         function savePars() {
-            const holes = league.course?.holes || 18;
+            const holes = league.course?.holes || 9;
             const pars = [];
             for (let i = 0; i < holes; i++) {
                 pars.push(parseInt(document.getElementById('par' + i).value) || 4);
@@ -4640,7 +5196,7 @@
             const round = league.rounds[league.rounds.length - 1];
             const isBlank = !teamId;
             const team = teamId ? league.teams.find(t => t.id === teamId) : null;
-            const holes = league.course?.holes || 18;
+            const holes = league.course?.holes || 9;
             const pars = league.course?.pars || Array(holes).fill(4);
             const frontNine = Math.min(9, holes);
             const has18 = holes >= 18;

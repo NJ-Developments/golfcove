@@ -1329,9 +1329,20 @@
         function calculateStandings(league) {
             const holes = 9; // Front 9 only
             const frontNine = 9;
-            // Only include players that belong to a team (filter out orphaned players)
-            const players = (league.players || []).filter(p => p.teamId);
+            // Include players with teamId (exclude orphans) - log for debugging
+            const allPlayers = league.players || [];
+            const players = allPlayers.filter(p => p.teamId);
             const rounds = league.rounds || [];
+            
+            console.log('📊 calculateStandings debug:', {
+                totalPlayers: allPlayers.length,
+                playersWithTeam: players.length,
+                playersWithoutTeam: allPlayers.filter(p => !p.teamId).map(p => p.name),
+                totalRounds: rounds.length,
+                roundIds: rounds.map(r => r.id),
+                scoresKeys: Object.keys(league.scores || {}),
+                scoresData: league.scores
+            });
             
             return players.map(player => {
                 let totalGross = 0, totalOut = 0, totalIn = 0, roundsPlayed = 0;
@@ -1341,19 +1352,37 @@
 
                 rounds.forEach(round => {
                     const ps = league.scores?.[round.id]?.[player.id];
+                    
+                    // Debug score lookup
+                    if (ps) {
+                        console.log(`🎯 Score found for ${player.name} in ${round.name}:`, {
+                            roundId: round.id,
+                            playerId: player.id,
+                            submitted: ps.submitted,
+                            scores: ps,
+                            scoreKeys: Object.keys(ps)
+                        });
+                    } else {
+                        console.log(`❌ No score for ${player.name} in ${round.name} (roundId: ${round.id}, playerId: ${player.id})`);
+                    }
+                    
                     if (ps && ps.submitted) {
                         let gross = 0;
                         let holesPlayed = 0;
                         
                         for (let h = 1; h <= frontNine; h++) {
-                            const score = ps[h];
-                            if (score && score > 0) {
-                                gross += score; holesPlayed++;
+                            // Handle both numeric and string keys from Firebase
+                            const score = ps[h] || ps[String(h)] || ps[`${h}`];
+                            if (score && parseInt(score) > 0) {
+                                gross += parseInt(score); 
+                                holesPlayed++;
                             }
                         }
                         
-                        // Only count rounds where player actually played (at least 50% of holes)
-                        if (holesPlayed >= Math.ceil(frontNine / 2)) {
+                        console.log(`  → Calculated: gross=${gross}, holesPlayed=${holesPlayed}, minRequired=1`);
+                        
+                        // Count any round with at least 1 hole played (changed from 50%)
+                        if (holesPlayed >= 1) {
                             const net = gross - (player.handicap || 0);
                             totalGross += gross; roundsPlayed++;
                             roundDetails.push({ name: round.name, date: round.date, gross, net, holesPlayed });
@@ -1363,6 +1392,8 @@
                             if (bestGross === null || gross < bestGross) bestGross = gross;
                             if (worstGross === null || gross > worstGross) worstGross = gross;
                             if (bestNet === null || net < bestNet) bestNet = net;
+                        } else {
+                            console.log(`  ⚠️ Not counting - no valid scores found`);
                         }
                     }
                 });

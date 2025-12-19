@@ -2348,12 +2348,11 @@ exports.fullPull = functions.https.onRequest((req, res) => {
 });
 
 // ============================================================
-// FOREUP-STYLE RESTFUL APIS
+// RESTFUL APIS
 // ============================================================
 
 /**
  * Cart API - Manages POS cart operations
- * Similar to foreUP's /api/cart endpoint
  */
 exports.cart = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
@@ -2447,7 +2446,6 @@ exports.cart = functions.https.onRequest((req, res) => {
 
 /**
  * Sales API - Process and retrieve sales/transactions
- * Similar to foreUP's /api/sales endpoint
  */
 exports.sales = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
@@ -2542,7 +2540,6 @@ exports.sales = functions.https.onRequest((req, res) => {
 
 /**
  * Gift Cards API
- * Similar to foreUP's /api/giftcards endpoint
  */
 exports.giftcards = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
@@ -2679,7 +2676,6 @@ exports.giftcards = functions.https.onRequest((req, res) => {
 
 /**
  * Customers API - CRUD for customers
- * Similar to foreUP's /api/customers endpoint
  */
 exports.customers = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
@@ -2804,7 +2800,6 @@ exports.customers = functions.https.onRequest((req, res) => {
 
 /**
  * Items/Products API - Manage POS items
- * Similar to foreUP's /api/items endpoint
  */
 exports.items = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
@@ -2899,7 +2894,6 @@ exports.items = functions.https.onRequest((req, res) => {
 
 /**
  * Reports API - Generate sales reports
- * Similar to foreUP's /api/reports endpoint
  */
 exports.reports = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
