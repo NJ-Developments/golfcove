@@ -1583,14 +1583,15 @@
         function selectTeam(teamId) {
             const team = (league.teams || []).find(t => t.id === teamId);
             const players = (league.players || []).filter(p => p.teamId === teamId);
-            if (players.length > 0) {
+            if (players.length > 0 && team) {
                 // Require PIN verification before accessing team scorecard
                 const playerNames = players.map(p => p.name).join(' & ');
-                promptTeamPin(teamId, team.name, playerNames, players);
+                promptTeamPin(teamId, team, playerNames, players);
             }
         }
         
-        function promptTeamPin(teamId, teamName, playerNames, players) {
+        function promptTeamPin(teamId, team, playerNames, players) {
+            const teamName = team.name || 'Team';
             const modal = document.createElement('div');
             modal.id = 'teamPinModal';
             modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
@@ -1626,7 +1627,8 @@
             `;
             document.body.appendChild(modal);
             
-            // Store players data for verification
+            // Store team pin and players data for verification
+            modal.dataset.teamPin = team.pin || '';
             modal.dataset.players = JSON.stringify(players.map(p => ({ id: p.id, pin: p.pin })));
             
             setTimeout(() => {
@@ -1659,13 +1661,15 @@
                 return;
             }
             
-            // Get players from modal data
+            // Get team PIN and players from modal data
+            const teamPin = modal.dataset.teamPin || '';
             const players = JSON.parse(modal.dataset.players || '[]');
             
-            // Check if PIN matches any player in the team
+            // Check if PIN matches team PIN OR any player in the team
             const matchingPlayer = players.find(p => p.pin === pin);
+            const isTeamPinMatch = teamPin && pin === teamPin;
             
-            if (matchingPlayer) {
+            if (isTeamPinMatch || matchingPlayer) {
                 closeTeamPinModal();
                 // Select the first player - scores apply to team
                 const teamPlayers = (league.players || []).filter(p => p.teamId === teamId);
