@@ -1703,7 +1703,7 @@
                     return a.totalNet - b.totalNet;
                 });
                 
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Team</th><th style="text-align:left">Players</th><th>Rnds</th><th>Best Rnd</th><th>Avg/Rnd</th><th class="highlight">Team Total</th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Team</th><th style="text-align:left">Players</th><th>Rnds</th><th>Avg/Rnd</th><th class="highlight">Team Total</th>`;
                 
                 let pos = 1;
                 return `
@@ -1722,7 +1722,6 @@
                                         <td style="text-align:left"><div class="player-info"><span class="player-name" style="font-weight:700;color:#37b24a;">${team.teamName}</span></div></td>
                                         <td style="text-align:left;font-size:13px;color:#666;">${team.players}</td>
                                         <td>${team.roundsPlayed}</td>
-                                        <td style="font-weight:600;color:#2c3e50;">${team.bestRound !== null ? team.bestRound : '-'}</td>
                                         <td style="font-weight:600;">${team.avgPerRound !== null ? team.avgPerRound : '-'}</td>
                                         <td><span class="score-cell net" style="font-size:18px;font-weight:700;">${team.roundsPlayed > 0 ? team.totalNet : '-'}</span></td>
                                     </tr>
