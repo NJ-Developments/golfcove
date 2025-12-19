@@ -5520,7 +5520,32 @@
                     return;
                 }
                 console.log('Attempting to save to Firebase...');
-                leagueRef.set(league).then(() => {
+                
+                // Convert arrays to objects keyed by ID for consistent Firebase storage
+                // This ensures deletions work properly since Firebase function uses keyed objects
+                const playersObj = {};
+                (league.players || []).forEach(p => {
+                    if (p && p.id) playersObj[p.id] = p;
+                });
+                
+                const teamsObj = {};
+                (league.teams || []).forEach(t => {
+                    if (t && t.id) teamsObj[t.id] = t;
+                });
+                
+                const roundsObj = {};
+                (league.rounds || []).forEach(r => {
+                    if (r && r.id) roundsObj[r.id] = r;
+                });
+                
+                const leagueData = {
+                    ...league,
+                    players: playersObj,
+                    teams: teamsObj,
+                    rounds: roundsObj
+                };
+                
+                leagueRef.set(leagueData).then(() => {
                     console.log('Successfully saved to Firebase');
                 }).catch(err => {
                     console.error('Firebase save error:', err);

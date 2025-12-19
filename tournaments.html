@@ -1282,15 +1282,6 @@
                         ${hasPlayers ? `
                         <div class="controls-panel">
                             <div class="controls-row">
-                                <div class="filter-group">
-                                    <label><i class="fas fa-flag-checkered"></i> Min Rounds:</label>
-                                    <select class="filter-select" id="roundFilter" onchange="filterByRounds(this.value)">
-                                        <option value="0">All Teams</option>
-                                        <option value="1">1+ rounds</option>
-                                        <option value="3">3+ rounds</option>
-                                        <option value="5">5+ rounds</option>
-                                    </select>
-                                </div>
                                 <div class="view-toggle">
                                     <button class="view-btn ${currentView === 'team-standings' ? 'active' : ''}" data-view="team-standings" title="Team leaderboard - combined net scores for 2-person teams"><i class="fas fa-trophy"></i> Teams</button>
                                     <button class="view-btn ${currentView === 'by-round' ? 'active' : ''}" data-view="by-round" title="Week by week breakdown - see round-by-round performance"><i class="fas fa-calendar-week"></i> By Week</button>
@@ -1564,27 +1555,8 @@
                 };
             } else if (view === 'average') {
                 // Sort by best average net score - most fair for players with different round counts
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>HCP</th><th>Rnds</th><th>Best/Worst</th><th class="highlight">Avg Net</th><th>Consistency</th><th>Total</th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>HCP</th><th>Rnds</th><th>Best/Worst</th><th class="highlight">Avg Net</th><th>Total</th>`;
                 renderRow = (s, posDisplay, posNum) => {
-                    // Calculate standard deviation for consistency
-                    let consistency = '-';
-                    if (s.roundDetails.length >= 3) {
-                        const netScores = s.roundDetails.map(r => r.net);
-                        const avg = netScores.reduce((a, b) => a + b, 0) / netScores.length;
-                        const variance = netScores.reduce((sum, score) => sum + Math.pow(score - avg, 2), 0) / netScores.length;
-                        const stdDev = Math.sqrt(variance);
-                        
-                        if (stdDev < 2) {
-                            consistency = '<span style="color:#27ae60;font-weight:600;" title="Very consistent scoring">★★★</span>';
-                        } else if (stdDev < 4) {
-                            consistency = '<span style="color:#f39c12;font-weight:600;" title="Moderately consistent">★★</span>';
-                        } else {
-                            consistency = '<span style="color:#e74c3c;font-weight:600;" title="Variable scoring">★</span>';
-                        }
-                    } else if (s.roundDetails.length > 0) {
-                        consistency = '<span style="color:#95a5a6;">N/A</span>';
-                    }
-                    
                     const bestWorst = (s.bestNet !== null && s.roundDetails.length > 1) ? 
                         `${s.bestNet} / ${Math.max(...s.roundDetails.map(r => r.net))}` : 
                         (s.bestNet !== null ? `${s.bestNet}` : '-');
@@ -1596,7 +1568,6 @@
                         <td>${s.roundsPlayed}</td>
                         <td style="font-size:12px;color:#666;">${bestWorst}</td>
                         <td><span class="score-cell net" style="font-size:16px;font-weight:700;">${s.avgNet !== null ? s.avgNet : '-'}</span></td>
-                        <td style="text-align:center;">${consistency}</td>
                         <td style="color:#888;">${s.roundsPlayed > 0 ? s.totalNet : '-'}</td>
                     `;
                 };
@@ -1636,22 +1607,6 @@
                     const avgPerRound = roundsPlayed > 0 ? Math.round((teamTotal / roundsPlayed) * 10) / 10 : null;
                     const bestRound = teamRoundScores.length > 0 ? Math.min(...teamRoundScores) : null;
                     
-                    // Calculate team consistency
-                    let consistency = '-';
-                    if (teamRoundScores.length >= 3) {
-                        const avg = teamTotal / roundsPlayed;
-                        const variance = teamRoundScores.reduce((sum, score) => sum + Math.pow(score - avg, 2), 0) / teamRoundScores.length;
-                        const stdDev = Math.sqrt(variance);
-                        
-                        if (stdDev < 4) {
-                            consistency = '<span style="color:#27ae60;font-weight:600;" title="Very consistent team">★★★</span>';
-                        } else if (stdDev < 7) {
-                            consistency = '<span style="color:#f39c12;font-weight:600;" title="Moderately consistent">★★</span>';
-                        } else {
-                            consistency = '<span style="color:#e74c3c;font-weight:600;" title="Variable performance">★</span>';
-                        }
-                    }
-                    
                     // Check if team is complete (has 2 players)
                     const isComplete = teamPlayers.length === 2;
                     const playerNames = isComplete ? 
@@ -1667,7 +1622,6 @@
                         roundsPlayed,
                         avgPerRound,
                         bestRound,
-                        consistency,
                         isComplete
                     };
                 });
@@ -1681,7 +1635,7 @@
                     return a.totalNet - b.totalNet;
                 });
                 
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Team</th><th style="text-align:left">Players</th><th>Rnds</th><th>Best Rnd</th><th>Avg/Rnd</th><th>Consistency</th><th class="highlight">Team Total</th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Team</th><th style="text-align:left">Players</th><th>Rnds</th><th>Best Rnd</th><th>Avg/Rnd</th><th class="highlight">Team Total</th>`;
                 
                 let pos = 1;
                 return `
@@ -1702,7 +1656,6 @@
                                         <td>${team.roundsPlayed}</td>
                                         <td style="font-weight:600;color:#2c3e50;">${team.bestRound !== null ? team.bestRound : '-'}</td>
                                         <td style="font-weight:600;">${team.avgPerRound !== null ? team.avgPerRound : '-'}</td>
-                                        <td style="text-align:center;">${team.consistency}</td>
                                         <td><span class="score-cell net" style="font-size:18px;font-weight:700;">${team.roundsPlayed > 0 ? team.totalNet : '-'}</span></td>
                                     </tr>
                                 `;
