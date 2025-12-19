@@ -1232,7 +1232,7 @@
                     <button class="btn btn-secondary btn-sm" onclick="generatePinsForAll()"><i class="fas fa-magic"></i> Generate PINs</button>
                     <button class="btn btn-secondary btn-sm" onclick="printPinSheet()"><i class="fas fa-print"></i> Print PINs</button>
                     <button class="btn btn-secondary btn-sm" onclick="exportTeamsCSV(); document.getElementById('exportModal')?.remove();"><i class="fas fa-download"></i> Export Teams</button>
-                    <button class="btn btn-secondary btn-sm" onclick="exportPlayersCSV(); document.getElementById('exportModal')?.remove();"><i class="fas fa-download"></i> Export Players</button>
+                    <button class="btn btn-secondary btn-sm" onclick="cleanupOrphanedPlayers()" title="Remove players without a team"><i class="fas fa-broom"></i> Cleanup</button>
                     <div id="pinStats" style="font-weight: 600; margin-left: auto; color: #fff;"></div>
                 </div>
                 <div id="playerSyncStatus" style="display: none; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 10px 15px; margin-top: 12px; font-size: 13px; color: #1565c0;">
@@ -4138,6 +4138,28 @@
             league.players = league.players.filter(p => p.id !== id);
             save();
             renderAll();
+        }
+        
+        // Cleanup orphaned players (players without a team)
+        function cleanupOrphanedPlayers() {
+            const orphanedPlayers = league.players.filter(p => !p.teamId);
+            
+            if (orphanedPlayers.length === 0) {
+                alert('No orphaned players found. All players belong to a team.');
+                return;
+            }
+            
+            const playerNames = orphanedPlayers.map(p => p.name).join('\n- ');
+            const confirmMsg = `Found ${orphanedPlayers.length} player(s) without a team:\n\n- ${playerNames}\n\nDelete these orphaned players?\n\n(Stripe customer accounts are NOT affected)`;
+            
+            if (!confirm(confirmMsg)) return;
+            
+            // Remove orphaned players
+            league.players = league.players.filter(p => p.teamId);
+            save();
+            renderAll();
+            
+            alert(`Removed ${orphanedPlayers.length} orphaned player(s).`);
         }
         
         // PIN management
