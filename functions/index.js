@@ -6553,8 +6553,8 @@ exports.registerLeagueTeam = functions.https.onRequest((req, res) => {
       await db.ref(`league/players/${player1Id}`).set({
         id: player1Id,
         name: player1Name,
-        email: player1Email || session.customer_email,
-        phone: player1Phone || session.metadata?.customerPhone,
+        email: player1Email || session.customer_email || '',
+        phone: player1Phone || session.metadata?.customerPhone || '',
         teamId: teamId,
         handicap: parseInt(player1Handicap) || 0,
         pin: pin,
