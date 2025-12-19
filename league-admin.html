@@ -1127,7 +1127,7 @@
                     <i class="fas fa-home"></i> Dashboard
                 </div>
                 <div class="nav-item" data-section="teams" onclick="showSection('teams')">
-                    <i class="fas fa-users"></i> Player Management
+                    <i class="fas fa-users"></i> Teams & Players
                 </div>
                 <div class="nav-item" data-section="rounds" onclick="showSection('rounds')">
                     <i class="fas fa-flag"></i> Rounds
@@ -1220,33 +1220,29 @@
             </div>
         </div>
         
-        <!-- Player Management Section (Teams & PINs) -->
+        <!-- Teams & Players Section -->
         <div class="page-section" id="section-teams">
-            <h1 class="page-title"><i class="fas fa-users"></i> Player Management</h1>
+            <h1 class="page-title"><i class="fas fa-users"></i> Teams & Players</h1>
             
-            <!-- Teams -->
-            <div class="card" style="margin-bottom: 20px;">
-                <h3><i class="fas fa-user-friends"></i> Teams</h3>
-                <div class="team-grid" id="teamGrid"></div>
-            </div>
-            
-            <!-- All Players Management -->
-            <div class="card" style="background: linear-gradient(to bottom, #1a1a1a 0%, #2d2d2d 80px, #fff 80px); border: 1px solid #333;">
-                <h3 style="color: #fff; margin-bottom: 8px;"><i class="fas fa-user-edit"></i> All Players</h3>
-                <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin-bottom: 15px;">Manage all league players - edit PINs, handicaps, or remove players. Players must be linked to Stripe customers.</p>
-                
-                <div class="pin-actions" style="margin-bottom: 15px; background: #f8f9fa; padding: 12px; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+            <!-- Quick Actions -->
+            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: none;">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                    <button class="btn btn-sm" style="background: #37b24a;" onclick="openAddTeamModal()"><i class="fas fa-plus"></i> New Team</button>
                     <button class="btn btn-secondary btn-sm" onclick="syncMemberStatus()" title="Refresh member status from Stripe"><i class="fas fa-sync-alt"></i> Sync Members</button>
                     <button class="btn btn-secondary btn-sm" onclick="generatePinsForAll()"><i class="fas fa-magic"></i> Generate Missing PINs</button>
                     <button class="btn btn-secondary btn-sm" onclick="printPinSheet()"><i class="fas fa-print"></i> Print PIN Sheet</button>
-                    <div class="pin-stats" id="pinStats" style="font-weight: 600; margin-left: auto;"></div>
+                    <div id="pinStats" style="font-weight: 600; margin-left: auto; color: #fff;"></div>
                 </div>
-                
-                <div id="playerSyncStatus" style="display: none; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 10px 15px; margin-bottom: 15px; font-size: 13px; color: #1565c0;">
+                <div id="playerSyncStatus" style="display: none; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 10px 15px; margin-top: 12px; font-size: 13px; color: #1565c0;">
                     <i class="fas fa-info-circle"></i> <span id="playerSyncMessage"></span>
                 </div>
-                
-                <div id="pinList" class="pin-list"></div>
+            </div>
+            
+            <!-- Teams Grid -->
+            <div class="card">
+                <h3><i class="fas fa-user-friends"></i> Teams</h3>
+                <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Each team has a 4-digit PIN. Players use this PIN to access their scorecard. Teams should be created after league payment.</p>
+                <div class="team-grid" id="teamGrid"></div>
             </div>
         </div>
         
@@ -2688,15 +2684,23 @@
                                     badges += `<span style="background:${tierColor};color:#fff;font-size:9px;padding:2px 5px;border-radius:8px;font-weight:700;margin-left:4px;">${getMemberTierName(memberType).toUpperCase()}</span>`;
                                 }
                                 if (isLinked && !isMember) {
-                                    badges += `<span style="background:#3498db;color:#fff;font-size:9px;padding:2px 5px;border-radius:8px;font-weight:700;margin-left:4px;"><i class="fab fa-stripe-s"></i></span>`;
+                                    badges += `<span style="background:#635bff;color:#fff;font-size:9px;padding:2px 5px;border-radius:8px;font-weight:700;margin-left:4px;"><i class="fab fa-stripe-s"></i></span>`;
                                 }
                                 
                                 return `
-                                    <div class="player">
-                                        <span class="player-name">${p.name}${badges}</span>
-                                        <div class="player-meta">
-                                            <span class="hcp">HCP ${p.handicap || 0}</span>
-                                            <button class="delete-btn" onclick="deletePlayer('${p.id}')"><i class="fas fa-times"></i></button>
+                                    <div class="player" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
+                                        <div style="display: flex; align-items: center; gap: 6px; flex: 1;">
+                                            <span class="player-name" style="font-weight: 600;">${p.name}</span>
+                                            ${badges}
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div style="display: flex; align-items: center; gap: 4px;">
+                                                <span style="font-size: 11px; color: #888;">HCP</span>
+                                                <input type="number" value="${p.handicap || 0}" min="0" max="54"
+                                                    onchange="updatePlayerHandicap('${p.id}', this.value)"
+                                                    style="width: 45px; padding: 4px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 13px; text-align: center;">
+                                            </div>
+                                            <button class="delete-btn" onclick="deletePlayer('${p.id}')" title="Remove player"><i class="fas fa-times"></i></button>
                                         </div>
                                     </div>
                                 `;
@@ -2762,86 +2766,21 @@
         }
         
         function renderPins() {
-            const list = document.getElementById('pinList');
             const stats = document.getElementById('pinStats');
-            if (!list) return;
+            if (!stats) return;
             
             const total = league.players.length;
             const withPin = league.players.filter(p => p.pin).length;
             const linked = league.players.filter(p => p.stripeCustomerId).length;
             const members = league.players.filter(p => p.isMember).length;
+            const teams = league.teams.length;
             
-            if (stats) {
-                let statsHtml = `<span style="color:#333;">${total} players</span>`;
-                if (members > 0) {
-                    statsHtml += ` • <span style="color:#f39c12;">${members} members</span>`;
-                }
-                statsHtml += ` • <span style="color:#635bff;">${linked} linked</span>`;
-                stats.innerHTML = statsHtml;
+            let statsHtml = `<span>${teams} teams</span> • <span>${total} players</span>`;
+            if (members > 0) {
+                statsHtml += ` • <span style="color:#f39c12;">${members} members</span>`;
             }
-            
-            if (total === 0) {
-                list.innerHTML = `
-                    <div class="empty-state" style="grid-column: 1 / -1;">
-                        <i class="fas fa-users-slash"></i>
-                        <p>No players yet. Add teams and players first.</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            const players = [...league.players].sort((a, b) => a.name.localeCompare(b.name));
-            list.innerHTML = players.map(p => {
-                const team = league.teams.find(t => t.id === p.teamId);
-                const pinValue = p.pin || '';
-                
-                // Member/League status badges
-                const isMember = p.isMember || false;
-                const isLinked = p.stripeCustomerId ? true : false;
-                const tierColor = isMember ? getMemberTierColor(p.memberType) : '#3498db';
-                
-                let statusBadges = '';
-                if (isMember) {
-                    statusBadges += `<span style="background:${tierColor};color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700;"><i class="fas fa-star"></i> ${getMemberTierName(p.memberType)}</span>`;
-                }
-                if (isLinked) {
-                    statusBadges += `<span style="background:#635bff;color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700;margin-left:4px;" title="Linked to Stripe"><i class="fab fa-stripe-s"></i></span>`;
-                } else {
-                    statusBadges += `<span style="background:#f44336;color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700;margin-left:4px;" title="Not linked to Stripe - added before customer requirement"><i class="fas fa-unlink"></i> Legacy</span>`;
-                }
-                
-                return `
-                    <div class="pin-row" style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; background: ${isMember ? 'linear-gradient(135deg, #f8f9fa, #fff8e1)' : (isLinked ? '#f9fafb' : '#fff5f5')}; border-radius: 8px; margin-bottom: 8px; ${isMember ? 'border-left: 3px solid ' + tierColor : (!isLinked ? 'border-left: 3px solid #f44336' : '')}">
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-                            <input type="text" value="${p.name}" ${!isLinked ? '' : 'readonly'} 
-                                ${!isLinked ? `onchange="renamePlayer('${p.id}', this.value)"` : ''}
-                                style="flex: 1; min-width: 140px; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600; ${isLinked ? 'background: #f5f5f5; cursor: default;' : ''}"
-                                placeholder="Player name" ${isLinked ? 'title="Name synced from Stripe customer"' : ''}>
-                            ${statusBadges ? `<div style="display:flex;align-items:center;gap:4px;">${statusBadges}</div>` : ''}
-                            <div style="display: flex; align-items: center; gap: 4px;">
-                                <label style="font-size: 11px; color: #888;">HCP</label>
-                                <input type="number" value="${p.handicap || 0}" min="0" max="54"
-                                    onchange="updatePlayerHandicap('${p.id}', this.value)"
-                                    style="width: 55px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; text-align: center;">
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 4px;">
-                                <label style="font-size: 11px; color: #888;">PIN</label>
-                                <input type="text" value="${pinValue}" maxlength="4" inputmode="numeric"
-                                    onchange="updatePlayerPin('${p.id}', this.value)"
-                                    style="width: 65px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: monospace; text-align: center; letter-spacing: 2px;"
-                                    placeholder="----">
-                            </div>
-                            <span style="font-size: 12px; color: #888; background: #e5e7eb; padding: 4px 8px; border-radius: 4px;">${team ? team.name : 'No team'}</span>
-                        </div>
-                        <div style="display: flex; gap: 6px;">
-                            ${!isLinked ? `<button class="btn btn-sm" style="background:#1976d2;color:#fff;" onclick="openLinkPlayerModal('${p.id}')" title="Link to Stripe Customer"><i class="fas fa-link"></i></button>` : ''}
-                            ${pinValue ? `<button class="btn btn-sm btn-secondary" onclick="copyPin('${p.id}')" title="Copy PIN"><i class="fas fa-copy"></i></button>` : ''}
-                            <button class="btn btn-sm btn-secondary" onclick="regeneratePin('${p.id}')" title="${pinValue ? 'Regenerate PIN' : 'Generate PIN'}"><i class="fas fa-key"></i></button>
-                            <button class="btn btn-sm btn-danger" onclick="deletePlayerConfirm('${p.id}')" title="Remove Player"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            statsHtml += ` • <span style="color:#37b24a;">${withPin} with PIN</span>`;
+            stats.innerHTML = statsHtml;
         }
         
         function renamePlayer(playerId, newName) {
