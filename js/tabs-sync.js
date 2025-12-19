@@ -10,7 +10,7 @@ const TabsSync = (function() {
     
     // Use config for API URL, fallback to hardcoded
     const getApiBase = () => window.GolfCoveConfig?.stripe?.functionsUrl || 
-                             'https://us-central1-golfcove-d3c46.cloudfunctions.net';
+                             'https://us-central1-golfcove.cloudfunctions.net';
     const LOCAL_KEY = 'gc_tabs';
     const SYNC_INTERVAL = 30000; // Sync every 30 seconds
     

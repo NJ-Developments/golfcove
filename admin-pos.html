@@ -1223,6 +1223,7 @@
         let cart = [];
         let currentDiscount = 0;
         let currentCartCustomer = null;  // Track customer for member discount
+        let currentCartCustomerIsMember = false; // Track if current cart customer is a member
         let memberDiscountApplied = false; // Track if auto-discount was applied
         let selectedBookingId = null;
         let selectedTabId = null;
@@ -1275,10 +1276,14 @@
                         }
                         
                         // Also check metadata for membership tier (Stripe stores as 'tier' not 'memberType')
+                        let isLeague = false;
                         if (!isMember && (c.metadata?.tier || c.metadata?.memberType)) {
                             const tier = (c.metadata?.tier || c.metadata?.memberType || '').toLowerCase();
-                            // Only mark as member for actual membership tiers (not league-player which is just league access)
-                            if (tier && tier !== 'league-player' && tier !== 'league-team') {
+                            // Mark league players/teams as league (not full members but tracked)
+                            if (tier === 'league-player' || tier === 'league-team') {
+                                isLeague = true;
+                                memberType = tier;
+                            } else if (tier) {
                                 isMember = true;
                                 memberType = tier;
                                 memberExpires = c.metadata.memberExpires || null;
@@ -1293,6 +1298,7 @@
                             email: c.email || '',
                             phone: c.phone || '',
                             isMember,
+                            isLeague,
                             memberType,
                             memberExpires,
                             createdAt: new Date(c.created * 1000).toISOString(),
@@ -1305,7 +1311,8 @@
                     customersLastSync = new Date();
                     
                     const memberCount = stripeCustomersCache.filter(c => c.isMember).length;
-                    console.log(`[CustomerSync] Loaded ${stripeCustomersCache.length} customers (${memberCount} active members)`);
+                    const leagueCount = stripeCustomersCache.filter(c => c.isLeague).length;
+                    console.log(`[CustomerSync] Loaded ${stripeCustomersCache.length} customers (${memberCount} members, ${leagueCount} league)`);
                     showToast(`Synced ${stripeCustomersCache.length} customers`, 'success');
                     
                     // Refresh UI components
@@ -1459,6 +1466,11 @@
                 // Timeclock disabled - TODO: Re-enable when moved to Firebase
                 console.log('Timeclock disabled - lock:', currentEmployee.name);
             }
+        }
+        
+        // Get current logged-in employee name
+        function getCurrentUserName() {
+            return currentEmployee ? currentEmployee.name : 'Staff';
         }
         
         // Handle keyboard input for PIN
@@ -2161,7 +2173,7 @@
             const trans = transactions[index];
             if (!trans) return;
             
-            if (!confirm(`Refund $${trans.amount.toFixed(2)} to ${trans.customer}?\\n\\nThis action cannot be undone.`)) return;
+            if (!confirm(`Refund $${trans.amount.toFixed(2)} to ${trans.customer}?\n\nThis action cannot be undone.`)) return;
             
             // Record refund
             const refund = {
@@ -2333,8 +2345,9 @@
             }
         }
         
-        // Customer database
-        let customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+        // Customer database - now uses stripeCustomersCache (synced from Stripe on page load)
+        // Legacy 'customers' reference kept for backward compatibility, points to Stripe cache
+        const customers = stripeCustomersCache;
         
         // Helper to get full name from customer object (handles both old and new formats)
         function getCustomerFullName(c) {
@@ -2346,58 +2359,74 @@
         
         function saveCustomer(name, phone, email) {
             if (!name) return;
+            
             // Split name into firstName/lastName for consistency
             const nameParts = name.trim().split(/\s+/);
             const firstName = nameParts[0] || '';
             const lastName = nameParts.slice(1).join(' ') || '';
             
-            const existing = customers.find(c => {
-                const fullName = getCustomerFullName(c).toLowerCase();
+            // Check if customer already exists in Stripe cache
+            const existing = stripeCustomersCache.find(c => {
+                const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
                 return fullName === name.toLowerCase();
             });
             
             if (existing) {
-                // Migrate old format to new format if needed
-                if (existing.name && !existing.firstName) {
-                    const parts = existing.name.trim().split(/\s+/);
-                    existing.firstName = parts[0] || '';
-                    existing.lastName = parts.slice(1).join(' ') || '';
-                    delete existing.name;
-                }
+                // Customer exists - just update cache if needed
                 if (phone) existing.phone = phone;
                 if (email) existing.email = email;
+                console.log('Customer already exists in system:', name);
             } else {
-                customers.push({
-                    id: Date.now(),
-                    firstName: firstName,
-                    lastName: lastName,
-                    phone: phone || '',
-                    email: email || '',
-                    isMember: false,
-                    memberType: null,
-                    priceClass: 'Regular',
-                    visitCount: 0,
-                    totalSpent: 0,
-                    createdAt: new Date().toISOString()
-                });
+                // Create customer in Stripe via backend
+                if (email) {
+                    fetch(`${FUNCTIONS_URL}/createStripeCustomer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, phone })
+                    }).then(response => response.json())
+                      .then(data => {
+                        if (data.customer) {
+                            // Add to local cache
+                            stripeCustomersCache.push({
+                                id: data.customer.id,
+                                stripeId: data.customer.id,
+                                firstName,
+                                lastName,
+                                email: email || '',
+                                phone: phone || '',
+                                isMember: false,
+                                memberType: null,
+                                createdAt: new Date().toISOString(),
+                                source: 'stripe'
+                            });
+                            console.log('Created customer in Stripe:', data.customer.id);
+                        }
+                    }).catch(err => console.error('Failed to create Stripe customer:', err));
+                } else {
+                    // No email - store locally as walk-in (won't sync to Stripe)
+                    console.log('Walk-in customer (no email, not synced to Stripe):', name);
+                }
             }
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
         }
         
         // Update customer stats after a transaction
+        // Note: Stats are tracked in transactions; Stripe metadata should be updated via backend
         function updateCustomerStats(customerName, amount) {
             if (!customerName || customerName === 'Walk-In' || customerName === 'Walk-in') return;
             
-            const customer = customers.find(c => {
-                const fullName = getCustomerFullName(c).toLowerCase();
+            // Find customer in Stripe cache
+            const customer = stripeCustomersCache.find(c => {
+                const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
                 return fullName === customerName.toLowerCase();
             });
             
             if (customer) {
+                // Update local cache for display purposes
                 customer.totalSpent = (customer.totalSpent || 0) + amount;
                 customer.visitCount = (customer.visitCount || 0) + 1;
                 customer.lastVisit = new Date().toISOString();
-                localStorage.setItem('gc_customers', JSON.stringify(customers));
+                // Note: Actual stats are derived from transactions, not stored on customer
+                console.log(`Updated stats for ${customerName}: +$${amount.toFixed(2)}`);
             }
         }
 
@@ -2429,7 +2458,7 @@
         
         function applyDiscount() {
             if (cart.length === 0) return showToast('Add items first', 'error');
-            const discountType = prompt('Enter discount:\\n- Percentage (e.g., "10%")\\n- Dollar amount (e.g., "5")\\n- Or cancel');
+            const discountType = prompt('Enter discount:\n- Percentage (e.g., "10%")\n- Dollar amount (e.g., "5")\n- Or cancel');
             if (!discountType) return;
             
             const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -4625,140 +4654,60 @@
             }).join('');
             bookingAutocomplete.style.display = 'block';
         });
-                            <div style="font-weight:600;color:#333;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                ${c.firstName} ${c.lastName}
-                                ${isMember ? `<span style="background:${tierBg};color:#fff;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:700;">${tierName}</span>` : ''}
-                            </div>
-                            <div style="font-size:11px;color:#666;display:flex;gap:8px;">
-                                <span>${contactInfo}</span>
-                                ${visitInfo ? `<span style="color:#999;">• ${visitInfo}</span>` : ''}
-                            </div>
-                        </div>
-                        ${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;font-size:16px;"></i>' : ''}
-                    </div>
-                `;
-            }).join('');
-            bookingAutocomplete.style.display = 'block';
-        });
         
         bookingCustomerInput.addEventListener('blur', function() {
             setTimeout(() => { bookingAutocomplete.style.display = 'none'; }, 250);
         });
         
-        // Select customer by ID (new unified function)
-        function selectBookingCustomerById(customerId) {
-            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const customer = allCustomers.find(c => c.id === customerId);
-            
-            if (!customer) return;
-            
-            const name = `${customer.firstName} ${customer.lastName}`;
-            bookingCustomerInput.value = name;
-            document.getElementById('bookingCustomerId').value = customerId;
-            bookingAutocomplete.style.display = 'none';
-            
-            // Auto-fill contact info
-            if (customer.phone) document.getElementById('bookingPhone').value = customer.phone;
-            if (customer.email) document.getElementById('bookingEmail').value = customer.email;
-            
-            const now = new Date();
-            const isMember = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > now;
-            
-            if (isMember) {
-                selectedBookingCustomerTier = customer.memberType;
-                updateBookingMemberBadge(customer);
-                const isVIP = customer.memberType && (customer.memberType.includes('eagle') || customer.memberType.includes('birdie'));
-                showToast(`${isVIP ? '⭐ VIP ' : ''}${name} selected`, 'success');
-            } else {
-                selectedBookingCustomerTier = null;
-                document.getElementById('bookingMemberBadge').style.display = 'none';
-            }
-            
-            updateBookingPrice();
-        }
-        
         // Create quick customer from booking modal
-        function createQuickCustomerFromBooking(searchVal) {
+        async function createQuickCustomerFromBooking(searchVal) {
             // Try to parse as name
             const parts = searchVal.trim().split(' ');
             const firstName = parts[0] || 'Guest';
             const lastName = parts.slice(1).join(' ') || '';
+            const fullName = `${firstName} ${lastName}`.trim();
             
-            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const newCustomer = {
-                id: Date.now(),
-                firstName: firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase(),
-                lastName: lastName ? lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase() : '',
-                email: '',
-                phone: '',
-                isMember: false,
-                memberType: null,
-                visitCount: 0,
-                totalSpent: 0,
-                createdAt: new Date().toISOString(),
-                source: 'booking'
-            };
+            // Generate a placeholder email for Stripe (required)
+            const placeholderEmail = `${firstName.toLowerCase()}.${Date.now()}@booking.golfcove.local`;
             
-            allCustomers.push(newCustomer);
-            localStorage.setItem('gc_customers', JSON.stringify(allCustomers));
-            
-            // Select the new customer
-            selectBookingCustomerById(newCustomer.id);
-            showToast(`Created new customer: ${newCustomer.firstName} ${newCustomer.lastName}`, 'success');
-        }
-        
-        let selectedBookingCustomerTier = null;
-        // Note: selectedBookingMemberType is declared earlier in the file (line ~2717)
-        
-        // Legacy function for autocomplete selections by name
-        // DEPRECATED: Use selectBookingCustomerById when possible
-        function selectBookingCustomerByName(name, isMember, tierType) {
-            bookingCustomerInput.value = name;
-            bookingAutocomplete.style.display = 'none';
-            selectedBookingCustomerTier = tierType;
-            // IMPORTANT: Also set selectedBookingMemberType for pricing consistency
-            selectedBookingMemberType = tierType;
-            
-            if (isMember) {
-                const isVIP = tierType && (tierType.includes('eagle') || tierType.includes('birdie'));
-                const tierDisplay = {
-                    'eagle': 'Eagle Member',
-                    'family_eagle': 'Eagle Family Member',
-                    'birdie': 'Birdie Member',
-                    'family_birdie': 'Birdie Family Member',
-                    'par': 'Par Member',
-                    'family_par': 'Par Family Member'
-                };
-                const displayName = tierDisplay[tierType] || 'Member';
+            try {
+                const response = await fetch(`${FUNCTIONS_URL}/createStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        name: fullName, 
+                        email: placeholderEmail,
+                        metadata: { source: 'quick-booking' }
+                    })
+                });
                 
-                if (isVIP) {
-                    showToast(`⭐ VIP ${displayName}: ${name} - Priority booking!`, 'success');
+                const data = await response.json();
+                
+                if (data.customer) {
+                    // Add to local cache
+                    const newCustomer = {
+                        id: data.customer.id,
+                        stripeId: data.customer.id,
+                        firstName: firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase(),
+                        lastName: lastName ? lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase() : '',
+                        email: placeholderEmail,
+                        phone: '',
+                        isMember: false,
+                        memberType: null,
+                        createdAt: new Date().toISOString(),
+                        source: 'stripe'
+                    };
+                    stripeCustomersCache.push(newCustomer);
+                    
+                    // Select the new customer
+                    selectBookingCustomerById(data.customer.id);
+                    showToast(`Created new customer: ${fullName}`, 'success');
                 } else {
-                    showToast(`${displayName} selected: ${name}`, 'success');
+                    throw new Error(data.error || 'Failed to create customer');
                 }
-                
-                // Show member badge
-                document.getElementById('bookingMemberBadge').style.display = 'block';
-                document.getElementById('bookingMemberText').textContent = displayName;
-                const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%' };
-                document.getElementById('bookingMemberDiscount').textContent = (discounts[tierType] || '10%') + ' OFF';
-            } else {
-                selectedBookingMemberType = null;
-                document.getElementById('bookingMemberBadge').style.display = 'none';
-            }
-            
-            updateBookingPrice();
-        }
-        
-        // Wrapper function for backward compatibility - routes to ID-based or name-based
-        function selectBookingCustomer(firstArg, isMember, tierType) {
-            // Check if first argument is a customer ID (number) or name (string with spaces)
-            if (typeof firstArg === 'number' || (typeof firstArg === 'string' && !firstArg.includes(' ') && !isNaN(parseInt(firstArg)))) {
-                // It's an ID - use the ID-based selector (defined later in the file)
-                selectBookingCustomerById(parseInt(firstArg));
-            } else {
-                // It's a name - use the name-based selector
-                selectBookingCustomerByName(firstArg, isMember, tierType);
+            } catch (error) {
+                console.error('Failed to create customer:', error);
+                showToast('Could not create customer - try again', 'error');
             }
         }
 
@@ -6932,7 +6881,10 @@
                 const color = getMemberTierColor(customer.memberType);
                 const isVIP = customer.memberType?.includes('eagle') || customer.memberType?.includes('birdie');
                 
-                badge.style.background = `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`;\n                badge.style.display = 'block';\n                \n                document.getElementById('bookingMemberText').innerHTML = `${isVIP ? '<i class=\"fas fa-crown\" style=\"color:#f1c40f;margin-right:5px;\"></i>' : '<i class=\"fas fa-star\" style=\"margin-right:5px;\"></i>'}${tierName} Member`;
+                badge.style.background = `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`;
+                badge.style.display = 'block';
+                
+                document.getElementById('bookingMemberText').innerHTML = `${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;margin-right:5px;"></i>' : '<i class="fas fa-star" style="margin-right:5px;"></i>'}${tierName} Member`;
                 document.getElementById('bookingMemberDiscount').textContent = `${discount}% OFF`;
                 document.getElementById('bookingMemberBenefits').textContent = isVIP ? 'Priority booking • Unlimited play • Premium benefits' : 'Member discount applied';
                 

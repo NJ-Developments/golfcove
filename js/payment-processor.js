@@ -947,9 +947,9 @@ const PaymentProcessor = (function() {
         calculateTotals,
         formatCurrency,
         setPaymentContext,
-        TAX_RATE,
+        getTaxRate,
         PAYMENT_METHODS,
-        TIP_PRESETS
+        getTipPresets
     };
 })();
 

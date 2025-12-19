@@ -41,10 +41,14 @@
         .search-box input { width: 100%; padding: 14px 20px 14px 50px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; transition: all 0.2s; }
         .search-box input:focus { border-color: #4a90a4; outline: none; box-shadow: 0 0 0 3px rgba(74,144,164,0.1); }
         .search-box i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #999; font-size: 18px; }
-        .search-filters { display: flex; gap: 8px; }
+        .search-filters { display: flex; gap: 8px; flex-wrap: wrap; }
         .filter-chip { padding: 10px 16px; border: 1px solid #e0e0e0; background: #fff; border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
         .filter-chip:hover { background: #f5f5f5; }
         .filter-chip.active { background: #4a90a4; color: #fff; border-color: #4a90a4; }
+        .filter-chip[data-filter="eagle"].active { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); border-color: #9b59b6; }
+        .filter-chip[data-filter="birdie"].active { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); border-color: #f39c12; }
+        .filter-chip[data-filter="par"].active { background: linear-gradient(135deg, #27ae60 0%, #219a52 100%); border-color: #27ae60; }
+        .filter-chip[data-filter="league"].active { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); border-color: #3498db; }
         .filter-chip .count { background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
         .filter-chip.active .count { background: rgba(255,255,255,0.2); }
         .btn-new { padding: 14px 24px; background: #27ae60; color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
@@ -65,6 +69,7 @@
         .card-avatar.eagle { background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); }
         .card-avatar.birdie { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); }
         .card-avatar.par { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+        .card-avatar.league { background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%); }
         .card-info { flex: 1; min-width: 0; }
         .card-name { font-size: 18px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .card-contact { font-size: 13px; color: #888; margin-top: 4px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -75,6 +80,7 @@
         .member-badge.eagle { background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #fff; }
         .member-badge.birdie { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); color: #fff; }
         .member-badge.par { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: #fff; }
+        .member-badge.league { background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%); color: #fff; }
         .member-badge.expired { background: #e74c3c; color: #fff; }
         .member-badge.expiring { background: #f39c12; color: #fff; }
         
@@ -239,14 +245,20 @@
                     <button class="filter-chip" data-filter="member" onclick="setFilter('member', this)">
                         <i class="fas fa-crown"></i> Members <span class="count" id="countMembers">0</span>
                     </button>
-                    <button class="filter-chip" data-filter="vip" onclick="setFilter('vip', this)">
-                        <i class="fas fa-star"></i> VIP <span class="count" id="countVIP">0</span>
+                    <button class="filter-chip" data-filter="eagle" onclick="setFilter('eagle', this)" style="--chip-color: #9b59b6;">
+                        <i class="fas fa-trophy"></i> Eagle <span class="count" id="countEagle">0</span>
                     </button>
-                    <button class="filter-chip" data-filter="expiring" onclick="setFilter('expiring', this)">
-                        <i class="fas fa-exclamation-triangle"></i> Expiring <span class="count" id="countExpiring">0</span>
+                    <button class="filter-chip" data-filter="birdie" onclick="setFilter('birdie', this)" style="--chip-color: #f39c12;">
+                        <i class="fas fa-star"></i> Birdie <span class="count" id="countBirdie">0</span>
                     </button>
-                    <button class="filter-chip" data-filter="expired" onclick="setFilter('expired', this)">
-                        <i class="fas fa-times-circle"></i> Expired <span class="count" id="countExpired">0</span>
+                    <button class="filter-chip" data-filter="par" onclick="setFilter('par', this)" style="--chip-color: #27ae60;">
+                        <i class="fas fa-golf-ball"></i> Par <span class="count" id="countPar">0</span>
+                    </button>
+                    <button class="filter-chip" data-filter="league" onclick="setFilter('league', this)" style="--chip-color: #3498db;">
+                        <i class="fas fa-flag"></i> League <span class="count" id="countLeague">0</span>
+                    </button>
+                    <button class="filter-chip" data-filter="nonmember" onclick="setFilter('nonmember', this)">
+                        <i class="fas fa-user"></i> Non-Members <span class="count" id="countNonMember">0</span>
                     </button>
                 </div>
                 <button class="btn-new" onclick="showModal('newCustomer')" style="margin-right:8px;">
@@ -588,9 +600,11 @@
                 const matchSearch = !search || name.includes(search) || (c.email && c.email.includes(search)) || (c.phone && c.phone.includes(search));
                 
                 if (currentFilter === 'member') return matchSearch && c.isMember && !isExpired(c);
-                if (currentFilter === 'vip') return matchSearch && c.isMember && !isExpired(c) && (c.memberType === 'eagle' || c.memberType === 'birdie' || c.memberType === 'family_eagle' || c.memberType === 'family_birdie');
-                if (currentFilter === 'expiring') return matchSearch && isExpiringSoon(c);
-                if (currentFilter === 'expired') return matchSearch && c.isMember && isExpired(c);
+                if (currentFilter === 'eagle') return matchSearch && c.isMember && !isExpired(c) && (c.memberType === 'eagle' || c.memberType === 'family_eagle');
+                if (currentFilter === 'birdie') return matchSearch && c.isMember && !isExpired(c) && (c.memberType === 'birdie' || c.memberType === 'family_birdie');
+                if (currentFilter === 'par') return matchSearch && c.isMember && !isExpired(c) && (c.memberType === 'par' || c.memberType === 'family_par');
+                if (currentFilter === 'league') return matchSearch && (c.isLeague || (c.memberType && c.memberType.includes('league')));
+                if (currentFilter === 'nonmember') return matchSearch && (!c.isMember && !c.isLeague && !(c.memberType && c.memberType.includes('league')));
                 return matchSearch;
             });
             
@@ -622,6 +636,7 @@
             const expired = isExpired(c);
             const expiring = isExpiringSoon(c);
             const isActive = c.isMember && !expired;
+            const isLeague = c.isLeague || (c.memberType && c.memberType.includes('league'));
             
             let avatarClass = '';
             let badgeHtml = '';
@@ -636,6 +651,9 @@
                     avatarClass = c.memberType || 'member';
                     badgeHtml = `<span class="member-badge ${c.memberType}"><i class="fas fa-crown"></i> ${getTierName(c.memberType)}</span>`;
                 }
+            } else if (isLeague) {
+                avatarClass = 'league';
+                badgeHtml = '<span class="member-badge league"><i class="fas fa-flag"></i> League</span>';
             }
             
             const selected = selectedCustomerId === c.id ? 'selected' : '';
@@ -665,9 +683,11 @@
         function updateCounts() {
             document.getElementById('countAll').textContent = customers.length;
             document.getElementById('countMembers').textContent = customers.filter(c => c.isMember && !isExpired(c)).length;
-            document.getElementById('countVIP').textContent = customers.filter(c => c.isMember && !isExpired(c) && (c.memberType === 'eagle' || c.memberType === 'birdie' || c.memberType === 'family_eagle' || c.memberType === 'family_birdie')).length;
-            document.getElementById('countExpiring').textContent = customers.filter(c => isExpiringSoon(c)).length;
-            document.getElementById('countExpired').textContent = customers.filter(c => c.isMember && isExpired(c)).length;
+            document.getElementById('countEagle').textContent = customers.filter(c => c.isMember && !isExpired(c) && (c.memberType === 'eagle' || c.memberType === 'family_eagle')).length;
+            document.getElementById('countBirdie').textContent = customers.filter(c => c.isMember && !isExpired(c) && (c.memberType === 'birdie' || c.memberType === 'family_birdie')).length;
+            document.getElementById('countPar').textContent = customers.filter(c => c.isMember && !isExpired(c) && (c.memberType === 'par' || c.memberType === 'family_par')).length;
+            document.getElementById('countLeague').textContent = customers.filter(c => c.isLeague || (c.memberType && c.memberType.includes('league'))).length;
+            document.getElementById('countNonMember').textContent = customers.filter(c => !c.isMember && !c.isLeague && !(c.memberType && c.memberType.includes('league'))).length;
         }
         
         // ============ CUSTOMER DETAIL ============

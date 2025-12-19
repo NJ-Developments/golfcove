@@ -10,7 +10,7 @@ const GolfCoveFirebase = (function() {
     // Configuration
     const config = {
         baseUrl: window.location.hostname === 'localhost' 
-            ? 'http://localhost:5001/golfcove-d3c46/us-central1'
+            ? 'http://localhost:5001/golfcove/us-central1'
             : '/api',
         storeId: 'golfcove',
         syncInterval: 30000, // 30 seconds
