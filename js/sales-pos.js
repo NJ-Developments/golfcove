@@ -23,7 +23,8 @@ const SalesPOS = (function() {
     let activeCategory = 'food';
     
     // ============ CONFIGURATION ============
-    const TAX_RATE = 0.0635;
+    const getTaxRate = () => window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635;
+    const TAX_RATE = getTaxRate(); // For backward compatibility
     
     const categories = [
         { id: 'food', name: 'Food', icon: 'fa-utensils', color: '#3498db' },

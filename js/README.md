@@ -281,21 +281,24 @@ GolfCoveReports.generateMonthlyReport()
 
 ---
 
-### 10. `js/tabs-system.js` - GolfCoveTabs
-F&B tab and cart management.
+### 10. `js/tabs-sync.js` - TabsSync
+Real-time tab synchronization across all POS terminals with Firebase backend.
 
 **Features:**
 - Open/close tabs
 - Add/remove items
 - Member discounts
-- Tab transfer between rooms
+- Firebase sync with localStorage fallback
+- Cross-terminal real-time updates
 
 **Key Methods:**
 ```javascript
-GolfCoveTabs.createTab(customer)
-GolfCoveTabs.addItem(tabId, item)
-GolfCoveTabs.closeTab(tabId, payment)
-GolfCoveTabs.getCartSummary(tabId)
+TabsSync.init()                        // Initialize sync
+TabsSync.createTab(customer, customerId, items, employee, options)
+TabsSync.addItemToTab(tabId, item)
+TabsSync.closeTab(tabId, paymentMethod)
+TabsSync.getAllTabs()                  // Get all open tabs
+TabsSync.getTab(tabId)                 // Get specific tab
 ```
 
 ---
@@ -394,16 +397,16 @@ golfcove/
 ├── css/
 │   └── styles.css          # Public styles
 ├── js/
-│   ├── config.js           # Central configuration
+│   ├── config-unified.js   # Central configuration
 │   ├── database.js         # Data access layer
 │   ├── booking-system.js   # Bookings
-│   ├── customers.js        # Customer management
+│   ├── customer-manager.js # Customer management
 │   ├── employees.js        # Employee management
 │   ├── gift-cards.js       # Gift cards
 │   ├── promotions.js       # Promotions/discounts
 │   ├── inventory.js        # Inventory management
 │   ├── reports.js          # Reporting/analytics
-│   ├── tabs-system.js      # Tab/cart management
+│   ├── tabs-sync.js        # Tab/cart management with Firebase sync
 │   ├── pin-system.js       # PIN authentication
 │   ├── stripe-terminal.js  # Stripe payments
 │   ├── toast.js            # Notifications
@@ -431,7 +434,7 @@ golfcove/
 <script src="js/promotions.js"></script>
 <script src="js/inventory.js"></script>
 <script src="js/booking-system.js"></script>
-<script src="js/tabs-system.js"></script>
+<script src="js/tabs-sync.js"></script>
 <script src="js/reports.js"></script>
 <script src="js/pin-system.js"></script>
 <script src="js/stripe-terminal.js"></script>

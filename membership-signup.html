@@ -800,7 +800,7 @@
                 <div class="agreement">
                     <label>
                         <input type="checkbox" id="agreement" required>
-                        <span>I agree to the <a href="#" style="color:#2d5a27;">Terms of Service</a> and authorize Golf Cove to charge my card monthly. Annual commitment required. Cancel anytime after 12 months.</span>
+                        <span>I agree to the <a href="terms.html" target="_blank" style="color:#2d5a27;">Terms of Service</a> and authorize Golf Cove to charge my card monthly. Annual commitment required. Cancel anytime after 12 months.</span>
                     </label>
                 </div>
                 
@@ -832,7 +832,7 @@
     
     <script>
         let selectedMembership = null;
-        const TAX_RATE = 0.0635; // CT sales tax
+        const TAX_RATE = window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635; // Use config with fallback
         
         // Check URL params for pre-selected membership
         document.addEventListener('DOMContentLoaded', () => {

@@ -364,7 +364,7 @@ const GolfCoveServices = (function() {
     
     // ============================================================
     // TAB SERVICE
-    // Unifies GolfCoveTabs and TabsManager
+    // Uses TabsSync for Firebase-backed tab management
     // ============================================================
     const TabService = {
         /**
@@ -373,9 +373,6 @@ const GolfCoveServices = (function() {
         getAll() {
             if (window.TabsSync?.getAllTabs) {
                 return window.TabsSync.getAllTabs();
-            }
-            if (window.GolfCoveTabs?.getAllTabs) {
-                return window.GolfCoveTabs.getAllTabs();
             }
             return JSON.parse(localStorage.getItem('gc_tabs') || '[]')
                 .filter(t => t.status === 'open' || !t.status);
@@ -388,9 +385,6 @@ const GolfCoveServices = (function() {
             if (window.TabsSync?.getTab) {
                 return window.TabsSync.getTab(tabId);
             }
-            if (window.GolfCoveTabs?.getTab) {
-                return window.GolfCoveTabs.getTab(tabId);
-            }
             return this.getAll().find(t => t.id === tabId || t.id === parseInt(tabId));
         },
         
@@ -401,9 +395,6 @@ const GolfCoveServices = (function() {
             if (window.TabsSync?.createTab) {
                 // TabsSync.createTab(customerName, customerId, items, employeeName, options)
                 return window.TabsSync.createTab(customer, null, [], employee || 'POS', { table });
-            }
-            if (window.GolfCoveTabs?.createTab) {
-                return window.GolfCoveTabs.createTab(customer, null, [], employee || 'POS', { table });
             }
             
             const tabs = this.getAll();
@@ -445,9 +436,6 @@ const GolfCoveServices = (function() {
         addItem(tabId, item) {
             if (window.TabsSync?.addItemToTab) {
                 return window.TabsSync.addItemToTab(tabId, item);
-            }
-            if (window.GolfCoveTabs?.addItemToTab) {
-                return window.GolfCoveTabs.addItemToTab(tabId, item);
             }
             
             const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
@@ -501,9 +489,6 @@ const GolfCoveServices = (function() {
         close(tabId, paymentMethod = 'card') {
             if (window.TabsSync?.closeTab) {
                 return window.TabsSync.closeTab(tabId, paymentMethod);
-            }
-            if (window.GolfCoveTabs?.closeTab) {
-                return window.GolfCoveTabs.closeTab(tabId, paymentMethod);
             }
             
             const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
