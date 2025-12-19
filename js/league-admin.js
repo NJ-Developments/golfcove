@@ -1,0 +1,4995 @@
+﻿// Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8SH5Eh7OhIFLUkL2hjZS23uXkCsDJXGc",
+            authDomain: "golfcove.firebaseapp.com",
+            databaseURL: "https://golfcove-default-rtdb.firebaseio.com",
+            projectId: "golfcove",
+            storageBucket: "golfcove.firebasestorage.app",
+            messagingSenderId: "284762891644",
+            appId: "1:284762891644:web:424223b102f08a230f70f9"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+        const leagueRef = db.ref('league');
+        
+        let league = null;
+        let currentUser = null;
+        let leagueListener = null;
+        
+        // ============ STRIPE CUSTOMER INTEGRATION ============
+        const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
+        let stripeCustomersCache = []; // In-memory cache of Stripe customers
+        
+        // Transform Stripe API customer to our format
+        function transformStripeCustomer(c) {
+            const nameParts = (c.name || '').split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
+            
+            // Check for active subscription
+            const activeSub = c.subscriptions?.find(s => s.status === 'active');
+            const memberType = c.metadata?.tier || c.metadata?.memberType || 
+                              (activeSub ? getMemberTypeFromPlan(activeSub.plan) : null);
+            
+            return {
+                id: c.id,
+                stripeId: c.id,
+                stripeCustomerId: c.id,
+                name: c.name || '',
+                firstName,
+                lastName,
+                email: c.email || '',
+                phone: c.phone || '',
+                isMember: !!activeSub || !!memberType,
+                memberType: memberType,
+                memberExpires: activeSub?.currentPeriodEnd 
+                    ? new Date(activeSub.currentPeriodEnd * 1000).toISOString().split('T')[0] 
+                    : c.metadata?.memberExpires || null,
+                isLeague: c.metadata?.isLeague === 'true' || c.metadata?.isLeague === true,
+                subscriptions: c.subscriptions || [],
+                created: c.created
+            };
+        }
+        
+        function getMemberTypeFromPlan(planName) {
+            if (!planName) return null;
+            const lower = String(planName).toLowerCase();
+            if (lower.includes('eagle')) return 'eagle';
+            if (lower.includes('birdie')) return 'birdie';
+            if (lower.includes('par')) return 'par';
+            if (lower.includes('family')) return 'family_' + (lower.includes('eagle') ? 'eagle' : lower.includes('birdie') ? 'birdie' : 'par');
+            return null;
+        }
+        
+        // Load customers from Stripe/cache
+        async function loadStripeCustomers() {
+            // First try to load from localStorage cache
+            try {
+                const cached = localStorage.getItem('gc_customers');
+                if (cached) {
+                    const parsedCache = JSON.parse(cached);
+                    // IMPORTANT: Only use customers that are actual Stripe customers (have stripeId or id starting with cus_)
+                    // This filters out local-only customers that were created in POS but not synced to Stripe
+                    if (parsedCache && parsedCache.length > 0) {
+                        const stripeOnlyCustomers = parsedCache.filter(c => 
+                            c.stripeId || c.stripeCustomerId || (c.id && c.id.startsWith('cus_'))
+                        );
+                        if (stripeOnlyCustomers.length > 0) {
+                            stripeCustomersCache = stripeOnlyCustomers.map(c => ({
+                                ...c,
+                                name: c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim() || ''
+                            }));
+                            console.log(`[LeagueAdmin] Loaded ${stripeCustomersCache.length} Stripe customers from cache (filtered from ${parsedCache.length} total)`);
+                            return stripeCustomersCache;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[LeagueAdmin] Error loading customer cache:', e);
+            }
+            
+            // If no cache or no Stripe customers in cache, fetch from API
+            try {
+                console.log('[LeagueAdmin] Fetching customers from Stripe API...');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+                
+                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.customers) {
+                        stripeCustomersCache = data.customers.map(transformStripeCustomer);
+                        localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
+                        console.log(`[LeagueAdmin] Synced ${stripeCustomersCache.length} customers from Stripe`);
+                    }
+                } else {
+                    console.error('[LeagueAdmin] Stripe API error:', response.status, response.statusText);
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    console.warn('[LeagueAdmin] Customer sync request timed out');
+                } else {
+                    console.warn('[LeagueAdmin] Could not sync customers from API:', e);
+                }
+            }
+            
+            return stripeCustomersCache;
+        }
+        
+        // Check if customer is an active member
+        function isActiveMember(customer) {
+            if (!customer || !customer.isMember) return false;
+            if (!customer.memberExpires) return false;
+            return new Date(customer.memberExpires) > new Date();
+        }
+        
+        // Get member tier display name
+        function getMemberTierName(memberType) {
+            const names = {
+                'eagle': 'Eagle', 'family_eagle': 'Eagle Family',
+                'birdie': 'Birdie', 'family_birdie': 'Birdie Family',
+                'par': 'Par', 'family_par': 'Par Family',
+                'corporate': 'Corporate', 'monthly': 'Monthly', 'annual': 'Annual'
+            };
+            return names[memberType] || 'Member';
+        }
+        
+        // Get member tier color
+        function getMemberTierColor(memberType) {
+            const colors = {
+                'eagle': '#9b59b6', 'family_eagle': '#9b59b6',
+                'birdie': '#f39c12', 'family_birdie': '#f39c12',
+                'par': '#27ae60', 'family_par': '#27ae60',
+                'corporate': '#2c3e50'
+            };
+            return colors[memberType] || '#27ae60';
+        }
+        
+        // Find customer by name
+        function findCustomerByName(name) {
+            if (!name) return null;
+            const nameParts = name.trim().split(' ');
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(' ');
+            
+            return stripeCustomersCache.find(c => 
+                (c.firstName || '').toLowerCase() === firstName.toLowerCase() &&
+                (c.lastName || '').toLowerCase() === lastName.toLowerCase()
+            ) || null;
+        }
+        
+        // Rate limiting
+        const rateLimits = {
+            lastRequest: 0,
+            requestCount: 0,
+            windowStart: Date.now(),
+            maxRequests: 100,
+            windowMs: 60000 // 1 minute
+        };
+        
+        function checkRateLimit() {
+            const now = Date.now();
+            if (now - rateLimits.windowStart > rateLimits.windowMs) {
+                rateLimits.requestCount = 0;
+                rateLimits.windowStart = now;
+            }
+            rateLimits.requestCount++;
+            if (rateLimits.requestCount > rateLimits.maxRequests) {
+                throw new Error('Rate limit exceeded. Please wait before making more requests.');
+            }
+            const timeSinceLastRequest = now - rateLimits.lastRequest;
+            if (timeSinceLastRequest < 100) { // Minimum 100ms between requests
+                return false;
+            }
+            rateLimits.lastRequest = now;
+            return true;
+        }
+        
+        function generatePin() {
+            // Generate unique 4-digit PIN
+            const existingPins = new Set((league?.players || []).map(p => p.pin).filter(Boolean));
+            let pin;
+            let attempts = 0;
+            do {
+                pin = String(Math.floor(1000 + Math.random() * 9000));
+                attempts++;
+            } while (existingPins.has(pin) && attempts < 100);
+            return pin;
+        }
+        
+        // Authentication handlers
+        async function handleLogin(e) {
+            console.log('handleLogin called');
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const loginButton = document.getElementById('loginButton');
+            const errorDiv = document.getElementById('loginError');
+            const errorText = document.getElementById('loginErrorText');
+            
+            console.log('Attempting login with email:', email);
+            
+            if (!email || !password) {
+                console.error('Email or password is empty');
+                errorText.textContent = 'Please enter email and password';
+                errorDiv.style.display = 'block';
+                return false;
+            }
+            
+            loginButton.disabled = true;
+            loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+            errorDiv.style.display = 'none';
+            
+            try {
+                console.log('Calling signInWithEmailAndPassword...');
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                console.log('Login successful!', userCredential.user);
+                currentUser = userCredential.user;
+                // Success handled by onAuthStateChanged
+            } catch (error) {
+                console.error('Login error:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                
+                let message = 'Incorrect email or password';
+                if (error.code === 'auth/user-not-found') message = 'Email does not exist';
+                else if (error.code === 'auth/wrong-password') message = 'Incorrect password';
+                else if (error.code === 'auth/invalid-email') message = 'Invalid email format';
+                else if (error.code === 'auth/invalid-credential') message = 'Incorrect email or password';
+                else if (error.code === 'auth/too-many-requests') message = 'Too many attempts. Try again later.';
+                else if (error.code === 'auth/network-request-failed') message = 'Network error. Check your connection.';
+                else if (error.code === 'auth/user-disabled') message = 'Account has been disabled';
+                else message = `Login failed: ${error.code || 'Unknown error'}`;
+                
+                errorText.textContent = message;
+                errorDiv.style.display = 'block';
+                loginButton.disabled = false;
+                loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In Securely';
+                document.getElementById('adminPassword').value = '';
+            }
+            
+            return false;
+        }
+        
+        async function handleLogout() {
+            if (confirm('Are you sure you want to sign out?')) {
+                try {
+                    await auth.signOut();
+                    document.getElementById('loginContainer').classList.add('active');
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    alert('Error signing out. Please try again.');
+                }
+            }
+        }
+        
+        // Monitor auth state
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginContainer').classList.remove('active');
+                initAdmin();
+            } else {
+                currentUser = null;
+                detachLeagueListener();
+                league = null;
+                document.getElementById('loginContainer').classList.add('active');
+                document.getElementById('setupContainer').classList.remove('active');
+                document.getElementById('adminWrapper').style.display = 'none';
+                document.getElementById('mobileAdminToggle').style.display = 'none';
+                setTimeout(() => {
+                    document.getElementById('adminEmail')?.focus();
+                }, 100);
+            }
+        });
+        
+        function init() {
+            // Auth state handled by onAuthStateChanged listener
+        }
+
+        function detachLeagueListener() {
+            if (leagueListener) {
+                leagueRef.off('value', leagueListener);
+                leagueListener = null;
+            }
+        }
+        
+        async function initAdmin() {
+            // Avoid stacking listeners on re-login
+            detachLeagueListener();
+            
+            // Load Stripe customers for member lookups
+            // Always fetch fresh from Stripe to avoid showing stale/local-only customers
+            await loadStripeCustomers();
+            
+            // Background sync to get latest from Stripe (don't block UI)
+            setTimeout(async () => {
+                try {
+                    console.log('[LeagueAdmin] Background sync: fetching fresh customers from Stripe...');
+                    const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.customers && data.customers.length > 0) {
+                            stripeCustomersCache = data.customers.map(transformStripeCustomer);
+                            localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
+                            console.log(`[LeagueAdmin] Background sync complete: ${stripeCustomersCache.length} customers`);
+                            // Re-render customers if on that tab
+                            if (document.getElementById('section-customers')?.classList.contains('active')) {
+                                renderCustomers();
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[LeagueAdmin] Background sync failed:', e);
+                }
+            }, 1000);
+            
+            leagueListener = (snapshot) => {
+                league = snapshot.val();
+                
+                // Ensure arrays exist and convert Firebase objects to arrays
+                // Firebase stores arrays as objects when using .set() with keys
+                if (league) {
+                    league.teams = Array.isArray(league.teams) ? league.teams : 
+                        (league.teams ? Object.values(league.teams) : []);
+                    league.players = Array.isArray(league.players) ? league.players : 
+                        (league.players ? Object.values(league.players) : []);
+                    league.rounds = Array.isArray(league.rounds) ? league.rounds : 
+                        (league.rounds ? Object.values(league.rounds) : []);
+                    league.scores = league.scores || {};
+                }
+                
+                // Migration for old data
+                if (league && league.teams.length === 0) {
+                    const teamNames = [...new Set(league.players.filter(p => p.team).map(p => p.team))];
+                    teamNames.forEach(name => {
+                        const teamId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
+                        league.teams.push({ id: teamId, name });
+                        league.players.forEach(p => {
+                            if (p.team === name) p.teamId = teamId;
+                        });
+                    });
+                    league.players.forEach(p => {
+                        if (!p.pin) p.pin = generatePin();
+                    });
+                    save();
+                }
+                
+                if (league) {
+                    document.getElementById('loginContainer').classList.remove('active');
+                    document.getElementById('setupContainer').classList.remove('active');
+                    document.getElementById('adminWrapper').style.display = 'flex';
+                    document.getElementById('mobileAdminToggle').style.display = '';
+                    renderAll();
+                } else {
+                    document.getElementById('loginContainer').classList.remove('active');
+                    document.getElementById('setupContainer').classList.add('active');
+                    document.getElementById('adminWrapper').style.display = 'none';
+                    document.getElementById('mobileAdminToggle').style.display = 'none';
+                }
+            };
+
+            leagueRef.on('value', leagueListener);
+        }
+        
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('adminSidebar');
+            const overlay = document.getElementById('mobileSidebarOverlay');
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('open');
+        }
+        
+        function createLeague(e) {
+            e.preventDefault();
+            const name = document.getElementById('leagueName').value.trim();
+            const holes = parseInt(document.getElementById('holes').value);
+            
+            league = {
+                id: 'league_' + Date.now(),
+                name,
+                course: { name: 'TBD', holes, pars: Array(holes).fill(4) },
+                teams: [], players: [], rounds: [], scores: {},
+                createdAt: new Date().toISOString()
+            };
+            save();
+            initAdmin();
+        }
+        
+        function renderAll() {
+            document.getElementById('sidebarLeagueName').textContent = league.name;
+            document.getElementById('sidebarSeason').textContent = '';
+            document.getElementById('statTeams').textContent = league.teams.length;
+            document.getElementById('statPlayers').textContent = league.players.length;
+            document.getElementById('statRounds').textContent = league.rounds.length;
+            
+            document.getElementById('roundName').value = 'Week ' + (league.rounds.length + 1);
+            const today = new Date();
+            const nextWeek = new Date(today);
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            document.getElementById('roundStartDate').valueAsDate = today;
+            document.getElementById('roundEndDate').valueAsDate = nextWeek;
+            
+            renderCurrentRound();
+            renderTeams();
+            renderRounds();
+            renderPrintOptions();
+            renderPins();
+            renderCustomers();
+            renderParInputs();
+        }
+        
+        function renderCurrentRound() {
+            const container = document.getElementById('currentRoundStatus');
+            
+            if (league.rounds.length === 0) {
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="empty-state">
+                            <i class="fas fa-flag"></i>
+                            <p>No rounds yet. Create your first round to get started.</p>
+                            <button class="btn" onclick="showSection('rounds')" style="margin-top: 15px;">
+                                <i class="fas fa-plus"></i> Add Round
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('qrCard').style.display = 'none';
+                return;
+            }
+            
+            // Helper to parse date strings safely (handles YYYY-MM-DD format without timezone issues)
+            function parseDate(dateStr) {
+                if (!dateStr) return null;
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+                }
+                return new Date(dateStr);
+            }
+            
+            // Helper to format date safely
+            function formatDateSafe(dateStr, options = { month: 'short', day: 'numeric' }) {
+                if (!dateStr) return '';
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    let result = `${months[parseInt(parts[1]) - 1]} ${parseInt(parts[2])}`;
+                    if (options.year) result += `, ${parts[0]}`;
+                    return result;
+                }
+                return new Date(dateStr).toLocaleDateString('en-US', options);
+            }
+            
+            // Find current round based on today's date
+            const today = new Date();
+            today.setHours(12, 0, 0, 0);
+            
+            let round = null;
+            for (const r of league.rounds) {
+                if (r.startDate && r.endDate) {
+                    const start = parseDate(r.startDate);
+                    const end = parseDate(r.endDate);
+                    start.setHours(0, 0, 0, 0);
+                    end.setHours(23, 59, 59, 999);
+                    if (today >= start && today <= end) {
+                        round = r;
+                        break;
+                    }
+                }
+            }
+            
+            // If no current round found, show the most recent or upcoming round
+            if (!round) {
+                // Find next upcoming round
+                const upcomingRounds = league.rounds.filter(r => {
+                    if (!r.startDate) return false;
+                    const start = parseDate(r.startDate);
+                    start.setHours(0, 0, 0, 0);
+                    return start > today;
+                }).sort((a, b) => parseDate(a.startDate) - parseDate(b.startDate));
+                
+                if (upcomingRounds.length > 0) {
+                    round = upcomingRounds[0];
+                } else {
+                    // Fall back to most recent round
+                    round = league.rounds[league.rounds.length - 1];
+                }
+            }
+            
+            const scored = league.players.filter(p => (league.scores || {})[round.id]?.[p.id]?.submitted).length;
+            const total = league.players.length;
+            
+            const startDate = round.startDate ? formatDateSafe(round.startDate) : '';
+            const endDate = round.endDate ? formatDateSafe(round.endDate, { month: 'short', day: 'numeric', year: true }) : '';
+            const dateDisplay = startDate && endDate ? `${startDate} - ${endDate}` : (round.date ? formatDateSafe(round.date) : 'No date');
+            
+            container.innerHTML = `
+                <div class="round-status">
+                    <div>
+                        <h3>${round.name}</h3>
+                        <p>${dateDisplay}</p>
+                    </div>
+                    <div class="score-count">
+                        <div class="big">${scored}/${total}</div>
+                        <div class="label">scores submitted</div>
+                    </div>
+                </div>
+            `;
+            
+            // Update general QR code
+            updateGeneralQR();
+        }
+        
+        function updateGeneralQR() {
+            const round = league.rounds[league.rounds.length - 1];
+            if (!round) return;
+            
+            const url = 'https://golfcove.web.app/score.html?r=' + round.id;
+            document.getElementById('generalQRUrl').textContent = url;
+            
+            const qrContainer = document.getElementById('generalQRCode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: url,
+                width: 120,
+                height: 120,
+                colorDark: '#333333',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+        
+        function updatePrintPreview() {
+            const teamId = document.getElementById('printTeamSelect').value;
+            const preview = document.getElementById('printPreview');
+            const btn = document.getElementById('printBtn');
+            const previewContainer = document.getElementById('scorecardPreviewContainer');
+            
+            const round = league.rounds[league.rounds.length - 1];
+            if (!round) {
+                if (teamId) {
+                    alert('Create a round first');
+                    preview.style.display = 'none';
+                    btn.disabled = true;
+                }
+                return;
+            }
+            
+            // Show preview even when no team selected (blank preview)
+            const isBlank = !teamId || teamId === 'blank';
+            const team = (teamId && teamId !== 'blank') ? league.teams.find(t => t.id === teamId) : null;
+            const holes = league.course?.holes || 9;
+            const pars = league.course?.pars || Array(holes).fill(4);
+            const frontNine = Math.min(9, holes);
+            const has18 = holes >= 18;
+            
+            // Generate QR code for team (hidden, just for print function to access)
+            let qrImg = '';
+            if (!isBlank) {
+                const url = 'https://golfcove.web.app/score.html?r=' + round.id + '&t=' + teamId;
+                const qrContainer = document.getElementById('teamQRPreview');
+                qrContainer.innerHTML = '';
+                new QRCode(qrContainer, {
+                    text: url,
+                    width: 100,
+                    height: 100,
+                    colorDark: '#333333',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                // Wait a moment for QR to render, then get the image
+                setTimeout(() => {
+                    qrImg = document.querySelector('#teamQRPreview img')?.src || '';
+                }, 100);
+            }
+            
+            const logoPath = 'images/golfcovelogo.png';
+            const teamInfo = isBlank ? '' : `<div class="team-info">${team.name}</div>`;
+            const qrSection = !isBlank ? `<div class="qr-container"><div class="qr-placeholder">QR</div></div>` : '';
+            
+            previewContainer.innerHTML = `
+                <style>
+                    #scorecardPreviewContainer .scorecard {
+                        background: #fff;
+                        border: 2px solid #000;
+                        padding: 15px;
+                        max-width: 100%;
+                        margin: 0 auto;
+                        font-family: 'Arial', sans-serif;
+                    }
+                    #scorecardPreviewContainer .top-section {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        margin-bottom: 10px;
+                        padding-bottom: 10px;
+                        border-bottom: 2px solid #000;
+                        position: relative;
+                    }
+                    #scorecardPreviewContainer .center-header {
+                        flex: 1;
+                        text-align: center;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 4px;
+                    }
+                    #scorecardPreviewContainer .logo {
+                        height: 50px;
+                        width: auto;
+                    }
+                    #scorecardPreviewContainer .league-title {
+                        font-size: 14px;
+                        font-weight: bold;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    #scorecardPreviewContainer .tournament-details {
+                        font-size: 10px;
+                        color: #666;
+                        font-weight: 600;
+                    }
+                    #scorecardPreviewContainer .team-info {
+                        font-size: 11px;
+                        font-weight: bold;
+                        color: #37b24a;
+                    }
+                    #scorecardPreviewContainer .qr-container {
+                        position: absolute;
+                        right: 0;
+                        top: 0;
+                    }
+                    #scorecardPreviewContainer .qr-placeholder {
+                        width: 55px;
+                        height: 55px;
+                        background: #e0e0e0;
+                        border: 1px solid #000;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 11px;
+                        font-weight: bold;
+                        color: #666;
+                    }
+                    #scorecardPreviewContainer .score-grid {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 10px;
+                    }
+                    #scorecardPreviewContainer .score-grid td {
+                        border: 1px solid #000;
+                        text-align: center;
+                        padding: 5px 2px;
+                        font-size: 10px;
+                    }
+                    #scorecardPreviewContainer .name-cell {
+                        background: #fff;
+                        color: #000;
+                        font-weight: bold;
+                        font-size: 9px;
+                        text-transform: uppercase;
+                        width: 80px;
+                        text-align: left;
+                        padding-left: 4px;
+                    }
+                    #scorecardPreviewContainer .label-cell {
+                        background: #333;
+                        color: #fff;
+                        font-weight: bold;
+                        font-size: 9px;
+                        text-transform: uppercase;
+                        width: 50px;
+                    }
+                    #scorecardPreviewContainer .holes-row td {
+                        font-weight: bold;
+                        font-size: 9px;
+                        background: #f5f5f5;
+                    }
+                    #scorecardPreviewContainer .player-row td {
+                        height: 22px;
+                        background: #fff;
+                    }
+                    #scorecardPreviewContainer .player-row .name-cell {
+                        background: #fff;
+                        color: #000;
+                        border-right: 2px solid #000;
+                        font-weight: normal;
+                    }
+                    #scorecardPreviewContainer .total-cell {
+                        background: #e8e8e8 !important;
+                        font-weight: bold;
+                    }
+                    #scorecardPreviewContainer .bottom-row {
+                        display: flex;
+                        gap: 25px;
+                        padding-top: 8px;
+                        border-top: 1px solid #000;
+                        font-size: 9px;
+                    }
+                    #scorecardPreviewContainer .bottom-row .field {
+                        display: flex;
+                        gap: 5px;
+                    }
+                    #scorecardPreviewContainer .bottom-row .field span {
+                        font-weight: bold;
+                    }
+                    #scorecardPreviewContainer .qr-text {
+                        font-size: 8px;
+                        color: #333;
+                        margin-top: 3px;
+                        line-height: 1.2;
+                        font-weight: bold;
+                    }
+                    #scorecardPreviewContainer .player-info {
+                        margin-bottom: 15px;
+                        padding: 12px;
+                        background: #f9f9f9;
+                        border: 2px solid #000;
+                    }
+                    #scorecardPreviewContainer .info-row {
+                        display: flex;
+                        gap: 25px;
+                        justify-content: space-between;
+                    }
+                    #scorecardPreviewContainer .info-item {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+                    #scorecardPreviewContainer .info-item .label {
+                        font-size: 10px;
+                        font-weight: bold;
+                        color: #000;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    #scorecardPreviewContainer .info-item .value {
+                        font-size: 11px;
+                        color: #333;
+                        border-bottom: 1px solid #000;
+                    }
+                    #scorecardPreviewContainer .score-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 15px;
+                        border: 2px solid #000;
+                    }
+                    #scorecardPreviewContainer .score-table th,
+                    #scorecardPreviewContainer .score-table td {
+                        padding: 7px 3px;
+                        text-align: center;
+                        border: 1px solid #000;
+                        font-size: 10px;
+                    }
+                    #scorecardPreviewContainer .score-table thead {
+                        background: #37b24a;
+                        color: #fff;
+                    }
+                    #scorecardPreviewContainer .hole-label {
+                        background: #1a1a1a !important;
+                        font-weight: bold;
+                        font-size: 9px;
+                        text-transform: uppercase;
+                    }
+                    #scorecardPreviewContainer .hole-num {
+                        font-weight: bold;
+                        min-width: 28px;
+                    }
+                    #scorecardPreviewContainer .subtotal {
+                        background: #2d9440 !important;
+                        font-weight: bold;
+                    }
+                    #scorecardPreviewContainer .total {
+                        background: #1a6b2e !important;
+                        font-weight: bold;
+                    }
+                    #scorecardPreviewContainer .hcp-col,
+                    #scorecardPreviewContainer .net-col {
+                        background: #1a6b2e !important;
+                        font-weight: bold;
+                    }
+                    #scorecardPreviewContainer .row-label {
+                        background: #333 !important;
+                        color: #fff !important;
+                        font-weight: bold;
+                        text-transform: uppercase;
+                        font-size: 9px;
+                        letter-spacing: 0.5px;
+                    }
+                    #scorecardPreviewContainer .score-row td {
+                        background: #fff;
+                        height: 30px;
+                    }
+                    #scorecardPreviewContainer .score-row .row-label {
+                        background: #333 !important;
+                        color: #fff !important;
+                    }
+                    #scorecardPreviewContainer .subtotal-cell {
+                        background: #e8f5e9 !important;
+                        font-weight: 600;
+                    }
+                    #scorecardPreviewContainer .total-cell {
+                        background: #c8e6c9 !important;
+                        font-weight: bold;
+                    }
+                    #scorecardPreviewContainer .empty-cell {
+                        background: #fff !important;
+                    }
+                    #scorecardPreviewContainer .card-footer {
+                        display: flex;
+                        justify-content: space-between;
+                        padding-top: 12px;
+                        border-top: 2px solid #000;
+                        gap: 20px;
+                    }
+                    #scorecardPreviewContainer .footer-item {
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+                    #scorecardPreviewContainer .footer-label {
+                        font-size: 9px;
+                        font-weight: bold;
+                        color: #000;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    #scorecardPreviewContainer .footer-line {
+                        font-size: 10px;
+                        color: #333;
+                        border-bottom: 1px solid #000;
+                    }
+                <\/style>
+                <div class="scorecard">
+                    <div class="top-section">
+                        <div class="center-header">
+                            <img src="${logoPath}" alt="Golf Cove" class="logo">
+                            <div class="league-title">${league.name || 'League Name'}</div>
+                            <div class="tournament-details">${round.name} - ${round.startDate ? new Date(round.startDate).toLocaleDateString() : (round.date ? new Date(round.date).toLocaleDateString() : '')}</div>
+                            ${teamInfo}
+                        </div>
+                        ${qrSection}
+                    </div>
+                    <table class="score-grid">
+                        <tr class="holes-row">
+                            <td class="name-cell">HOLE</td>
+                            ${Array.from({length:frontNine},(_,i)=>`<td>${i+1}</td>`).join('')}
+                            <td class="total-cell">OUT</td>
+                        ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
+                        ${has18?'<td class="total-cell">IN</td>':''}
+                        <td class="total-cell">TOT</td>
+                        <td class="total-cell">HCP</td>
+                        <td class="total-cell">NET</td>
+                    </tr>
+                    ${Array.from({length:6},()=>`
+                    <tr class="player-row">
+                        <td class="name-cell"></td>
+                        ${Array.from({length:frontNine},()=>'<td></td>').join('')}
+                        <td class="total-cell"></td>
+                            ${has18?Array.from({length:holes-9},()=>'<td></td>').join(''):''}
+                            ${has18?'<td class="total-cell"></td>':''}
+                            <td class="total-cell"></td>
+                            <td></td>
+                            <td></td>
+                        </tr>`).join('')}
+                    </table>
+                    <div class="bottom-row">
+                        <div class="field"><span>SCORER:</span> _________________</div>
+                        <div class="field"><span>ATTEST:</span> _________________</div>
+                        <div class="field"><span>DATE:</span> __________</div>
+                    </div>
+                </div>
+            `;
+            
+            preview.style.display = 'block';
+            btn.disabled = false; // Enable button for both blank and team scorecards
+        }
+        
+        function copyGeneralUrl() {
+            const url = document.getElementById('generalQRUrl').textContent;
+            navigator.clipboard.writeText(url);
+            alert('Link copied!');
+        }
+        
+        function printQRPoster() {
+            const posterWindow = window.open('qr-poster.html', '_blank');
+            posterWindow.onload = function() {
+                posterWindow.print();
+            };
+        }
+        
+        function renderTeams() {
+            const container = document.getElementById('teamGrid');
+            
+            let html = league.teams.map(team => {
+                const players = league.players.filter(p => p.teamId === team.id);
+                const teamPin = team.pin || (players.length > 0 && players[0].pin) || 'No PIN';
+                const canAddPlayer = players.length < 2;
+                return `
+                    <div class="team-card">
+                        <div class="team-header">
+                            <input type="text" value="${team.name}" 
+                                onchange="renameTeam('${team.id}', this.value)" 
+                                style="flex: 1; font-size: 16px; font-weight: 700; border: 1px solid transparent; background: transparent; padding: 4px 8px; border-radius: 4px; cursor: text;"
+                                onmouseover="this.style.borderColor='#ddd'; this.style.background='#fff';"
+                                onmouseout="if(document.activeElement !== this) { this.style.borderColor='transparent'; this.style.background='transparent'; }"
+                                onfocus="this.style.borderColor='#37b24a'; this.style.background='#fff';"
+                                onblur="this.style.borderColor='transparent'; this.style.background='transparent';">
+                            <button class="delete-btn" onclick="deleteTeam('${team.id}')" title="Delete Team"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 12px; color: #ca8a04; font-weight: 600;"><i class="fas fa-key"></i> Team PIN</span>
+                            <input type="text" value="${teamPin}" 
+                                onchange="updateTeamPin('${team.id}', this.value)"
+                                maxlength="4" pattern="[0-9]{4}" inputmode="numeric"
+                                style="font-family: monospace; font-size: 16px; font-weight: 700; color: #333; letter-spacing: 3px; width: 80px; text-align: center; border: 1px solid transparent; background: transparent; padding: 4px 8px; border-radius: 4px; cursor: text;"
+                                onmouseover="this.style.borderColor='#fef08a'; this.style.background='#fff';"
+                                onmouseout="if(document.activeElement !== this) { this.style.borderColor='transparent'; this.style.background='transparent'; }"
+                                onfocus="this.style.borderColor='#ca8a04'; this.style.background='#fff';"
+                                onblur="this.style.borderColor='transparent'; this.style.background='transparent';">
+                        </div>
+                        ${players.length === 0 ? '<p style="color: #999; font-size: 13px;">No players yet</p>' : 
+                            players.map(p => {
+                                // Check member/league status
+                                const isMember = p.isMember || false;
+                                const isLinked = p.stripeCustomerId ? true : false;
+                                const memberType = p.memberType;
+                                const tierColor = isMember ? getMemberTierColor(memberType) : '#3498db';
+                                
+                                let badges = '';
+                                if (isMember) {
+                                    badges += `<span style="background:${tierColor};color:#fff;font-size:9px;padding:2px 5px;border-radius:8px;font-weight:700;margin-left:4px;">${getMemberTierName(memberType).toUpperCase()}</span>`;
+                                }
+                                if (isLinked && !isMember) {
+                                    badges += `<span style="background:#635bff;color:#fff;font-size:9px;padding:2px 5px;border-radius:8px;font-weight:700;margin-left:4px;"><i class="fab fa-stripe-s"></i></span>`;
+                                }
+                                
+                                return `
+                                    <div class="player" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
+                                        <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
+                                            <input type="text" value="${p.name}" 
+                                                onchange="renamePlayer('${p.id}', this.value)" 
+                                                style="font-weight: 600; font-size: 14px; border: 1px solid transparent; background: transparent; padding: 2px 6px; border-radius: 4px; cursor: text; flex: 1; min-width: 0;"
+                                                onmouseover="this.style.borderColor='#ddd'; this.style.background='#fff';"
+                                                onmouseout="if(document.activeElement !== this) { this.style.borderColor='transparent'; this.style.background='transparent'; }"
+                                                onfocus="this.style.borderColor='#37b24a'; this.style.background='#fff';"
+                                                onblur="this.style.borderColor='transparent'; this.style.background='transparent';">
+                                            ${badges}
+                                            ${!isLinked ? `<button onclick="openLinkPlayerModal('${p.id}')" title="Link to Stripe Customer" style="background:#fff;border:1px solid #635bff;color:#635bff;font-size:10px;padding:2px 5px;border-radius:4px;cursor:pointer;"><i class="fas fa-link"></i></button>` : ''}
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <button onclick="viewPlayerScores('${p.id}')" title="View Scores" style="background:#e3f2fd;border:none;color:#1976d2;font-size:12px;padding:4px 8px;border-radius:4px;cursor:pointer;"><i class="fas fa-chart-line"></i></button>
+                                            <div style="display: flex; align-items: center; gap: 4px;">
+                                                <span style="font-size: 11px; color: #888;">HCP</span>
+                                                <input type="number" value="${p.handicap || 0}" min="0" max="54"
+                                                    onchange="updatePlayerHandicap('${p.id}', this.value)"
+                                                    style="width: 45px; padding: 4px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 13px; text-align: center;">
+                                            </div>
+                                            <button class="delete-btn" onclick="deletePlayer('${p.id}')" title="Remove player"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')
+                        }
+                        ${canAddPlayer ? `
+                        <button class="add-player-btn" onclick="openAddPlayerModal('${team.id}', '${team.name.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-plus"></i> Add Player ${players.length === 1 ? '(1/2)' : ''}
+                        </button>` : `
+                        <div style="text-align: center; padding: 10px; color: #888; font-size: 12px; background: #f5f5f5; border-radius: 8px; margin-top: 12px;">
+                            <i class="fas fa-check-circle" style="color: #37b24a;"></i> Team Complete (2 players)
+                        </div>`}
+                    </div>
+                `;
+            }).join('');
+            
+            html += `
+                <div class="add-team-card" onclick="openAddTeamModal()">
+                    <i class="fas fa-plus"></i>
+                    <span style="color: #888;">Add Team</span>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        function renderRounds() {
+            const container = document.getElementById('roundsList');
+            
+            if (league.rounds.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-flag"></i><p>No rounds yet</p></div>';
+                return;
+            }
+            
+            container.innerHTML = league.rounds.slice().reverse().map(r => {
+                const scored = league.players.filter(p => (league.scores || {})[r.id]?.[p.id]?.submitted).length;
+                const startDate = r.startDate ? new Date(r.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
+                const endDate = r.endDate ? new Date(r.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+                const dateDisplay = r.startDate && r.endDate ? `${startDate} - ${endDate}` : (r.date ? new Date(r.date).toLocaleDateString() : 'No date');
+                const status = r.finalized ? '<span style="color: #888; font-size: 12px;">&bull; Finalized</span>' : '';
+                return `
+                    <div class="round-item">
+                        <div>
+                            <h4>${r.name}</h4>
+                            <p>${dateDisplay} &bull; ${scored}/${league.players.length} scores ${status}</p>
+                        </div>
+                        <div class="actions">
+                            <button class="btn btn-sm btn-secondary" onclick="viewRoundScores('${r.id}')"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteRound('${r.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderPrintOptions() {
+            const select = document.getElementById('printTeamSelect');
+            select.innerHTML = '<option value="">Select a Team</option>' + 
+                league.teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            
+            // Show blank preview by default
+            updatePrintPreview();
+        }
+        
+        function renderPins() {
+            const stats = document.getElementById('pinStats');
+            if (!stats) return;
+            
+            const total = league.players.length;
+            const withPin = league.players.filter(p => p.pin).length;
+            const linked = league.players.filter(p => p.stripeCustomerId).length;
+            const members = league.players.filter(p => p.isMember).length;
+            const teams = league.teams.length;
+            
+            let statsHtml = `<span>${teams} teams</span> • <span>${total} players</span>`;
+            if (members > 0) {
+                statsHtml += ` • <span style="color:#f39c12;">${members} members</span>`;
+            }
+            statsHtml += ` • <span style="color:#37b24a;">${withPin} with PIN</span>`;
+            stats.innerHTML = statsHtml;
+        }
+        
+        // ============ CUSTOMER MANAGEMENT ============
+        
+        // Customer management state
+        let customerTab = 'all';
+        let customerPage = 1;
+        let sortBy = 'name';
+        const customersPerPage = 25;
+        let selectedCustomers = new Set();
+        
+        function setCustomerTab(tab) {
+            customerTab = tab;
+            customerPage = 1;
+            selectedCustomers.clear();
+            
+            // Update tab styles - clean monochrome
+            document.querySelectorAll('.customer-tab').forEach(t => {
+                t.style.borderBottom = '2px solid transparent';
+                t.style.color = '#888';
+                t.style.fontWeight = '500';
+            });
+            const activeTab = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            if (activeTab) {
+                activeTab.style.borderBottom = '2px solid #1a1a2e';
+                activeTab.style.color = '#1a1a2e';
+                activeTab.style.fontWeight = '600';
+            }
+            
+            renderCustomers();
+        }
+        
+        function updateCustomerStats() {
+            const total = stripeCustomersCache.length;
+            const members = stripeCustomersCache.filter(c => c.isMember).length;
+            const leaguePlayers = stripeCustomersCache.filter(c => c.isLeague).length;
+            const inactive = stripeCustomersCache.filter(c => !c.isMember && !c.isLeague).length;
+            
+            // Count by tier
+            const eagle = stripeCustomersCache.filter(c => c.memberType?.includes('eagle')).length;
+            const birdie = stripeCustomersCache.filter(c => c.memberType?.includes('birdie')).length;
+            const par = stripeCustomersCache.filter(c => c.memberType?.includes('par')).length;
+            
+            // Update total customers stat
+            const totalCustomersEl = document.getElementById('statTotalCustomers');
+            if (totalCustomersEl) totalCustomersEl.textContent = total;
+            
+            // Update membership tier stats
+            const eagleEl = document.getElementById('statEagleMembers');
+            const birdieEl = document.getElementById('statBirdieMembers');
+            const parEl = document.getElementById('statParMembers');
+            if (eagleEl) eagleEl.textContent = eagle;
+            if (birdieEl) birdieEl.textContent = birdie;
+            if (parEl) parEl.textContent = par;
+            
+            // Update stat cards
+            const totalMembersEl = document.getElementById('statTotalMembers');
+            if (totalMembersEl) totalMembersEl.textContent = members;
+            
+            // Update tab counts
+            const tabAll = document.getElementById('tabCountAll');
+            const tabMembers = document.getElementById('tabCountMembers');
+            const tabLeague = document.getElementById('tabCountLeague');
+            const tabInactive = document.getElementById('tabCountInactive');
+            if (tabAll) tabAll.textContent = total;
+            if (tabMembers) tabMembers.textContent = members;
+            if (tabLeague) tabLeague.textContent = leaguePlayers;
+            if (tabInactive) tabInactive.textContent = inactive;
+        }
+        
+        function renderCustomers() {
+            const grid = document.getElementById('customerGrid');
+            const searchTerm = (document.getElementById('customerSearch')?.value || '').toLowerCase();
+            const memberTypeFilter = document.getElementById('memberTypeFilter')?.value || 'all';
+            
+            console.log('[renderCustomers] Grid element:', grid);
+            console.log('[renderCustomers] Customer cache:', stripeCustomersCache.length, 'customers');
+            
+            if (!grid) {
+                console.warn('[renderCustomers] customerGrid not found!');
+                return;
+            }
+            
+            updateCustomerStats();
+            
+            // Filter by tab
+            let customers = [...stripeCustomersCache];
+            
+            if (customerTab === 'members') {
+                customers = customers.filter(c => c.isMember);
+            } else if (customerTab === 'league') {
+                customers = customers.filter(c => c.isLeague);
+            } else if (customerTab === 'inactive') {
+                customers = customers.filter(c => !c.isMember && !c.isLeague);
+            }
+            
+            // Filter by search
+            if (searchTerm) {
+                customers = customers.filter(c => 
+                    (c.name || '').toLowerCase().includes(searchTerm) ||
+                    (c.email || '').toLowerCase().includes(searchTerm) ||
+                    (c.phone || '').includes(searchTerm)
+                );
+            }
+            
+            // Filter by member type
+            if (memberTypeFilter !== 'all') {
+                customers = customers.filter(c => c.memberType === memberTypeFilter);
+            }
+            
+            // Sort
+            customers.sort((a, b) => {
+                if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+                if (sortBy === 'recent') return (b.created || 0) - (a.created || 0);
+                if (sortBy === 'spent') return (b.totalSpent || 0) - (a.totalSpent || 0);
+                if (sortBy === 'visits') return (b.visits || 0) - (a.visits || 0);
+                return 0;
+            });
+            
+            // Pagination
+            const totalPages = Math.ceil(customers.length / customersPerPage);
+            const startIdx = (customerPage - 1) * customersPerPage;
+            const pageCustomers = customers.slice(startIdx, startIdx + customersPerPage);
+            
+            console.log('[renderCustomers] After filtering:', customers.length, 'customers');
+            console.log('[renderCustomers] Page customers:', pageCustomers.length);
+            console.log('[renderCustomers] First customer:', pageCustomers[0]);
+            
+            // Update bulk selection bar visibility
+            document.getElementById('bulkSelectionBar').style.display = selectedCustomers.size > 0 ? 'block' : 'none';
+            document.getElementById('selectedCount').textContent = `${selectedCustomers.size} selected`;
+            
+            if (pageCustomers.length === 0) {
+                grid.innerHTML = `
+                    <div style="padding: 60px; text-align: center;">
+                        <i class="fas fa-users" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
+                        <p style="color: #888; font-size: 14px;">${searchTerm ? 'No customers match your search.' : 'No customers yet.'}</p>
+                        <button class="btn btn-sm" onclick="syncStripeCustomers()" style="margin-top: 10px;"><i class="fas fa-sync-alt"></i> Sync from Stripe</button>
+                    </div>
+                `;
+                document.getElementById('customerPagination').innerHTML = '';
+                return;
+            }
+            
+            grid.innerHTML = pageCustomers.map(c => {
+                const tierColor = getMemberTierColor(c.memberType);
+                const tierName = c.isMember ? getMemberTierName(c.memberType) : (c.isLeague ? 'League' : '');
+                const initials = getInitials(c.name || c.email || 'NA');
+                const isSelected = selectedCustomers.has(c.id);
+                const avatarBg = c.isMember ? tierColor : (c.isLeague ? '#37b24a' : '#6b7280');
+                
+                return `
+                    <div onclick="openCustomerProfile('${c.id}')" style="display: flex; align-items: center; gap: 12px; padding: 12px 15px; background: ${isSelected ? '#f0f0f0' : '#fff'}; border-radius: 8px; border: 1px solid ${isSelected ? '#999' : '#e5e7eb'}; cursor: pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='${isSelected ? '#f0f0f0' : '#fff'}'">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleCustomerSelect('${c.id}')" style="width: 16px; height: 16px; cursor: pointer;">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: ${avatarBg}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0;">${initials}</div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-weight: 600; font-size: 14px; color: #1a1a2e;">${c.name || 'No Name'}</span>
+                                ${tierName ? `<span style="background: ${avatarBg}; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${tierName}</span>` : ''}
+                            </div>
+                            <div style="font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.email || c.phone || '-'}</div>
+                        </div>
+                        <div style="display: flex; gap: 4px;" onclick="event.stopPropagation();">
+                            ${c.isMember ? `<button class="btn btn-sm btn-secondary" onclick="manageMembership('${c.id}')" title="Manage Membership"><i class="fas fa-id-card"></i></button>` : `<button class="btn btn-sm" onclick="addMembership('${c.id}')" title="Add Membership" style="background: #27ae60; color: #fff;"><i class="fas fa-plus"></i></button>`}
+                            <button class="btn btn-sm btn-secondary" onclick="editCustomer('${c.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            console.log('[renderCustomers] Grid HTML length:', grid.innerHTML.length);
+            console.log('[renderCustomers] Grid children:', grid.children.length);
+            
+            // Pagination
+            if (totalPages > 1) {
+                let pagHtml = '';
+                if (customerPage > 1) {
+                    pagHtml += `<button class="btn btn-sm btn-secondary" onclick="customerPage=${customerPage-1}; renderCustomers()"><i class="fas fa-chevron-left"></i></button>`;
+                }
+                pagHtml += `<span style="padding: 0 10px; font-size: 13px; color: #666;">${customerPage} / ${totalPages}</span>`;
+                if (customerPage < totalPages) {
+                    pagHtml += `<button class="btn btn-sm btn-secondary" onclick="customerPage=${customerPage+1}; renderCustomers()"><i class="fas fa-chevron-right"></i></button>`;
+                }
+                document.getElementById('customerPagination').innerHTML = pagHtml;
+            } else {
+                document.getElementById('customerPagination').innerHTML = '';
+            }
+        }
+        
+        function getInitials(name) {
+            if (!name) return 'NA';
+            const parts = name.trim().split(' ');
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+        
+        function toggleCustomerSelect(customerId) {
+            if (selectedCustomers.has(customerId)) {
+                selectedCustomers.delete(customerId);
+            } else {
+                selectedCustomers.add(customerId);
+            }
+            renderCustomers();
+        }
+        
+        function toggleSelectAll(checked) {
+            const searchTerm = (document.getElementById('customerSearch')?.value || '').toLowerCase();
+            let customers = [...stripeCustomersCache];
+            
+            if (customerTab === 'members') customers = customers.filter(c => c.isMember);
+            else if (customerTab === 'league') customers = customers.filter(c => c.isLeague);
+            else if (customerTab === 'inactive') customers = customers.filter(c => !c.isMember && !c.isLeague);
+            
+            if (searchTerm) {
+                customers = customers.filter(c => 
+                    (c.name || '').toLowerCase().includes(searchTerm) ||
+                    (c.email || '').toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (checked) {
+                customers.forEach(c => selectedCustomers.add(c.id));
+            } else {
+                selectedCustomers.clear();
+            }
+            renderCustomers();
+        }
+        
+        function openCustomerProfile(customerId) {
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            const linkedPlayer = league.players.find(p => p.stripeCustomerId === customerId);
+            const team = linkedPlayer ? league.teams.find(t => t.id === linkedPlayer.teamId) : null;
+            const tierColor = customer.isMember ? getMemberTierColor(customer.memberType) : (customer.isLeague ? '#37b24a' : '#6b7280');
+            const tierName = customer.isMember ? getMemberTierName(customer.memberType) : (customer.isLeague ? 'League' : 'Customer');
+            const initials = getInitials(customer.name || customer.email || 'NA');
+            const createdDate = customer.created ? new Date(customer.created * 1000).toLocaleDateString() : '-';
+            
+            // Get player scores if linked
+            let scoresHtml = '';
+            if (linkedPlayer) {
+                let totalRounds = 0, avgNet = 0;
+                league.rounds.forEach(round => {
+                    const score = (league.scores || {})[round.id]?.[linkedPlayer.id];
+                    if (score && score.submitted) {
+                        totalRounds++;
+                        avgNet += score.net || 0;
+                    }
+                });
+                if (totalRounds > 0) avgNet = Math.round(avgNet / totalRounds);
+                
+                scoresHtml = `
+                    <div style="margin-top: 20px; background: #f0fff4; border: 1px solid #37b24a40; border-radius: 10px; padding: 15px;">
+                        <h4 style="color: #37b24a; margin-bottom: 10px;"><i class="fas fa-trophy"></i> League Stats</h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+                            <div><div style="font-size: 24px; font-weight: 700;">${totalRounds}</div><div style="font-size: 11px; color: #888;">Rounds</div></div>
+                            <div><div style="font-size: 24px; font-weight: 700;">${linkedPlayer.handicap || 0}</div><div style="font-size: 11px; color: #888;">Handicap</div></div>
+                            <div><div style="font-size: 24px; font-weight: 700;">${avgNet || '-'}</div><div style="font-size: 11px; color: #888;">Avg Net</div></div>
+                        </div>
+                        ${team ? `<div style="margin-top: 10px; font-size: 13px; color: #666;"><i class="fas fa-users"></i> Team: <strong>${team.name}</strong></div>` : ''}
+                        <button class="btn btn-sm btn-danger" style="margin-top: 12px;" onclick="document.getElementById('customerProfileModal').remove(); removeFromLeague('${linkedPlayer.id}')"><i class="fas fa-user-minus"></i> Remove from League</button>
+                    </div>
+                `;
+            }
+            
+            const modalHtml = `
+                <div id="customerProfileModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;overflow-y:auto;">
+                    <div style="background:#fff;border-radius:20px;max-width:600px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;">
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, ${tierColor}, ${tierColor}dd); color: #fff; padding: 30px; border-radius: 20px 20px 0 0; position: relative;">
+                            <button onclick="document.getElementById('customerProfileModal').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 18px;">&times;</button>
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 28px;">${initials}</div>
+                                <div>
+                                    <div style="font-size: 24px; font-weight: 700;">${customer.name || 'No Name'}</div>
+                                    <div style="opacity: 0.9; font-size: 14px;">${tierName} • Since ${createdDate}</div>
+                                    ${customer.subscriptionStatus ? `<div style="opacity: 0.8; font-size: 12px; margin-top: 4px;"><i class="fas fa-credit-card"></i> ${customer.subscriptionStatus}</div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Body -->
+                        <div style="padding: 25px;">
+                            <!-- Contact Info -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                                    <div style="font-size: 11px; color: #888; margin-bottom: 4px;">EMAIL</div>
+                                    <div style="font-weight: 600;">${customer.email || '-'}</div>
+                                    ${customer.email ? `<a href="mailto:${customer.email}" style="font-size: 12px; color: #635bff;"><i class="fas fa-envelope"></i> Send Email</a>` : ''}
+                                </div>
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                                    <div style="font-size: 11px; color: #888; margin-bottom: 4px;">PHONE</div>
+                                    <div style="font-weight: 600;">${customer.phone || '-'}</div>
+                                    ${customer.phone ? `<a href="tel:${customer.phone}" style="font-size: 12px; color: #635bff;"><i class="fas fa-phone"></i> Call</a>` : ''}
+                                </div>
+                            </div>
+                            
+                            <!-- Membership Section -->
+                            ${customer.isMember ? `
+                                <div style="background: linear-gradient(135deg, ${tierColor}10, ${tierColor}05); border: 1px solid ${tierColor}40; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                                    <h4 style="color: ${tierColor}; margin-bottom: 10px;"><i class="fas fa-crown"></i> ${tierName} Membership</h4>
+                                    <div style="font-size: 13px; color: #666;">
+                                        Status: <strong style="color: #37b24a;">Active</strong>
+                                    </div>
+                                    <button class="btn btn-sm btn-danger" onclick="cancelMembership('${customerId}')" style="margin-top: 10px;"><i class="fas fa-times"></i> Cancel Membership</button>
+                                </div>
+                            ` : `
+                                <div style="background: #f8f9fa; border: 1px dashed #ddd; border-radius: 10px; padding: 15px; margin-bottom: 20px; text-align: center;">
+                                    <p style="color: #888; margin-bottom: 10px;">No active membership</p>
+                                    <button class="btn btn-sm" style="background: #f39c12;" onclick="addMembership('${customerId}')"><i class="fas fa-crown"></i> Add Membership</button>
+                                </div>
+                            `}
+                            
+                            <!-- League Section -->
+                            ${scoresHtml}
+                            
+                            ${!linkedPlayer ? `
+                                <div style="margin-top: 20px; background: #f8f9fa; border: 1px dashed #ddd; border-radius: 10px; padding: 15px; text-align: center;">
+                                    <p style="color: #888; margin-bottom: 10px;">Not in league</p>
+                                    <button class="btn btn-sm" style="background: #37b24a;" onclick="document.getElementById('customerProfileModal').remove(); addCustomerToLeague('${customerId}')"><i class="fas fa-user-plus"></i> Add to League</button>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Notes -->
+                            <div style="margin-top: 20px;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 8px;"><i class="fas fa-sticky-note"></i> Notes</label>
+                                <textarea id="customerNotes" placeholder="Add notes about this customer..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px;">${customer.notes || ''}</textarea>
+                                <button class="btn btn-sm" onclick="saveCustomerNotes('${customerId}')" style="margin-top: 8px;"><i class="fas fa-save"></i> Save Notes</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer Actions -->
+                        <div style="padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn" style="background: #635bff;" onclick="document.getElementById('customerProfileModal').remove(); editCustomer('${customerId}')"><i class="fas fa-edit"></i> Edit</button>
+                            <a href="https://dashboard.stripe.com/customers/${customerId}" target="_blank" class="btn btn-secondary" style="text-decoration: none;"><i class="fab fa-stripe-s"></i> View in Stripe</a>
+                            <button class="btn btn-danger" style="margin-left: auto;" onclick="document.getElementById('customerProfileModal').remove(); deleteCustomer('${customerId}')"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function openBulkActionsModal() {
+            document.getElementById('bulkSelectionBar').style.display = 'block';
+            document.getElementById('selectAllCustomers').checked = false;
+            selectedCustomers.clear();
+            renderCustomers();
+        }
+        
+        async function bulkAddToLeague() {
+            if (selectedCustomers.size === 0) {
+                alert('No customers selected');
+                return;
+            }
+            alert(`Adding ${selectedCustomers.size} customers to league... (Feature coming soon)`);
+        }
+        
+        function bulkExport() {
+            if (selectedCustomers.size === 0) {
+                alert('No customers selected');
+                return;
+            }
+            const customers = stripeCustomersCache.filter(c => selectedCustomers.has(c.id));
+            let csv = 'Name,Email,Phone,Member Type,Is League\n';
+            customers.forEach(c => {
+                csv += `"${c.name || ''}","${c.email || ''}","${c.phone || ''}","${c.memberType || ''}","${c.isLeague ? 'Yes' : 'No'}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'selected_customers.csv';
+            a.click();
+            selectedCustomers.clear();
+            renderCustomers();
+        }
+        
+        async function bulkDelete() {
+            if (selectedCustomers.size === 0) {
+                alert('No customers selected');
+                return;
+            }
+            if (!confirm(`Delete ${selectedCustomers.size} customers? This cannot be undone.`)) return;
+            
+            let deleted = 0;
+            for (const customerId of selectedCustomers) {
+                try {
+                    await fetch(`${FUNCTIONS_URL}/deleteStripeCustomer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ customerId })
+                    });
+                    deleted++;
+                } catch (e) {
+                    console.error('Delete error:', e);
+                }
+            }
+            
+            selectedCustomers.clear();
+            await syncStripeCustomers();
+            alert(`Deleted ${deleted} customers.`);
+        }
+        
+        async function saveCustomerNotes(customerId) {
+            const notes = document.getElementById('customerNotes')?.value || '';
+            try {
+                await fetch(`${FUNCTIONS_URL}/updateStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerId, metadata: { notes } })
+                });
+                alert('Notes saved!');
+            } catch (e) {
+                alert('Failed to save notes: ' + e.message);
+            }
+        }
+        
+        function addMembership(customerId) {
+            alert('Redirect to membership signup with pre-filled customer. Feature coming soon.');
+            window.open(`membership-signup.html?customer=${customerId}`, '_blank');
+        }
+        
+        function cancelMembership(customerId) {
+            if (!confirm('Cancel this membership? The customer will lose access to member benefits.')) return;
+            alert('Membership cancellation feature coming soon. Please cancel via Stripe Dashboard.');
+            window.open(`https://dashboard.stripe.com/customers/${customerId}`, '_blank');
+        }
+        
+        async function syncStripeCustomers() {
+            const statusDiv = document.getElementById('customerSyncStatus');
+            const messageSpan = document.getElementById('customerSyncMessage');
+            
+            statusDiv.style.display = 'block';
+            messageSpan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing customers from Stripe...';
+            
+            try {
+                // Clear cache to force fresh fetch
+                localStorage.removeItem('gc_customers');
+                stripeCustomersCache = [];
+                
+                await loadStripeCustomers();
+                messageSpan.innerHTML = `<i class="fas fa-check-circle" style="color:#37b24a;"></i> Synced ${stripeCustomersCache.length} customers successfully!`;
+                renderCustomers();
+                
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            } catch (error) {
+                console.error('Sync error:', error);
+                messageSpan.innerHTML = `<i class="fas fa-exclamation-circle" style="color:#f44336;"></i> Sync failed: ${error.message}`;
+            }
+        }
+        
+        function addCustomerToLeague(customerId) {
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            // Open modal to select team or create new
+            const teams = league.teams || [];
+            const teamsWithSpace = teams.filter(t => {
+                const playerCount = league.players.filter(p => p.teamId === t.id).length;
+                return playerCount < 2;
+            });
+            
+            let modalHtml = `
+                <div id="addToLeagueModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:450px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                        <h3 style="margin-bottom:20px;color:#1a1a2e;"><i class="fas fa-user-plus" style="color:#37b24a;"></i> Add to League</h3>
+                        <p style="margin-bottom:15px;color:#666;">Adding <strong>${customer.name}</strong> to the league.</p>
+                        
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Select Team</label>
+                            <select id="addToLeagueTeam" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                                <option value="">-- Select a team --</option>
+                                ${teamsWithSpace.map(t => {
+                                    const count = league.players.filter(p => p.teamId === t.id).length;
+                                    return `<option value="${t.id}">${t.name} (${count}/2 players)</option>`;
+                                }).join('')}
+                            </select>
+                        </div>
+                        
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Handicap</label>
+                            <input type="number" id="addToLeagueHandicap" value="0" min="0" max="54" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                        </div>
+                        
+                        <div id="addToLeagueError" style="display:none;color:#f44336;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:8px;"></div>
+                        
+                        <div style="display:flex;gap:10px;">
+                            <button onclick="confirmAddToLeague('${customerId}')" class="btn" style="flex:1;background:#37b24a;"><i class="fas fa-check"></i> Add Player</button>
+                            <button onclick="document.getElementById('addToLeagueModal').remove()" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        async function removeFromLeague(playerId) {
+            const player = league.players.find(p => p.id === playerId);
+            if (!player) {
+                alert('Player not found');
+                return;
+            }
+            
+            const team = league.teams.find(t => t.id === player.teamId);
+            const teamName = team ? team.name : 'the league';
+            
+            if (!confirm(`Remove ${player.name} from ${teamName}? This will also delete their scores.`)) {
+                return;
+            }
+            
+            try {
+                // Remove player from the array
+                league.players = league.players.filter(p => p.id !== playerId);
+                
+                // Remove their scores from all rounds
+                if (league.scores) {
+                    for (const roundId in league.scores) {
+                        if (league.scores[roundId] && league.scores[roundId][playerId]) {
+                            delete league.scores[roundId][playerId];
+                        }
+                    }
+                }
+                
+                await save();
+                renderTeams();
+                renderCustomers();
+                renderPins();
+                
+                alert(`${player.name} has been removed from the league.`);
+            } catch (error) {
+                console.error('Error removing from league:', error);
+                alert('Failed to remove player: ' + error.message);
+            }
+        }
+        
+        async function confirmAddToLeague(customerId) {
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            const teamId = document.getElementById('addToLeagueTeam').value;
+            const handicap = parseInt(document.getElementById('addToLeagueHandicap').value) || 0;
+            const errorDiv = document.getElementById('addToLeagueError');
+            
+            if (!teamId) {
+                errorDiv.textContent = 'Please select a team';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            const team = league.teams.find(t => t.id === teamId);
+            if (!team) {
+                errorDiv.textContent = 'Team not found';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const playerId = 'p' + Date.now() + Math.random().toString(36).substr(2, 5);
+                const newPlayer = {
+                    id: playerId,
+                    name: customer.name || customer.email,
+                    email: customer.email || '',
+                    phone: customer.phone || '',
+                    teamId: teamId,
+                    handicap: handicap,
+                    pin: team.pin || generatePin(),
+                    stripeCustomerId: customerId,
+                    isMember: customer.isMember,
+                    isLeague: customer.isLeague,
+                    memberType: customer.memberType,
+                    createdAt: Date.now()
+                };
+                
+                league.players.push(newPlayer);
+                await save();
+                
+                document.getElementById('addToLeagueModal').remove();
+                renderTeams();
+                renderCustomers();
+                renderPins();
+                
+                alert(`${customer.name} has been added to ${team.name}!`);
+            } catch (error) {
+                console.error('Error adding to league:', error);
+                errorDiv.textContent = 'Failed to add player: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        function viewCustomerDetails(customerId) {
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            const linkedPlayer = league.players.find(p => p.stripeCustomerId === customerId);
+            const team = linkedPlayer ? league.teams.find(t => t.id === linkedPlayer.teamId) : null;
+            
+            let modalHtml = `
+                <div id="customerDetailsModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);max-height:80vh;overflow-y:auto;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="color:#1a1a2e;"><i class="fas fa-user" style="color:#635bff;"></i> Customer Details</h3>
+                            <button onclick="document.getElementById('customerDetailsModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">&times;</button>
+                        </div>
+                        
+                        <div style="background:#f8f9fa;border-radius:12px;padding:20px;margin-bottom:20px;">
+                            <h4 style="margin-bottom:15px;color:#1a1a2e;">${customer.name || 'No Name'}</h4>
+                            <div style="display:grid;gap:10px;font-size:14px;">
+                                <div><strong>Email:</strong> ${customer.email || 'N/A'}</div>
+                                <div><strong>Phone:</strong> ${customer.phone || 'N/A'}</div>
+                                <div><strong>Stripe ID:</strong> <code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;font-size:12px;">${customer.id}</code></div>
+                                <div><strong>Member:</strong> ${customer.isMember ? '<span style="color:#37b24a;">Yes</span>' : 'No'}</div>
+                                <div><strong>League Player:</strong> ${customer.isLeague ? '<span style="color:#37b24a;">Yes</span>' : 'No'}</div>
+                                ${customer.memberType ? `<div><strong>Tier:</strong> ${getMemberTierName(customer.memberType)}</div>` : ''}
+                                ${customer.subscriptionStatus ? `<div><strong>Subscription:</strong> ${customer.subscriptionStatus}</div>` : ''}
+                            </div>
+                        </div>
+                        
+                        ${linkedPlayer ? `
+                            <div style="background:#ecfdf5;border:1px solid #10b981;border-radius:12px;padding:20px;margin-bottom:20px;">
+                                <h4 style="margin-bottom:10px;color:#059669;"><i class="fas fa-golf-ball"></i> League Info</h4>
+                                <div style="display:grid;gap:8px;font-size:14px;">
+                                    <div><strong>Team:</strong> ${team ? team.name : 'No team'}</div>
+                                    <div><strong>Handicap:</strong> ${linkedPlayer.handicap || 0}</div>
+                                    <div><strong>PIN:</strong> <code style="background:#d1fae5;padding:2px 8px;border-radius:4px;font-family:monospace;letter-spacing:2px;">${linkedPlayer.pin || 'None'}</code></div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button onclick="editCustomer('${customerId}')" class="btn" style="background:#635bff;"><i class="fas fa-edit"></i> Edit</button>
+                            <a href="https://dashboard.stripe.com/customers/${customer.id}" target="_blank" class="btn btn-secondary" style="text-decoration:none;"><i class="fab fa-stripe-s"></i> View in Stripe</a>
+                            ${!linkedPlayer && customer.isLeague ? `<button onclick="document.getElementById('customerDetailsModal').remove(); addCustomerToLeague('${customerId}')" class="btn" style="background:#37b24a;"><i class="fas fa-user-plus"></i> Add to League</button>` : ''}
+                            ${linkedPlayer ? `<button onclick="removeFromLeague('${linkedPlayer.id}')" class="btn btn-danger"><i class="fas fa-user-minus"></i> Remove from League</button>` : ''}
+                            <button onclick="deleteCustomer('${customerId}')" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function openAddCustomerModal() {
+            let modalHtml = `
+                <div id="addCustomerModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="color:#1a1a2e;"><i class="fas fa-user-plus" style="color:#635bff;"></i> Add New Customer</h3>
+                            <button onclick="document.getElementById('addCustomerModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">&times;</button>
+                        </div>
+                        
+                        <form onsubmit="createCustomer(event)">
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Name *</label>
+                                <input type="text" id="newCustomerName" required style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;" placeholder="John Smith">
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Email *</label>
+                                <input type="email" id="newCustomerEmail" required style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;" placeholder="john@example.com">
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Phone</label>
+                                <input type="tel" id="newCustomerPhone" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;" placeholder="+1 555-123-4567">
+                            </div>
+                            
+                            <div id="addCustomerError" style="display:none;color:#f44336;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:8px;"></div>
+                            
+                            <div style="display:flex;gap:10px;">
+                                <button type="submit" class="btn" style="flex:1;background:#635bff;"><i class="fas fa-plus"></i> Create Customer</button>
+                                <button type="button" onclick="document.getElementById('addCustomerModal').remove()" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            document.getElementById('newCustomerName').focus();
+        }
+        
+        async function createCustomer(e) {
+            e.preventDefault();
+            const name = document.getElementById('newCustomerName').value.trim();
+            const email = document.getElementById('newCustomerEmail').value.trim();
+            const phone = document.getElementById('newCustomerPhone').value.trim();
+            const errorDiv = document.getElementById('addCustomerError');
+            
+            errorDiv.style.display = 'none';
+            
+            if (!name || !email) {
+                errorDiv.textContent = 'Name and email are required';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                errorDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating customer...';
+                errorDiv.style.display = 'block';
+                errorDiv.style.color = '#635bff';
+                errorDiv.style.background = '#f0f0ff';
+                
+                const response = await fetch(`${FUNCTIONS_URL}/createStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, phone })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                document.getElementById('addCustomerModal').remove();
+                await syncStripeCustomers();
+                alert('Customer created successfully!');
+                
+            } catch (error) {
+                console.error('Create customer error:', error);
+                errorDiv.textContent = 'Failed: ' + error.message;
+                errorDiv.style.display = 'block';
+                errorDiv.style.color = '#f44336';
+                errorDiv.style.background = '#ffebee';
+            }
+        }
+        
+        function manageMembership(customerId) {
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            const tierColor = getMemberTierColor(customer.memberType);
+            const tierName = getMemberTierName(customer.memberType);
+            
+            let modalHtml = `
+                <div id="manageMembershipModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="color:#1a1a2e;"><i class="fas fa-id-card" style="color:${tierColor};"></i> Manage Membership</h3>
+                            <button onclick="document.getElementById('manageMembershipModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">&times;</button>
+                        </div>
+                        
+                        <div style="background:#f8f9fa;border-radius:12px;padding:20px;margin-bottom:20px;">
+                            <div style="display:flex;align-items:center;gap:15px;margin-bottom:15px;">
+                                <div style="width:50px;height:50px;border-radius:50%;background:${tierColor};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;">${getInitials(customer.name || 'NA')}</div>
+                                <div>
+                                    <div style="font-weight:600;font-size:16px;">${customer.name || 'No Name'}</div>
+                                    <div style="color:#666;font-size:13px;">${customer.email || ''}</div>
+                                </div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                                <div style="background:#fff;padding:12px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:11px;color:#888;margin-bottom:4px;">Current Tier</div>
+                                    <span style="background:${tierColor};color:#fff;padding:4px 12px;border-radius:6px;font-weight:600;font-size:13px;">${tierName}</span>
+                                </div>
+                                <div style="background:#fff;padding:12px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:11px;color:#888;margin-bottom:4px;">Status</div>
+                                    <span style="color:#27ae60;font-weight:600;font-size:13px;"><i class="fas fa-check-circle"></i> Active</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block;margin-bottom:8px;font-weight:600;font-size:13px;">Change Membership Tier</label>
+                            <select id="newMemberTier" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                                <option value="eagle" ${customer.memberType?.includes('eagle') ? 'selected' : ''}>🦅 Eagle - Premium ($199/mo)</option>
+                                <option value="birdie" ${customer.memberType?.includes('birdie') ? 'selected' : ''}>🐦 Birdie - Standard ($99/mo)</option>
+                                <option value="par" ${customer.memberType?.includes('par') ? 'selected' : ''}>⛳ Par - Basic ($49/mo)</option>
+                            </select>
+                        </div>
+                        
+                        <div id="membershipError" style="display:none;color:#f44336;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:8px;"></div>
+                        
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <button onclick="saveMembershipChange('${customerId}')" class="btn" style="background:#635bff;"><i class="fas fa-save"></i> Save Changes</button>
+                            <div style="display:flex;gap:10px;">
+                                <button onclick="cancelMembership('${customerId}')" class="btn" style="flex:1;background:#e74c3c;"><i class="fas fa-ban"></i> Cancel Membership</button>
+                                <button type="button" onclick="document.getElementById('manageMembershipModal').remove()" class="btn btn-secondary" style="flex:1;"><i class="fas fa-times"></i> Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function addMembership(customerId) {
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            let modalHtml = `
+                <div id="addMembershipModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="color:#1a1a2e;"><i class="fas fa-user-plus" style="color:#27ae60;"></i> Add Membership</h3>
+                            <button onclick="document.getElementById('addMembershipModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">&times;</button>
+                        </div>
+                        
+                        <div style="background:#f8f9fa;border-radius:12px;padding:15px;margin-bottom:20px;">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div style="width:40px;height:40px;border-radius:50%;background:#6b7280;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;">${getInitials(customer.name || 'NA')}</div>
+                                <div>
+                                    <div style="font-weight:600;">${customer.name || 'No Name'}</div>
+                                    <div style="color:#666;font-size:13px;">${customer.email || ''}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block;margin-bottom:8px;font-weight:600;font-size:13px;">Select Membership Tier</label>
+                            <div style="display:flex;flex-direction:column;gap:10px;">
+                                <label style="display:flex;align-items:center;gap:12px;padding:15px;border:2px solid #ddd;border-radius:10px;cursor:pointer;" onclick="this.querySelector('input').checked=true;document.querySelectorAll('#addMembershipModal label[style]').forEach(l=>l.style.borderColor='#ddd');this.style.borderColor='#9b59b6';">
+                                    <input type="radio" name="memberTier" value="eagle" style="width:18px;height:18px;">
+                                    <div style="flex:1;">
+                                        <div style="font-weight:600;color:#9b59b6;">🦅 Eagle Membership</div>
+                                        <div style="font-size:12px;color:#666;">Unlimited rounds, range, lessons • $199/mo</div>
+                                    </div>
+                                </label>
+                                <label style="display:flex;align-items:center;gap:12px;padding:15px;border:2px solid #ddd;border-radius:10px;cursor:pointer;" onclick="this.querySelector('input').checked=true;document.querySelectorAll('#addMembershipModal label[style]').forEach(l=>l.style.borderColor='#ddd');this.style.borderColor='#f39c12';">
+                                    <input type="radio" name="memberTier" value="birdie" style="width:18px;height:18px;">
+                                    <div style="flex:1;">
+                                        <div style="font-weight:600;color:#f39c12;">🐦 Birdie Membership</div>
+                                        <div style="font-size:12px;color:#666;">10 rounds, unlimited range • $99/mo</div>
+                                    </div>
+                                </label>
+                                <label style="display:flex;align-items:center;gap:12px;padding:15px;border:2px solid #ddd;border-radius:10px;cursor:pointer;" onclick="this.querySelector('input').checked=true;document.querySelectorAll('#addMembershipModal label[style]').forEach(l=>l.style.borderColor='#ddd');this.style.borderColor='#27ae60';">
+                                    <input type="radio" name="memberTier" value="par" checked style="width:18px;height:18px;">
+                                    <div style="flex:1;">
+                                        <div style="font-weight:600;color:#27ae60;">⛳ Par Membership</div>
+                                        <div style="font-size:12px;color:#666;">5 rounds, range access • $49/mo</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div id="addMembershipError" style="display:none;color:#f44336;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:8px;"></div>
+                        
+                        <div style="display:flex;gap:10px;">
+                            <button onclick="createMembership('${customerId}')" class="btn" style="flex:1;background:#27ae60;"><i class="fas fa-check"></i> Create Membership</button>
+                            <button type="button" onclick="document.getElementById('addMembershipModal').remove()" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        async function saveMembershipChange(customerId) {
+            const newTier = document.getElementById('newMemberTier').value;
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            try {
+                await db.ref('stripe_customers/' + customerId).update({
+                    memberType: newTier,
+                    memberTypeUpdated: new Date().toISOString()
+                });
+                
+                const idx = stripeCustomersCache.findIndex(c => c.id === customerId);
+                if (idx !== -1) {
+                    stripeCustomersCache[idx].memberType = newTier;
+                }
+                
+                document.getElementById('manageMembershipModal').remove();
+                showToast('Membership tier updated!', 'success');
+                updateCustomerStats();
+                renderCustomers();
+            } catch (error) {
+                console.error('Error updating membership:', error);
+                const errDiv = document.getElementById('membershipError');
+                errDiv.textContent = 'Failed to update membership. Please try again.';
+                errDiv.style.display = 'block';
+            }
+        }
+        
+        async function cancelMembership(customerId) {
+            if (!confirm('Are you sure you want to cancel this membership? This cannot be undone.')) return;
+            
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            try {
+                await db.ref('stripe_customers/' + customerId).update({
+                    isMember: false,
+                    memberType: null,
+                    membershipCancelledAt: new Date().toISOString()
+                });
+                
+                const idx = stripeCustomersCache.findIndex(c => c.id === customerId);
+                if (idx !== -1) {
+                    stripeCustomersCache[idx].isMember = false;
+                    stripeCustomersCache[idx].memberType = null;
+                }
+                
+                document.getElementById('manageMembershipModal').remove();
+                showToast('Membership cancelled', 'info');
+                updateCustomerStats();
+                renderCustomers();
+            } catch (error) {
+                console.error('Error cancelling membership:', error);
+                showToast('Failed to cancel membership', 'error');
+            }
+        }
+        
+        async function createMembership(customerId) {
+            const selectedTier = document.querySelector('input[name="memberTier"]:checked')?.value;
+            if (!selectedTier) {
+                const errDiv = document.getElementById('addMembershipError');
+                errDiv.textContent = 'Please select a membership tier.';
+                errDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                await db.ref('stripe_customers/' + customerId).update({
+                    isMember: true,
+                    memberType: selectedTier,
+                    memberSince: new Date().toISOString()
+                });
+                
+                const idx = stripeCustomersCache.findIndex(c => c.id === customerId);
+                if (idx !== -1) {
+                    stripeCustomersCache[idx].isMember = true;
+                    stripeCustomersCache[idx].memberType = selectedTier;
+                }
+                
+                document.getElementById('addMembershipModal').remove();
+                showToast('Membership created!', 'success');
+                updateCustomerStats();
+                renderCustomers();
+            } catch (error) {
+                console.error('Error creating membership:', error);
+                const errDiv = document.getElementById('addMembershipError');
+                errDiv.textContent = 'Failed to create membership. Please try again.';
+                errDiv.style.display = 'block';
+            }
+        }
+        
+        function editCustomer(customerId) {
+            document.getElementById('customerDetailsModal')?.remove();
+            
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            let modalHtml = `
+                <div id="editCustomerModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="color:#1a1a2e;"><i class="fas fa-user-edit" style="color:#635bff;"></i> Edit Customer</h3>
+                            <button onclick="document.getElementById('editCustomerModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">&times;</button>
+                        </div>
+                        
+                        <form onsubmit="updateCustomer(event, '${customerId}')">
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Name *</label>
+                                <input type="text" id="editCustomerName" value="${customer.name || ''}" required style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Email *</label>
+                                <input type="email" id="editCustomerEmail" value="${customer.email || ''}" required style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Phone</label>
+                                <input type="tel" id="editCustomerPhone" value="${customer.phone || ''}" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                            </div>
+                            
+                            <div id="editCustomerError" style="display:none;color:#f44336;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:8px;"></div>
+                            
+                            <div style="display:flex;gap:10px;">
+                                <button type="submit" class="btn" style="flex:1;background:#635bff;"><i class="fas fa-save"></i> Save Changes</button>
+                                <button type="button" onclick="document.getElementById('editCustomerModal').remove()" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            document.getElementById('editCustomerName').focus();
+        }
+        
+        async function updateCustomer(e, customerId) {
+            e.preventDefault();
+            const name = document.getElementById('editCustomerName').value.trim();
+            const email = document.getElementById('editCustomerEmail').value.trim();
+            const phone = document.getElementById('editCustomerPhone').value.trim();
+            const errorDiv = document.getElementById('editCustomerError');
+            
+            errorDiv.style.display = 'none';
+            
+            try {
+                errorDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                errorDiv.style.display = 'block';
+                errorDiv.style.color = '#635bff';
+                errorDiv.style.background = '#f0f0ff';
+                
+                const response = await fetch(`${FUNCTIONS_URL}/updateStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerId, name, email, phone })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Also update linked player name if exists
+                const linkedPlayer = league.players.find(p => p.stripeCustomerId === customerId);
+                if (linkedPlayer) {
+                    linkedPlayer.name = name;
+                    linkedPlayer.email = email;
+                    linkedPlayer.phone = phone;
+                    await save();
+                    renderTeams();
+                }
+                
+                document.getElementById('editCustomerModal').remove();
+                await syncStripeCustomers();
+                alert('Customer updated successfully!');
+                
+            } catch (error) {
+                console.error('Update customer error:', error);
+                errorDiv.textContent = 'Failed: ' + error.message;
+                errorDiv.style.display = 'block';
+                errorDiv.style.color = '#f44336';
+                errorDiv.style.background = '#ffebee';
+            }
+        }
+        
+        async function deleteCustomer(customerId) {
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
+            if (!customer) return;
+            
+            const linkedPlayer = league.players.find(p => p.stripeCustomerId === customerId);
+            
+            let confirmMsg = `Are you sure you want to delete ${customer.name || customer.email}?`;
+            if (linkedPlayer) {
+                confirmMsg += '\n\nThis customer is linked to a league player. The player will also be removed from the league.';
+            }
+            confirmMsg += '\n\nThis action cannot be undone.';
+            
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                // Remove from league first if linked
+                if (linkedPlayer) {
+                    league.players = league.players.filter(p => p.id !== linkedPlayer.id);
+                    await save();
+                }
+                
+                // Delete from Stripe
+                const response = await fetch(`${FUNCTIONS_URL}/deleteStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerId })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                document.getElementById('customerDetailsModal')?.remove();
+                await syncStripeCustomers();
+                renderTeams();
+                renderPins();
+                alert('Customer deleted successfully!');
+                
+            } catch (error) {
+                console.error('Delete customer error:', error);
+                alert('Failed to delete customer: ' + error.message);
+            }
+        }
+        
+        async function removeFromLeague(playerId) {
+            const player = league.players.find(p => p.id === playerId);
+            if (!player) return;
+            
+            if (!confirm(`Remove ${player.name} from the league? They will no longer have access to enter scores.`)) return;
+            
+            league.players = league.players.filter(p => p.id !== playerId);
+            await save();
+            
+            document.getElementById('customerDetailsModal')?.remove();
+            renderTeams();
+            renderCustomers();
+            renderPins();
+            alert('Player removed from league.');
+        }
+
+        function renamePlayer(playerId, newName) {
+            const name = newName.trim();
+            if (!name) {
+                alert('Player name cannot be empty');
+                renderPins();
+                return;
+            }
+            const player = league.players.find(p => p.id === playerId);
+            if (player) {
+                player.name = name;
+                saveLeague();
+                renderTeams();
+            }
+        }
+        
+        function updatePlayerHandicap(playerId, value) {
+            const handicap = parseInt(value) || 0;
+            const player = league.players.find(p => p.id === playerId);
+            if (player) {
+                player.handicap = handicap;
+                saveLeague();
+                renderTeams();
+            }
+        }
+        
+        function updatePlayerPin(playerId, value) {
+            const pin = value.replace(/\D/g, '').slice(0, 4);
+            const player = league.players.find(p => p.id === playerId);
+            if (player) {
+                if (pin && pin.length !== 4) {
+                    alert('PIN must be exactly 4 digits');
+                    renderPins();
+                    return;
+                }
+                // Check for duplicate PINs
+                if (pin && league.players.some(p => p.id !== playerId && p.pin === pin)) {
+                    alert('This PIN is already in use by another player');
+                    renderPins();
+                    return;
+                }
+                player.pin = pin || null;
+                saveLeague();
+                renderTeams();
+            }
+        }
+        
+        function deletePlayerConfirm(playerId) {
+            deletePlayer(playerId);
+        }
+        
+        // ============ LINK LEGACY PLAYER TO STRIPE CUSTOMER ============
+        function openLinkPlayerModal(playerId) {
+            const player = league.players.find(p => p.id === playerId);
+            if (!player) return;
+            
+            document.getElementById('linkPlayerId').value = playerId;
+            document.getElementById('linkPlayerName').textContent = player.name;
+            document.getElementById('linkCustomerSearch').value = '';
+            document.getElementById('linkCustomerStripeId').value = '';
+            document.getElementById('linkCustomerResults').style.display = 'none';
+            document.getElementById('linkSelectedCustomer').style.display = 'none';
+            document.getElementById('linkPlayerBtn').disabled = true;
+            document.getElementById('linkPlayerBtn').style.opacity = '0.5';
+            
+            openModal('linkPlayerModal');
+            setupLinkCustomerSearch();
+        }
+        
+        function setupLinkCustomerSearch() {
+            const searchInput = document.getElementById('linkCustomerSearch');
+            const resultsDiv = document.getElementById('linkCustomerResults');
+            
+            // Remove old listeners
+            const newSearch = searchInput.cloneNode(true);
+            searchInput.parentNode.replaceChild(newSearch, searchInput);
+            
+            newSearch.addEventListener('input', function() {
+                const val = this.value.toLowerCase().trim();
+                if (val.length < 2) {
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Exclude already-linked players
+                const existingStripeIds = new Set(league.players.filter(p => p.stripeCustomerId).map(p => p.stripeCustomerId));
+                
+                const matches = stripeCustomersCache.filter(c => {
+                    if (existingStripeIds.has(c.stripeId) || existingStripeIds.has(c.id)) return false;
+                    const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+                    return fullName.includes(val) || (c.email && c.email.toLowerCase().includes(val));
+                }).slice(0, 8);
+                
+                if (matches.length === 0) {
+                    resultsDiv.innerHTML = '<div style="padding: 12px; color: #888; font-size: 13px; text-align: center;">No matching customers found.</div>';
+                    resultsDiv.style.display = 'block';
+                    return;
+                }
+                
+                resultsDiv.innerHTML = matches.map((c, idx) => {
+                    const isMember = isActiveMember(c);
+                    const initials = ((c.firstName || '')[0] || '') + ((c.lastName || '')[0] || '');
+                    const tierColor = isMember ? getMemberTierColor(c.memberType) : '#4a90a4';
+                    
+                    return `
+                        <div onclick="selectLinkCustomer(${idx})" style="padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: ${tierColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px;">${initials.toUpperCase()}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 14px;">${c.firstName || ''} ${c.lastName || ''}</div>
+                                <div style="font-size: 12px; color: #888;">${c.email || 'No email'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                resultsDiv._matches = matches;
+                resultsDiv.style.display = 'block';
+            });
+            
+            newSearch.addEventListener('blur', function() {
+                setTimeout(() => { resultsDiv.style.display = 'none'; }, 200);
+            });
+        }
+        
+        function selectLinkCustomer(index) {
+            const resultsDiv = document.getElementById('linkCustomerResults');
+            const matches = resultsDiv._matches || [];
+            const customer = matches[index];
+            if (!customer) return;
+            
+            document.getElementById('linkCustomerStripeId').value = customer.stripeId || customer.id;
+            document.getElementById('linkCustomerSearch').value = '';
+            resultsDiv.style.display = 'none';
+            
+            const isMember = isActiveMember(customer);
+            const tierName = isMember ? getMemberTierName(customer.memberType) : null;
+            const tierColor = isMember ? getMemberTierColor(customer.memberType) : '#4a90a4';
+            const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            
+            const selectedDiv = document.getElementById('linkSelectedCustomer');
+            selectedDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-check-circle" style="color: #4caf50; font-size: 18px;"></i>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600;">${fullName}</div>
+                        <div style="font-size: 12px; color: #666;">${customer.email || ''}</div>
+                        ${isMember ? `<span style="background:${tierColor};color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-top:4px;display:inline-block;">${tierName}</span>` : ''}
+                    </div>
+                </div>
+            `;
+            selectedDiv.style.display = 'block';
+            
+            document.getElementById('linkPlayerBtn').disabled = false;
+            document.getElementById('linkPlayerBtn').style.opacity = '1';
+        }
+        
+        function linkPlayerToCustomer(e) {
+            e.preventDefault();
+            const playerId = document.getElementById('linkPlayerId').value;
+            const stripeId = document.getElementById('linkCustomerStripeId').value;
+            
+            if (!playerId || !stripeId) return;
+            
+            const player = league.players.find(p => p.id === playerId);
+            const customer = stripeCustomersCache.find(c => c.stripeId === stripeId || c.id === stripeId);
+            
+            if (!player || !customer) return;
+            
+            // Update player with customer data
+            player.stripeCustomerId = stripeId;
+            player.name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || player.name;
+            player.email = customer.email || player.email;
+            player.isMember = isActiveMember(customer);
+            player.memberType = customer.memberType || null;
+            player.isLeague = true;
+            
+            // Update customer's league status in Stripe
+            if (!customer.isLeague) {
+                updateCustomerLeagueStatus(stripeId, true);
+            }
+            
+            save();
+            closeModal('linkPlayerModal');
+            renderPins();
+            renderTeams();
+            
+            alert(`Successfully linked ${player.name} to their Stripe customer profile!`);
+        }
+        
+        function renderParInputs() {
+            const container = document.getElementById('parInputsContainer');
+            if (!container) return; // Exit if container doesn't exist
+            
+            const holes = league.course?.holes || 9;
+            const pars = league.course?.pars || Array(holes).fill(4);
+            
+            let html = '<div class="par-grid">';
+            for (let i = 0; i < Math.min(9, holes); i++) {
+                html += `<div class="hole"><label>H${i + 1}</label><input type="number" min="3" max="6" value="${pars[i]}" id="par${i}"></div>`;
+            }
+            html += '</div>';
+            
+            if (holes > 9) {
+                html += '<div class="par-grid" style="margin-top: 15px;">';
+                for (let i = 9; i < holes; i++) {
+                    html += `<div class="hole"><label>H${i + 1}</label><input type="number" min="3" max="6" value="${pars[i]}" id="par${i}"></div>`;
+                }
+                html += '</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // Navigation
+        function toggleSidebar() {
+            document.getElementById('adminSidebar').classList.toggle('mobile-open');
+        }
+        
+        function showSection(section) {
+            console.log('[showSection] Switching to:', section);
+            
+            try {
+                document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                
+                const sectionEl = document.getElementById('section-' + section);
+                const navEl = document.querySelector(`[data-section="${section}"]`);
+                
+                console.log('[showSection] Section element:', sectionEl);
+                console.log('[showSection] Nav element:', navEl);
+                
+                if (sectionEl) sectionEl.classList.add('active');
+                if (navEl) navEl.classList.add('active');
+                
+                // Close sidebar on mobile
+                document.getElementById('adminSidebar').classList.remove('mobile-open');
+                document.getElementById('mobileSidebarOverlay').classList.remove('open');
+                
+                // Render content for admin sections
+                if (section === 'staff') loadStaffList();
+                else if (section === 'reports') loadSalesReports();
+                else if (section === 'timeclock') loadTimeclock();
+                else if (section === 'inventory') loadInventory();
+                else if (section === 'settings') loadStripeSettings();
+                else if (section === 'scoredocs') loadScoreDocuments();
+                else if (section === 'customers') {
+                    // Always render first (shows empty state), then sync if needed
+                    renderCustomers();
+                    if (stripeCustomersCache.length === 0) {
+                        syncStripeCustomers();
+                    }
+                }
+            } catch (err) {
+                console.error('[showSection] Error:', err);
+            }
+        }
+        
+        // Teams
+        // Setup team player search (for Add Team modal)
+        function setupTeamPlayerSearch(playerNum) {
+            const searchInput = document.getElementById(`teamPlayer${playerNum}Search`);
+            const resultsDiv = document.getElementById(`teamPlayer${playerNum}Results`);
+            const infoDiv = document.getElementById(`teamPlayer${playerNum}Info`);
+            const hcpSection = document.getElementById(`teamPlayer${playerNum}HcpSection`);
+            const stripeIdInput = document.getElementById(`teamPlayer${playerNum}StripeId`);
+            
+            // Remove old listeners
+            const newSearch = searchInput.cloneNode(true);
+            searchInput.parentNode.replaceChild(newSearch, searchInput);
+            
+            newSearch.addEventListener('input', function() {
+                const val = this.value.toLowerCase().trim();
+                if (val.length < 2) {
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Get the other player's Stripe ID to exclude from results
+                const otherPlayerNum = playerNum === 1 ? 2 : 1;
+                const otherStripeId = document.getElementById(`teamPlayer${otherPlayerNum}StripeId`)?.value || '';
+                
+                // Also exclude existing league players
+                const existingStripeIds = new Set(league.players.filter(p => p.stripeCustomerId).map(p => p.stripeCustomerId));
+                
+                const matches = stripeCustomersCache.filter(c => {
+                    const stripeId = c.stripeId || c.id;
+                    // Exclude other player selection and existing league players
+                    if (stripeId === otherStripeId || existingStripeIds.has(stripeId)) return false;
+                    
+                    const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+                    return fullName.includes(val) || (c.email && c.email.toLowerCase().includes(val));
+                }).slice(0, 10);
+                
+                if (matches.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div style="padding: 15px; text-align: center;">
+                            <div style="color: #888; font-size: 13px; margin-bottom: 8px;">No matching customers found.</div>
+                            <a href="customers.html" target="_blank" style="font-size: 12px; color: #1976d2;">
+                                <i class="fas fa-plus"></i> Add new customer
+                            </a>
+                        </div>
+                    `;
+                    resultsDiv.style.display = 'block';
+                    return;
+                }
+                
+                resultsDiv.innerHTML = matches.map((c, idx) => {
+                    const isMember = isActiveMember(c);
+                    const initials = ((c.firstName || '')[0] || '') + ((c.lastName || '')[0] || '');
+                    const tierColor = isMember ? getMemberTierColor(c.memberType) : '#4a90a4';
+                    const tierName = isMember ? getMemberTierName(c.memberType) : '';
+                    
+                    let badges = '';
+                    if (isMember) {
+                        badges += `<span style="background:${tierColor};color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:6px;">${tierName.toUpperCase()}</span>`;
+                    }
+                    if (c.isLeague) {
+                        badges += `<span style="background:#3498db;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:6px;">LEAGUE</span>`;
+                    }
+                    
+                    return `
+                        <div onclick="selectTeamPlayer(${playerNum}, ${idx})" style="padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; transition: background 0.15s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: ${tierColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px;">${initials.toUpperCase()}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 14px;">${c.firstName || ''} ${c.lastName || ''}${badges}</div>
+                                <div style="font-size: 12px; color: #888;">${c.email || c.phone || 'No contact'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Store matches for selection
+                resultsDiv._matches = matches;
+                resultsDiv.style.display = 'block';
+            });
+            
+            newSearch.addEventListener('blur', function() {
+                setTimeout(() => { resultsDiv.style.display = 'none'; }, 200);
+            });
+        }
+        
+        // Select team player from search results
+        function selectTeamPlayer(playerNum, index) {
+            const resultsDiv = document.getElementById(`teamPlayer${playerNum}Results`);
+            const matches = resultsDiv._matches || [];
+            const customer = matches[index];
+            
+            if (!customer) return;
+            
+            // Store the Stripe ID
+            document.getElementById(`teamPlayer${playerNum}StripeId`).value = customer.stripeId || customer.id || '';
+            document.getElementById(`teamPlayer${playerNum}Search`).value = '';
+            resultsDiv.style.display = 'none';
+            
+            // Show player info
+            const infoDiv = document.getElementById(`teamPlayer${playerNum}Info`);
+            const isMember = isActiveMember(customer);
+            const tierName = isMember ? getMemberTierName(customer.memberType) : null;
+            const tierColor = isMember ? getMemberTierColor(customer.memberType) : '#4a90a4';
+            const initials = ((customer.firstName || '')[0] || '') + ((customer.lastName || '')[0] || '');
+            const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            
+            let badges = '';
+            if (isMember) {
+                badges = `<span style="background:${tierColor};color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;margin-left:8px;">${tierName.toUpperCase()}</span>`;
+            }
+            
+            infoDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: ${tierColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">${initials.toUpperCase()}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 14px;">${fullName}${badges}</div>
+                        <div style="font-size: 12px; color: #888;">${customer.email || 'Customer'}</div>
+                    </div>
+                    <button type="button" onclick="clearTeamPlayer(${playerNum})" style="background: none; border: none; color: #999; cursor: pointer; font-size: 16px; padding: 5px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            infoDiv.style.display = 'block';
+            
+            // Show handicap section
+            document.getElementById(`teamPlayer${playerNum}HcpSection`).style.display = 'block';
+            
+            // Check if both players are selected
+            checkTeamFormComplete();
+        }
+        
+        // Clear team player selection
+        function clearTeamPlayer(playerNum) {
+            document.getElementById(`teamPlayer${playerNum}StripeId`).value = '';
+            document.getElementById(`teamPlayer${playerNum}Info`).style.display = 'none';
+            document.getElementById(`teamPlayer${playerNum}HcpSection`).style.display = 'none';
+            document.getElementById(`teamPlayer${playerNum}Search`).value = '';
+            document.getElementById(`teamPlayer${playerNum}Search`).focus();
+            checkTeamFormComplete();
+        }
+        
+        // Check if Add Team form is complete
+        function checkTeamFormComplete() {
+            const player1Id = document.getElementById('teamPlayer1StripeId')?.value || '';
+            const player2Id = document.getElementById('teamPlayer2StripeId')?.value || '';
+            const createBtn = document.getElementById('createTeamBtn');
+            
+            if (player1Id && player2Id) {
+                createBtn.disabled = false;
+                createBtn.style.opacity = '1';
+            } else {
+                createBtn.disabled = true;
+                createBtn.style.opacity = '0.5';
+            }
+        }
+        
+        // Open Add Team modal
+        function openAddTeamModal() {
+            // Reset form
+            document.getElementById('newTeamName').value = '';
+            document.getElementById('teamPlayer1Search').value = '';
+            document.getElementById('teamPlayer1StripeId').value = '';
+            document.getElementById('teamPlayer1Info').style.display = 'none';
+            document.getElementById('teamPlayer1HcpSection').style.display = 'none';
+            document.getElementById('newTeamPlayer1Hcp').value = '0';
+            document.getElementById('teamPlayer2Search').value = '';
+            document.getElementById('teamPlayer2StripeId').value = '';
+            document.getElementById('teamPlayer2Info').style.display = 'none';
+            document.getElementById('teamPlayer2HcpSection').style.display = 'none';
+            document.getElementById('newTeamPlayer2Hcp').value = '0';
+            document.getElementById('newTeamPin').value = '';
+            document.getElementById('createTeamBtn').disabled = true;
+            document.getElementById('createTeamBtn').style.opacity = '0.5';
+            
+            openModal('addTeamModal');
+            
+            // Setup player searches
+            setupTeamPlayerSearch(1);
+            setupTeamPlayerSearch(2);
+        }
+        
+        function addTeam(e) {
+            e.preventDefault();
+            const name = document.getElementById('newTeamName').value.trim();
+            const player1StripeId = document.getElementById('teamPlayer1StripeId').value.trim();
+            const player1Hcp = parseInt(document.getElementById('newTeamPlayer1Hcp').value) || 0;
+            const player2StripeId = document.getElementById('teamPlayer2StripeId').value.trim();
+            const player2Hcp = parseInt(document.getElementById('newTeamPlayer2Hcp').value) || 0;
+            const pin = document.getElementById('newTeamPin').value.trim();
+            
+            if (!name) {
+                alert('Please enter a team name');
+                return;
+            }
+            
+            if (!player1StripeId || !player2StripeId) {
+                alert('Please select both players from existing customers');
+                return;
+            }
+            
+            if (!pin || pin.length !== 4 || !/^[0-9]{4}$/.test(pin)) {
+                alert('Please enter a valid 4-digit PIN');
+                return;
+            }
+            
+            if (player1StripeId === player2StripeId) {
+                alert('Please select different customers for each player');
+                return;
+            }
+            
+            // Get customer data from cache
+            const player1 = stripeCustomersCache.find(c => c.stripeId === player1StripeId || c.id === player1StripeId);
+            const player2 = stripeCustomersCache.find(c => c.stripeId === player2StripeId || c.id === player2StripeId);
+            
+            if (!player1 || !player2) {
+                alert('Customer not found. Please search and select again.');
+                return;
+            }
+            
+            const player1Name = `${player1.firstName || ''} ${player1.lastName || ''}`.trim();
+            const player2Name = `${player2.firstName || ''} ${player2.lastName || ''}`.trim();
+            
+            // Create team with PIN
+            const teamId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
+            league.teams.push({ id: teamId, name, pin });
+            
+            // Create player 1 linked to Stripe customer
+            const player1IsMember = isActiveMember(player1);
+            league.players.push({
+                id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
+                name: player1Name,
+                teamId,
+                handicap: player1Hcp,
+                pin: pin,
+                email: player1.email || null,
+                stripeCustomerId: player1StripeId,
+                isMember: player1IsMember,
+                isLeague: true,
+                memberType: player1.memberType || null
+            });
+            
+            // Create player 2 linked to Stripe customer
+            const player2IsMember = isActiveMember(player2);
+            league.players.push({
+                id: 'p' + (Date.now() + 1) + Math.random().toString(36).substr(2, 5),
+                name: player2Name,
+                teamId,
+                handicap: player2Hcp,
+                pin: pin,
+                email: player2.email || null,
+                stripeCustomerId: player2StripeId,
+                isMember: player2IsMember,
+                isLeague: true,
+                memberType: player2.memberType || null
+            });
+            
+            // Update customers' isLeague flag in Stripe
+            if (!player1.isLeague) updateCustomerLeagueStatus(player1StripeId, true);
+            if (!player2.isLeague) updateCustomerLeagueStatus(player2StripeId, true);
+            
+            save();
+            closeModal('addTeamModal');
+            renderAll();
+        }
+        
+        function renameTeam(teamId, newName) {
+            const name = newName.trim();
+            if (!name) {
+                alert('Team name cannot be empty');
+                renderTeams();
+                return;
+            }
+            const team = league.teams.find(t => t.id === teamId);
+            if (team) {
+                team.name = name;
+                saveLeague();
+                renderPins(); // Update player list which shows team names
+            }
+        }
+        
+        function updateTeamPin(teamId, newPin) {
+            const pin = newPin.trim();
+            if (!pin || !/^[0-9]{4}$/.test(pin)) {
+                alert('PIN must be exactly 4 digits');
+                renderTeams();
+                return;
+            }
+            const team = league.teams.find(t => t.id === teamId);
+            if (team) {
+                team.pin = pin;
+                // Also update all players on this team to use the new PIN
+                league.players.filter(p => p.teamId === teamId).forEach(p => {
+                    p.pin = pin;
+                });
+                saveLeague();
+                renderPins();
+            }
+        }
+        
+        function deleteTeam(id) {
+            const team = league.teams.find(t => t.id === id);
+            const teamPlayers = league.players.filter(p => p.teamId === id);
+            
+            let confirmMsg = `Delete team "${team?.name || id}"?`;
+            if (teamPlayers.length > 0) {
+                confirmMsg += `\n\nThis will remove ${teamPlayers.length} player(s) from the league:\n- ${teamPlayers.map(p => p.name).join('\n- ')}`;
+            }
+            confirmMsg += '\n\n(Note: Stripe customer accounts and memberships are NOT affected)';
+            
+            if (!confirm(confirmMsg)) return;
+            
+            // Remove players from league roster (does NOT delete Stripe customers)
+            league.players = league.players.filter(p => p.teamId !== id);
+            league.teams = league.teams.filter(t => t.id !== id);
+            save();
+            renderAll();
+        }
+        
+        // Players
+        function openAddPlayerModal(teamId, teamName) {
+            document.getElementById('addPlayerTeamId').value = teamId;
+            document.getElementById('addPlayerStripeId').value = '';
+            document.getElementById('modalTeamName').textContent = teamName;
+            document.getElementById('addPlayerHcp').value = '0';
+            document.getElementById('playerCustomerSearch').value = '';
+            document.getElementById('playerCustomerResults').style.display = 'none';
+            document.getElementById('selectedPlayerInfo').style.display = 'none';
+            document.getElementById('handicapSection').style.display = 'none';
+            document.getElementById('addPlayerBtn').disabled = true;
+            document.getElementById('addPlayerBtn').style.opacity = '0.5';
+            openModal('addPlayerModal');
+            
+            // Setup customer search
+            setupPlayerCustomerSearch();
+        }
+        
+        // Clear selected player
+        function clearSelectedPlayer() {
+            document.getElementById('addPlayerStripeId').value = '';
+            document.getElementById('selectedPlayerInfo').style.display = 'none';
+            document.getElementById('handicapSection').style.display = 'none';
+            document.getElementById('addPlayerBtn').disabled = true;
+            document.getElementById('addPlayerBtn').style.opacity = '0.5';
+            document.getElementById('playerCustomerSearch').value = '';
+            document.getElementById('playerCustomerSearch').focus();
+        }
+        
+        // Customer search for add player modal
+        function setupPlayerCustomerSearch() {
+            const searchInput = document.getElementById('playerCustomerSearch');
+            const resultsDiv = document.getElementById('playerCustomerResults');
+            
+            // Remove old listeners
+            const newSearch = searchInput.cloneNode(true);
+            searchInput.parentNode.replaceChild(newSearch, searchInput);
+            
+            newSearch.addEventListener('input', function() {
+                const val = this.value.toLowerCase().trim();
+                if (val.length < 2) {
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Filter out customers already in the league
+                const existingStripeIds = new Set(league.players.filter(p => p.stripeCustomerId).map(p => p.stripeCustomerId));
+                
+                const matches = stripeCustomersCache.filter(c => {
+                    // Exclude already-added players
+                    if (existingStripeIds.has(c.stripeId) || existingStripeIds.has(c.id)) return false;
+                    
+                    const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+                    return fullName.includes(val) || (c.email && c.email.toLowerCase().includes(val));
+                }).slice(0, 10);
+                
+                if (matches.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div style="padding: 15px; text-align: center;">
+                            <div style="color: #888; font-size: 13px; margin-bottom: 8px;">No matching customers found.</div>
+                            <a href="customers.html" target="_blank" style="font-size: 12px; color: #1976d2;">
+                                <i class="fas fa-plus"></i> Add new customer
+                            </a>
+                        </div>
+                    `;
+                    resultsDiv.style.display = 'block';
+                    return;
+                }
+                
+                resultsDiv.innerHTML = matches.map((c, idx) => {
+                    const isMember = isActiveMember(c);
+                    const isLeague = c.isLeague || false;
+                    const initials = ((c.firstName || '')[0] || '') + ((c.lastName || '')[0] || '');
+                    const tierName = isMember ? getMemberTierName(c.memberType) : '';
+                    const tierColor = isMember ? getMemberTierColor(c.memberType) : '#4a90a4';
+                    
+                    let badges = '';
+                    if (isMember) {
+                        badges += `<span style="background:${tierColor};color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:6px;">${tierName.toUpperCase()}</span>`;
+                    }
+                    if (isLeague) {
+                        badges += `<span style="background:#3498db;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:6px;">LEAGUE</span>`;
+                    }
+                    
+                    return `
+                        <div onclick="selectPlayerCustomer(${idx})" style="padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; transition: background 0.15s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: ${isMember ? tierColor : '#4a90a4'}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px;">${initials.toUpperCase()}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 14px;">${c.firstName || ''} ${c.lastName || ''}${badges}</div>
+                                <div style="font-size: 12px; color: #888;">${c.email || c.phone || 'No contact'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Store matches for selection
+                resultsDiv._matches = matches;
+                resultsDiv.style.display = 'block';
+            });
+            
+            newSearch.addEventListener('blur', function() {
+                setTimeout(() => { resultsDiv.style.display = 'none'; }, 200);
+            });
+        }
+        
+        // Select a customer from search results
+        function selectPlayerCustomer(index) {
+            const resultsDiv = document.getElementById('playerCustomerResults');
+            const matches = resultsDiv._matches || [];
+            const customer = matches[index];
+            
+            if (!customer) return;
+            
+            // Store the Stripe ID
+            document.getElementById('addPlayerStripeId').value = customer.stripeId || customer.id || '';
+            document.getElementById('playerCustomerSearch').value = '';
+            resultsDiv.style.display = 'none';
+            
+            // Show selected player info
+            const selectedDiv = document.getElementById('selectedPlayerInfo');
+            const isMember = isActiveMember(customer);
+            const tierName = isMember ? getMemberTierName(customer.memberType) : null;
+            const tierColor = isMember ? getMemberTierColor(customer.memberType) : '#4a90a4';
+            const initials = ((customer.firstName || '')[0] || '') + ((customer.lastName || '')[0] || '');
+            const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            
+            let badges = '';
+            if (isMember) {
+                badges = `<span style="background:${tierColor};color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;margin-left:8px;">${tierName.toUpperCase()}</span>`;
+            }
+            if (customer.isLeague) {
+                badges += `<span style="background:#3498db;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;margin-left:4px;">LEAGUE</span>`;
+            }
+            
+            selectedDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: ${tierColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;">${initials.toUpperCase()}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 15px; color: #333;">${fullName}${badges}</div>
+                        <div style="font-size: 12px; color: #888; margin-top: 2px;">${customer.email || customer.phone || 'Customer'}</div>
+                    </div>
+                    <button type="button" onclick="clearSelectedPlayer()" style="background: none; border: none; color: #999; cursor: pointer; font-size: 18px; padding: 5px;" title="Change selection">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            selectedDiv.style.display = 'block';
+            
+            // Show handicap section
+            document.getElementById('handicapSection').style.display = 'block';
+            
+            // Enable the submit button
+            document.getElementById('addPlayerBtn').disabled = false;
+            document.getElementById('addPlayerBtn').style.opacity = '1';
+        }
+        
+        function addPlayerToTeam(e) {
+            e.preventDefault();
+            const teamId = document.getElementById('addPlayerTeamId').value;
+            const stripeId = document.getElementById('addPlayerStripeId').value.trim();
+            const handicap = parseInt(document.getElementById('addPlayerHcp').value) || 0;
+            
+            // Require Stripe customer selection
+            if (!stripeId) {
+                alert('Please select a customer to add as a player.');
+                return;
+            }
+            
+            // Get customer data from cache
+            const customer = stripeCustomersCache.find(c => c.stripeId === stripeId || c.id === stripeId);
+            if (!customer) {
+                alert('Customer not found. Please search and select again.');
+                return;
+            }
+            
+            const name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            const email = customer.email || '';
+            
+            // Check if team already has 2 players
+            const existingPlayers = league.players.filter(p => p.teamId === teamId);
+            if (existingPlayers.length >= 2) {
+                alert('This team already has 2 players. Remove a player first to add a new one.');
+                return;
+            }
+            
+            // Get team PIN for the new player
+            const team = league.teams.find(t => t.id === teamId);
+            const teamPin = team?.pin || (existingPlayers.length > 0 ? existingPlayers[0].pin : null);
+            
+            // Get member info from customer
+            const isMember = isActiveMember(customer);
+            
+            league.players.push({
+                id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
+                name, 
+                teamId, 
+                handicap,
+                email: email || null,
+                stripeCustomerId: stripeId,
+                isMember: isMember,
+                isLeague: true, // Mark as league player
+                memberType: customer.memberType || null,
+                pin: teamPin  // Use team PIN
+            });
+            
+            // Update customer's isLeague flag in Stripe
+            if (!customer.isLeague) {
+                updateCustomerLeagueStatus(stripeId, true);
+            }
+            
+            save();
+            closeModal('addPlayerModal');
+            renderAll();
+        }
+        
+        // Update customer's league status in Stripe
+        async function updateCustomerLeagueStatus(stripeCustomerId, isLeague) {
+            try {
+                const response = await fetch(`${FUNCTIONS_URL}/updateCustomerMetadata`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customerId: stripeCustomerId,
+                        metadata: { isLeague: isLeague ? 'true' : 'false' }
+                    })
+                });
+                if (response.ok) {
+                    console.log('[LeagueAdmin] Updated customer league status:', stripeCustomerId);
+                    // Update local cache
+                    const cached = stripeCustomersCache.find(c => c.stripeId === stripeCustomerId);
+                    if (cached) cached.isLeague = isLeague;
+                }
+            } catch (e) {
+                console.warn('[LeagueAdmin] Could not update customer metadata:', e);
+            }
+        }
+        
+        function deletePlayer(id) {
+            const player = league.players.find(p => p.id === id);
+            if (!player) return;
+            
+            if (!confirm(`Remove ${player.name} from the league?\n\n(Their Stripe customer account and membership are NOT affected)`)) return;
+            
+            league.players = league.players.filter(p => p.id !== id);
+            save();
+            renderAll();
+        }
+        
+        // Cleanup orphaned players (players without a team)
+        function cleanupOrphanedPlayers() {
+            const orphanedPlayers = league.players.filter(p => !p.teamId);
+            
+            if (orphanedPlayers.length === 0) {
+                alert('No orphaned players found. All players belong to a team.');
+                return;
+            }
+            
+            const playerNames = orphanedPlayers.map(p => p.name).join('\n- ');
+            const confirmMsg = `Found ${orphanedPlayers.length} player(s) without a team:\n\n- ${playerNames}\n\nDelete these orphaned players?\n\n(Stripe customer accounts are NOT affected)`;
+            
+            if (!confirm(confirmMsg)) return;
+            
+            // Remove orphaned players
+            league.players = league.players.filter(p => p.teamId);
+            save();
+            renderAll();
+            
+            alert(`Removed ${orphanedPlayers.length} orphaned player(s).`);
+        }
+        
+        // PIN management
+        function regeneratePin(playerId) {
+            const player = league.players.find(p => p.id === playerId);
+            if (!player) return;
+            player.pin = generatePin();
+            save();
+            renderPins();
+            alert(`${player.name}'s new PIN: ${player.pin}`);
+        }
+        
+        function handlePinTeamChange() {
+            renderPins();
+        }
+        
+        function setCustomPin() {
+            const playerId = document.getElementById('pinPlayerSelect')?.value;
+            const pin = document.getElementById('pinManualInput')?.value.trim();
+            if (!playerId) {
+                alert('Select a player first.');
+                return;
+            }
+            if (!pin || !/^[0-9]{4}$/.test(pin)) {
+                alert('PIN must be exactly 4 digits.');
+                return;
+            }
+            const player = league.players.find(p => p.id === playerId);
+            const idx = league.players.findIndex(p => p.id === playerId);
+            if (!player || idx === -1) return;
+            player.pin = pin;
+            save();
+            renderPins();
+            alert(`PIN set for ${player.name}`);
+        }
+        
+        function fillRandomPin() {
+            const pinInput = document.getElementById('pinManualInput');
+            if (!pinInput) return;
+            pinInput.value = generatePin();
+        }
+        
+        // Sync member status from Stripe for all league players
+        async function syncMemberStatus() {
+            const statusDiv = document.getElementById('playerSyncStatus');
+            const msgSpan = document.getElementById('playerSyncMessage');
+            
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#e3f2fd';
+            statusDiv.style.borderColor = '#90caf9';
+            statusDiv.style.color = '#1565c0';
+            msgSpan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing member status from Stripe...';
+            
+            let fetchSuccess = false;
+            
+            try {
+                // Refresh Stripe customer cache with timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.customers && data.customers.length > 0) {
+                        // Use the same transform function as loadStripeCustomers
+                        stripeCustomersCache = data.customers.map(transformStripeCustomer);
+                        // Update localStorage cache
+                        localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
+                        console.log(`[LeagueAdmin] Refreshed ${stripeCustomersCache.length} customers from Stripe`);
+                        fetchSuccess = true;
+                    } else {
+                        console.warn('[LeagueAdmin] No customers returned from API');
+                    }
+                } else {
+                    console.warn('[LeagueAdmin] API returned error:', response.status);
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    console.warn('[LeagueAdmin] Request timed out');
+                    msgSpan.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Request timed out. Using cached data.';
+                } else {
+                    console.warn('[LeagueAdmin] Error refreshing customers:', e);
+                    msgSpan.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Could not reach server. Using cached data.';
+                }
+                statusDiv.style.background = '#fff3e0';
+                statusDiv.style.borderColor = '#ffcc02';
+                statusDiv.style.color = '#e65100';
+                
+                // Try to use localStorage cache
+                try {
+                    const cached = localStorage.getItem('gc_customers');
+                    if (cached) {
+                        stripeCustomersCache = JSON.parse(cached);
+                        console.log(`[LeagueAdmin] Using ${stripeCustomersCache.length} customers from cache`);
+                    }
+                } catch (cacheErr) {
+                    console.warn('[LeagueAdmin] Could not load cache:', cacheErr);
+                }
+            }
+            
+            // Now sync each player's member status
+            let updated = 0;
+            let unlinked = 0;
+            
+            league.players.forEach(player => {
+                if (player.stripeCustomerId) {
+                    // Find matching Stripe customer
+                    const customer = stripeCustomersCache.find(c => 
+                        c.stripeId === player.stripeCustomerId || c.id === player.stripeCustomerId
+                    );
+                    
+                    if (customer) {
+                        const newIsMember = isActiveMember(customer);
+                        const newMemberType = customer.memberType || null;
+                        
+                        // Update if changed
+                        if (player.isMember !== newIsMember || player.memberType !== newMemberType) {
+                            player.isMember = newIsMember;
+                            player.memberType = newMemberType;
+                            player.isLeague = customer.isLeague || true;
+                            updated++;
+                        }
+                        
+                        // Also update name/email if they've changed
+                        const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+                        if (fullName && fullName !== player.name) {
+                            player.name = fullName;
+                            updated++;
+                        }
+                        if (customer.email && customer.email !== player.email) {
+                            player.email = customer.email;
+                        }
+                    } else {
+                        // Customer was deleted from Stripe
+                        unlinked++;
+                    }
+                } else {
+                    unlinked++;
+                }
+            });
+            
+            if (updated > 0 || unlinked > 0) {
+                save();
+            }
+            
+            renderPins();
+            renderTeams();
+            
+            // Show summary
+            const linkedCount = league.players.filter(p => p.stripeCustomerId).length;
+            const memberCount = league.players.filter(p => p.isMember).length;
+            
+            if (updated > 0) {
+                msgSpan.textContent = `✓ Synced! ${updated} player(s) updated. ${linkedCount}/${league.players.length} linked to Stripe, ${memberCount} active members.`;
+                statusDiv.style.background = '#e8f5e9';
+                statusDiv.style.borderColor = '#a5d6a7';
+                statusDiv.style.color = '#2e7d32';
+            } else {
+                msgSpan.textContent = `✓ All players up to date. ${linkedCount}/${league.players.length} linked to Stripe, ${memberCount} active members.`;
+                statusDiv.style.background = '#e3f2fd';
+                statusDiv.style.borderColor = '#90caf9';
+                statusDiv.style.color = '#1565c0';
+            }
+            
+            if (unlinked > 0) {
+                msgSpan.textContent += ` (${unlinked} not linked to Stripe)`;
+            }
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function generatePinsForAll() {
+            let created = 0;
+            league.players.forEach(p => {
+                if (!p.pin) {
+                    p.pin = generatePin();
+                    created++;
+                }
+            });
+            if (created === 0) {
+                alert('All players already have PINs.');
+                return;
+            }
+            save();
+            renderPins();
+            alert(`Generated ${created} PIN${created === 1 ? '' : 's'}.`);
+        }
+        
+        function copyPin(playerId) {
+            const player = league.players.find(p => p.id === playerId);
+            if (!player || !player.pin) return;
+            navigator.clipboard.writeText(player.pin).then(() => {
+                alert(`Copied PIN for ${player.name}`);
+            }).catch(() => {
+                alert('Could not copy PIN. Please try again.');
+            });
+        }
+        
+        // Import Winter 2025 League Schedule
+        function importWinter2025Schedule() {
+            if (!confirm('This will import the Winter 2025 league schedule (15 rounds). Continue?')) return;
+            
+            const schedule = [
+                { name: 'Week 1 - Kapalua Bay', startDate: '2026-01-05', endDate: '2026-01-11' },
+                { name: 'Week 2 - Kapalua Plantation', startDate: '2026-01-12', endDate: '2026-01-18' },
+                { name: 'Week 3 - Spanish Bay', startDate: '2026-01-19', endDate: '2026-01-25' },
+                { name: 'Week 4 - Torrey Pines', startDate: '2026-01-26', endDate: '2026-02-01' },
+                { name: 'Week 5 - Scottsdale North', startDate: '2026-02-02', endDate: '2026-02-08' },
+                { name: 'Week 6 - Pebble Beach', startDate: '2026-02-09', endDate: '2026-02-15' },
+                { name: 'Week 7 - Spyglass', startDate: '2026-02-16', endDate: '2026-02-22' },
+                { name: 'Week 8 - PGA National', startDate: '2026-02-23', endDate: '2026-03-01' },
+                { name: 'Week 9 - Bay Hill', startDate: '2026-03-02', endDate: '2026-03-08' },
+                { name: 'Week 10 - Grand National', startDate: '2026-03-09', endDate: '2026-03-15' },
+                { name: 'Playoffs - Round of 16 (Panther Lake)', startDate: '2026-03-16', endDate: '2026-03-22' },
+                { name: 'Playoffs - Quarterfinals (Innisbrook)', startDate: '2026-03-23', endDate: '2026-03-29' },
+                { name: 'Playoffs - Semifinals', startDate: '2026-03-30', endDate: '2026-04-05' },
+                { name: 'Playoffs - Championship', startDate: '2026-04-09', endDate: '2026-04-12' },
+                { name: 'Awards/Round Robin - Masters', startDate: '2026-04-09', endDate: '2026-04-12' }
+            ];
+            
+            schedule.forEach(round => {
+                const newRound = {
+                    id: 'r' + Date.now() + Math.random().toString(36).substr(2, 5),
+                    name: round.name,
+                    startDate: round.startDate,
+                    endDate: round.endDate,
+                    finalized: false,
+                    createdAt: new Date().toISOString()
+                };
+                league.rounds.push(newRound);
+            });
+            
+            save();
+            renderAll();
+            alert('Successfully imported 15 rounds for Winter 2025 season!');
+        }
+        
+        // Rounds
+        function addRound(e) {
+            e.preventDefault();
+            console.log('addRound called');
+            const name = document.getElementById('roundName').value.trim();
+            const startDate = document.getElementById('roundStartDate').value;
+            const endDate = document.getElementById('roundEndDate').value;
+            
+            console.log('Round data:', { name, startDate, endDate });
+            
+            if (new Date(endDate) < new Date(startDate)) {
+                alert('End date must be after start date');
+                return;
+            }
+            
+            const newRound = {
+                id: 'r' + Date.now() + Math.random().toString(36).substr(2, 5),
+                name,
+                startDate,
+                endDate,
+                finalized: false,
+                createdAt: new Date().toISOString()
+            };
+            
+            console.log('Adding round:', newRound);
+            league.rounds.push(newRound);
+            console.log('League rounds after push:', league.rounds);
+            
+            save();
+            renderAll();
+        }
+        
+        function deleteRound(id) {
+            console.log('deleteRound called for id:', id);
+            if (!confirm('Delete this round and all scores?')) return;
+            console.log('Rounds before delete:', league.rounds);
+            league.rounds = league.rounds.filter(r => r.id !== id);
+            console.log('Rounds after delete:', league.rounds);
+            if (league.scores) delete league.scores[id];
+            save();
+            renderAll();
+        }
+        
+        function viewRoundScores(roundId) {
+            const round = league.rounds.find(r => r.id === roundId);
+            if (!round) return;
+            
+            document.getElementById('scoresModalTitle').textContent = round.name + ' Scores';
+            
+            const holes = league.course?.holes || 9;
+            const scores = league.players.map(p => {
+                const ps = (league.scores || {})[roundId]?.[p.id];
+                const handicap = p.handicap || 0;
+                if (!ps || !ps.submitted) return { name: p.name, handicap, gross: null };
+                let gross = 0;
+                let holesPlayed = 0;
+                for (let h = 1; h <= holes; h++) {
+                    if (ps[h] && ps[h] > 0) {
+                        gross += ps[h];
+                        holesPlayed++;
+                    }
+                }
+                return { name: p.name, handicap, gross, net: gross - handicap, holesPlayed };
+            }).sort((a, b) => {
+                if (a.gross === null) return 1;
+                if (b.gross === null) return -1;
+                return a.net - b.net;
+            });
+            
+            document.getElementById('scoresModalContent').innerHTML = scores.map(s => `
+                <div class="round-item">
+                    <div>
+                        <h4>${s.name}</h4>
+                        <p>HCP ${s.handicap}</p>
+                    </div>
+                    ${s.gross !== null ? `
+                        <div style="text-align: right;">
+                            <div style="font-size: 18px; font-weight: 700; color: #37b24a;">${s.gross}${s.holesPlayed < holes ? ` <span style="font-size:12px;color:#888">(${s.holesPlayed}h)</span>` : ''}</div>
+                            <div style="font-size: 12px; color: #888;">Net: ${s.net}</div>
+                        </div>
+                    ` : '<span style="color: #999;">No score</span>'}
+                </div>
+            `).join('');
+            
+            openModal('scoresModal');
+        }
+        
+        // Settings
+        function savePars() {
+            const holes = league.course?.holes || 9;
+            const pars = [];
+            for (let i = 0; i < holes; i++) {
+                pars.push(parseInt(document.getElementById('par' + i).value) || 4);
+            }
+            league.course.pars = pars;
+            save();
+            alert('Pars saved!');
+        }
+        
+        // Business Settings
+        function loadBusinessSettings() {
+            const nameInput = document.getElementById('settingBusinessName');
+            const phoneInput = document.getElementById('settingBusinessPhone');
+            const emailInput = document.getElementById('settingBusinessEmail');
+            const taxInput = document.getElementById('settingTaxRate');
+            const addressInput = document.getElementById('settingBusinessAddress');
+            
+            if (nameInput) nameInput.value = localStorage.getItem('gc_business_name') || 'Golf Cove';
+            if (phoneInput) phoneInput.value = localStorage.getItem('gc_business_phone') || '(203) 390-5994';
+            if (emailInput) emailInput.value = localStorage.getItem('gc_business_email') || 'info@golfcovect.com';
+            if (taxInput) taxInput.value = localStorage.getItem('gc_tax_rate') || '6.35';
+            if (addressInput) addressInput.value = localStorage.getItem('gc_business_address') || '336 State Street, North Haven, CT 06473';
+        }
+        
+        function saveBusinessSettings() {
+            localStorage.setItem('gc_business_name', document.getElementById('settingBusinessName').value);
+            localStorage.setItem('gc_business_phone', document.getElementById('settingBusinessPhone').value);
+            localStorage.setItem('gc_business_email', document.getElementById('settingBusinessEmail').value);
+            localStorage.setItem('gc_tax_rate', document.getElementById('settingTaxRate').value);
+            localStorage.setItem('gc_business_address', document.getElementById('settingBusinessAddress').value);
+            alert('Business settings saved!');
+        }
+        
+        // Stripe Settings (Admin only)
+        function loadStripeSettings() {
+            const pk = localStorage.getItem('gc_stripe_pk') || '';
+            const sk = localStorage.getItem('gc_stripe_sk') || '';
+            const pkInput = document.getElementById('settingStripePK');
+            const skInput = document.getElementById('settingStripeSK');
+            if (pkInput) pkInput.value = pk;
+            if (skInput) skInput.value = sk;
+            
+            // Also load business settings when showing settings section
+            loadBusinessSettings();
+        }
+        
+        function saveStripeSettings() {
+            const pk = document.getElementById('settingStripePK').value.trim();
+            const sk = document.getElementById('settingStripeSK').value.trim();
+            if (pk) localStorage.setItem('gc_stripe_pk', pk);
+            if (sk) localStorage.setItem('gc_stripe_sk', sk);
+            alert('Stripe settings saved!');
+        }
+        
+        // Data Management (Admin only)
+        function exportAllPOSData() {
+            const data = {
+                exportDate: new Date().toISOString(),
+                version: '1.0',
+                customers: JSON.parse(localStorage.getItem('gc_customers') || '[]'),
+                transactions: JSON.parse(localStorage.getItem('gc_transactions') || '[]'),
+                bookings: JSON.parse(localStorage.getItem('gc_bookings') || '[]'),
+                giftCards: JSON.parse(localStorage.getItem('gc_gift_cards') || '[]'),
+                tabs: JSON.parse(localStorage.getItem('gc_tabs') || '[]'),
+                employees: JSON.parse(localStorage.getItem('gc_employees') || '[]'),
+                settings: {
+                    businessName: localStorage.getItem('gc_business_name'),
+                    taxRate: localStorage.getItem('gc_tax_rate'),
+                    stripePK: localStorage.getItem('gc_stripe_pk')
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `golf-cove-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function importPOSData() {
+            document.getElementById('importDataFile').click();
+        }
+        
+        function handleDataImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (!confirm('This will MERGE imported data with existing data. Continue?')) return;
+                    
+                    // Merge data
+                    if (data.customers) {
+                        const existing = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+                        const merged = [...existing, ...data.customers.filter(c => !existing.find(e => e.id === c.id))];
+                        localStorage.setItem('gc_customers', JSON.stringify(merged));
+                    }
+                    if (data.transactions) {
+                        const existing = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
+                        const merged = [...existing, ...data.transactions.filter(t => !existing.find(e => e.id === t.id))];
+                        localStorage.setItem('gc_transactions', JSON.stringify(merged));
+                    }
+                    if (data.employees) {
+                        const existing = JSON.parse(localStorage.getItem('gc_employees') || '[]');
+                        const merged = [...existing, ...data.employees.filter(emp => !existing.find(e => e.pin === emp.pin))];
+                        localStorage.setItem('gc_employees', JSON.stringify(merged));
+                    }
+                    
+                    alert('Data imported successfully! Refresh the page to see changes.');
+                } catch (err) {
+                    alert('Error importing data: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+        
+        function resetAllPOSData() {
+            if (!confirm('⚠️ WARNING: This will DELETE ALL DATA including customers, transactions, bookings, and employees.\n\nThis cannot be undone!\n\nAre you ABSOLUTELY sure?')) return;
+            if (!confirm('FINAL WARNING: Type "RESET" in the next prompt to confirm.')) return;
+            
+            const confirmation = prompt('Type RESET to confirm:');
+            if (confirmation !== 'RESET') {
+                alert('Reset cancelled.');
+                return;
+            }
+            
+            // Clear all GC data
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('gc_')) keysToRemove.push(key);
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            
+            alert('All data has been reset. The page will now reload.');
+            location.reload();
+        }
+
+        // QR & URLs
+        function copyUrl() {
+            navigator.clipboard.writeText(document.getElementById('scoringUrl').textContent);
+            alert('Link copied!');
+        }
+        
+        function printQR() {
+            var round = league.rounds[league.rounds.length - 1];
+            var url = document.getElementById('scoringUrl').textContent;
+            var qrImg = document.querySelector('#qrcode img')?.src || '';
+            var roundDate = round.startDate ? new Date(round.startDate).toLocaleDateString() : (round.date ? new Date(round.date).toLocaleDateString() : 'TBD');
+            
+            var w = window.open('', '_blank');
+            var html = '<!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>';
+            html += '<style>body{font-family:Arial;text-align:center;padding:40px;}h1{color:#37b24a;}<\/style>';
+            html += '</head><bo' + 'dy>';
+            html += '<h1>⛳ ' + league.name + '</h1>';
+            html += '<h2>' + round.name + ' - ' + roundDate + '</h2>';
+            html += '<img src="' + qrImg + '" width="250" height="250" style="margin:30px;">';
+            html += '<p>Scan to enter your score</p>';
+            html += '<p style="font-family:monospace;background:#f5f5f5;padding:10px;border-radius:5px;">' + url + '</p>';
+            html += '</bo' + 'dy></ht' + 'ml>';
+            w.document.write(html);
+            w.document.close();
+            setTimeout(function() { w.print(); }, 250);
+        }
+        
+        // Print Functions
+        function printPinSheet() {
+            if (league.players.length === 0) { alert('No players'); return; }
+            var w = window.open('', '_blank');
+            var html = '<!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>';
+            html += '<style>body{font-family:Arial;padding:30px;}h1{color:#37b24a;}table{width:100%;border-collapse:collapse;}th,td{padding:10px 15px;text-align:left;border-bottom:1px solid #ddd;}th{background:#f5f5f5;}.pin{font-family:monospace;font-size:18px;font-weight:bold;}<\/style>';
+            html += '</head><bo' + 'dy>';
+            html += '<h1>⛳ ' + league.name + '</h1>';
+            html += '<h2>Player PINs</h2>';
+            html += '<table><tr><th>Player</th><th>Team</th><th>PIN</th></tr>';
+            league.players.forEach(function(p) {
+                var team = league.teams.find(function(t) { return t.id === p.teamId; });
+                html += '<tr><td>' + p.name + '</td><td>' + (team?.name || '-') + '</td><td class="pin">' + p.pin + '</td></tr>';
+            });
+            html += '</table>';
+            html += '</bo' + 'dy></ht' + 'ml>';
+            w.document.write(html);
+            w.document.close();
+            setTimeout(function() { w.print(); }, 250);
+        }
+        
+        function printScorecards() {
+            const teamId = document.getElementById('printTeamSelect').value;
+            
+            if (league.rounds.length === 0) { alert('Create a round first'); return; }
+            
+            const round = league.rounds[league.rounds.length - 1];
+            const isBlank = !teamId;
+            const team = teamId ? league.teams.find(t => t.id === teamId) : null;
+            const holes = league.course?.holes || 9;
+            const pars = league.course?.pars || Array(holes).fill(4);
+            const frontNine = Math.min(9, holes);
+            const has18 = holes >= 18;
+            
+            // Get the team-specific QR code (empty for blank cards)
+            const qrImg = isBlank ? '' : (document.querySelector('#teamQRPreview img')?.src || '');
+            
+            const players = isBlank ? [] : league.players.filter(p => p.teamId === teamId);
+            
+            // Print enough blank scorecards for the team (or 5 for blank option)
+            const cardCount = isBlank ? 5 : Math.max(players.length, 5);
+            
+            const buildCard = () => {
+                const logoPath = window.location.origin + window.location.pathname.replace('league-admin.html', '') + 'images/golfcovelogo.png';
+                
+                const teamInfo = isBlank ? '' : `<div class="team-info">${team.name}</div>`;
+                const qrSection = qrImg ? `<div class="qr-container"><img src="${qrImg}" class="qr-img"></div>` : '';
+                
+                return `
+                    <div class="scorecard">
+                        <div class="top-section">
+                            <div class="center-header">
+                                <img src="${logoPath}" class="logo">
+                                <div class="league-title">${league.name}</div>
+                                <div class="tournament-details">${round.name} - ${round.startDate ? new Date(round.startDate).toLocaleDateString() : (round.date ? new Date(round.date).toLocaleDateString() : 'TBD')}</div>
+                                ${teamInfo}
+                            </div>
+                            ${qrSection}
+                        </div>
+                        
+                        <table class="score-grid">
+                            <tr class="holes-row">
+                                <td class="name-cell">HOLE</td>
+                                ${Array.from({length:frontNine},(_,i)=>`<td>${i+1}</td>`).join('')}
+                                <td class="total-cell">OUT</td>
+                                ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
+                                ${has18?'<td class="total-cell">IN</td>':''}
+                                <td class="total-cell">TOT</td>
+                                <td class="total-cell">HCP</td>
+                                <td class="total-cell">NET</td>
+                            </tr>
+                            ${Array.from({length:6},()=>`
+                            <tr class="player-row">
+                                <td class="name-cell"></td>
+                                ${Array.from({length:frontNine},()=>'<td></td>').join('')}
+                                <td class="total-cell"></td>
+                                ${has18?Array.from({length:holes-9},()=>'<td></td>').join(''):''}
+                                ${has18?'<td class="total-cell"></td>':''}
+                                <td class="total-cell"></td>
+                                <td></td>
+                                <td></td>
+                            </tr>`).join('')}
+                        </table>
+                        
+                        <div class="bottom-row">
+                            <div class="field"><span>SCORER:</span> _____________________</div>
+                            <div class="field"><span>ATTEST:</span> _____________________</div>
+                            <div class="field"><span>DATE:</span> _____________</div>
+                        </div>
+                    </div>
+                `;
+            };
+            
+            const w = window.open('', '_blank');
+            const title = isBlank ? 'Blank Scorecards' : `Blank Scorecards - ${team.name}`;
+            w.document.write(`
+                <!DOCTYPE html><html><head><title>Golf Cove - New Haven</title>
+                <style>
+                    @page { size: landscape; margin: 0.5cm; }
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body {
+                        font-family: 'Arial', 'Helvetica', sans-serif;
+                        padding: 10px;
+                        background: #fff;
+                    }
+                    .scorecard {
+                        border: 2px solid #000;
+                        padding: 12px;
+                        margin-bottom: 15px;
+                        page-break-inside: avoid;
+                        page-break-after: always;
+                    }
+                    .scorecard:last-child { page-break-after: auto; }
+                    
+                    .top-section {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        margin-bottom: 8px;
+                        padding-bottom: 8px;
+                        border-bottom: 2px solid #000;
+                        position: relative;
+                    }
+                    .center-header {
+                        flex: 1;
+                        text-align: center;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 4px;
+                    }
+                    .logo {
+                        height: 50px;
+                        width: auto;
+                    }
+                    .league-title {
+                        font-size: 14px;
+                        font-weight: bold;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .tournament-details {
+                        font-size: 10px;
+                        color: #666;
+                        font-weight: 600;
+                    }
+                    .team-info {
+                        font-size: 11px;
+                        font-weight: bold;
+                        color: #37b24a;
+                    }
+                    .qr-container {
+                        position: absolute;
+                        right: 0;
+                        top: 0;
+                    }
+                    .qr-img {
+                        width: 55px;
+                        height: 55px;
+                        border: 1px solid #000;
+                    }
+                    
+                    .score-grid {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 8px;
+                    }
+                    .score-grid td {
+                        border: 1px solid #000;
+                        text-align: center;
+                        padding: 4px 2px;
+                        font-size: 10px;
+                    }
+                    .name-cell {
+                        background: #fff;
+                        color: #000;
+                        font-weight: bold;
+                        font-size: 9px;
+                        text-transform: uppercase;
+                        width: 80px;
+                        text-align: left;
+                        padding-left: 4px;
+                    }
+                    .label-cell {
+                        background: #333;
+                        color: #fff;
+                        font-weight: bold;
+                        font-size: 9px;
+                        text-transform: uppercase;
+                        width: 50px;
+                    }
+                    .holes-row td {
+                        font-weight: bold;
+                        font-size: 9px;
+                        background: #f5f5f5;
+                    }
+                    .par-row td {
+                        background: #f5f5f5;
+                        font-weight: 600;
+                    }
+                    .player-row td {
+                        height: 22px;
+                        background: #fff;
+                    }
+                    .player-row .name-cell {
+                        background: #fff;
+                        color: #000;
+                        border-right: 2px solid #000;
+                        font-weight: normal;
+                    }
+                    .total-cell {
+                        background: #e8e8e8 !important;
+                        font-weight: bold;
+                    }
+                    
+                    .bottom-row {
+                        display: flex;
+                        gap: 30px;
+                        padding-top: 6px;
+                        border-top: 1px solid #000;
+                        font-size: 9px;
+                    }
+                    .bottom-row .field {
+                        display: flex;
+                        gap: 5px;
+                    }
+                    .bottom-row .field span {
+                        font-weight: bold;
+                    }
+                    
+                    @media print {
+                        body { padding: 0; }
+                        .scorecard { border-width: 1px; }
+                    }
+                <\/style><\/head><body>${Array.from({length: cardCount}, () => buildCard()).join('')}<\/body><\/html>
+            `);
+            w.document.close();
+            setTimeout(() => w.print(), 300);
+        }
+        
+        function exportData() {
+            showExportModal();
+        }
+        
+        function showExportModal() {
+            const modalHtml = `
+                <div id="exportModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="color:#1a1a2e;"><i class="fas fa-download" style="color:#37b24a;"></i> Export Data</h3>
+                            <button onclick="document.getElementById('exportModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">&times;</button>
+                        </div>
+                        
+                        <div style="display:grid;gap:12px;">
+                            <button onclick="exportJSON()" class="btn" style="width:100%;justify-content:center;background:#1a1a2e;">
+                                <i class="fas fa-file-code"></i> Export All Data (JSON)
+                            </button>
+                            <button onclick="exportTeamsCSV()" class="btn btn-secondary" style="width:100%;justify-content:center;">
+                                <i class="fas fa-users"></i> Export Teams (CSV)
+                            </button>
+                            <button onclick="exportPlayersCSV()" class="btn btn-secondary" style="width:100%;justify-content:center;">
+                                <i class="fas fa-user"></i> Export Players (CSV)
+                            </button>
+                            <button onclick="exportCustomersCSV()" class="btn btn-secondary" style="width:100%;justify-content:center;">
+                                <i class="fas fa-address-book"></i> Export Customers (CSV)
+                            </button>
+                            <button onclick="exportScoresCSV()" class="btn btn-secondary" style="width:100%;justify-content:center;">
+                                <i class="fas fa-chart-bar"></i> Export Scores (CSV)
+                            </button>
+                        </div>
+                        
+                        <div style="margin-top:20px;padding-top:15px;border-top:1px solid #eee;">
+                            <button onclick="document.getElementById('exportModal').remove()" class="btn btn-secondary" style="width:100%;justify-content:center;">
+                                <i class="fas fa-times"></i> Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function exportJSON() {
+            const blob = new Blob([JSON.stringify(league, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = (league.name || 'league').replace(/\s+/g, '_') + '_export.json';
+            a.click();
+            document.getElementById('exportModal').remove();
+        }
+        
+        function exportTeamsCSV() {
+            let csv = 'Team ID,Team Name,PIN,Player 1,Player 1 Handicap,Player 2,Player 2 Handicap\n';
+            league.teams.forEach(team => {
+                const players = league.players.filter(p => p.teamId === team.id);
+                csv += `"${team.id}","${team.name}","${team.pin || ''}","${players[0]?.name || ''}","${players[0]?.handicap || 0}","${players[1]?.name || ''}","${players[1]?.handicap || 0}"\n`;
+            });
+            downloadCSV(csv, 'teams_export.csv');
+            document.getElementById('exportModal').remove();
+        }
+        
+        function exportPlayersCSV() {
+            let csv = 'Player ID,Name,Email,Team,Handicap,PIN,Member,Stripe ID\n';
+            league.players.forEach(p => {
+                const team = league.teams.find(t => t.id === p.teamId);
+                csv += `"${p.id}","${p.name}","${p.email || ''}","${team?.name || 'No Team'}","${p.handicap || 0}","${p.pin || ''}","${p.isMember ? 'Yes' : 'No'}","${p.stripeCustomerId || ''}"\n`;
+            });
+            downloadCSV(csv, 'players_export.csv');
+            document.getElementById('exportModal').remove();
+        }
+        
+        function exportCustomersCSV() {
+            let csv = 'Stripe ID,Name,Email,Phone,Member Type,Is League,Subscription Status\n';
+            stripeCustomersCache.forEach(c => {
+                csv += `"${c.id}","${c.name || ''}","${c.email || ''}","${c.phone || ''}","${c.memberType || ''}","${c.isLeague ? 'Yes' : 'No'}","${c.subscriptionStatus || ''}"\n`;
+            });
+            downloadCSV(csv, 'customers_export.csv');
+            document.getElementById('exportModal').remove();
+        }
+        
+        function exportScoresCSV() {
+            let csv = 'Round,Player,Team,Gross,Net,Handicap,Submitted At\n';
+            Object.keys(league.scores || {}).forEach(roundId => {
+                const round = league.rounds?.find(r => r.id === roundId);
+                Object.keys(league.scores[roundId]).forEach(playerId => {
+                    const score = league.scores[roundId][playerId];
+                    if (!score.submitted) return;
+                    const player = league.players?.find(p => p.id === playerId);
+                    const team = league.teams?.find(t => t.id === player?.teamId);
+                    csv += `"${round?.name || roundId}","${player?.name || playerId}","${team?.name || 'N/A'}","${score.gross || ''}","${score.net || ''}","${score.handicap || 0}","${score.submittedAt || ''}"\n`;
+                });
+            });
+            downloadCSV(csv, 'scores_export.csv');
+            document.getElementById('exportModal').remove();
+        }
+        
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+        }
+        
+        function viewPlayerScores(playerId) {
+            const player = league.players.find(p => p.id === playerId);
+            if (!player) return;
+            
+            const team = league.teams.find(t => t.id === player.teamId);
+            
+            // Collect scores for this player
+            let scoresHtml = '';
+            let totalRounds = 0;
+            let avgGross = 0;
+            let avgNet = 0;
+            
+            league.rounds.forEach(round => {
+                const score = (league.scores || {})[round.id]?.[playerId];
+                if (score && score.submitted) {
+                    totalRounds++;
+                    avgGross += score.gross || 0;
+                    avgNet += score.net || 0;
+                    
+                    scoresHtml += `
+                        <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:15px;padding:12px;background:#f8f9fa;border-radius:8px;align-items:center;">
+                            <div>
+                                <div style="font-weight:600;">${round.name}</div>
+                                <div style="font-size:12px;color:#888;">${round.startDate ? new Date(round.startDate).toLocaleDateString() : ''}</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:11px;color:#888;">GROSS</div>
+                                <div style="font-weight:700;font-size:18px;">${score.gross || '-'}</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:11px;color:#888;">NET</div>
+                                <div style="font-weight:700;font-size:18px;color:#37b24a;">${score.net || '-'}</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:11px;color:#888;">HCP</div>
+                                <div style="font-weight:600;">${score.handicap || 0}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            if (totalRounds > 0) {
+                avgGross = Math.round(avgGross / totalRounds);
+                avgNet = Math.round(avgNet / totalRounds);
+            }
+            
+            const modalHtml = `
+                <div id="playerScoresModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;overflow-y:auto;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:550px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="color:#1a1a2e;"><i class="fas fa-chart-line" style="color:#37b24a;"></i> Player Scores</h3>
+                            <button onclick="document.getElementById('playerScoresModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;">&times;</button>
+                        </div>
+                        
+                        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:20px;border-radius:12px;margin-bottom:20px;">
+                            <div style="font-size:20px;font-weight:700;">${player.name}</div>
+                            <div style="font-size:13px;color:#aaa;margin-top:4px;">${team?.name || 'No Team'}</div>
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:15px;">
+                                <div style="text-align:center;background:rgba(255,255,255,0.1);padding:10px;border-radius:8px;">
+                                    <div style="font-size:11px;color:#aaa;">ROUNDS</div>
+                                    <div style="font-size:22px;font-weight:700;">${totalRounds}</div>
+                                </div>
+                                <div style="text-align:center;background:rgba(255,255,255,0.1);padding:10px;border-radius:8px;">
+                                    <div style="font-size:11px;color:#aaa;">AVG GROSS</div>
+                                    <div style="font-size:22px;font-weight:700;">${avgGross || '-'}</div>
+                                </div>
+                                <div style="text-align:center;background:rgba(55,178,74,0.3);padding:10px;border-radius:8px;">
+                                    <div style="font-size:11px;color:#aaa;">AVG NET</div>
+                                    <div style="font-size:22px;font-weight:700;">${avgNet || '-'}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin-bottom:12px;color:#1a1a2e;">Round History</h4>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            ${scoresHtml || '<p style="color:#888;text-align:center;padding:20px;">No scores submitted yet.</p>'}
+                        </div>
+                        
+                        <div style="margin-top:20px;padding-top:15px;border-top:1px solid #eee;">
+                            <button onclick="document.getElementById('playerScoresModal').remove()" class="btn btn-secondary" style="width:100%;justify-content:center;">
+                                <i class="fas fa-times"></i> Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        // =====================
+        // Score Documents
+        // =====================
+        
+        function loadScoreDocuments() {
+            // Populate filter dropdowns
+            const roundSelect = document.getElementById('filterRound');
+            const teamSelect = document.getElementById('filterTeam');
+            
+            // Populate rounds
+            roundSelect.innerHTML = '<option value="">All Rounds</option>';
+            if (league.rounds) {
+                league.rounds.forEach((round, idx) => {
+                    roundSelect.innerHTML += `<option value="${round.id}">${round.name || ('Round ' + (idx + 1))} - ${new Date(round.date).toLocaleDateString()}</option>`;
+                });
+            }
+            
+            // Populate teams
+            teamSelect.innerHTML = '<option value="">All Teams</option>';
+            if (league.teams) {
+                league.teams.forEach(team => {
+                    teamSelect.innerHTML += `<option value="${team.id}">${team.name}</option>`;
+                });
+            }
+            
+            renderScoreDocuments();
+        }
+        
+        function renderScoreDocuments() {
+            const container = document.getElementById('scoreDocsList');
+            const filterRound = document.getElementById('filterRound').value;
+            const filterTeam = document.getElementById('filterTeam').value;
+            const filterDate = document.getElementById('filterDateRange').value;
+            
+            if (!league.scores || Object.keys(league.scores).length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #999; padding: 40px;">
+                        <i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 15px;"></i>
+                        <p>No score documents found. Submitted scorecards will appear here.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let scoreDocuments = [];
+            
+            // Collect all submitted scores
+            Object.keys(league.scores).forEach(roundId => {
+                const round = league.rounds?.find(r => r.id === roundId);
+                if (!round) return;
+                
+                Object.keys(league.scores[roundId]).forEach(playerId => {
+                    const scoreData = league.scores[roundId][playerId];
+                    if (!scoreData.submitted) return;
+                    
+                    const player = league.players?.find(p => p.id === playerId);
+                    if (!player) return;
+                    
+                    const team = league.teams?.find(t => t.id === player.teamId);
+                    
+                    // Apply filters
+                    if (filterRound && roundId !== filterRound) return;
+                    if (filterTeam && player.teamId !== filterTeam) return;
+                    
+                    // Date filter
+                    if (filterDate) {
+                        const submittedDate = new Date(scoreData.submittedAt || round.date);
+                        const now = new Date();
+                        if (filterDate === 'today') {
+                            if (submittedDate.toDateString() !== now.toDateString()) return;
+                        } else if (filterDate === 'week') {
+                            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                            if (submittedDate < weekAgo) return;
+                        } else if (filterDate === 'month') {
+                            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                            if (submittedDate < monthAgo) return;
+                        }
+                    }
+                    
+                    scoreDocuments.push({
+                        roundId,
+                        playerId,
+                        round,
+                        player,
+                        team,
+                        scoreData
+                    });
+                });
+            });
+            
+            if (scoreDocuments.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #999; padding: 40px;">
+                        <i class="fas fa-search" style="font-size: 48px; margin-bottom: 15px;"></i>
+                        <p>No documents match your filters.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort by submission date (newest first)
+            scoreDocuments.sort((a, b) => {
+                const dateA = new Date(a.scoreData.submittedAt || a.round.date);
+                const dateB = new Date(b.scoreData.submittedAt || b.round.date);
+                return dateB - dateA;
+            });
+            
+            // Render document cards
+            container.innerHTML = `
+                <div style="display: grid; gap: 10px;">
+                    ${scoreDocuments.map(doc => renderScoreDocCard(doc)).join('')}
+                </div>
+            `;
+        }
+        
+        function renderScoreDocCard(doc) {
+            const { roundId, playerId, round, player, team, scoreData } = doc;
+            const submittedAt = scoreData.submittedAt ? new Date(scoreData.submittedAt).toLocaleString() : 'Unknown';
+            const totalScore = calculateTotal(scoreData.holes || []);
+            const pars = league.pars || [3, 3, 3, 3, 3, 3, 3, 3, 3];
+            const totalPar = pars.reduce((a, b) => a + b, 0);
+            const scoreDiff = totalScore - totalPar;
+            const scoreClass = scoreDiff < 0 ? 'color: #27ae60;' : scoreDiff > 0 ? 'color: #e74c3c;' : '';
+            
+            return `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #4a90a4;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 16px; margin-bottom: 5px;">
+                            ${player.name}
+                            ${team ? `<span style="color: #888; font-weight: 400; font-size: 14px;"> - ${team.name}</span>` : ''}
+                        </div>
+                        <div style="font-size: 13px; color: #666;">
+                            <span style="margin-right: 15px;"><i class="fas fa-flag" style="color: #4a90a4;"></i> ${round.name || 'Round'}</span>
+                            <span style="margin-right: 15px;"><i class="fas fa-calendar"></i> ${new Date(round.date).toLocaleDateString()}</span>
+                            <span><i class="fas fa-clock"></i> Submitted: ${submittedAt}</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center; padding: 0 20px;">
+                        <div style="font-size: 24px; font-weight: 700; ${scoreClass}">${totalScore}</div>
+                        <div style="font-size: 11px; color: #888;">Total Score</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm" onclick="viewScoreDocument('${roundId}', '${playerId}')" title="View Document">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="printScoreDocument('${roundId}', '${playerId}')" title="Print">
+                            <i class="fas fa-print"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function calculateTotal(holes) {
+            return holes.reduce((sum, h) => sum + (parseInt(h) || 0), 0);
+        }
+        
+        function viewScoreDocument(roundId, playerId) {
+            const content = generateScoreDocumentHTML(roundId, playerId, false);
+            
+            // Create modal to display
+            let modal = document.getElementById('scoreDocModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'scoreDocModal';
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-file-alt"></i> Score Document</h3>
+                            <span class="modal-close" onclick="closeModal('scoreDocModal')">&times;</span>
+                        </div>
+                        <div id="scoreDocModalContent" style="padding: 20px;"></div>
+                        <div style="padding: 15px 20px; border-top: 1px solid #eee; text-align: right;">
+                            <button class="btn" onclick="printCurrentScoreDoc()"><i class="fas fa-print"></i> Print</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            document.getElementById('scoreDocModalContent').innerHTML = content;
+            modal.dataset.roundId = roundId;
+            modal.dataset.playerId = playerId;
+            openModal('scoreDocModal');
+        }
+        
+        function printCurrentScoreDoc() {
+            const modal = document.getElementById('scoreDocModal');
+            if (modal) {
+                printScoreDocument(modal.dataset.roundId, modal.dataset.playerId);
+            }
+        }
+        
+        function printScoreDocument(roundId, playerId) {
+            const content = generateScoreDocumentHTML(roundId, playerId, true);
+            
+            const printWindow = window.open('', '_blank', 'width=800,height=900');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Score Document - Golf Cove</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                            padding: 30px;
+                            color: #333;
+                        }
+                        .header { 
+                            text-align: center; 
+                            margin-bottom: 25px;
+                            padding-bottom: 15px;
+                            border-bottom: 2px solid #4a90a4;
+                        }
+                        .header h1 { 
+                            color: #2c3e50; 
+                            font-size: 24px; 
+                            margin-bottom: 5px;
+                        }
+                        .header .subtitle { 
+                            color: #666; 
+                            font-size: 14px;
+                        }
+                        .info-grid {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 15px;
+                            margin-bottom: 25px;
+                            padding: 15px;
+                            background: #f8f9fa;
+                            border-radius: 8px;
+                        }
+                        .info-item label {
+                            font-weight: 600;
+                            color: #555;
+                            font-size: 12px;
+                            display: block;
+                            margin-bottom: 3px;
+                        }
+                        .info-item span {
+                            font-size: 14px;
+                        }
+                        .scorecard {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 20px;
+                        }
+                        .scorecard th, .scorecard td {
+                            border: 1px solid #ddd;
+                            padding: 8px 10px;
+                            text-align: center;
+                            font-size: 13px;
+                        }
+                        .scorecard th {
+                            background: #4a90a4;
+                            color: white;
+                            font-weight: 600;
+                        }
+                        .scorecard .hole-num {
+                            background: #e8f4f8;
+                            font-weight: 600;
+                        }
+                        .scorecard .par-row {
+                            background: #f0f0f0;
+                        }
+                        .scorecard .score-row td {
+                            font-weight: 600;
+                            font-size: 16px;
+                        }
+                        .totals {
+                            display: flex;
+                            justify-content: center;
+                            gap: 40px;
+                            margin: 25px 0;
+                            padding: 20px;
+                            background: #f8f9fa;
+                            border-radius: 8px;
+                        }
+                        .total-item {
+                            text-align: center;
+                        }
+                        .total-item .value {
+                            font-size: 32px;
+                            font-weight: 700;
+                            color: #2c3e50;
+                        }
+                        .total-item .label {
+                            font-size: 12px;
+                            color: #666;
+                            margin-top: 5px;
+                        }
+                        .signature-section {
+                            margin-top: 40px;
+                            padding-top: 20px;
+                            border-top: 1px solid #ddd;
+                        }
+                        .signature-grid {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 40px;
+                            margin-top: 20px;
+                        }
+                        .signature-line {
+                            border-bottom: 1px solid #333;
+                            padding-bottom: 5px;
+                            margin-bottom: 5px;
+                        }
+                        .signature-label {
+                            font-size: 12px;
+                            color: #666;
+                        }
+                        .footer {
+                            margin-top: 30px;
+                            text-align: center;
+                            font-size: 11px;
+                            color: #888;
+                        }
+                        @media print {
+                            body { padding: 20px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${content}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => {
+                printWindow.print();
+            }, 300);
+        }
+        
+        function generateScoreDocumentHTML(roundId, playerId, forPrint = false) {
+            const scoreData = league.scores?.[roundId]?.[playerId];
+            const player = league.players?.find(p => p.id === playerId);
+            const round = league.rounds?.find(r => r.id === roundId);
+            const team = player ? league.teams?.find(t => t.id === player.teamId) : null;
+            const pars = league.pars || [3, 3, 3, 3, 3, 3, 3, 3, 3];
+            const holes = scoreData?.holes || [];
+            
+            const totalScore = holes.reduce((sum, h) => sum + (parseInt(h) || 0), 0);
+            const totalPar = pars.reduce((a, b) => a + b, 0);
+            const scoreDiff = totalScore - totalPar;
+            const diffText = scoreDiff === 0 ? 'E' : (scoreDiff > 0 ? '+' + scoreDiff : scoreDiff);
+            
+            const submittedAt = scoreData?.submittedAt ? new Date(scoreData.submittedAt) : null;
+            
+            return `
+                <div class="header">
+                    <h1>Golf Cove - Official Scorecard</h1>
+                    <div class="subtitle">${league.name || 'League Tournament'}</div>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Player Name</label>
+                        <span>${player?.name || 'Unknown'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Team</label>
+                        <span>${team?.name || 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Round</label>
+                        <span>${round?.name || 'Unknown'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Date</label>
+                        <span>${round ? new Date(round.date).toLocaleDateString() : 'Unknown'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Handicap</label>
+                        <span>${player?.handicap || 0}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Submitted</label>
+                        <span>${submittedAt ? submittedAt.toLocaleString() : 'N/A'}</span>
+                    </div>
+                </div>
+                
+                <table class="scorecard">
+                    <tr>
+                        <th>Hole</th>
+                        ${pars.map((_, i) => `<th class="hole-num">${i + 1}</th>`).join('')}
+                        <th style="background: #2c3e50;">Total</th>
+                    </tr>
+                    <tr class="par-row">
+                        <td><strong>Par</strong></td>
+                        ${pars.map(p => `<td>${p}</td>`).join('')}
+                        <td><strong>${totalPar}</strong></td>
+                    </tr>
+                    <tr class="score-row">
+                        <td><strong>Score</strong></td>
+                        ${pars.map((p, i) => {
+                            const score = parseInt(holes[i]) || 0;
+                            const diff = score - p;
+                            let style = '';
+                            if (score > 0) {
+                                if (diff < 0) style = 'color: #27ae60;'; // Under par (birdie/eagle)
+                                else if (diff > 0) style = 'color: #e74c3c;'; // Over par
+                            }
+                            return `<td style="${style}">${score || '-'}</td>`;
+                        }).join('')}
+                        <td style="font-size: 18px;"><strong>${totalScore}</strong></td>
+                    </tr>
+                </table>
+                
+                <div class="totals">
+                    <div class="total-item">
+                        <div class="value">${totalScore}</div>
+                        <div class="label">Total Strokes</div>
+                    </div>
+                    <div class="total-item">
+                        <div class="value">${diffText}</div>
+                        <div class="label">vs Par (${totalPar})</div>
+                    </div>
+                    <div class="total-item">
+                        <div class="value">${Math.max(0, totalScore - (player?.handicap || 0))}</div>
+                        <div class="label">Net Score</div>
+                    </div>
+                </div>
+                
+                ${forPrint ? `
+                <div class="signature-section">
+                    <h4 style="font-size: 14px; margin-bottom: 5px;">Verification</h4>
+                    <div class="signature-grid">
+                        <div>
+                            <div class="signature-line"></div>
+                            <div class="signature-label">Player Signature</div>
+                        </div>
+                        <div>
+                            <div class="signature-line"></div>
+                            <div class="signature-label">Attested By</div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="footer">
+                    <p>Golf Cove • 336 State Street, North Haven, CT 06473 • (203) 390-5994</p>
+                    <p style="margin-top: 5px;">Document generated on ${new Date().toLocaleString()}</p>
+                </div>
+            `;
+        }
+
+        function resetLeague() {
+            if (!confirm('Delete the entire league? This cannot be undone!')) return;
+            if (!confirm('Are you absolutely sure?')) return;
+            leagueRef.remove();
+            league = null;
+        }
+        
+        // Modal helpers
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+        
+        function save() {
+            console.log('save() called');
+            if (!currentUser) {
+                console.error('No current user');
+                alert('You must be signed in to make changes.');
+                return;
+            }
+            console.log('Current user:', currentUser.email);
+            console.log('Saving league:', league);
+            try {
+                if (!checkRateLimit()) {
+                    console.warn('Request throttled - please slow down');
+                    return;
+                }
+                console.log('Attempting to save to Firebase...');
+                
+                // Convert arrays to objects keyed by ID for consistent Firebase storage
+                // This ensures deletions work properly since Firebase function uses keyed objects
+                const playersObj = {};
+                (league.players || []).forEach(p => {
+                    if (p && p.id) playersObj[p.id] = p;
+                });
+                
+                const teamsObj = {};
+                (league.teams || []).forEach(t => {
+                    if (t && t.id) teamsObj[t.id] = t;
+                });
+                
+                const roundsObj = {};
+                (league.rounds || []).forEach(r => {
+                    if (r && r.id) roundsObj[r.id] = r;
+                });
+                
+                const leagueData = {
+                    ...league,
+                    players: playersObj,
+                    teams: teamsObj,
+                    rounds: roundsObj
+                };
+                
+                leagueRef.set(leagueData).then(() => {
+                    console.log('Successfully saved to Firebase');
+                }).catch(err => {
+                    console.error('Firebase save error:', err);
+                    alert('Error saving: ' + err.message);
+                });
+            } catch (error) {
+                console.error('Save error:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        // ============ STAFF MANAGEMENT (Firebase Synced) ============
+        const defaultStaffList = [
+            { id: 1, name: 'EJ Sattelberger', pin: '9999', role: 'manager', color: '#3498db', active: true },
+            { id: 2, name: 'Manager', pin: '9999', role: 'manager', color: '#e67e22', active: true },
+            { id: 3, name: 'Bartender', pin: '9999', role: 'bartender', color: '#9b59b6', active: true },
+            { id: 4, name: 'Staff', pin: '9999', role: 'server', color: '#27ae60', active: true }
+        ];
+        
+        // Sync employees to Firebase (unified PIN storage)
+        async function syncEmployeesToFirebase(employees) {
+            try {
+                const employeesRef = firebase.database().ref('employees/golfcove');
+                await employeesRef.set(employees);
+                console.log('Staff PINs synced to Firebase');
+            } catch (error) {
+                console.error('Failed to sync employees:', error);
+            }
+        }
+        
+        // Pull employees from Firebase on load
+        async function loadEmployeesFromFirebase() {
+            try {
+                const snapshot = await firebase.database().ref('employees/golfcove').once('value');
+                const employees = snapshot.val();
+                if (employees && Array.isArray(employees) && employees.length > 0) {
+                    localStorage.setItem('gc_employees', JSON.stringify(employees));
+                    console.log('Loaded employees from Firebase');
+                }
+            } catch (error) {
+                console.warn('Could not load employees from Firebase:', error);
+            }
+        }
+        
+        async function loadStaffList() {
+            // First try to pull from Firebase
+            await loadEmployeesFromFirebase();
+            
+            let staff = JSON.parse(localStorage.getItem('gc_employees') || 'null') || defaultStaffList;
+            // Ensure staff has required properties for display
+            staff = staff.map((s, i) => ({
+                id: s.id || i + 1,
+                name: s.name || (s.firstName + ' ' + (s.lastName || '')).trim(),
+                pin: s.pin || '9999',
+                role: s.role || 'staff',
+                color: s.color || ['#3498db', '#e67e22', '#9b59b6', '#27ae60'][i % 4],
+                active: s.active !== false
+            }));
+            const container = document.getElementById('staffList');
+            if (!container) return;
+            
+            if (staff.length === 0) {
+                container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No staff members yet</p>';
+                return;
+            }
+            
+            let html = '<table style="width:100%;border-collapse:collapse;">';
+            html += '<tr style="background:#f5f6f8;"><th style="padding:12px;text-align:left;">Name</th><th style="padding:12px;text-align:center;">Role</th><th style="padding:12px;text-align:center;">PIN</th><th style="padding:12px;text-align:center;">Status</th><th style="padding:12px;text-align:center;">Actions</th></tr>';
+            
+            staff.forEach(s => {
+                const initials = s.name.split(' ').map(n => n[0]).join('');
+                html += '<tr style="border-bottom:1px solid #eee;">';
+                html += '<td style="padding:12px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:50%;background:' + s.color + ';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">' + initials + '</div>' + s.name + '</div></td>';
+                html += '<td style="padding:12px;text-align:center;text-transform:capitalize;">' + s.role + '</td>';
+                html += '<td style="padding:12px;text-align:center;font-family:monospace;font-size:16px;">' + s.pin + '</td>';
+                html += '<td style="padding:12px;text-align:center;">' + (s.active !== false ? '<span style="color:#27ae60;"><i class="fas fa-check-circle"></i> Active</span>' : '<span style="color:#999;"><i class="fas fa-times-circle"></i> Inactive</span>') + '</td>';
+                html += '<td style="padding:12px;text-align:center;">';
+                html += '<button onclick="editStaffMember(' + s.id + ')" style="padding:6px 12px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:5px;"><i class="fas fa-edit"></i></button>';
+                html += '<button onclick="resetStaffPin(' + s.id + ')" style="padding:6px 12px;background:#f39c12;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:5px;"><i class="fas fa-key"></i></button>';
+                html += '<button onclick="toggleStaffActive(' + s.id + ')" style="padding:6px 12px;background:' + (s.active !== false ? '#e74c3c' : '#27ae60') + ';color:#fff;border:none;border-radius:4px;cursor:pointer;"><i class="fas fa-' + (s.active !== false ? 'ban' : 'check') + '"></i></button>';
+                html += '</td></tr>';
+            });
+            
+            html += '</table>';
+            container.innerHTML = html;
+        }
+        
+        function showAddStaffModal() {
+            const name = prompt('Enter staff member name:');
+            if (!name) return;
+            
+            const role = prompt('Enter role (manager, bartender, server):') || 'server';
+            const pin = prompt('Enter 4-digit PIN:');
+            
+            if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
+                alert('Invalid PIN - must be 4 digits');
+                return;
+            }
+            
+            const staff = JSON.parse(localStorage.getItem('gc_employees') || '[]');
+            const colors = ['#3498db', '#e67e22', '#9b59b6', '#27ae60', '#e74c3c', '#1abc9c', '#34495e'];
+            
+            staff.push({
+                id: Date.now(),
+                name: name,
+                pin: pin,
+                role: role.toLowerCase(),
+                color: colors[staff.length % colors.length],
+                active: true
+            });
+            
+            localStorage.setItem('gc_employees', JSON.stringify(staff));
+            syncEmployeesToFirebase(staff);
+            loadStaffList();
+        }
+        
+        function editStaffMember(id) {
+            const staff = JSON.parse(localStorage.getItem('gc_employees') || '[]');
+            const member = staff.find(s => s.id === id);
+            if (!member) return;
+            
+            const newName = prompt('Edit name:', member.name);
+            if (newName) member.name = newName;
+            
+            const newRole = prompt('Edit role (manager, bartender, server):', member.role);
+            if (newRole) member.role = newRole.toLowerCase();
+            
+            localStorage.setItem('gc_employees', JSON.stringify(staff));
+            syncEmployeesToFirebase(staff);
+            loadStaffList();
+        }
+        
+        function resetStaffPin(id) {
+            const staff = JSON.parse(localStorage.getItem('gc_employees') || '[]');
+            const member = staff.find(s => s.id === id);
+            if (!member) return;
+            
+            const newPin = prompt('Enter new 4-digit PIN:');
+            if (!newPin || newPin.length !== 4 || !/^\d+$/.test(newPin)) {
+                alert('Invalid PIN - must be 4 digits');
+                return;
+            }
+            
+            member.pin = newPin;
+            localStorage.setItem('gc_employees', JSON.stringify(staff));
+            syncEmployeesToFirebase(staff);
+            loadStaffList();
+            alert('PIN updated successfully');
+        }
+        
+        function toggleStaffActive(id) {
+            const staff = JSON.parse(localStorage.getItem('gc_employees') || '[]');
+            const member = staff.find(s => s.id === id);
+            if (!member) return;
+            
+            member.active = member.active === false ? true : false;
+            localStorage.setItem('gc_employees', JSON.stringify(staff));
+            syncEmployeesToFirebase(staff);
+            loadStaffList();
+        }
+        
+        // ============ TIME CLOCK ============
+        function loadTimeclock() {
+            const timelog = JSON.parse(localStorage.getItem('gc_timeclock') || '[]');
+            const today = new Date().toDateString();
+            
+            // Today's activity
+            const todayContainer = document.getElementById('todayTimeclock');
+            if (todayContainer) {
+                const todayLogs = timelog.filter(t => new Date(t.timestamp).toDateString() === today);
+                
+                if (todayLogs.length === 0) {
+                    todayContainer.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No clock activity today</p>';
+                } else {
+                    let html = '<table style="width:100%;border-collapse:collapse;">';
+                    html += '<tr style="background:#f5f6f8;"><th style="padding:10px;text-align:left;">Employee</th><th style="padding:10px;text-align:center;">Time</th><th style="padding:10px;text-align:center;">Action</th></tr>';
+                    
+                    todayLogs.reverse().forEach(log => {
+                        const time = new Date(log.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                        const isIn = log.type === 'clockIn';
+                        html += '<tr style="border-bottom:1px solid #eee;">';
+                        html += '<td style="padding:10px;">' + log.staffName + '</td>';
+                        html += '<td style="padding:10px;text-align:center;">' + time + '</td>';
+                        html += '<td style="padding:10px;text-align:center;"><span style="padding:4px 10px;border-radius:20px;font-size:12px;background:' + (isIn ? '#e8f5e9' : '#ffebee') + ';color:' + (isIn ? '#27ae60' : '#e74c3c') + ';">' + (isIn ? 'Clock In' : 'Clock Out') + '</span></td>';
+                        html += '</tr>';
+                    });
+                    
+                    html += '</table>';
+                    todayContainer.innerHTML = html;
+                }
+            }
+            
+            // History
+            loadTimeclockHistory();
+        }
+        
+        function loadTimeclockHistory() {
+            const timelog = JSON.parse(localStorage.getItem('gc_timeclock') || '[]');
+            const container = document.getElementById('timeclockHistory');
+            if (!container) return;
+            
+            if (timelog.length === 0) {
+                container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No time clock history</p>';
+                return;
+            }
+            
+            // Group by date
+            const byDate = {};
+            timelog.forEach(log => {
+                const date = new Date(log.timestamp).toDateString();
+                if (!byDate[date]) byDate[date] = [];
+                byDate[date].push(log);
+            });
+            
+            let html = '';
+            Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a)).slice(0, 7).forEach(date => {
+                html += '<div style="margin-bottom:15px;"><h4 style="font-size:14px;color:#666;margin-bottom:8px;">' + date + '</h4>';
+                html += '<div style="background:#f8f9fa;border-radius:8px;padding:10px;">';
+                byDate[date].forEach(log => {
+                    const time = new Date(log.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                    const isIn = log.type === 'clockIn';
+                    html += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;">';
+                    html += '<span>' + log.staffName + '</span>';
+                    html += '<span style="color:' + (isIn ? '#27ae60' : '#e74c3c') + ';">' + (isIn ? '▶ In' : '◼ Out') + ' ' + time + '</span>';
+                    html += '</div>';
+                });
+                html += '</div></div>';
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function filterTimeclock() {
+            alert('Filter functionality - would filter by date range');
+        }
+        
+        function exportTimeclock() {
+            const timelog = JSON.parse(localStorage.getItem('gc_timeclock') || '[]');
+            const csv = 'Employee,Action,Date,Time\n' + timelog.map(t => {
+                const d = new Date(t.timestamp);
+                return t.staffName + ',' + t.type + ',' + d.toLocaleDateString() + ',' + d.toLocaleTimeString();
+            }).join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'timeclock_export.csv';
+            a.click();
+        }
+        
+        // ============ SALES REPORTS ============
+        function loadSalesReports() {
+            const transactions = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
+            const now = new Date();
+            const today = now.toDateString();
+            const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+            const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+            
+            // Calculate totals
+            let todayTotal = 0, weekTotal = 0, monthTotal = 0;
+            transactions.forEach(t => {
+                const tDate = new Date(t.date);
+                const amt = Math.abs(t.amount || 0);
+                if (!t.isReturn) {
+                    if (tDate.toDateString() === today) todayTotal += amt;
+                    if (tDate >= weekAgo) weekTotal += amt;
+                    if (tDate >= monthAgo) monthTotal += amt;
+                }
+            });
+            
+            // Update stat cards
+            const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+            el('reportTodaySales', '$' + todayTotal.toFixed(2));
+            el('reportWeekSales', '$' + weekTotal.toFixed(2));
+            el('reportMonthSales', '$' + monthTotal.toFixed(2));
+            el('reportTransCount', transactions.length);
+            
+            // Recent transactions
+            const recentContainer = document.getElementById('recentTransactionsReport');
+            if (recentContainer) {
+                if (transactions.length === 0) {
+                    recentContainer.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No transactions yet</p>';
+                } else {
+                    let html = '<table style="width:100%;border-collapse:collapse;font-size:14px;">';
+                    html += '<tr style="background:#f5f6f8;"><th style="padding:10px;text-align:left;">ID</th><th style="padding:10px;text-align:left;">Customer</th><th style="padding:10px;text-align:left;">Employee</th><th style="padding:10px;text-align:center;">Method</th><th style="padding:10px;text-align:right;">Amount</th><th style="padding:10px;text-align:center;">Time</th></tr>';
+                    
+                    transactions.slice(0, 20).forEach(t => {
+                        html += '<tr style="border-bottom:1px solid #eee;">';
+                        html += '<td style="padding:10px;">#' + t.id + '</td>';
+                        html += '<td style="padding:10px;">' + (t.customer || 'Walk-in') + '</td>';
+                        html += '<td style="padding:10px;">' + (t.employee || 'Staff') + '</td>';
+                        html += '<td style="padding:10px;text-align:center;text-transform:capitalize;">' + (t.method || 'card') + '</td>';
+                        html += '<td style="padding:10px;text-align:right;color:' + (t.isReturn ? '#e74c3c' : '#27ae60') + ';font-weight:600;">' + (t.isReturn ? '-' : '') + '$' + Math.abs(t.amount).toFixed(2) + '</td>';
+                        html += '<td style="padding:10px;text-align:center;color:#888;">' + (t.time || '') + '</td>';
+                        html += '</tr>';
+                    });
+                    
+                    html += '</table>';
+                    recentContainer.innerHTML = html;
+                }
+            }
+            
+            // Sales by category
+            loadSalesByCategory(transactions);
+            
+            // Sales by employee
+            loadSalesByEmployee(transactions);
+        }
+        
+        function loadSalesByCategory(transactions) {
+            const container = document.getElementById('salesByCategory');
+            if (!container) return;
+            
+            const byCategory = {};
+            transactions.forEach(t => {
+                if (t.isReturn || !t.itemDetails) return;
+                t.itemDetails.forEach(item => {
+                    // Try to determine category from item name
+                    let cat = 'Other';
+                    const name = item.name.toLowerCase();
+                    if (name.includes('beer') || name.includes('bud') || name.includes('coors') || name.includes('miller') || name.includes('corona') || name.includes('heineken')) cat = 'Beer';
+                    else if (name.includes('wine') || name.includes('pinot') || name.includes('chardonnay') || name.includes('cabernet') || name.includes('merlot')) cat = 'Wine';
+                    else if (name.includes('cocktail') || name.includes('margarita') || name.includes('vodka') || name.includes('rum') || name.includes('whiskey') || name.includes('mojito')) cat = 'Cocktails';
+                    else if (name.includes('burger') || name.includes('hot dog') || name.includes('nachos') || name.includes('pizza') || name.includes('fries') || name.includes('wings') || name.includes('tenders')) cat = 'Food';
+                    else if (name.includes('soda') || name.includes('coffee') || name.includes('tea') || name.includes('water') || name.includes('lemonade')) cat = 'Beverages';
+                    else if (name.includes('room') || name.includes('rental') || name.includes('club')) cat = 'Rentals';
+                    else if (name.includes('gift')) cat = 'Gift Cards';
+                    else if (name.includes('hat') || name.includes('polo') || name.includes('shirt') || name.includes('glove') || name.includes('towel') || name.includes('ball')) cat = 'Merchandise';
+                    
+                    if (!byCategory[cat]) byCategory[cat] = 0;
+                    byCategory[cat] += (item.price * item.qty * (1 - (item.discount || 0) / 100));
+                });
+            });
+            
+            if (Object.keys(byCategory).length === 0) {
+                container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No category data yet</p>';
+                return;
+            }
+            
+            const total = Object.values(byCategory).reduce((a, b) => a + b, 0);
+            const colors = { 'Beer': '#f39c12', 'Wine': '#8e44ad', 'Cocktails': '#e74c3c', 'Food': '#e67e22', 'Beverages': '#3498db', 'Rentals': '#9b59b6', 'Gift Cards': '#1abc9c', 'Merchandise': '#27ae60', 'Other': '#95a5a6' };
+            
+            let html = '';
+            Object.entries(byCategory).sort((a, b) => b[1] - a[1]).forEach(([cat, amt]) => {
+                const pct = total > 0 ? (amt / total * 100) : 0;
+                html += '<div style="margin-bottom:12px;">';
+                html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-weight:600;">' + cat + '</span><span>$' + amt.toFixed(2) + ' (' + pct.toFixed(1) + '%)</span></div>';
+                html += '<div style="background:#eee;border-radius:4px;height:8px;overflow:hidden;"><div style="background:' + (colors[cat] || '#666') + ';height:100%;width:' + pct + '%;"></div></div>';
+                html += '</div>';
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function loadSalesByEmployee(transactions) {
+            const container = document.getElementById('salesByEmployee');
+            if (!container) return;
+            
+            const byEmployee = {};
+            transactions.forEach(t => {
+                if (t.isReturn) return;
+                const emp = t.employee || 'Unknown';
+                if (!byEmployee[emp]) byEmployee[emp] = { sales: 0, count: 0 };
+                byEmployee[emp].sales += Math.abs(t.amount || 0);
+                byEmployee[emp].count++;
+            });
+            
+            if (Object.keys(byEmployee).length === 0) {
+                container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No employee data yet</p>';
+                return;
+            }
+            
+            let html = '<table style="width:100%;border-collapse:collapse;">';
+            html += '<tr style="background:#f5f6f8;"><th style="padding:10px;text-align:left;">Employee</th><th style="padding:10px;text-align:center;">Transactions</th><th style="padding:10px;text-align:right;">Total Sales</th><th style="padding:10px;text-align:right;">Avg Sale</th></tr>';
+            
+            Object.entries(byEmployee).sort((a, b) => b[1].sales - a[1].sales).forEach(([emp, data]) => {
+                html += '<tr style="border-bottom:1px solid #eee;">';
+                html += '<td style="padding:10px;font-weight:600;">' + emp + '</td>';
+                html += '<td style="padding:10px;text-align:center;">' + data.count + '</td>';
+                html += '<td style="padding:10px;text-align:right;color:#27ae60;font-weight:600;">$' + data.sales.toFixed(2) + '</td>';
+                html += '<td style="padding:10px;text-align:right;color:#888;">$' + (data.sales / data.count).toFixed(2) + '</td>';
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            container.innerHTML = html;
+        }
+        
+        // ============ INVENTORY ============
+        function loadInventory() {
+            const items = JSON.parse(localStorage.getItem('gc_inventory') || 'null');
+            if (!items) return;
+            
+            // Low stock alerts
+            const lowStockContainer = document.getElementById('lowStockAlerts');
+            if (lowStockContainer) {
+                const lowStock = items.filter(i => i.trackInventory && i.stock !== undefined && i.stock <= 5);
+                
+                if (lowStock.length === 0) {
+                    lowStockContainer.innerHTML = '<p style="color:#27ae60;text-align:center;padding:20px;"><i class="fas fa-check-circle"></i> All inventory levels are healthy</p>';
+                } else {
+                    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">';
+                    lowStock.forEach(item => {
+                        const color = item.stock === 0 ? '#e74c3c' : '#f39c12';
+                        html += '<div style="background:#fff;border:2px solid ' + color + ';border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;">';
+                        html += '<span style="font-weight:600;">' + item.name + '</span>';
+                        html += '<span style="background:' + color + ';color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;">' + (item.stock || 0) + ' left</span>';
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                    lowStockContainer.innerHTML = html;
+                }
+            }
+            
+            // Full inventory list
+            const listContainer = document.getElementById('inventoryList');
+            if (listContainer) {
+                let html = '<table style="width:100%;border-collapse:collapse;font-size:14px;">';
+                html += '<tr style="background:#f5f6f8;"><th style="padding:10px;text-align:left;">Item</th><th style="padding:10px;text-align:center;">Category</th><th style="padding:10px;text-align:right;">Price</th><th style="padding:10px;text-align:center;">Stock</th><th style="padding:10px;text-align:center;">Actions</th></tr>';
+                
+                items.filter(i => i.trackInventory).forEach(item => {
+                    const stockColor = item.stock <= 0 ? '#e74c3c' : item.stock <= 5 ? '#f39c12' : '#27ae60';
+                    html += '<tr style="border-bottom:1px solid #eee;">';
+                    html += '<td style="padding:10px;font-weight:600;">' + item.name + '</td>';
+                    html += '<td style="padding:10px;text-align:center;text-transform:capitalize;">' + item.category + '</td>';
+                    html += '<td style="padding:10px;text-align:right;">$' + item.price.toFixed(2) + '</td>';
+                    html += '<td style="padding:10px;text-align:center;"><span style="color:' + stockColor + ';font-weight:600;">' + (item.stock || 0) + '</span></td>';
+                    html += '<td style="padding:10px;text-align:center;">';
+                    html += '<button onclick="adjustInventory(' + item.id + ', 1)" style="padding:4px 8px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:3px;">+</button>';
+                    html += '<button onclick="adjustInventory(' + item.id + ', -1)" style="padding:4px 8px;background:#e74c3c;color:#fff;border:none;border-radius:4px;cursor:pointer;">-</button>';
+                    html += '</td></tr>';
+                });
+                
+                html += '</table>';
+                listContainer.innerHTML = html;
+            }
+        }
+        
+        function adjustInventory(itemId, delta) {
+            const items = JSON.parse(localStorage.getItem('gc_inventory') || '[]');
+            const item = items.find(i => i.id === itemId);
+            if (item) {
+                item.stock = Math.max(0, (item.stock || 0) + delta);
+                localStorage.setItem('gc_inventory', JSON.stringify(items));
+                loadInventory();
+            }
+        }
+
+        // ============ CLOUD SYNC FUNCTIONS ============
+        async function syncToCloud() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+            btn.disabled = true;
+            
+            try {
+                const data = {
+                    customers: JSON.parse(localStorage.getItem('gc_customers') || '[]'),
+                    transactions: JSON.parse(localStorage.getItem('gc_transactions') || '[]'),
+                    bookings: JSON.parse(localStorage.getItem('gc_bookings') || '[]')
+                };
+                
+                const response = await fetch('/api/fullSync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`Cloud sync complete!\nCustomers: ${result.customers || 0}\nTransactions: ${result.transactions || 0}\nBookings: ${result.bookings || 0}`);
+                } else {
+                    throw new Error('Sync failed');
+                }
+            } catch (err) {
+                console.error('Sync error:', err);
+                alert('Sync failed: ' + err.message);
+            }
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+        
+        async function pullFromCloud() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pulling...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/fullPull');
+                if (!response.ok) throw new Error('Pull failed');
+                
+                const data = await response.json();
+                
+                if (data.customers) localStorage.setItem('gc_customers', JSON.stringify(data.customers));
+                if (data.transactions) localStorage.setItem('gc_transactions', JSON.stringify(data.transactions));
+                if (data.bookings) localStorage.setItem('gc_bookings', JSON.stringify(data.bookings));
+                
+                alert(`Data pulled from cloud!\nCustomers: ${data.customers?.length || 0}\nTransactions: ${data.transactions?.length || 0}\nBookings: ${data.bookings?.length || 0}`);
+                
+                loadSalesReports();
+            } catch (err) {
+                console.error('Pull error:', err);
+                alert('Pull failed: ' + err.message);
+            }
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+        
+        async function fetchSalesFromBackend() {
+            try {
+                const response = await fetch('/api/sales?limit=100');
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                if (data.sales && data.sales.length > 0) {
+                    // Merge with local
+                    const local = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
+                    const merged = [...local];
+                    
+                    data.sales.forEach(sale => {
+                        if (!merged.find(t => t.id === sale.id)) {
+                            merged.push({
+                                id: sale.id,
+                                date: sale.date,
+                                time: sale.time,
+                                customer: sale.customer,
+                                employee: sale.employee,
+                                method: sale.method,
+                                amount: sale.amount,
+                                itemDetails: sale.items || []
+                            });
+                        }
+                    });
+                    
+                    localStorage.setItem('gc_transactions', JSON.stringify(merged));
+                    loadSalesReports();
+                }
+            } catch (err) {
+                console.error('Failed to fetch sales from backend:', err);
+            }
+        }
+        
+        // Fetch sales from backend on reports page load
+        const originalShowSection = showSection;
+        showSection = function(section) {
+            originalShowSection(section);
+            if (section === 'reports') {
+                fetchSalesFromBackend();
+            }
+        };
+        
+        init();
