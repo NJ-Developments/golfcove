@@ -1275,10 +1275,14 @@
                         }
                         
                         // Also check metadata for membership tier (Stripe stores as 'tier' not 'memberType')
+                        let isLeague = false;
                         if (!isMember && (c.metadata?.tier || c.metadata?.memberType)) {
                             const tier = (c.metadata?.tier || c.metadata?.memberType || '').toLowerCase();
-                            // Only mark as member for actual membership tiers (not league-player which is just league access)
-                            if (tier && tier !== 'league-player' && tier !== 'league-team') {
+                            // Mark league players/teams as league (not full members but tracked)
+                            if (tier === 'league-player' || tier === 'league-team') {
+                                isLeague = true;
+                                memberType = tier;
+                            } else if (tier) {
                                 isMember = true;
                                 memberType = tier;
                                 memberExpires = c.metadata.memberExpires || null;
@@ -1293,6 +1297,7 @@
                             email: c.email || '',
                             phone: c.phone || '',
                             isMember,
+                            isLeague,
                             memberType,
                             memberExpires,
                             createdAt: new Date(c.created * 1000).toISOString(),
@@ -1305,7 +1310,8 @@
                     customersLastSync = new Date();
                     
                     const memberCount = stripeCustomersCache.filter(c => c.isMember).length;
-                    console.log(`[CustomerSync] Loaded ${stripeCustomersCache.length} customers (${memberCount} active members)`);
+                    const leagueCount = stripeCustomersCache.filter(c => c.isLeague).length;
+                    console.log(`[CustomerSync] Loaded ${stripeCustomersCache.length} customers (${memberCount} members, ${leagueCount} league)`);
                     showToast(`Synced ${stripeCustomersCache.length} customers`, 'success');
                     
                     // Refresh UI components
@@ -4625,21 +4631,6 @@
             }).join('');
             bookingAutocomplete.style.display = 'block';
         });
-                            <div style="font-weight:600;color:#333;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                ${c.firstName} ${c.lastName}
-                                ${isMember ? `<span style="background:${tierBg};color:#fff;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:700;">${tierName}</span>` : ''}
-                            </div>
-                            <div style="font-size:11px;color:#666;display:flex;gap:8px;">
-                                <span>${contactInfo}</span>
-                                ${visitInfo ? `<span style="color:#999;">• ${visitInfo}</span>` : ''}
-                            </div>
-                        </div>
-                        ${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;font-size:16px;"></i>' : ''}
-                    </div>
-                `;
-            }).join('');
-            bookingAutocomplete.style.display = 'block';
-        });
         
         bookingCustomerInput.addEventListener('blur', function() {
             setTimeout(() => { bookingAutocomplete.style.display = 'none'; }, 250);
@@ -6932,7 +6923,10 @@
                 const color = getMemberTierColor(customer.memberType);
                 const isVIP = customer.memberType?.includes('eagle') || customer.memberType?.includes('birdie');
                 
-                badge.style.background = `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`;\n                badge.style.display = 'block';\n                \n                document.getElementById('bookingMemberText').innerHTML = `${isVIP ? '<i class=\"fas fa-crown\" style=\"color:#f1c40f;margin-right:5px;\"></i>' : '<i class=\"fas fa-star\" style=\"margin-right:5px;\"></i>'}${tierName} Member`;
+                badge.style.background = `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`;
+                badge.style.display = 'block';
+                
+                document.getElementById('bookingMemberText').innerHTML = `${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;margin-right:5px;"></i>' : '<i class="fas fa-star" style="margin-right:5px;"></i>'}${tierName} Member`;
                 document.getElementById('bookingMemberDiscount').textContent = `${discount}% OFF`;
                 document.getElementById('bookingMemberBenefits').textContent = isVIP ? 'Priority booking • Unlimited play • Premium benefits' : 'Member discount applied';
                 
