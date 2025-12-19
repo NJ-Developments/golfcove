@@ -25,3 +25,41 @@
 [debug] [2025-12-19T10:40:04.054Z] Checked if tokens are valid: true, expires at: 1766141762199
 [debug] [2025-12-19T10:40:04.055Z] Checked if tokens are valid: true, expires at: 1766141762199
 [debug] [2025-12-19T10:40:04.055Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/golfcove [none]
+[debug] [2025-12-19T10:40:04.308Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/golfcove 200
+[debug] [2025-12-19T10:40:04.308Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/golfcove {"projectId":"golfcove","projectNumber":"284762891644","displayName":"GolfCove","name":"projects/golfcove","resources":{"hostingSite":"golfcove","realtimeDatabaseInstance":"golfcove-default-rtdb"},"state":"ACTIVE","etag":"1_734dba61-4175-4a1b-83e2-2c888fcc201b"}
+[info] 
+[info] === Deploying to 'golfcove'...
+[info] 
+[info] i  deploying firestore, functions, hosting 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2025-12-19T10:40:04.314Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:04.314Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:04.314Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/golfcove/databases/(default) [none]
+[debug] [2025-12-19T10:40:04.662Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/golfcove/databases/(default) 200
+[debug] [2025-12-19T10:40:04.662Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/golfcove/databases/(default) {"name":"projects/golfcove/databases/(default)","uid":"562986e6-d701-47ff-bf95-29604f3b8695","createTime":"2025-12-09T19:00:23.372942Z","updateTime":"2025-12-09T19:00:23.372942Z","locationId":"nam5","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2025-12-19T09:40:04.633168Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"s","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IKmfopq7yZEDMJ2E1ZC3yJED"}
+[info] i  cloud.firestore: checking firebase-security-rules.json for compilation errors... 
+[debug] [2025-12-19T10:40:04.664Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:04.664Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:04.664Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/golfcove:test [none]
+[debug] [2025-12-19T10:40:04.664Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/golfcove:test [omitted]
+[debug] [2025-12-19T10:40:04.955Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/golfcove:test 200
+[debug] [2025-12-19T10:40:04.955Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/golfcove:test {}
+[info] +  cloud.firestore: rules file firebase-security-rules.json compiled successfully 
+[debug] [2025-12-19T10:40:04.957Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:04.957Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:04.957Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/golfcove [none]
+[debug] [2025-12-19T10:40:05.065Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/golfcove 200
+[debug] [2025-12-19T10:40:05.065Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/golfcove {"projectNumber":"284762891644","projectId":"golfcove","lifecycleState":"ACTIVE","name":"GolfCove","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-12-02T13:46:16.653058Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2025-12-19T10:40:05.070Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:05.070Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:05.070Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/golfcove/adminSdkConfig [none]
+[debug] [2025-12-19T10:40:05.340Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/golfcove/adminSdkConfig 200
+[debug] [2025-12-19T10:40:05.340Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/golfcove/adminSdkConfig {"projectId":"golfcove","databaseURL":"https://golfcove-default-rtdb.firebaseio.com","storageBucket":"golfcove.firebasestorage.app"}
+[debug] [2025-12-19T10:40:05.341Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:05.342Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:05.342Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/golfcove/configs [none]
