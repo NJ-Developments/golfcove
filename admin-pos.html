@@ -2345,8 +2345,9 @@
             }
         }
         
-        // Customer database
-        let customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+        // Customer database - now uses stripeCustomersCache (synced from Stripe on page load)
+        // Legacy 'customers' reference kept for backward compatibility, points to Stripe cache
+        const customers = stripeCustomersCache;
         
         // Helper to get full name from customer object (handles both old and new formats)
         function getCustomerFullName(c) {
@@ -2358,58 +2359,74 @@
         
         function saveCustomer(name, phone, email) {
             if (!name) return;
+            
             // Split name into firstName/lastName for consistency
             const nameParts = name.trim().split(/\s+/);
             const firstName = nameParts[0] || '';
             const lastName = nameParts.slice(1).join(' ') || '';
             
-            const existing = customers.find(c => {
-                const fullName = getCustomerFullName(c).toLowerCase();
+            // Check if customer already exists in Stripe cache
+            const existing = stripeCustomersCache.find(c => {
+                const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
                 return fullName === name.toLowerCase();
             });
             
             if (existing) {
-                // Migrate old format to new format if needed
-                if (existing.name && !existing.firstName) {
-                    const parts = existing.name.trim().split(/\s+/);
-                    existing.firstName = parts[0] || '';
-                    existing.lastName = parts.slice(1).join(' ') || '';
-                    delete existing.name;
-                }
+                // Customer exists - just update cache if needed
                 if (phone) existing.phone = phone;
                 if (email) existing.email = email;
+                console.log('Customer already exists in system:', name);
             } else {
-                customers.push({
-                    id: Date.now(),
-                    firstName: firstName,
-                    lastName: lastName,
-                    phone: phone || '',
-                    email: email || '',
-                    isMember: false,
-                    memberType: null,
-                    priceClass: 'Regular',
-                    visitCount: 0,
-                    totalSpent: 0,
-                    createdAt: new Date().toISOString()
-                });
+                // Create customer in Stripe via backend
+                if (email) {
+                    fetch(`${FUNCTIONS_URL}/createStripeCustomer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, phone })
+                    }).then(response => response.json())
+                      .then(data => {
+                        if (data.customer) {
+                            // Add to local cache
+                            stripeCustomersCache.push({
+                                id: data.customer.id,
+                                stripeId: data.customer.id,
+                                firstName,
+                                lastName,
+                                email: email || '',
+                                phone: phone || '',
+                                isMember: false,
+                                memberType: null,
+                                createdAt: new Date().toISOString(),
+                                source: 'stripe'
+                            });
+                            console.log('Created customer in Stripe:', data.customer.id);
+                        }
+                    }).catch(err => console.error('Failed to create Stripe customer:', err));
+                } else {
+                    // No email - store locally as walk-in (won't sync to Stripe)
+                    console.log('Walk-in customer (no email, not synced to Stripe):', name);
+                }
             }
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
         }
         
         // Update customer stats after a transaction
+        // Note: Stats are tracked in transactions; Stripe metadata should be updated via backend
         function updateCustomerStats(customerName, amount) {
             if (!customerName || customerName === 'Walk-In' || customerName === 'Walk-in') return;
             
-            const customer = customers.find(c => {
-                const fullName = getCustomerFullName(c).toLowerCase();
+            // Find customer in Stripe cache
+            const customer = stripeCustomersCache.find(c => {
+                const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
                 return fullName === customerName.toLowerCase();
             });
             
             if (customer) {
+                // Update local cache for display purposes
                 customer.totalSpent = (customer.totalSpent || 0) + amount;
                 customer.visitCount = (customer.visitCount || 0) + 1;
                 customer.lastVisit = new Date().toISOString();
-                localStorage.setItem('gc_customers', JSON.stringify(customers));
+                // Note: Actual stats are derived from transactions, not stored on customer
+                console.log(`Updated stats for ${customerName}: +$${amount.toFixed(2)}`);
             }
         }
 
@@ -4643,87 +4660,54 @@
         });
         
         // Create quick customer from booking modal
-        function createQuickCustomerFromBooking(searchVal) {
+        async function createQuickCustomerFromBooking(searchVal) {
             // Try to parse as name
             const parts = searchVal.trim().split(' ');
             const firstName = parts[0] || 'Guest';
             const lastName = parts.slice(1).join(' ') || '';
+            const fullName = `${firstName} ${lastName}`.trim();
             
-            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const newCustomer = {
-                id: Date.now(),
-                firstName: firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase(),
-                lastName: lastName ? lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase() : '',
-                email: '',
-                phone: '',
-                isMember: false,
-                memberType: null,
-                visitCount: 0,
-                totalSpent: 0,
-                createdAt: new Date().toISOString(),
-                source: 'booking'
-            };
+            // Generate a placeholder email for Stripe (required)
+            const placeholderEmail = `${firstName.toLowerCase()}.${Date.now()}@booking.golfcove.local`;
             
-            allCustomers.push(newCustomer);
-            localStorage.setItem('gc_customers', JSON.stringify(allCustomers));
-            
-            // Select the new customer
-            selectBookingCustomerById(newCustomer.id);
-            showToast(`Created new customer: ${newCustomer.firstName} ${newCustomer.lastName}`, 'success');
-        }
-        
-        let selectedBookingCustomerTier = null;
-        // Note: selectedBookingMemberType is declared earlier in the file (line ~2717)
-        
-        // Legacy function for autocomplete selections by name
-        // DEPRECATED: Use selectBookingCustomerById when possible
-        function selectBookingCustomerByName(name, isMember, tierType) {
-            bookingCustomerInput.value = name;
-            bookingAutocomplete.style.display = 'none';
-            selectedBookingCustomerTier = tierType;
-            // IMPORTANT: Also set selectedBookingMemberType for pricing consistency
-            selectedBookingMemberType = tierType;
-            
-            if (isMember) {
-                const isVIP = tierType && (tierType.includes('eagle') || tierType.includes('birdie'));
-                const tierDisplay = {
-                    'eagle': 'Eagle Member',
-                    'family_eagle': 'Eagle Family Member',
-                    'birdie': 'Birdie Member',
-                    'family_birdie': 'Birdie Family Member',
-                    'par': 'Par Member',
-                    'family_par': 'Par Family Member'
-                };
-                const displayName = tierDisplay[tierType] || 'Member';
+            try {
+                const response = await fetch(`${FUNCTIONS_URL}/createStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        name: fullName, 
+                        email: placeholderEmail,
+                        metadata: { source: 'quick-booking' }
+                    })
+                });
                 
-                if (isVIP) {
-                    showToast(`⭐ VIP ${displayName}: ${name} - Priority booking!`, 'success');
+                const data = await response.json();
+                
+                if (data.customer) {
+                    // Add to local cache
+                    const newCustomer = {
+                        id: data.customer.id,
+                        stripeId: data.customer.id,
+                        firstName: firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase(),
+                        lastName: lastName ? lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase() : '',
+                        email: placeholderEmail,
+                        phone: '',
+                        isMember: false,
+                        memberType: null,
+                        createdAt: new Date().toISOString(),
+                        source: 'stripe'
+                    };
+                    stripeCustomersCache.push(newCustomer);
+                    
+                    // Select the new customer
+                    selectBookingCustomerById(data.customer.id);
+                    showToast(`Created new customer: ${fullName}`, 'success');
                 } else {
-                    showToast(`${displayName} selected: ${name}`, 'success');
+                    throw new Error(data.error || 'Failed to create customer');
                 }
-                
-                // Show member badge
-                document.getElementById('bookingMemberBadge').style.display = 'block';
-                document.getElementById('bookingMemberText').textContent = displayName;
-                const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%' };
-                document.getElementById('bookingMemberDiscount').textContent = (discounts[tierType] || '10%') + ' OFF';
-            } else {
-                selectedBookingMemberType = null;
-                document.getElementById('bookingMemberBadge').style.display = 'none';
-            }
-            
-            updateBookingPrice();
-        }
-        
-        // Wrapper function for backward compatibility - routes to ID-based or name-based
-        function selectBookingCustomer(firstArg, isMember, tierType) {
-            // Check if first argument is a customer ID (number) or name (string with spaces)
-            if (typeof firstArg === 'number' || (typeof firstArg === 'string' && !firstArg.includes(' ') && !isNaN(parseInt(firstArg)))) {
-                // It's an ID - use the ID-based selector (defined later in the file)
-                selectBookingCustomerById(parseInt(firstArg));
-            } else {
-                // It's a name - use the name-based selector
-                selectBookingCustomerByName(firstArg, isMember, tierType);
+            } catch (error) {
+                console.error('Failed to create customer:', error);
+                showToast('Could not create customer - try again', 'error');
             }
         }
 
