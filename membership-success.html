@@ -1131,9 +1131,10 @@
                     document.getElementById('registrationForm').style.display = 'block';
                     document.getElementById('player2Section').style.display = 'block';
                     document.getElementById('player2Name').required = true;
-                    // Hide buttons until team is created
+                    // Hide all action buttons until team is created
                     document.getElementById('bookBtn').style.display = 'none';
                     document.getElementById('returnHomeBtn').style.display = 'none';
+                    document.getElementById('createTeamBtn').style.display = 'none';
                 } else {
                     // League Player ($400): Show join team section
                     console.log('Showing join team section for League Player');
