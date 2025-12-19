@@ -1007,7 +1007,7 @@ exports.createGiftCardCheckout = functions.https.onRequest((req, res) => {
 
 /**
  * Create checkout session for membership (supports subscriptions and one-time)
- * Creates a Stripe Customer first to ensure customer data is saved regardless of payment method
+ * Stripe Checkout collects customer info - we just create the session
  */
 exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
@@ -1018,56 +1018,33 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
         stripePriceId // Optional: use Stripe Price ID directly
       } = req.body;
 
-      // Create or find existing Stripe Customer to ensure they're always saved
-      let customer;
-      const existingCustomers = await stripe.customers.list({
-        email: customerEmail,
-        limit: 1
-      });
-
-      if (existingCustomers.data.length > 0) {
-        // Update existing customer with latest info
-        customer = await stripe.customers.update(existingCustomers.data[0].id, {
-          name: customerName,
-          phone: customerPhone,
-          metadata: {
-            source: 'membership_signup',
-            tier: tier,
-            updatedAt: new Date().toISOString()
-          }
-        });
-      } else {
-        // Create new customer
-        customer = await stripe.customers.create({
-          email: customerEmail,
-          name: customerName,
-          phone: customerPhone,
-          metadata: {
-            source: 'membership_signup',
-            tier: tier,
-            createdAt: new Date().toISOString()
-          }
-        });
-      }
-
       let sessionConfig;
+      
+      // Base config - let Stripe Checkout collect customer info
+      const baseConfig = {
+        payment_method_types: CHECKOUT_PAYMENT_METHODS,
+        billing_address_collection: 'required',
+        phone_number_collection: { enabled: true },
+      };
+
+      // If customer email provided, pre-fill it; otherwise Stripe collects it
+      if (customerEmail) {
+        baseConfig.customer_email = customerEmail;
+      }
 
       // If a Stripe Price ID is provided, use it directly
       if (stripePriceId) {
         const isSubscription = billingCycle === 'monthly';
         sessionConfig = {
-          payment_method_types: CHECKOUT_PAYMENT_METHODS,
+          ...baseConfig,
           mode: isSubscription ? 'subscription' : 'payment',
-          customer: customer.id,
           line_items: [{
             price: stripePriceId,
             quantity: 1
           }],
           metadata: {
             type: tier?.includes('league') ? 'league' : 'membership',
-            tier,
-            customerName, 
-            customerPhone
+            tier
           },
           success_url: successUrl.includes('?') 
             ? `${successUrl}&session_id={CHECKOUT_SESSION_ID}`
@@ -1093,9 +1070,8 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
         const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
 
         sessionConfig = {
-          payment_method_types: CHECKOUT_PAYMENT_METHODS,
+          ...baseConfig,
           mode: isSeasonal || billingCycle === 'annual' ? 'payment' : 'subscription',
-          customer: customer.id,
           line_items: [{
             price_data: {
               currency: 'usd',
@@ -1114,7 +1090,6 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
             type: isSeasonal ? 'league' : 'membership',
             tier,
             isFamily: String(isFamily),
-            customerName, customerPhone,
             billingCycle: isSeasonal ? 'seasonal' : billingCycle
           },
           success_url: successUrl.includes('?') 
@@ -1125,7 +1100,7 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
 
         if (billingCycle === 'monthly' && !isSeasonal) {
           sessionConfig.subscription_data = {
-            metadata: { tier, isFamily: String(isFamily), customerName }
+            metadata: { tier, isFamily: String(isFamily) }
           };
         }
       }
@@ -1845,6 +1820,172 @@ exports.syncCustomers = functions.https.onRequest((req, res) => {
       res.json({ success: true, count: customers.length });
     } catch (error) {
       console.error('Sync customers error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Get customers from Stripe (the source of truth)
+ * Returns all Stripe customers with their subscription/payment info
+ */
+exports.getStripeCustomers = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const { limit = 100, starting_after, email } = req.query;
+      
+      const params = {
+        limit: Math.min(parseInt(limit) || 100, 100)
+      };
+      
+      if (starting_after) {
+        params.starting_after = starting_after;
+      }
+      
+      if (email) {
+        params.email = email;
+      }
+      
+      const customers = await stripe.customers.list(params);
+      
+      // Format customers for the frontend
+      const formattedCustomers = customers.data.map(c => ({
+        id: c.id,
+        email: c.email,
+        name: c.name,
+        phone: c.phone,
+        created: c.created,
+        metadata: c.metadata,
+        // Include subscription status if available
+        subscriptions: c.subscriptions?.data?.map(s => ({
+          id: s.id,
+          status: s.status,
+          plan: s.plan?.nickname || s.items?.data?.[0]?.price?.nickname,
+          currentPeriodEnd: s.current_period_end
+        })) || []
+      }));
+      
+      res.json({ 
+        customers: formattedCustomers, 
+        hasMore: customers.has_more,
+        count: formattedCustomers.length
+      });
+    } catch (error) {
+      console.error('Get Stripe customers error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Create a new customer in Stripe
+ */
+exports.createStripeCustomer = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
+    try {
+      const { name, email, phone, metadata } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+      
+      // Check if customer already exists
+      const existing = await stripe.customers.list({ email, limit: 1 });
+      if (existing.data.length > 0) {
+        return res.status(400).json({ error: 'Customer with this email already exists' });
+      }
+      
+      const customer = await stripe.customers.create({
+        name,
+        email,
+        phone,
+        metadata: {
+          ...metadata,
+          createdAt: new Date().toISOString()
+        }
+      });
+      
+      res.json({ 
+        success: true, 
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone
+        }
+      });
+    } catch (error) {
+      console.error('Create Stripe customer error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Update a customer in Stripe
+ */
+exports.updateStripeCustomer = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
+    try {
+      const { customerId, name, email, phone, metadata } = req.body;
+      
+      if (!customerId) {
+        return res.status(400).json({ error: 'Customer ID is required' });
+      }
+      
+      const updateData = {};
+      if (name !== undefined) updateData.name = name;
+      if (email !== undefined) updateData.email = email;
+      if (phone !== undefined) updateData.phone = phone;
+      if (metadata) updateData.metadata = metadata;
+      
+      const customer = await stripe.customers.update(customerId, updateData);
+      
+      res.json({ 
+        success: true, 
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone
+        }
+      });
+    } catch (error) {
+      console.error('Update Stripe customer error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+/**
+ * Delete a customer from Stripe
+ */
+exports.deleteStripeCustomer = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
+    try {
+      const { customerId } = req.body;
+      
+      if (!customerId) {
+        return res.status(400).json({ error: 'Customer ID is required' });
+      }
+      
+      await stripe.customers.del(customerId);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete Stripe customer error:', error);
       res.status(500).json({ error: error.message });
     }
   });

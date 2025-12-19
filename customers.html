@@ -498,47 +498,83 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        // ============ CONSTANTS ============
+        const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
+        
         // ============ STATE ============
-        let customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+        let customers = [];
         let selectedCustomerId = null;
         let currentFilter = 'all';
+        let isLoading = false;
         
         // ============ INIT ============
-        function init() {
-            // Migrate old data
-            migrateCustomers();
-            
-            // Seed sample data if empty
-            if (customers.length === 0) seedSampleData();
-            
-            renderCustomers();
-            updateCounts();
+        async function init() {
             updateClock();
             setInterval(updateClock, 1000);
+            
+            // Load customers from Stripe
+            await loadCustomersFromStripe();
         }
         
-        function migrateCustomers() {
-            let changed = false;
-            customers = customers.map(c => {
-                if (c.name && !c.firstName) {
-                    changed = true;
-                    const parts = c.name.trim().split(/\s+/);
-                    return { ...c, firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '', name: undefined };
+        async function loadCustomersFromStripe() {
+            if (isLoading) return;
+            isLoading = true;
+            
+            const grid = document.getElementById('customerGrid');
+            grid.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top: 12px;">Loading customers from Stripe...</p></div>';
+            
+            try {
+                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers?limit=100`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
                 }
-                return c;
-            });
-            if (changed) localStorage.setItem('gc_customers', JSON.stringify(customers));
+                
+                // Transform Stripe customers to our format
+                customers = data.customers.map(c => {
+                    const nameParts = (c.name || '').split(' ');
+                    const firstName = nameParts[0] || '';
+                    const lastName = nameParts.slice(1).join(' ') || '';
+                    
+                    // Check for active subscription
+                    const activeSub = c.subscriptions?.find(s => s.status === 'active');
+                    const memberType = c.metadata?.tier || (activeSub ? getMemberTypeFromPlan(activeSub.plan) : null);
+                    
+                    return {
+                        id: c.id,
+                        stripeId: c.id,
+                        firstName,
+                        lastName,
+                        email: c.email || '',
+                        phone: c.phone || '',
+                        isMember: !!activeSub,
+                        memberType: memberType,
+                        memberExpires: activeSub ? new Date(activeSub.currentPeriodEnd * 1000).toISOString().split('T')[0] : null,
+                        memberSince: c.created ? new Date(c.created * 1000).toISOString().split('T')[0] : null,
+                        subscriptions: c.subscriptions || []
+                    };
+                });
+                
+                renderCustomers();
+                updateCounts();
+                showToast(`Loaded ${customers.length} customers from Stripe`, 'success');
+                
+            } catch (error) {
+                console.error('Failed to load customers:', error);
+                grid.innerHTML = `<div style="text-align: center; padding: 40px; color: #e74c3c;"><i class="fas fa-exclamation-triangle fa-2x"></i><p style="margin-top: 12px;">Failed to load customers: ${error.message}</p><button class="btn btn-primary" onclick="loadCustomersFromStripe()" style="margin-top: 12px;"><i class="fas fa-sync"></i> Retry</button></div>`;
+            }
+            
+            isLoading = false;
         }
         
-        function seedSampleData() {
-            customers = [
-                { id: 1, firstName: 'Alex', lastName: 'Qi', email: 'alex@email.com', phone: '(203) 543-7199', isMember: true, memberType: 'eagle', memberSince: '2025-01-15', memberExpires: '2026-01-15' },
-                { id: 2, firstName: 'Paul', lastName: 'Cicarella', email: 'paul@email.com', phone: '(203) 555-1234', isMember: true, memberType: 'birdie', memberSince: '2024-06-01', memberExpires: '2025-12-20' },
-                { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike@email.com', phone: '(860) 555-5678', isMember: false },
-                { id: 4, firstName: 'Sarah', lastName: 'Wilson', email: 'sarah@email.com', phone: '', isMember: true, memberType: 'par', memberSince: '2025-03-01', memberExpires: '2026-03-01' },
-                { id: 5, firstName: 'Grant', lastName: 'Schoenfeldt', email: '', phone: '(203) 444-9999', isMember: true, memberType: 'birdie', memberSince: '2025-02-01', memberExpires: '2025-12-25' },
-            ];
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
+        function getMemberTypeFromPlan(planName) {
+            if (!planName) return null;
+            const lower = planName.toLowerCase();
+            if (lower.includes('eagle')) return 'eagle';
+            if (lower.includes('birdie')) return 'birdie';
+            if (lower.includes('par')) return 'par';
+            return null;
         }
         
         // ============ RENDER ============
@@ -729,26 +765,49 @@
         }
         
         // ============ ACTIONS ============
-        function createCustomer(e) {
+        async function createCustomer(e) {
             e.preventDefault();
-            const newC = {
-                id: Date.now(),
-                firstName: document.getElementById('newFirstName').value.trim(),
-                lastName: document.getElementById('newLastName').value.trim(),
-                email: document.getElementById('newEmail').value.trim(),
-                phone: document.getElementById('newPhone').value.trim(),
-                isMember: false,
-                createdAt: new Date().toISOString()
-            };
             
-            customers.push(newC);
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
-            hideModal('newCustomer');
-            e.target.reset();
-            renderCustomers();
-            updateCounts();
-            selectCustomer(newC.id);
-            showToast(`${newC.firstName} ${newC.lastName} added!`, 'success');
+            const firstName = document.getElementById('newFirstName').value.trim();
+            const lastName = document.getElementById('newLastName').value.trim();
+            const email = document.getElementById('newEmail').value.trim();
+            const phone = document.getElementById('newPhone').value.trim();
+            
+            if (!email) {
+                showToast('Email is required to create a customer in Stripe', 'error');
+                return;
+            }
+            
+            try {
+                // Create customer in Stripe
+                const response = await fetch(`${FUNCTIONS_URL}/createStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: `${firstName} ${lastName}`.trim(),
+                        email,
+                        phone,
+                        metadata: { source: 'admin_panel' }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                hideModal('newCustomer');
+                e.target.reset();
+                showToast(`${firstName} ${lastName} added to Stripe!`, 'success');
+                
+                // Reload customers from Stripe
+                await loadCustomersFromStripe();
+                
+            } catch (error) {
+                console.error('Create customer error:', error);
+                showToast('Failed to create customer: ' + error.message, 'error');
+            }
         }
         
         function addMembership(e) {
@@ -793,45 +852,84 @@
             showModal('editCustomer');
         }
         
-        function saveCustomer(e) {
+        async function saveCustomer(e) {
             e.preventDefault();
             if (!selectedCustomerId) return;
             const c = customers.find(x => x.id === selectedCustomerId);
             if (!c) return;
             
-            c.firstName = document.getElementById('editFirstName').value.trim();
-            c.lastName = document.getElementById('editLastName').value.trim();
-            c.email = document.getElementById('editEmail').value.trim();
-            c.phone = document.getElementById('editPhone').value.trim();
-            c.address = document.getElementById('editAddress').value.trim();
-            c.city = document.getElementById('editCity').value.trim();
-            c.state = document.getElementById('editState').value.trim();
-            c.zip = document.getElementById('editZip').value.trim();
+            const firstName = document.getElementById('editFirstName').value.trim();
+            const lastName = document.getElementById('editLastName').value.trim();
+            const email = document.getElementById('editEmail').value.trim();
+            const phone = document.getElementById('editPhone').value.trim();
             
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
-            hideModal('editCustomer');
-            selectCustomer(selectedCustomerId);
-            renderCustomers();
-            showToast('Customer updated!', 'success');
+            try {
+                // Update in Stripe
+                const response = await fetch(`${FUNCTIONS_URL}/updateStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customerId: c.stripeId || c.id,
+                        name: `${firstName} ${lastName}`.trim(),
+                        email,
+                        phone
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                hideModal('editCustomer');
+                showToast('Customer updated in Stripe!', 'success');
+                
+                // Reload from Stripe
+                await loadCustomersFromStripe();
+                selectCustomer(selectedCustomerId);
+                
+            } catch (error) {
+                console.error('Update customer error:', error);
+                showToast('Failed to update: ' + error.message, 'error');
+            }
         }
         
         function saveNotes() {
+            // Notes are stored locally for now (could add to Stripe metadata)
             if (!selectedCustomerId) return;
             const c = customers.find(x => x.id === selectedCustomerId);
             if (!c) return;
             c.notes = document.getElementById('detailNotes').value;
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
+            // Notes stored in memory only - would need Stripe metadata update for persistence
+            showToast('Notes saved locally', 'success');
         }
         
-        function deleteCustomer() {
+        async function deleteCustomer() {
             if (!selectedCustomerId) return;
-            if (!confirm('Delete this customer? This cannot be undone.')) return;
+            if (!confirm('Delete this customer from Stripe? This cannot be undone.')) return;
             
-            customers = customers.filter(c => c.id !== selectedCustomerId);
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
-            closeDetail();
-            updateCounts();
-            showToast('Customer deleted', 'error');
+            const c = customers.find(x => x.id === selectedCustomerId);
+            if (!c) return;
+            
+            try {
+                const response = await fetch(`${FUNCTIONS_URL}/deleteStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerId: c.stripeId || c.id })
+                });
+                
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                
+                closeDetail();
+                showToast('Customer deleted from Stripe', 'success');
+                await loadCustomersFromStripe();
+                
+            } catch (error) {
+                console.error('Delete customer error:', error);
+                showToast('Failed to delete: ' + error.message, 'error');
+            }
         }
         
         function quickAction(action, id) {

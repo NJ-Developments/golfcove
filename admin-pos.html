@@ -700,6 +700,37 @@
             
             <div class="pos-items-mini" id="salesItems"></div>
 
+            <!-- Cart Member Badge (shows when member is attached to transaction) -->
+            <div id="cartMemberBadge" style="display:none;margin:10px;padding:12px 15px;border-radius:10px;background:linear-gradient(135deg,#27ae60,#1e8449);color:#fff;box-shadow:0 3px 12px rgba(39,174,96,0.4);">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-crown" id="cartMemberIcon" style="font-size:20px;color:#f1c40f;"></i>
+                        <div>
+                            <div id="cartMemberName" style="font-weight:700;font-size:14px;">Member Name</div>
+                            <div id="cartMemberTier" style="font-size:11px;opacity:0.9;">Par Member</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div id="cartMemberDiscount" style="font-size:20px;font-weight:700;">10%</div>
+                        <div style="font-size:10px;opacity:0.8;text-transform:uppercase;">Discount</div>
+                    </div>
+                </div>
+                <button onclick="clearCartMember()" style="position:absolute;top:5px;right:5px;background:rgba(255,255,255,0.2);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;" title="Remove member">×</button>
+            </div>
+            
+            <!-- Quick Member Select for Bar -->
+            <div id="cartMemberSelect" style="margin:0 10px 10px;padding:10px;background:#f8f9fa;border-radius:8px;display:block;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <label style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">
+                        <i class="fas fa-crown" style="color:#f1c40f;margin-right:4px;"></i> Attach Member
+                    </label>
+                    <button onclick="syncCustomersFromStripe()" style="font-size:10px;padding:3px 8px;background:#4a90a4;color:#fff;border:none;border-radius:4px;cursor:pointer;" title="Refresh from Stripe">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div id="cartMemberList" style="display:flex;flex-wrap:wrap;gap:5px;max-height:60px;overflow-y:auto;"></div>
+            </div>
+
             <div class="cart-items" id="cartItems">
                 <div class="cart-empty"><i class="fas fa-shopping-cart" style="font-size:40px;margin-bottom:10px;"></i><p>No items in cart</p></div>
             </div>
@@ -1199,6 +1230,134 @@
         let transactions = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
         let openTabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
         
+        // ============ STRIPE CUSTOMER SYNC ============
+        const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
+        let stripeCustomersCache = []; // In-memory cache of Stripe customers
+        let customersLoading = false;
+        let customersLastSync = null;
+        
+        // Sync customers from Stripe on load
+        async function syncCustomersFromStripe() {
+            if (customersLoading) return;
+            customersLoading = true;
+            
+            try {
+                console.log('[CustomerSync] Fetching customers from Stripe...');
+                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers?limit=100`);
+                const data = await response.json();
+                
+                if (data.customers) {
+                    // Transform Stripe customers to our format with membership info
+                    stripeCustomersCache = data.customers.map(c => {
+                        const nameParts = (c.name || '').split(' ');
+                        const firstName = nameParts[0] || '';
+                        const lastName = nameParts.slice(1).join(' ') || '';
+                        
+                        // Check subscription for membership
+                        const activeSub = c.subscriptions?.find(s => s.status === 'active');
+                        let memberType = null;
+                        let memberExpires = null;
+                        let isMember = false;
+                        
+                        if (activeSub) {
+                            isMember = true;
+                            memberExpires = new Date(activeSub.currentPeriodEnd * 1000).toISOString();
+                            // Determine tier from plan name
+                            const plan = (activeSub.plan || '').toLowerCase();
+                            if (plan.includes('eagle')) memberType = plan.includes('family') ? 'family_eagle' : 'eagle';
+                            else if (plan.includes('birdie')) memberType = plan.includes('family') ? 'family_birdie' : 'birdie';
+                            else if (plan.includes('par')) memberType = plan.includes('family') ? 'family_par' : 'par';
+                            else memberType = 'par'; // Default to Par for unknown plans
+                        }
+                        
+                        return {
+                            id: c.id, // Stripe customer ID (string like cus_xxx)
+                            stripeId: c.id,
+                            firstName,
+                            lastName,
+                            email: c.email || '',
+                            phone: c.phone || '',
+                            isMember,
+                            memberType,
+                            memberExpires,
+                            createdAt: new Date(c.created * 1000).toISOString(),
+                            source: 'stripe'
+                        };
+                    });
+                    
+                    // Also update localStorage as fallback/cache
+                    localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
+                    customersLastSync = new Date();
+                    
+                    const memberCount = stripeCustomersCache.filter(c => c.isMember).length;
+                    console.log(`[CustomerSync] Loaded ${stripeCustomersCache.length} customers (${memberCount} active members)`);
+                    showToast(`Synced ${stripeCustomersCache.length} customers`, 'success');
+                    
+                    // Refresh UI components
+                    loadQuickCustomerSuggestions();
+                    if (typeof loadTabMemberQuickSelect === 'function') loadTabMemberQuickSelect();
+                }
+            } catch (error) {
+                console.error('[CustomerSync] Error:', error);
+                // Fall back to localStorage cache
+                stripeCustomersCache = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            }
+            
+            customersLoading = false;
+        }
+        
+        // Get all customers (from Stripe cache or localStorage fallback)
+        function getAllCustomers() {
+            if (stripeCustomersCache.length > 0) return stripeCustomersCache;
+            return JSON.parse(localStorage.getItem('gc_customers') || '[]');
+        }
+        
+        // Get customer by ID (supports both Stripe string IDs and legacy numeric IDs)
+        function getCustomerById(id) {
+            const customers = getAllCustomers();
+            return customers.find(c => c.id === id || c.id == id || c.stripeId === id);
+        }
+        
+        // Check if customer is an active member
+        function isActiveMember(customer) {
+            if (!customer || !customer.isMember) return false;
+            if (!customer.memberExpires) return false;
+            return new Date(customer.memberExpires) > new Date();
+        }
+        
+        // Get member discount percentage
+        function getMemberDiscount(memberType) {
+            const discounts = {
+                'eagle': 15, 'family_eagle': 15,
+                'birdie': 10, 'family_birdie': 10,
+                'par': 10, 'family_par': 10,
+                'corporate': 20, 'monthly': 10, 'annual': 10
+            };
+            return discounts[memberType] || 10;
+        }
+        
+        // Format member tier display name
+        function getMemberTierName(memberType) {
+            const names = {
+                'eagle': 'Eagle', 'family_eagle': 'Eagle Family',
+                'birdie': 'Birdie', 'family_birdie': 'Birdie Family',
+                'par': 'Par', 'family_par': 'Par Family',
+                'corporate': 'Corporate', 'monthly': 'Monthly', 'annual': 'Annual'
+            };
+            return names[memberType] || 'Member';
+        }
+        
+        // Get tier color
+        function getMemberTierColor(memberType) {
+            const colors = {
+                'eagle': '#9b59b6', 'family_eagle': '#9b59b6',
+                'birdie': '#f39c12', 'family_birdie': '#f39c12',
+                'par': '#27ae60', 'family_par': '#27ae60',
+                'corporate': '#2c3e50'
+            };
+            return colors[memberType] || '#27ae60';
+        }
+        
         // ============ PIN LOCK SYSTEM ============
         let currentPin = '';
         let currentEmployee = null;
@@ -1365,20 +1524,26 @@
             query = query.toLowerCase();
             quickSearchResults = [];
             
-            // Search customers
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            // Search customers from Stripe cache
+            const customers = getAllCustomers();
             customers.forEach(c => {
                 const fullName = getCustomerFullName(c).toLowerCase();
                 const phone = (c.phone || '').toLowerCase();
                 const email = (c.email || '').toLowerCase();
                 if (fullName.includes(query) || phone.includes(query) || email.includes(query)) {
+                    const isMember = isActiveMember(c);
+                    const tierName = isMember ? getMemberTierName(c.memberType) : '';
+                    const discount = isMember ? getMemberDiscount(c.memberType) : 0;
                     quickSearchResults.push({
                         type: 'customer',
-                        icon: c.isMember ? 'fa-crown' : 'fa-user',
+                        icon: isMember ? 'fa-crown' : 'fa-user',
+                        iconColor: isMember ? getMemberTierColor(c.memberType) : '#4a90a4',
                         title: getCustomerFullName(c),
-                        subtitle: c.isMember ? `Member - ${c.memberType?.replace('_', ' ')}` : (c.phone || c.email || 'Customer'),
-                        action: () => { closeQuickSearch(); selectBookingCustomer(c.id); showModal('booking'); },
-                        actionText: 'New Booking'
+                        subtitle: isMember ? `${tierName} Member - ${discount}% discount` : (c.phone || c.email || 'Customer'),
+                        badge: isMember ? { text: `${discount}%`, color: getMemberTierColor(c.memberType) } : null,
+                        action: () => { closeQuickSearch(); selectBookingCustomerById(c.id); showModal('booking'); },
+                        actionText: 'New Booking',
+                        customerId: c.id
                     });
                 }
             });
@@ -3398,24 +3563,19 @@
                     // Reload tabs from TabsSync
                     openTabs = TabsSync.getAllTabs();
                 } else {
-                    // Check if customer is a member
+                    // Check if customer is a member using new helper functions
                     let isMember = false;
                     let memberType = null;
                     let memberExpires = null;
                     let memberDiscount = 0;
                     
                     if (customerId) {
-                        const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-                        const customer = customers.find(c => c.id == customerId);
-                        if (customer && customer.isMember) {
-                            const expDate = new Date(customer.memberExpires);
-                            if (expDate > new Date()) {
-                                isMember = true;
-                                memberType = customer.memberType;
-                                memberExpires = customer.memberExpires;
-                                const discounts = { 'par': 10, 'birdie': 10, 'eagle': 15, 'family_par': 10, 'family_birdie': 10, 'family_eagle': 15, 'corporate': 20, 'monthly': 10, 'annual': 10 };
-                                memberDiscount = discounts[memberType] || 10;
-                            }
+                        const customer = getCustomerById(customerId);
+                        if (customer && isActiveMember(customer)) {
+                            isMember = true;
+                            memberType = customer.memberType;
+                            memberExpires = customer.memberExpires;
+                            memberDiscount = getMemberDiscount(memberType);
                         }
                     }
                     
@@ -3462,7 +3622,7 @@
                 return;
             }
             
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const customers = getAllCustomers();
             const matches = customers.filter(c => {
                 const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
                 return fullName.includes(query.toLowerCase()) || 
@@ -3477,15 +3637,23 @@
             }
             
             resultsDiv.innerHTML = matches.map(c => {
-                const isActive = c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date();
-                const memberBadge = isActive ? `<span style="background:linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);color:#fff;padding:2px 6px;border-radius:8px;font-size:9px;margin-left:5px;"><i class="fas fa-crown" style="color:#f1c40f;margin-right:3px;"></i>${c.memberType?.toUpperCase()}</span>` : '';
+                const isActive = isActiveMember(c);
+                const tierColor = getMemberTierColor(c.memberType);
+                const tierName = getMemberTierName(c.memberType);
+                const discount = getMemberDiscount(c.memberType);
+                const memberBadge = isActive ? 
+                    `<span style="background:linear-gradient(135deg, ${tierColor} 0%, ${tierColor}dd 100%);color:#fff;padding:3px 8px;border-radius:10px;font-size:10px;margin-left:8px;display:inline-flex;align-items:center;gap:3px;">
+                        <i class="fas fa-crown" style="color:#f1c40f;font-size:8px;"></i>
+                        ${tierName.toUpperCase()} 
+                        <span style="background:rgba(255,255,255,0.3);padding:1px 4px;border-radius:6px;font-size:8px;">${discount}%</span>
+                    </span>` : '';
                 return `
-                    <div onclick="selectTabCustomer(${c.id})" style="padding:10px;border-bottom:1px solid #eee;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
+                    <div onclick="selectTabCustomer('${c.id}')" style="padding:12px;border-bottom:1px solid #eee;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='#fff'">
                         <div>
-                            <div style="font-weight:600;">${c.firstName} ${c.lastName}${memberBadge}</div>
-                            <div style="font-size:11px;color:#666;">${c.phone || c.email || ''}</div>
+                            <div style="font-weight:600;display:flex;align-items:center;flex-wrap:wrap;">${c.firstName} ${c.lastName}${memberBadge}</div>
+                            <div style="font-size:11px;color:#666;margin-top:2px;">${c.phone || c.email || ''}</div>
                         </div>
-                        ${isActive ? '<i class="fas fa-star" style="color:#f1c40f;"></i>' : ''}
+                        ${isActive ? '<i class="fas fa-star" style="color:#f1c40f;font-size:16px;"></i>' : '<i class="fas fa-user" style="color:#ccc;"></i>'}
                     </div>
                 `;
             }).join('');
@@ -3493,8 +3661,7 @@
         }
         
         function selectTabCustomer(customerId) {
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const customer = customers.find(c => c.id === customerId);
+            const customer = getCustomerById(customerId);
             if (!customer) return;
             
             document.getElementById('tabCustomer').value = `${customer.firstName} ${customer.lastName}`;
@@ -3502,15 +3669,21 @@
             document.getElementById('tabCustomerResults').style.display = 'none';
             
             // Show member status if applicable
-            const isActive = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > new Date();
             const statusDiv = document.getElementById('tabMemberStatus');
             
-            if (isActive) {
-                const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%', 'corporate': '20%', 'monthly': '10%', 'annual': '10%' };
+            if (isActiveMember(customer)) {
+                const tierName = getMemberTierName(customer.memberType);
+                const discount = getMemberDiscount(customer.memberType);
+                const color = getMemberTierColor(customer.memberType);
+                
                 document.getElementById('tabMemberName').textContent = `${customer.firstName} ${customer.lastName}`;
-                document.getElementById('tabMemberTier').textContent = customer.memberType?.replace('_', ' ').toUpperCase();
-                document.getElementById('tabMemberDiscount').textContent = `${discounts[customer.memberType] || '10%'} Discount Applied!`;
+                document.getElementById('tabMemberTier').textContent = tierName.toUpperCase();
+                document.getElementById('tabMemberTier').style.background = color;
+                document.getElementById('tabMemberDiscount').textContent = `${discount}% Discount Applied!`;
                 statusDiv.style.display = 'block';
+                statusDiv.style.borderColor = color;
+                
+                showToast(`${tierName} Member - ${discount}% bar discount!`, 'success');
             } else {
                 statusDiv.style.display = 'none';
             }
@@ -3520,28 +3693,27 @@
             const container = document.getElementById('tabMemberQuickSelect');
             if (!container) return;
             
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const activeMembers = customers.filter(c => {
-                return c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date();
-            }).slice(0, 6);
+            const customers = getAllCustomers();
+            const activeMembers = customers.filter(c => isActiveMember(c)).slice(0, 8);
             
             if (activeMembers.length === 0) {
-                container.innerHTML = '<span style="font-size:11px;color:#999;">No active members</span>';
+                container.innerHTML = '<span style="font-size:11px;color:#999;">No active members - sync from Stripe</span>';
                 return;
             }
             
-            const tierColors = {
-                'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#f1c40f',
-                'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#f1c40f',
-                'corporate': '#2c3e50', 'monthly': '#27ae60', 'annual': '#27ae60'
-            };
-            
             container.innerHTML = activeMembers.map(c => {
-                const color = tierColors[c.memberType] || '#9b59b6';
+                const color = getMemberTierColor(c.memberType);
+                const tierName = getMemberTierName(c.memberType);
+                const discount = getMemberDiscount(c.memberType);
+                const isVIP = c.memberType?.includes('eagle') || c.memberType?.includes('birdie');
                 return `
-                    <button type="button" onclick="selectTabCustomer(${c.id})" style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;border:none;padding:5px 10px;border-radius:15px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
-                        <i class="fas fa-crown" style="font-size:9px;color:#f1c40f;"></i>
-                        ${c.firstName} ${c.lastName?.charAt(0)}.
+                    <button type="button" onclick="selectTabCustomer('${c.id}')" 
+                        style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;border:none;padding:6px 12px;border-radius:15px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;box-shadow:0 2px 6px ${color}55;transition:all 0.2s;"
+                        onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"
+                        title="${tierName} - ${discount}% discount">
+                        <i class="fas fa-crown" style="font-size:9px;${isVIP ? 'color:#f1c40f;' : ''}"></i>
+                        ${c.firstName} ${c.lastName?.charAt(0) || ''}.
+                        <span style="background:rgba(255,255,255,0.25);padding:1px 5px;border-radius:8px;font-size:9px;">${discount}%</span>
                     </button>
                 `;
             }).join('');
@@ -3809,69 +3981,79 @@
         
         // Populate VIP members and recent customers for quick selection
         function populateBookingCustomerOptions() {
-            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const allCustomers = getAllCustomers();
             const now = new Date();
             
-            // Get active VIP members (Eagle & Birdie)
+            // Get active VIP members (Eagle & Birdie - highest tiers)
             const vipMembers = allCustomers.filter(c => {
-                if (!c.isMember || !c.memberExpires) return false;
-                if (new Date(c.memberExpires) <= now) return false;
+                if (!isActiveMember(c)) return false;
                 return c.memberType && (c.memberType.includes('eagle') || c.memberType.includes('birdie'));
             }).slice(0, 8);
             
-            // Get recent customers (by last visit or creation date)
-            const recentCustomers = [...allCustomers]
-                .sort((a, b) => new Date(b.lastVisit || b.createdAt || 0) - new Date(a.lastVisit || a.createdAt || 0))
-                .filter(c => !vipMembers.find(v => v.id === c.id))
+            // Get all other active members
+            const otherMembers = allCustomers.filter(c => {
+                if (!isActiveMember(c)) return false;
+                return c.memberType && !c.memberType.includes('eagle') && !c.memberType.includes('birdie');
+            }).slice(0, 6);
+            
+            // Get recent non-member customers
+            const recentCustomers = allCustomers
+                .filter(c => !isActiveMember(c))
+                .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
                 .slice(0, 6);
             
             // Render VIP Members
             const vipList = document.getElementById('vipMembersList');
-            if (vipMembers.length > 0) {
-                vipList.innerHTML = vipMembers.map(c => {
-                    const tierColors = {
-                        'eagle': '#9b59b6', 'family_eagle': '#9b59b6',
-                        'birdie': '#f39c12', 'family_birdie': '#f39c12'
-                    };
-                    const color = tierColors[c.memberType] || '#9b59b6';
-                    return `<button type="button" class="quick-customer-btn" style="background:${color};color:#fff;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all 0.2s;"
-                            onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.2)';"
-                            onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none';"
-                            onclick="quickSelectBookingCustomer(${c.id})">
-                        <i class="fas fa-crown" style="font-size:10px;"></i>
-                        ${c.firstName} ${c.lastName[0]}.
-                    </button>`;
-                }).join('');
-                vipList.parentElement.style.display = 'block';
-            } else {
-                vipList.innerHTML = '<span style="font-size:11px;color:#999;">No VIP members yet</span>';
+            if (vipList) {
+                if (vipMembers.length > 0) {
+                    vipList.innerHTML = vipMembers.map(c => {
+                        const color = getMemberTierColor(c.memberType);
+                        const discount = getMemberDiscount(c.memberType);
+                        return `<button type="button" class="quick-customer-btn" 
+                            style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;border:none;padding:6px 14px;border-radius:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.2s;box-shadow:0 2px 8px ${color}55;"
+                            onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 12px ${color}66';"
+                            onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 2px 8px ${color}55';"
+                            onclick="quickSelectBookingCustomer('${c.id}')">
+                            <i class="fas fa-crown" style="font-size:11px;color:#f1c40f;"></i>
+                            <span style="font-weight:600;">${c.firstName} ${c.lastName?.[0] || ''}.</span>
+                            <span style="background:rgba(255,255,255,0.3);padding:2px 6px;border-radius:10px;font-size:9px;">${discount}%</span>
+                        </button>`;
+                    }).join('');
+                    vipList.parentElement.style.display = 'block';
+                } else {
+                    vipList.innerHTML = '<span style="font-size:11px;color:#999;">No VIP members yet</span>';
+                }
             }
             
             // Render Recent Customers
             const recentList = document.getElementById('recentCustomersList');
-            if (recentCustomers.length > 0) {
-                recentList.innerHTML = recentCustomers.map(c => {
-                    const isMember = c.isMember && c.memberExpires && new Date(c.memberExpires) > now;
-                    const bgColor = isMember ? '#27ae60' : '#4a90a4';
-                    return `<button type="button" class="quick-customer-btn" style="background:${bgColor};color:#fff;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;transition:all 0.2s;"
-                            onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.2)';"
-                            onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none';"
-                            onclick="quickSelectBookingCustomer(${c.id})">
-                        ${c.firstName} ${c.lastName[0]}.
-                        ${isMember ? '<i class="fas fa-check-circle" style="font-size:10px;margin-left:2px;"></i>' : ''}
-                    </button>`;
-                }).join('');
-                recentList.parentElement.style.display = 'block';
-            } else {
-                recentList.innerHTML = '<span style="font-size:11px;color:#999;">No recent customers</span>';
+            if (recentList) {
+                // Combine other members and non-members
+                const combined = [...otherMembers, ...recentCustomers].slice(0, 8);
+                if (combined.length > 0) {
+                    recentList.innerHTML = combined.map(c => {
+                        const isMember = isActiveMember(c);
+                        const color = isMember ? getMemberTierColor(c.memberType) : '#4a90a4';
+                        const discount = isMember ? getMemberDiscount(c.memberType) : 0;
+                        return `<button type="button" class="quick-customer-btn" 
+                            style="background:${isMember ? `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)` : '#f8f9fa'};color:${isMember ? '#fff' : '#333'};border:${isMember ? 'none' : '1px solid #ddd'};padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:4px;"
+                            onmouseover="this.style.transform='scale(1.05)';"
+                            onmouseout="this.style.transform='scale(1)';"
+                            onclick="quickSelectBookingCustomer('${c.id}')">
+                            ${c.firstName} ${c.lastName?.[0] || ''}.
+                            ${isMember ? `<i class="fas fa-check-circle" style="font-size:10px;"></i><span style="background:rgba(255,255,255,0.3);padding:1px 5px;border-radius:8px;font-size:9px;">${discount}%</span>` : ''}
+                        </button>`;
+                    }).join('');
+                    recentList.parentElement.style.display = 'block';
+                } else {
+                    recentList.innerHTML = '<span style="font-size:11px;color:#999;">No customers yet</span>';
+                }
             }
         }
         
         // Quick select a customer from the button lists
         function quickSelectBookingCustomer(customerId) {
-            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const customer = allCustomers.find(c => c.id === customerId);
-            
+            const customer = getCustomerById(customerId);
             if (!customer) return;
             
             const name = `${customer.firstName} ${customer.lastName}`;
@@ -3882,55 +4064,53 @@
             if (customer.phone) document.getElementById('bookingPhone').value = customer.phone;
             if (customer.email) document.getElementById('bookingEmail').value = customer.email;
             
-            const now = new Date();
-            const isMember = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > now;
-            
-            if (isMember) {
-                selectBookingCustomer(name, true, customer.memberType);
+            if (isActiveMember(customer)) {
+                const tierName = getMemberTierName(customer.memberType);
+                const discount = getMemberDiscount(customer.memberType);
+                const color = getMemberTierColor(customer.memberType);
+                
+                selectedBookingCustomerTier = customer.memberType;
+                selectedBookingMemberType = customer.memberType;
                 updateBookingMemberBadge(customer);
+                updateBookingPrice();
+                
+                showToast(`${tierName} Member - ${discount}% discount applied!`, 'success');
             } else {
                 selectedBookingCustomerTier = null;
+                selectedBookingMemberType = null;
                 document.getElementById('bookingMemberBadge').style.display = 'none';
             }
             
-            updateBookingPrice();
             showToast(`Selected: ${name}`, 'success');
         }
         
         // Update the member badge in booking modal
         function updateBookingMemberBadge(customer) {
             const badge = document.getElementById('bookingMemberBadge');
-            const now = new Date();
-            const isMember = customer && customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > now;
             
-            if (!isMember) {
+            if (!isActiveMember(customer)) {
                 badge.style.display = 'none';
                 return;
             }
             
-            const tierDisplay = {
-                'eagle': { name: 'Eagle Member', color: 'linear-gradient(135deg,#9b59b6,#8e44ad)', discount: '20%' },
-                'family_eagle': { name: 'Eagle Family', color: 'linear-gradient(135deg,#9b59b6,#8e44ad)', discount: '20%' },
-                'birdie': { name: 'Birdie Member', color: 'linear-gradient(135deg,#f1c40f,#e67e22)', discount: '15%' },
-                'family_birdie': { name: 'Birdie Family', color: 'linear-gradient(135deg,#f1c40f,#e67e22)', discount: '15%' },
-                'par': { name: 'Par Member', color: 'linear-gradient(135deg,#27ae60,#1e8449)', discount: '10%' },
-                'family_par': { name: 'Par Family', color: 'linear-gradient(135deg,#27ae60,#1e8449)', discount: '10%' }
-            };
-            
-            const tier = tierDisplay[customer.memberType] || { name: 'Member', color: '#27ae60', discount: '10%' };
+            const tierName = getMemberTierName(customer.memberType);
+            const discount = getMemberDiscount(customer.memberType);
+            const color = getMemberTierColor(customer.memberType);
             const isVIP = customer.memberType && (customer.memberType.includes('eagle') || customer.memberType.includes('birdie'));
             
-            badge.style.background = tier.color;
+            badge.style.background = `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`;
             badge.style.display = 'block';
-            document.getElementById('bookingMemberText').innerHTML = `${isVIP ? '<i class="fas fa-crown"></i> ' : ''}${tier.name}`;
-            document.getElementById('bookingMemberDiscount').textContent = `-${tier.discount} off`;
+            
+            document.getElementById('bookingMemberText').innerHTML = `${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;margin-right:6px;"></i>' : '<i class="fas fa-star" style="margin-right:6px;"></i>'}${tierName} Member`;
+            document.getElementById('bookingMemberDiscount').textContent = `-${discount}% off`;
             
             // Show benefits
             const benefitsEl = document.getElementById('bookingMemberBenefits');
             if (benefitsEl) {
                 const benefits = [];
+                benefits.push('Member Discount');
                 if (isVIP) benefits.push('Priority Booking');
-                if (customer.memberType.includes('birdie') || customer.memberType.includes('eagle')) benefits.push('Unlimited Play');
+                if (customer.memberType?.includes('eagle')) benefits.push('Unlimited Play');
                 benefitsEl.textContent = benefits.join(' • ');
             }
         }
@@ -4024,7 +4204,7 @@
             }
             
             const q = query.toLowerCase();
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            const customers = getAllCustomers();
             let html = '';
             
             // Search customers
@@ -4032,19 +4212,28 @@
                 `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
                 (c.email && c.email.toLowerCase().includes(q)) ||
                 (c.phone && c.phone.includes(q))
-            ).slice(0, 5);
+            ).slice(0, 6);
             
             if (matchedCustomers.length > 0) {
                 html += '<div style="padding:8px 12px;background:#f0f2f5;font-weight:600;font-size:12px;text-transform:uppercase;color:#666;"><i class="fas fa-users"></i> Customers</div>';
                 matchedCustomers.forEach(c => {
-                    const isMember = c.isMember;
-                    html += `<div style="padding:12px;border-bottom:1px solid #eee;cursor:pointer;display:flex;align-items:center;gap:12px;" onclick="goToCustomer(${c.id})">
-                        <div style="width:40px;height:40px;background:#4a90a4;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;">${c.firstName.charAt(0)}${c.lastName.charAt(0)}</div>
+                    const isMember = isActiveMember(c);
+                    const tierName = getMemberTierName(c.memberType);
+                    const color = getMemberTierColor(c.memberType);
+                    const discount = getMemberDiscount(c.memberType);
+                    const memberBadge = isMember ? 
+                        `<span style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;font-size:9px;padding:3px 8px;border-radius:10px;margin-left:8px;display:inline-flex;align-items:center;gap:3px;">
+                            <i class="fas fa-crown" style="color:#f1c40f;font-size:8px;"></i> ${tierName.toUpperCase()}
+                            <span style="background:rgba(255,255,255,0.3);padding:1px 4px;border-radius:6px;font-size:8px;">${discount}%</span>
+                        </span>` : '';
+                    const avatarBg = isMember ? color : '#4a90a4';
+                    html += `<div style="padding:12px;border-bottom:1px solid #eee;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='#fff'" onclick="goToCustomer('${c.id}')">
+                        <div style="width:44px;height:44px;background:${avatarBg};border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:14px;${isMember ? 'box-shadow:0 2px 8px ' + color + '66;' : ''}">${c.firstName?.charAt(0) || ''}${c.lastName?.charAt(0) || ''}</div>
                         <div style="flex:1;">
-                            <div style="font-weight:600;">${c.firstName} ${c.lastName} ${isMember ? '<span style="background:linear-gradient(135deg,#f1c40f,#e67e22);color:#fff;font-size:9px;padding:2px 5px;border-radius:8px;">MEMBER</span>' : ''}</div>
-                            <div style="font-size:12px;color:#999;">${c.email || ''} ${c.phone ? '· ' + c.phone : ''}</div>
+                            <div style="font-weight:600;display:flex;align-items:center;flex-wrap:wrap;">${c.firstName} ${c.lastName}${memberBadge}</div>
+                            <div style="font-size:12px;color:#999;margin-top:2px;">${c.email || ''} ${c.phone ? '· ' + c.phone : ''}</div>
                         </div>
-                        <i class="fas fa-arrow-right" style="color:#ccc;"></i>
+                        ${isMember ? '<i class="fas fa-star" style="color:#f1c40f;font-size:18px;"></i>' : '<i class="fas fa-arrow-right" style="color:#ccc;"></i>'}
                     </div>`;
                 });
             }
@@ -4133,10 +4322,11 @@
                 return;
             }
             
-            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            // Use Stripe-cached customers
+            const allCustomers = getAllCustomers();
             const matches = allCustomers.filter(c => {
                 const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
-                return fullName.includes(val) || (c.email && c.email.toLowerCase().includes(val));
+                return fullName.includes(val) || (c.email && c.email.toLowerCase().includes(val)) || (c.phone && c.phone.includes(val));
             }).slice(0, 8);
             
             if (matches.length === 0) {
@@ -4145,43 +4335,33 @@
             }
             
             autocompleteDiv.innerHTML = matches.map(c => {
-                const isMember = c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date();
-                const tierColors = {
-                    'eagle': 'linear-gradient(135deg, #9b59b6, #8e44ad)',
-                    'family_eagle': 'linear-gradient(135deg, #9b59b6, #8e44ad)',
-                    'birdie': 'linear-gradient(135deg, #f1c40f, #e67e22)',
-                    'family_birdie': 'linear-gradient(135deg, #f1c40f, #e67e22)',
-                    'par': 'linear-gradient(135deg, #27ae60, #1e8449)',
-                    'family_par': 'linear-gradient(135deg, #27ae60, #1e8449)'
-                };
-                const tierNames = {
-                    'eagle': '⭐ EAGLE',
-                    'family_eagle': '⭐ EAGLE',
-                    'birdie': '🏆 BIRDIE',
-                    'family_birdie': '🏆 BIRDIE',
-                    'par': 'PAR',
-                    'family_par': 'PAR'
-                };
-                const tierBg = isMember ? (tierColors[c.memberType] || '#27ae60') : '#4a90a4';
-                const tierName = isMember ? (tierNames[c.memberType] || 'MEMBER') : '';
+                const isMember = isActiveMember(c);
+                const color = getMemberTierColor(c.memberType);
+                const tierName = getMemberTierName(c.memberType);
+                const discount = getMemberDiscount(c.memberType);
+                const tierBg = isMember ? `linear-gradient(135deg, ${color}, ${color}dd)` : '#4a90a4';
                 const isVIP = c.memberType && (c.memberType.includes('eagle') || c.memberType.includes('birdie'));
                 
                 return `
                     <div style="padding:10px 15px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;${isVIP ? 'background:#fffdf5;' : ''}" 
                          onmouseover="this.style.background='${isVIP ? '#fff9e6' : '#f5f6fa'}'" 
                          onmouseout="this.style.background='${isVIP ? '#fffdf5' : '#fff'}'"
-                         onclick="selectCustomerFromSearch('${c.firstName} ${c.lastName}', ${c.isMember}, '${c.memberType || ''}')">
-                        <div style="width:32px;height:32px;border-radius:50%;background:${tierBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;">
-                            ${(c.firstName[0] || '') + (c.lastName[0] || '')}
+                         onclick="selectCustomerFromSearch('${c.firstName} ${c.lastName}', ${isMember}, '${c.memberType || ''}', '${c.id}')">
+                        <div style="width:32px;height:32px;border-radius:50%;background:${tierBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;${isMember ? 'box-shadow:0 2px 8px ' + color + '44;' : ''}">
+                            ${(c.firstName?.[0] || '') + (c.lastName?.[0] || '')}
                         </div>
                         <div style="flex:1;">
-                            <div style="font-weight:600;color:#333;display:flex;align-items:center;gap:6px;">
+                            <div style="font-weight:600;color:#333;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                                 ${c.firstName} ${c.lastName}
-                                ${isMember ? `<span style="background:${tierBg};color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700;">${tierName}</span>` : ''}
+                                ${isMember ? `<span style="background:${tierBg};color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px;">
+                                    ${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;font-size:8px;"></i>' : ''}
+                                    ${tierName.toUpperCase()}
+                                    <span style="background:rgba(255,255,255,0.3);padding:0 4px;border-radius:6px;font-size:8px;">${discount}%</span>
+                                </span>` : ''}
                             </div>
                             <div style="font-size:12px;color:#999;">${c.phone || c.email || 'No contact'}</div>
                         </div>
-                        ${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;"></i>' : ''}
+                        ${isMember ? '<i class="fas fa-star" style="color:#f1c40f;font-size:16px;"></i>' : ''}
                     </div>
                 `;
             }).join('');
@@ -4192,45 +4372,53 @@
             setTimeout(() => { autocompleteDiv.style.display = 'none'; }, 200);
         });
         
-        function selectCustomerFromSearch(name, isMember, tierType) {
+        function selectCustomerFromSearch(name, isMember, tierType, customerId = null) {
             customerSearch.value = name;
             autocompleteDiv.style.display = 'none';
             
-            // Find full customer record using membership system
-            if (typeof GolfCoveMembership !== 'undefined') {
-                currentCartCustomer = GolfCoveMembership.findCustomerByName(name);
+            // Find customer record using Stripe cache
+            let customer = null;
+            if (customerId) {
+                customer = getCustomerById(customerId);
+            } else {
+                // Try to find by name
+                const customers = getAllCustomers();
+                customer = customers.find(c => `${c.firstName} ${c.lastName}` === name);
+            }
+            
+            if (customer && isActiveMember(customer)) {
+                currentCartCustomer = customer;
+                const tierName = getMemberTierName(customer.memberType);
+                const discountPct = getMemberDiscount(customer.memberType);
                 
-                if (currentCartCustomer && GolfCoveMembership.isActiveMember(currentCartCustomer)) {
-                    const tier = GolfCoveMembership.getMemberTier(currentCartCustomer);
-                    const tierName = tier ? tier.name : 'Member';
-                    const discountPct = tier && tier.benefits ? tier.benefits.discountPercent : 10;
-                    
-                    showToast(`${tierName}: ${name} - ${discountPct}% discount on F&B!`, 'success');
-                    
-                    // Show member indicator in cart header
-                    updateCartMemberBadge(true, tierName, discountPct);
-                    
-                    // Auto-apply member discount if cart has items
-                    if (cart.length > 0) {
-                        applyMemberDiscount();
-                    }
-                    memberDiscountApplied = true;
-                } else {
-                    updateCartMemberBadge(false);
-                    memberDiscountApplied = false;
+                showToast(`${tierName}: ${name} - ${discountPct}% discount on F&B!`, 'success');
+                
+                // Show member badge in cart
+                updateCartMemberBadge(true, tierName, discountPct, customer);
+                
+                // Auto-apply member discount if cart has items
+                if (cart.length > 0) {
+                    applyMemberDiscount();
                 }
-            } else if (isMember) {
-                showToast(`Member: ${name}`, 'success');
+                memberDiscountApplied = true;
+            } else {
+                currentCartCustomer = customer || null;
+                updateCartMemberBadge(false);
+                memberDiscountApplied = false;
             }
         }
         
         // Apply automatic member discount
         function applyMemberDiscount() {
-            if (!currentCartCustomer || typeof GolfCoveMembership === 'undefined') return;
-            if (!GolfCoveMembership.isActiveMember(currentCartCustomer)) return;
+            if (!currentCartCustomer) return;
+            
+            // Use new helper functions to check membership
+            const customer = typeof currentCartCustomer === 'object' ? currentCartCustomer : getCustomerById(currentCartCustomer);
+            if (!customer || !isActiveMember(customer)) return;
             
             const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            const discount = GolfCoveMembership.calculateDiscount(currentCartCustomer, subtotal, 'fnb');
+            const discountPct = getMemberDiscount(customer.memberType);
+            const discount = subtotal * (discountPct / 100);
             
             if (discount > 0) {
                 currentDiscount = discount;
@@ -4238,22 +4426,113 @@
             }
         }
         
-        // Update cart header to show member badge
-        function updateCartMemberBadge(isMember, tierName = '', discountPct = 0) {
-            const cartHeader = document.querySelector('.cart-panel h3');
+        // Update cart member badge with enhanced UI
+        function updateCartMemberBadge(isMember, tierName = '', discountPct = 0, customer = null) {
+            const badgeDiv = document.getElementById('cartMemberBadge');
+            const selectDiv = document.getElementById('cartMemberSelect');
+            
+            if (isMember && customer) {
+                const color = getMemberTierColor(customer.memberType);
+                const isVIP = customer.memberType?.includes('eagle') || customer.memberType?.includes('birdie');
+                
+                if (badgeDiv) {
+                    badgeDiv.style.display = 'block';
+                    badgeDiv.style.background = `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`;
+                    badgeDiv.style.boxShadow = `0 3px 12px ${color}66`;
+                    badgeDiv.style.position = 'relative';
+                    
+                    document.getElementById('cartMemberName').textContent = `${customer.firstName} ${customer.lastName}`;
+                    document.getElementById('cartMemberTier').textContent = tierName + ' Member';
+                    document.getElementById('cartMemberDiscount').textContent = `${discountPct}%`;
+                    document.getElementById('cartMemberIcon').style.color = isVIP ? '#f1c40f' : '#fff';
+                }
+                if (selectDiv) selectDiv.style.display = 'none';
+            } else {
+                if (badgeDiv) badgeDiv.style.display = 'none';
+                if (selectDiv) selectDiv.style.display = 'block';
+                loadCartMemberList();
+            }
+            
+            // Also update cart header badge (legacy)
+            const cartHeader = document.querySelector('.sales-header h3');
             if (!cartHeader) return;
             
-            // Remove existing badge
             const existingBadge = cartHeader.querySelector('.cart-member-badge');
             if (existingBadge) existingBadge.remove();
             
             if (isMember && tierName) {
                 const badge = document.createElement('span');
                 badge.className = 'cart-member-badge';
-                badge.style.cssText = 'background:linear-gradient(135deg,#f1c40f,#e67e22);color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;margin-left:10px;font-weight:600;';
+                badge.style.cssText = `background:linear-gradient(135deg,${getMemberTierColor(customer?.memberType || 'par')},${getMemberTierColor(customer?.memberType || 'par')}dd);color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;margin-left:10px;font-weight:600;`;
                 badge.textContent = `${tierName} (-${discountPct}%)`;
                 cartHeader.appendChild(badge);
             }
+        }
+        
+        // Load member list for quick cart selection
+        function loadCartMemberList() {
+            const container = document.getElementById('cartMemberList');
+            if (!container) return;
+            
+            const customers = getAllCustomers();
+            const activeMembers = customers.filter(c => isActiveMember(c)).slice(0, 6);
+            
+            if (activeMembers.length === 0) {
+                container.innerHTML = '<span style="font-size:10px;color:#999;">No members - click sync</span>';
+                return;
+            }
+            
+            container.innerHTML = activeMembers.map(c => {
+                const color = getMemberTierColor(c.memberType);
+                const discount = getMemberDiscount(c.memberType);
+                const isVIP = c.memberType?.includes('eagle') || c.memberType?.includes('birdie');
+                return `
+                    <button type="button" onclick="attachMemberToCart('${c.id}')" 
+                        style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;border:none;padding:4px 10px;border-radius:12px;font-size:10px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all 0.2s;box-shadow:0 2px 6px ${color}44;"
+                        onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"
+                        title="${getMemberTierName(c.memberType)} - ${discount}% discount">
+                        <i class="fas fa-crown" style="font-size:8px;${isVIP ? 'color:#f1c40f;' : ''}"></i>
+                        ${c.firstName} ${(c.lastName || '').charAt(0)}.
+                        <span style="background:rgba(255,255,255,0.3);padding:0 4px;border-radius:6px;font-size:8px;">${discount}%</span>
+                    </button>
+                `;
+            }).join('');
+        }
+        
+        // Attach a member to the current cart transaction
+        function attachMemberToCart(customerId) {
+            const customer = getCustomerById(customerId);
+            if (!customer || !isActiveMember(customer)) {
+                showToast('Customer is not an active member', 'error');
+                return;
+            }
+            
+            currentCartCustomer = customer;
+            memberDiscountApplied = true;
+            
+            const tierName = getMemberTierName(customer.memberType);
+            const discountPct = getMemberDiscount(customer.memberType);
+            
+            updateCartMemberBadge(true, tierName, discountPct, customer);
+            
+            // Apply discount if cart has items
+            if (cart.length > 0) {
+                applyMemberDiscount();
+                renderCart();
+            }
+            
+            showToast(`${tierName}: ${customer.firstName} ${customer.lastName} - ${discountPct}% discount applied!`, 'success');
+        }
+        
+        // Clear member from cart
+        function clearCartMember() {
+            currentCartCustomer = null;
+            memberDiscountApplied = false;
+            currentDiscount = 0;
+            document.getElementById('customerSearch').value = '';
+            updateCartMemberBadge(false);
+            renderCart();
+            showToast('Member removed from transaction');
         }
         
         // Booking customer autocomplete
@@ -4267,7 +4546,8 @@
                 return;
             }
             
-            const allCustomers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            // Use Stripe-cached customers
+            const allCustomers = getAllCustomers();
             const cleanedPhone = val.replace(/\D/g, '');
             
             const matches = allCustomers.filter(c => {
@@ -4295,41 +4575,41 @@
             }
             
             bookingAutocomplete.innerHTML = matches.map(c => {
-                const now = new Date();
-                const isMember = c.isMember && c.memberExpires && new Date(c.memberExpires) > now;
-                const tierColors = {
-                    'eagle': 'linear-gradient(135deg, #9b59b6, #8e44ad)',
-                    'family_eagle': 'linear-gradient(135deg, #9b59b6, #8e44ad)',
-                    'birdie': 'linear-gradient(135deg, #f1c40f, #e67e22)',
-                    'family_birdie': 'linear-gradient(135deg, #f1c40f, #e67e22)',
-                    'par': 'linear-gradient(135deg, #27ae60, #1e8449)',
-                    'family_par': 'linear-gradient(135deg, #27ae60, #1e8449)'
-                };
-                const tierNames = {
-                    'eagle': '⭐ EAGLE',
-                    'family_eagle': '⭐ EAGLE',
-                    'birdie': '🏆 BIRDIE',
-                    'family_birdie': '🏆 BIRDIE',
-                    'par': 'PAR',
-                    'family_par': 'PAR'
-                };
-                const tierBg = isMember ? (tierColors[c.memberType] || 'linear-gradient(135deg, #27ae60, #1e8449)') : '#4a90a4';
-                const tierName = isMember ? (tierNames[c.memberType] || 'MEMBER') : '';
+                const isMember = isActiveMember(c);
+                const color = getMemberTierColor(c.memberType);
+                const tierName = getMemberTierName(c.memberType);
+                const discount = getMemberDiscount(c.memberType);
                 const isVIP = c.memberType && (c.memberType.includes('eagle') || c.memberType.includes('birdie'));
+                const tierBg = isMember ? `linear-gradient(135deg, ${color}, ${color}dd)` : '#4a90a4';
                 
                 // Contact info display
                 const contactInfo = c.phone || c.email || 'No contact';
-                const visitInfo = c.visitCount ? `${c.visitCount} visits` : '';
                 
                 return `
                     <div style="padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;${isVIP ? 'background:#fffdf5;' : ''}" 
                          onmouseover="this.style.background='${isVIP ? '#fff9e6' : '#f5f6fa'}'" 
                          onmouseout="this.style.background='${isVIP ? '#fffdf5' : '#fff'}'"
-                         onclick="selectBookingCustomerById(${c.id})">
+                         onclick="selectBookingCustomerById('${c.id}')">
                         <div style="width:36px;height:36px;border-radius:50%;background:${tierBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;${isVIP ? 'box-shadow:0 2px 8px rgba(0,0,0,0.2);' : ''}">
-                            ${(c.firstName[0] || '') + (c.lastName[0] || '')}
+                            ${(c.firstName?.[0] || '') + (c.lastName?.[0] || '')}
                         </div>
                         <div style="flex:1;min-width:0;">
+                            <div style="font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                ${c.firstName} ${c.lastName}
+                                ${isMember ? `<span style="background:${tierBg};color:#fff;padding:2px 8px;border-radius:10px;font-size:9px;display:inline-flex;align-items:center;gap:3px;">
+                                    ${isVIP ? '<i class="fas fa-crown" style="color:#f1c40f;font-size:8px;"></i>' : ''}
+                                    ${tierName.toUpperCase()}
+                                    <span style="background:rgba(255,255,255,0.3);padding:0 4px;border-radius:6px;">${discount}%</span>
+                                </span>` : ''}
+                            </div>
+                            <div style="font-size:11px;color:#666;margin-top:2px;">${contactInfo}</div>
+                        </div>
+                        ${isMember ? '<i class="fas fa-star" style="color:#f1c40f;font-size:16px;"></i>' : '<i class="fas fa-chevron-right" style="color:#ccc;"></i>'}
+                    </div>
+                `;
+            }).join('');
+            bookingAutocomplete.style.display = 'block';
+        });
                             <div style="font-weight:600;color:#333;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                                 ${c.firstName} ${c.lastName}
                                 ${isMember ? `<span style="background:${tierBg};color:#fff;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:700;">${tierName}</span>` : ''}
@@ -6550,8 +6830,14 @@
             }
             renderTeeSheet();
             
-            // Preload quick customer suggestions
+            // Sync customers from Stripe (source of truth)
+            syncCustomersFromStripe();
+            
+            // Preload quick customer suggestions (will use Stripe data after sync)
             loadQuickCustomerSuggestions();
+            
+            // Load cart member list
+            loadCartMemberList();
         });
         
         // ============ QUICK CUSTOMER SUGGESTIONS ============
@@ -6559,45 +6845,58 @@
             const vipList = document.getElementById('vipMembersList');
             const recentList = document.getElementById('recentCustomersList');
             
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            // Use getAllCustomers() which pulls from Stripe cache
+            const customers = getAllCustomers();
             
             // VIP Members (active members sorted by tier priority)
             const tierPriority = { 'eagle': 1, 'family_eagle': 2, 'birdie': 3, 'family_birdie': 4, 'par': 5, 'family_par': 6 };
             const vipMembers = customers
-                .filter(c => c.isMember && c.memberExpires && new Date(c.memberExpires) > new Date())
+                .filter(c => isActiveMember(c))
                 .sort((a, b) => (tierPriority[a.memberType] || 99) - (tierPriority[b.memberType] || 99))
-                .slice(0, 8);
+                .slice(0, 10);
             
             if (vipList) {
-                const tierColors = { 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#f1c40f', 'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#f1c40f' };
-                vipList.innerHTML = vipMembers.length > 0 ? vipMembers.map(c => `
-                    <button type="button" onclick="selectBookingCustomer(${c.id})" style="background:linear-gradient(135deg, ${tierColors[c.memberType] || '#9b59b6'} 0%, ${tierColors[c.memberType] || '#9b59b6'}dd 100%);color:#fff;border:none;padding:4px 10px;border-radius:12px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;">
-                        <i class="fas fa-crown" style="font-size:9px;color:#f1c40f;"></i>
-                        ${c.firstName} ${(c.lastName || '').charAt(0)}.
-                    </button>
-                `).join('') : '<span style="color:#999;font-size:11px;">No VIP members</span>';
+                vipList.innerHTML = vipMembers.length > 0 ? vipMembers.map(c => {
+                    const color = getMemberTierColor(c.memberType);
+                    const tierName = getMemberTierName(c.memberType);
+                    const discount = getMemberDiscount(c.memberType);
+                    const isVIP = c.memberType?.includes('eagle') || c.memberType?.includes('birdie');
+                    return `
+                    <button type="button" onclick="selectBookingCustomerById('${c.id}')" 
+                        style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;box-shadow:0 2px 8px ${color}66;transition:all 0.2s;"
+                        onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"
+                        title="${tierName} Member - ${discount}% discount">
+                        <i class="fas fa-crown" style="font-size:10px;${isVIP ? 'color:#f1c40f;' : ''}"></i>
+                        <span style="font-weight:600;">${c.firstName} ${(c.lastName || '').charAt(0)}.</span>
+                        <span style="background:rgba(255,255,255,0.25);padding:1px 6px;border-radius:10px;font-size:9px;">${discount}%</span>
+                    </button>`;
+                }).join('') : '<span style="color:#999;font-size:11px;">No active members - sync from Stripe</span>';
             }
             
-            // Recent customers (sorted by last visit)
-            const recentCustomers = customers
-                .filter(c => c.lastVisit)
-                .sort((a, b) => new Date(b.lastVisit) - new Date(a.lastVisit))
+            // All customers sorted by most recent (non-members for quick access)
+            const nonMembers = customers
+                .filter(c => !isActiveMember(c))
+                .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
                 .slice(0, 8);
             
             if (recentList) {
-                recentList.innerHTML = recentCustomers.length > 0 ? recentCustomers.map(c => `
-                    <button type="button" onclick="selectBookingCustomer(${c.id})" style="background:#f8f9fa;border:1px solid #ddd;padding:4px 10px;border-radius:12px;font-size:11px;cursor:pointer;">
+                recentList.innerHTML = nonMembers.length > 0 ? nonMembers.map(c => `
+                    <button type="button" onclick="selectBookingCustomerById('${c.id}')" 
+                        style="background:#f8f9fa;border:1px solid #ddd;padding:5px 12px;border-radius:12px;font-size:11px;cursor:pointer;transition:all 0.2s;"
+                        onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">
                         ${c.firstName} ${(c.lastName || '').charAt(0)}.
                     </button>
-                `).join('') : '<span style="color:#999;font-size:11px;">No recent customers</span>';
+                `).join('') : '<span style="color:#999;font-size:11px;">No customers yet</span>';
             }
         }
         
         // Select customer for booking modal by ID (primary method)
         function selectBookingCustomerById(customerId) {
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const customer = customers.find(c => c.id === customerId);
-            if (!customer) return;
+            const customer = getCustomerById(customerId);
+            if (!customer) {
+                console.warn('Customer not found:', customerId);
+                return;
+            }
             
             const fullName = getCustomerFullName(customer);
             document.getElementById('bookingCustomer').value = fullName;
@@ -6608,21 +6907,25 @@
             if (customer.email) document.getElementById('bookingEmail').value = customer.email;
             
             // Show member badge if applicable
-            const isActive = customer.isMember && customer.memberExpires && new Date(customer.memberExpires) > new Date();
-            if (isActive) {
+            if (isActiveMember(customer)) {
                 selectedBookingMemberType = customer.memberType;
-                selectedBookingCustomerTier = customer.memberType; // Sync both variables
+                selectedBookingCustomerTier = customer.memberType;
+                
                 const badge = document.getElementById('bookingMemberBadge');
-                const tierNames = { 'par': 'Par Member', 'birdie': 'Birdie Member', 'eagle': 'Eagle Member', 'family_par': 'Family Par', 'family_birdie': 'Family Birdie', 'family_eagle': 'Family Eagle' };
-                const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%' };
-                document.getElementById('bookingMemberText').textContent = tierNames[customer.memberType] || 'Member';
-                document.getElementById('bookingMemberDiscount').textContent = discounts[customer.memberType] || '10%' + ' OFF';
-                document.getElementById('bookingMemberBenefits').textContent = 'Priority booking • Member discount applied';
-                badge.style.display = 'block';
+                const tierName = getMemberTierName(customer.memberType);
+                const discount = getMemberDiscount(customer.memberType);
+                const color = getMemberTierColor(customer.memberType);
+                const isVIP = customer.memberType?.includes('eagle') || customer.memberType?.includes('birdie');
+                
+                badge.style.background = `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`;\n                badge.style.display = 'block';\n                \n                document.getElementById('bookingMemberText').innerHTML = `${isVIP ? '<i class=\"fas fa-crown\" style=\"color:#f1c40f;margin-right:5px;\"></i>' : '<i class=\"fas fa-star\" style=\"margin-right:5px;\"></i>'}${tierName} Member`;
+                document.getElementById('bookingMemberDiscount').textContent = `${discount}% OFF`;
+                document.getElementById('bookingMemberBenefits').textContent = isVIP ? 'Priority booking • Unlimited play • Premium benefits' : 'Member discount applied';
+                
                 updateBookingPrice();
+                showToast(`${tierName} Member selected - ${discount}% discount!`, 'success');
             } else {
                 selectedBookingMemberType = null;
-                selectedBookingCustomerTier = null; // Sync both variables
+                selectedBookingCustomerTier = null;
                 document.getElementById('bookingMemberBadge').style.display = 'none';
             }
             

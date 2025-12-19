@@ -796,38 +796,6 @@
             </div>
             
             <form id="paymentForm" onsubmit="processPayment(event)">
-                <!-- Personal Info -->
-                <div class="form-section">
-                    <div class="form-section-title"><i class="fas fa-user"></i> Personal Information</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>First Name *</label>
-                            <input type="text" id="firstName" required placeholder="John">
-                        </div>
-                        <div class="form-group">
-                            <label>Last Name *</label>
-                            <input type="text" id="lastName" required placeholder="Smith">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Email Address *</label>
-                        <input type="email" id="email" required placeholder="john@example.com">
-                    </div>
-                    <div class="form-group">
-                        <label>Phone Number *</label>
-                        <input type="tel" id="phone" required placeholder="(555) 123-4567">
-                    </div>
-                </div>
-                
-                <!-- Payment handled by Stripe Checkout -->
-                <div class="form-section">
-                    <div class="form-section-title"><i class="fas fa-credit-card"></i> Secure Payment</div>
-                    <p style="color: #666; font-size: 14px; margin: 0;">
-                        <i class="fas fa-shield-alt" style="color: #2d5a27; margin-right: 6px;"></i> 
-                        After clicking the button below, you'll complete payment securely through Stripe.
-                    </p>
-                </div>
-                
                 <!-- Agreement -->
                 <div class="agreement">
                     <label>
@@ -988,10 +956,10 @@
             btn.disabled = true;
             
             try {
-                // Get customer info
-                const customerName = `${document.getElementById('firstName').value} ${document.getElementById('lastName').value}`;
-                const customerEmail = document.getElementById('email').value;
-                const customerPhone = document.getElementById('phone').value;
+                // Customer info will be collected by Stripe Checkout
+                const customerName = null;
+                const customerEmail = null;
+                const customerPhone = null;
                 
                 // Get Stripe Price ID if available, otherwise use tier-based pricing
                 const stripePriceId = document.querySelector('.membership-card.selected')?.dataset.stripePrice;
