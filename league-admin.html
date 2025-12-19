@@ -1940,6 +1940,7 @@
                 id: c.id,
                 stripeId: c.id,
                 stripeCustomerId: c.id,
+                name: c.name || '',
                 firstName,
                 lastName,
                 email: c.email || '',
@@ -1972,6 +1973,11 @@
                 const cached = localStorage.getItem('gc_customers');
                 if (cached) {
                     stripeCustomersCache = JSON.parse(cached);
+                    // Ensure name field exists (older cache may not have it)
+                    stripeCustomersCache = stripeCustomersCache.map(c => ({
+                        ...c,
+                        name: c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim() || ''
+                    }));
                     console.log(`[LeagueAdmin] Loaded ${stripeCustomersCache.length} customers from cache`);
                     return stripeCustomersCache;
                 }
@@ -2932,7 +2938,13 @@
             const searchTerm = (document.getElementById('customerSearch')?.value || '').toLowerCase();
             const memberTypeFilter = document.getElementById('memberTypeFilter')?.value || 'all';
             
-            if (!grid) return;
+            console.log('[renderCustomers] Grid element:', grid);
+            console.log('[renderCustomers] Customer cache:', stripeCustomersCache.length, 'customers');
+            
+            if (!grid) {
+                console.warn('[renderCustomers] customerGrid not found!');
+                return;
+            }
             
             updateCustomerStats();
             
@@ -2975,6 +2987,10 @@
             const startIdx = (customerPage - 1) * customersPerPage;
             const pageCustomers = customers.slice(startIdx, startIdx + customersPerPage);
             
+            console.log('[renderCustomers] After filtering:', customers.length, 'customers');
+            console.log('[renderCustomers] Page customers:', pageCustomers.length);
+            console.log('[renderCustomers] First customer:', pageCustomers[0]);
+            
             // Update bulk selection bar visibility
             document.getElementById('bulkSelectionBar').style.display = selectedCustomers.size > 0 ? 'block' : 'none';
             document.getElementById('selectedCount').textContent = `${selectedCustomers.size} selected`;
@@ -3016,6 +3032,9 @@
                     </div>
                 `;
             }).join('');
+            
+            console.log('[renderCustomers] Grid HTML length:', grid.innerHTML.length);
+            console.log('[renderCustomers] Grid children:', grid.children.length);
             
             // Pagination
             if (totalPages > 1) {
@@ -4089,6 +4108,8 @@
         
         function renderParInputs() {
             const container = document.getElementById('parInputsContainer');
+            if (!container) return; // Exit if container doesn't exist
+            
             const holes = league.course?.holes || 9;
             const pars = league.course?.pars || Array(holes).fill(4);
             
@@ -4115,23 +4136,36 @@
         }
         
         function showSection(section) {
-            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            console.log('[showSection] Switching to:', section);
             
-            document.getElementById('section-' + section).classList.add('active');
-            document.querySelector(`[data-section="${section}"]`).classList.add('active');
-            
-            // Close sidebar on mobile
-            document.getElementById('adminSidebar').classList.remove('mobile-open');
-            document.getElementById('mobileSidebarOverlay').classList.remove('open');
-            
-            // Render content for admin sections
-            if (section === 'staff') loadStaffList();
-            else if (section === 'reports') loadSalesReports();
-            else if (section === 'timeclock') loadTimeclock();
-            else if (section === 'inventory') loadInventory();
-            else if (section === 'settings') loadStripeSettings();
-            else if (section === 'scoredocs') loadScoreDocuments();
+            try {
+                document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                
+                const sectionEl = document.getElementById('section-' + section);
+                const navEl = document.querySelector(`[data-section="${section}"]`);
+                
+                console.log('[showSection] Section element:', sectionEl);
+                console.log('[showSection] Nav element:', navEl);
+                
+                if (sectionEl) sectionEl.classList.add('active');
+                if (navEl) navEl.classList.add('active');
+                
+                // Close sidebar on mobile
+                document.getElementById('adminSidebar').classList.remove('mobile-open');
+                document.getElementById('mobileSidebarOverlay').classList.remove('open');
+                
+                // Render content for admin sections
+                if (section === 'staff') loadStaffList();
+                else if (section === 'reports') loadSalesReports();
+                else if (section === 'timeclock') loadTimeclock();
+                else if (section === 'inventory') loadInventory();
+                else if (section === 'settings') loadStripeSettings();
+                else if (section === 'scoredocs') loadScoreDocuments();
+                else if (section === 'customers') renderCustomers();
+            } catch (err) {
+                console.error('[showSection] Error:', err);
+            }
         }
         
         // Teams
