@@ -357,7 +357,7 @@ const GolfCoveReports = (function() {
                 checkedIn: todayBookings.summary?.checkedIn || 0,
                 occupancy: occupancy.occupancyRate || '0%'
             },
-            openTabs: typeof GolfCoveTabs !== 'undefined' ? GolfCoveTabs.getAllTabs().length : 0,
+            openTabs: typeof TabsSync !== 'undefined' ? TabsSync.getAllTabs().length : 0,
             activeMembers: typeof GolfCoveCustomers !== 'undefined' ? GolfCoveCustomers.getMembers().length : 0
         };
     }
