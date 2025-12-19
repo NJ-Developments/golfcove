@@ -2139,11 +2139,15 @@
             leagueListener = (snapshot) => {
                 league = snapshot.val();
                 
-                // Ensure arrays exist (Firebase returns undefined for empty arrays)
+                // Ensure arrays exist and convert Firebase objects to arrays
+                // Firebase stores arrays as objects when using .set() with keys
                 if (league) {
-                    league.teams = league.teams || [];
-                    league.players = league.players || [];
-                    league.rounds = league.rounds || [];
+                    league.teams = Array.isArray(league.teams) ? league.teams : 
+                        (league.teams ? Object.values(league.teams) : []);
+                    league.players = Array.isArray(league.players) ? league.players : 
+                        (league.players ? Object.values(league.players) : []);
+                    league.rounds = Array.isArray(league.rounds) ? league.rounds : 
+                        (league.rounds ? Object.values(league.rounds) : []);
                     league.scores = league.scores || {};
                 }
                 

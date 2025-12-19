@@ -910,10 +910,14 @@
                     return;
                 }
 
-                // Ensure arrays exist (Firebase returns undefined for empty arrays)
-                league.players = league.players || [];
-                league.rounds = league.rounds || [];
-                league.teams = league.teams || [];
+                // Ensure arrays exist and convert Firebase objects to arrays
+                // Firebase stores as objects when using .set() with keys
+                league.players = Array.isArray(league.players) ? league.players : 
+                    (league.players ? Object.values(league.players) : []);
+                league.rounds = Array.isArray(league.rounds) ? league.rounds : 
+                    (league.rounds ? Object.values(league.rounds) : []);
+                league.teams = Array.isArray(league.teams) ? league.teams : 
+                    (league.teams ? Object.values(league.teams) : []);
                 league.scores = league.scores || {};
 
                 const params = new URLSearchParams(window.location.search);
