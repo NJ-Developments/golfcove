@@ -4132,6 +4132,14 @@
             else if (section === 'inventory') loadInventory();
             else if (section === 'settings') loadStripeSettings();
             else if (section === 'scoredocs') loadScoreDocuments();
+            else if (section === 'customers') {
+                // Load customers from cache or sync from Stripe if empty
+                if (stripeCustomersCache.length === 0) {
+                    syncStripeCustomers();
+                } else {
+                    renderCustomers();
+                }
+            }
         }
         
         // Teams
