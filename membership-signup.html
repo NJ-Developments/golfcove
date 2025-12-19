@@ -819,12 +819,12 @@
                     </div>
                 </div>
                 
-                <!-- Payment Notice - Stripe Checkout handles card collection -->
+                <!-- Payment handled by Stripe Checkout -->
                 <div class="form-section">
-                    <div class="form-section-title"><i class="fas fa-credit-card"></i> Payment</div>
+                    <div class="form-section-title"><i class="fas fa-credit-card"></i> Secure Payment</div>
                     <p style="color: #666; font-size: 14px; margin: 0;">
-                        <i class="fas fa-lock" style="color: #2d5a27;"></i> 
-                        You'll be redirected to Stripe's secure checkout to complete your payment.
+                        <i class="fas fa-shield-alt" style="color: #2d5a27; margin-right: 6px;"></i> 
+                        After clicking the button below, you'll complete payment securely through Stripe.
                     </p>
                 </div>
                 
@@ -838,8 +838,8 @@
                 
                 <!-- Submit -->
                 <button type="submit" class="submit-btn" id="submitBtn" disabled>
-                    <i class="fas fa-lock"></i>
-                    <span>Complete Membership</span>
+                    <i class="fas fa-arrow-right"></i>
+                    <span>Proceed to Stripe</span>
                 </button>
                 
                 <div class="security-notice">
@@ -964,7 +964,7 @@
             
             if (selectedMembership) {
                 const total = selectedMembership.price * (1 + TAX_RATE);
-                btn.querySelector('span').textContent = `Continue to Payment - $${total.toFixed(2)}`;
+                btn.querySelector('span').textContent = `Proceed to Stripe - $${total.toFixed(2)}`;
             } else {
                 btn.querySelector('span').textContent = 'Select a Membership';
             }

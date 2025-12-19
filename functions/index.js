@@ -1007,6 +1007,7 @@ exports.createGiftCardCheckout = functions.https.onRequest((req, res) => {
 
 /**
  * Create checkout session for membership (supports subscriptions and one-time)
+ * Creates a Stripe Customer first to ensure customer data is saved regardless of payment method
  */
 exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
@@ -1017,6 +1018,38 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
         stripePriceId // Optional: use Stripe Price ID directly
       } = req.body;
 
+      // Create or find existing Stripe Customer to ensure they're always saved
+      let customer;
+      const existingCustomers = await stripe.customers.list({
+        email: customerEmail,
+        limit: 1
+      });
+
+      if (existingCustomers.data.length > 0) {
+        // Update existing customer with latest info
+        customer = await stripe.customers.update(existingCustomers.data[0].id, {
+          name: customerName,
+          phone: customerPhone,
+          metadata: {
+            source: 'membership_signup',
+            tier: tier,
+            updatedAt: new Date().toISOString()
+          }
+        });
+      } else {
+        // Create new customer
+        customer = await stripe.customers.create({
+          email: customerEmail,
+          name: customerName,
+          phone: customerPhone,
+          metadata: {
+            source: 'membership_signup',
+            tier: tier,
+            createdAt: new Date().toISOString()
+          }
+        });
+      }
+
       let sessionConfig;
 
       // If a Stripe Price ID is provided, use it directly
@@ -1025,7 +1058,7 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
         sessionConfig = {
           payment_method_types: CHECKOUT_PAYMENT_METHODS,
           mode: isSubscription ? 'subscription' : 'payment',
-          customer_email: customerEmail,
+          customer: customer.id,
           line_items: [{
             price: stripePriceId,
             quantity: 1
@@ -1062,7 +1095,7 @@ exports.createMembershipCheckout = functions.https.onRequest((req, res) => {
         sessionConfig = {
           payment_method_types: CHECKOUT_PAYMENT_METHODS,
           mode: isSeasonal || billingCycle === 'annual' ? 'payment' : 'subscription',
-          customer_email: customerEmail,
+          customer: customer.id,
           line_items: [{
             price_data: {
               currency: 'usd',

@@ -1,42 +1,16 @@
-[debug] [2025-12-18T20:48:52.054Z] ----------------------------------------------------------------------
-[debug] [2025-12-18T20:48:52.061Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Shadow18712\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js hosting:channel:list
-[debug] [2025-12-18T20:48:52.062Z] CLI Version:   15.0.0
-[debug] [2025-12-18T20:48:52.062Z] Platform:      win32
-[debug] [2025-12-18T20:48:52.062Z] Node Version:  v24.11.1
-[debug] [2025-12-18T20:48:52.062Z] Time:          Thu Dec 18 2025 15:48:52 GMT-0500 (Eastern Standard Time)
-[debug] [2025-12-18T20:48:52.063Z] ----------------------------------------------------------------------
+[debug] [2025-12-19T00:46:01.055Z] ----------------------------------------------------------------------
+[debug] [2025-12-19T00:46:01.057Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\acpsp\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions:createMembershipCheckout
+[debug] [2025-12-19T00:46:01.058Z] CLI Version:   15.0.0
+[debug] [2025-12-19T00:46:01.058Z] Platform:      win32
+[debug] [2025-12-19T00:46:01.058Z] Node Version:  v24.11.0
+[debug] [2025-12-19T00:46:01.058Z] Time:          Thu Dec 18 2025 19:46:01 GMT-0500 (Eastern Standard Time)
+[debug] [2025-12-19T00:46:01.058Z] ----------------------------------------------------------------------
 [debug] 
-[debug] [2025-12-18T20:48:52.069Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[debug] [2025-12-18T20:48:52.546Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2025-12-18T20:48:52.547Z] > authorizing via signed-in user (nolankrieger9@gmail.com)
-[debug] [2025-12-18T20:48:52.547Z] [iam] checking project golfcove for permissions ["firebase.projects.get","firebasehosting.sites.update"]
-[debug] [2025-12-18T20:48:52.550Z] Checked if tokens are valid: false, expires at: 1766040257311
-[debug] [2025-12-18T20:48:52.550Z] Checked if tokens are valid: false, expires at: 1766040257311
-[debug] [2025-12-18T20:48:52.551Z] > refreshing access token with scopes: []
-[debug] [2025-12-18T20:48:52.553Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
-[debug] [2025-12-18T20:48:52.553Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
-[debug] [2025-12-18T20:48:52.676Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
-[debug] [2025-12-18T20:48:52.676Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
-[debug] [2025-12-18T20:48:52.693Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
-[debug] [2025-12-18T20:48:52.693Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
-[debug] [2025-12-18T20:48:52.706Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions [none]
-[debug] [2025-12-18T20:48:52.706Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions x-goog-quota-user=projects/golfcove
-[debug] [2025-12-18T20:48:52.707Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
-[debug] [2025-12-18T20:48:53.040Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions 200
-[debug] [2025-12-18T20:48:53.041Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions {}
-[debug] [2025-12-18T20:48:53.041Z] [iam] error while checking permissions, command may fail: Authorization failed. This account is missing the following required permissions on project golfcove:
-
-  firebase.projects.get
-  firebasehosting.sites.update
-[debug] [2025-12-18T20:48:53.042Z] Checked if tokens are valid: true, expires at: 1766094531693
-[debug] [2025-12-18T20:48:53.043Z] Checked if tokens are valid: true, expires at: 1766094531693
-[debug] [2025-12-18T20:48:53.044Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/golfcove [none]
-[debug] [2025-12-18T20:48:53.340Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/golfcove 403
-[debug] [2025-12-18T20:48:53.340Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/golfcove {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
-[debug] [2025-12-18T20:48:53.341Z] Request to https://firebase.googleapis.com/v1beta1/projects/golfcove had HTTP Error: 403, The caller does not have permission
-[debug] [2025-12-18T20:48:53.343Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/golfcove had HTTP Error: 403, The caller does not have permission
-    at responseToError (C:\Users\Shadow18712\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:53:12)
-    at RetryOperation._fn (C:\Users\Shadow18712\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:322:77)
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-[error] 
-[error] Error: Failed to get Firebase project golfcove. Please make sure the project exists and your account has permission to access it.
+[debug] [2025-12-19T00:46:02.404Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-19T00:46:02.405Z] > authorizing via signed-in user (javflores.ct@gmail.com)
+[debug] [2025-12-19T00:46:02.405Z] [iam] checking project golfcove for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2025-12-19T00:46:02.406Z] Checked if tokens are valid: true, expires at: 1766108281801
+[debug] [2025-12-19T00:46:02.406Z] Checked if tokens are valid: true, expires at: 1766108281801
+[debug] [2025-12-19T00:46:02.406Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions [none]
+[debug] [2025-12-19T00:46:02.406Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions x-goog-quota-user=projects/golfcove
+[debug] [2025-12-19T00:46:02.406Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
