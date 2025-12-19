@@ -1467,67 +1467,22 @@
             });
         }
         
-        // Team creation is admin-only - show message to users
+        // Team creation requires payment - show message to users
         function showTeamScorecard() {
             const container = document.getElementById('content');
             container.innerHTML = `
                 <div class="registration-form" style="text-align: center;">
-                    <div style="width: 70px; height: 70px; background: #f59e0b; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-lock" style="color: #fff; font-size: 30px;"></i>
+                    <div style="width: 70px; height: 70px; background: #37b24a; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-trophy" style="color: #fff; font-size: 30px;"></i>
                     </div>
-                    <h2 style="color: #1a1a2e;"><i class="fas fa-shield-alt" style="color: #f59e0b;"></i> Admin Only</h2>
-                    <p class="form-desc">Team creation is restricted to administrators.</p>
-                    <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Please contact a Golf Cove admin to create your team, then come back here to enter your scores.</p>
-                    <button type="button" class="submit-btn" onclick="showExistingTeams()"><i class="fas fa-users"></i> View Existing Teams</button>
+                    <h2 style="color: #1a1a2e;"><i class="fas fa-users" style="color: #37b24a;"></i> Join the League</h2>
+                    <p class="form-desc">To create or join a team, you need to purchase a league membership.</p>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 20px;">After purchasing, you'll be able to create your team or join an existing one with a PIN.</p>
+                    <a href="membership-signup.html" class="submit-btn" style="display: inline-block; text-decoration: none;"><i class="fas fa-credit-card"></i> Purchase League Membership</a>
+                    <button type="button" class="submit-btn" onclick="showExistingTeams()" style="background: #6b7280; margin-top: 10px;"><i class="fas fa-users"></i> I Already Have a Team</button>
                     <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
                 </div>
             `;
-        }
-        
-        // Legacy function - team creation is admin-only now
-        function showTeamScorecardLegacy() {
-            const container = document.getElementById('content');
-            container.innerHTML = `
-                <div class="registration-form">
-                    <h2><i class="fas fa-users"></i> Team Scorecard</h2>
-                    <p class="form-desc">Enter both players for your 2-man scramble team</p>
-                    <form onsubmit="createTeamScorecard(event)">
-                        <div class="form-group">
-                            <label>Team Name</label>
-                            <input type="text" id="teamName" required placeholder="The Eagles" autocomplete="off">
-                        </div>
-                        
-                        <div style="background: #f8f9fa; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                            <div style="font-weight: 600; color: #37b24a; margin-bottom: 12px;"><i class="fas fa-user"></i> Player 1</div>
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label>Name</label>
-                                <input type="text" id="player1Name" required placeholder="John Smith" autocomplete="off">
-                            </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label>Handicap</label>
-                                <input type="number" id="player1Handicap" value="0" min="0" max="54">
-                            </div>
-                        </div>
-                        
-                        <div style="background: #f8f9fa; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                            <div style="font-weight: 600; color: #10a0b6; margin-bottom: 12px;"><i class="fas fa-user"></i> Player 2</div>
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label>Name</label>
-                                <input type="text" id="player2Name" required placeholder="Jane Doe" autocomplete="off">
-                            </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label>Handicap</label>
-                                <input type="number" id="player2Handicap" value="0" min="0" max="54">
-                            </div>
-                        </div>
-                        
-                        <div id="teamError" class="error-msg" style="display:none"></div>
-                        <button type="submit" class="submit-btn"><i class="fas fa-golf-ball"></i> Start Scorecard</button>
-                        <button type="button" class="cancel-btn" onclick="render()"><i class="fas fa-arrow-left"></i> Back</button>
-                    </form>
-                </div>
-            `;
-            document.getElementById('teamName').focus();
         }
         
         function showExistingTeams() {
@@ -1677,180 +1632,6 @@
                 document.getElementById('teamPinInput').value = '';
                 document.getElementById('teamPinInput').focus();
             }
-        }
-        
-        function toggleNewTeam(value) {
-            const newTeamGroup = document.getElementById('newTeamGroup');
-            newTeamGroup.style.display = value === '__new__' ? 'block' : 'none';
-            if (value === '__new__') {
-                document.getElementById('newTeamName').focus();
-            }
-        }
-        
-        function generatePin() {
-            // Generate unique 4-digit PIN
-            const existingPins = new Set((league.players || []).map(p => p.pin).filter(Boolean));
-            let pin;
-            let attempts = 0;
-            do {
-                pin = Math.floor(1000 + Math.random() * 9000).toString();
-                attempts++;
-            } while (existingPins.has(pin) && attempts < 100);
-            return pin;
-        }
-        
-        async function createTeamScorecard(e) {
-            e.preventDefault();
-            const teamName = document.getElementById('teamName').value.trim();
-            const player1Name = document.getElementById('player1Name').value.trim();
-            const player1Handicap = parseInt(document.getElementById('player1Handicap').value) || 0;
-            const player2Name = document.getElementById('player2Name').value.trim();
-            const player2Handicap = parseInt(document.getElementById('player2Handicap').value) || 0;
-            const errorEl = document.getElementById('teamError');
-            const submitBtn = e.target?.querySelector('.submit-btn');
-            
-            errorEl.style.display = 'none';
-            errorEl.textContent = '';
-            
-            if (!league) {
-                errorEl.textContent = 'League data is still loading. Please try again.';
-                errorEl.style.display = 'block';
-                return;
-            }
-            
-            if (!teamName || !player1Name || !player2Name) {
-                errorEl.textContent = 'Please fill in all fields';
-                errorEl.style.display = 'block';
-                return;
-            }
-            
-            if (player1Name.toLowerCase() === player2Name.toLowerCase()) {
-                errorEl.textContent = 'Player names must be different';
-                errorEl.style.display = 'block';
-                return;
-            }
-            
-            try {
-                submitBtn && (submitBtn.disabled = true);
-                await ensureAuth();
-                
-                // Generate a unique PIN for the team
-                const teamPin = generatePin();
-                
-                // Create new team with PIN
-                const newTeam = {
-                    id: 't' + Date.now() + Math.random().toString(36).substr(2, 5),
-                    name: teamName,
-                    pin: teamPin
-                };
-                
-                const teamResult = await leagueRef.child('teams').transaction((teams) => {
-                    const list = teams || [];
-                    // Check for duplicate team name
-                    if (list.some(t => t.name && t.name.toLowerCase() === teamName.toLowerCase())) {
-                        return; // abort transaction
-                    }
-                    return [...list, newTeam];
-                });
-                
-                if (!teamResult.committed) {
-                    throw new Error(`Team "${teamName}" already exists. Use "Continue Existing Scorecard" to find your team.`);
-                }
-                
-                league.teams = teamResult.snapshot.val() || [];
-                const teamId = newTeam.id;
-                
-                // Create both players with team PIN
-                const player1 = {
-                    id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
-                    name: player1Name,
-                    handicap: player1Handicap,
-                    teamId,
-                    pin: teamPin
-                };
-                
-                const player2 = {
-                    id: 'p' + (Date.now() + 1) + Math.random().toString(36).substr(2, 5),
-                    name: player2Name,
-                    handicap: player2Handicap,
-                    teamId,
-                    pin: teamPin
-                };
-                
-                // Add both players in a transaction
-                const playerResult = await leagueRef.child('players').transaction((players) => {
-                    const list = players || [];
-                    // Check for duplicate names
-                    const existingNames = list.map(p => p.name?.toLowerCase());
-                    if (existingNames.includes(player1Name.toLowerCase())) {
-                        return; // abort
-                    }
-                    if (existingNames.includes(player2Name.toLowerCase())) {
-                        return; // abort
-                    }
-                    return [...list, player1, player2];
-                });
-                
-                if (!playerResult.committed) {
-                    // Delete the team we just created since players failed
-                    await leagueRef.child('teams').transaction((teams) => {
-                        return (teams || []).filter(t => t.id !== teamId);
-                    });
-                    throw new Error(`One of the player names already exists. Use "Continue Existing Scorecard" to find your team.`);
-                }
-                
-                league.players = playerResult.snapshot.val() || [];
-                
-                // Show team confirmation and start scorecard
-                showTeamConfirmation(newTeam, player1, player2);
-            } catch (err) {
-                console.error('Team creation failed:', err);
-                errorEl.textContent = err.message || 'Could not create your team. Please try again.';
-                errorEl.style.display = 'block';
-            } finally {
-                submitBtn && (submitBtn.disabled = false);
-            }
-        }
-        
-        function showTeamConfirmation(team, player1, player2) {
-            const container = document.getElementById('content');
-            const combinedHcp = (player1.handicap || 0) + (player2.handicap || 0);
-            container.innerHTML = `
-                <div class="pin-confirmation">
-                    <div class="success-icon"><i class="fas fa-check-circle"></i></div>
-                    <h2>Team Created!</h2>
-                    <p style="font-size: 18px; font-weight: 600; color: #37b24a; margin-bottom: 8px;">${team.name}</p>
-                    
-                    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 16px; margin: 16px 0; border: 2px solid #f59e0b;">
-                        <div style="text-align: center; margin-bottom: 8px;">
-                            <i class="fas fa-key" style="color: #d97706; font-size: 20px;"></i>
-                            <span style="color: #92400e; font-weight: 700; font-size: 14px; margin-left: 6px;">YOUR TEAM PIN</span>
-                        </div>
-                        <div style="text-align: center; font-size: 36px; font-weight: 800; letter-spacing: 10px; color: #92400e;">${team.pin}</div>
-                        <p style="text-align: center; font-size: 11px; color: #b45309; margin-top: 8px;"><i class="fas fa-exclamation-triangle"></i> Save this PIN! You'll need it to access your scorecard.</p>
-                    </div>
-                    
-                    <div style="background: #f8f9fa; border-radius: 12px; padding: 16px; margin: 16px 0;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <span style="color: #1a1a2e; font-weight: 600;">${player1.name}</span>
-                            <span style="color: #666;">HCP ${player1.handicap || 0}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #1a1a2e; font-weight: 600;">${player2.name}</span>
-                            <span style="color: #666;">HCP ${player2.handicap || 0}</span>
-                        </div>
-                        <div style="border-top: 1px solid #ddd; margin-top: 12px; padding-top: 12px; display: flex; justify-content: space-between;">
-                            <span style="color: #37b24a; font-weight: 700;">Combined Handicap</span>
-                            <span style="color: #37b24a; font-weight: 700;">${combinedHcp}</span>
-                        </div>
-                    </div>
-                    
-                    <p style="font-size: 13px; color: #666; margin-bottom: 16px;"><i class="fas fa-info-circle"></i> Scores entered will apply to both players</p>
-                    
-                    <button class="submit-btn" onclick="selectPlayer('${player1.id}')"><i class="fas fa-golf-ball"></i> Start Entering Scores</button>
-                    <a href="tournaments.html" class="back-link"><i class="fas fa-trophy"></i> View Leaderboard</a>
-                </div>
-            `;
         }
 
         // Get all team members for the current player
