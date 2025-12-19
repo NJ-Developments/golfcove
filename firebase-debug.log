@@ -1,0 +1,27 @@
+[debug] [2025-12-19T10:40:01.446Z] ----------------------------------------------------------------------
+[debug] [2025-12-19T10:40:01.449Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\acpsp\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2025-12-19T10:40:01.449Z] CLI Version:   15.0.0
+[debug] [2025-12-19T10:40:01.450Z] Platform:      win32
+[debug] [2025-12-19T10:40:01.450Z] Node Version:  v24.11.0
+[debug] [2025-12-19T10:40:01.450Z] Time:          Fri Dec 19 2025 05:40:01 GMT-0500 (Eastern Standard Time)
+[debug] [2025-12-19T10:40:01.450Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-12-19T10:40:03.435Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-19T10:40:03.435Z] > authorizing via signed-in user (javflores.ct@gmail.com)
+[debug] [2025-12-19T10:40:03.436Z] [iam] checking project golfcove for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2025-12-19T10:40:03.437Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:03.437Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:03.438Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions [none]
+[debug] [2025-12-19T10:40:03.438Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions x-goog-quota-user=projects/golfcove
+[debug] [2025-12-19T10:40:03.438Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-12-19T10:40:03.755Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions 200
+[debug] [2025-12-19T10:40:03.756Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/golfcove:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-12-19T10:40:03.757Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:03.757Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:03.758Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/golfcove/serviceAccounts/golfcove@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2025-12-19T10:40:03.758Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/golfcove/serviceAccounts/golfcove@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2025-12-19T10:40:04.054Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/golfcove/serviceAccounts/golfcove@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2025-12-19T10:40:04.054Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/golfcove/serviceAccounts/golfcove@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2025-12-19T10:40:04.054Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:04.055Z] Checked if tokens are valid: true, expires at: 1766141762199
+[debug] [2025-12-19T10:40:04.055Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/golfcove [none]

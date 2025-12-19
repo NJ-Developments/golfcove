@@ -1265,13 +1265,14 @@
                 </div>
                 
                 <div class="card">
-                <h3><i class="fas fa-key"></i> Print Player PINs</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print a sheet with each player's personal PIN for score entry.</p>
-                <button class="btn" onclick="printPinSheet()" style="width: 100%;"><i class="fas fa-print"></i> Print PIN Sheet</button>
-                <div style="margin-top: 15px;"></div>
-                <h3 style="margin-top: 10px;"><i class="fas fa-download"></i> Export Data</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Download all league data as a JSON file.</p>
-                <button class="btn btn-secondary" onclick="exportData()" style="width: 100%;"><i class="fas fa-download"></i> Export JSON</button>
+                    <h3><i class="fas fa-key"></i> Print Player PINs</h3>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Print a sheet with each player's personal PIN for score entry.</p>
+                    <button class="btn" onclick="printPinSheet()" style="width: 100%;"><i class="fas fa-print"></i> Print PIN Sheet</button>
+                    <div style="margin-top: 15px;"></div>
+                    <h3 style="margin-top: 10px;"><i class="fas fa-download"></i> Export Data</h3>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Download all league data as a JSON file.</p>
+                    <button class="btn btn-secondary" onclick="exportData()" style="width: 100%;"><i class="fas fa-download"></i> Export JSON</button>
+                </div>
             </div>
         </div>
         
@@ -1395,7 +1396,12 @@
                     </div>
                     
                     <!-- Member List -->
-                    <div id="customerGrid" style="display: grid; gap: 6px;"></div>
+                    <div id="customerGrid" style="display: grid; gap: 6px;">
+                        <div style="padding: 60px; text-align: center;">
+                            <i class="fas fa-users" style="font-size: 48px; color: #ccc; margin-bottom: 15px; display: block;"></i>
+                            <p style="color: #888; font-size: 14px;">Loading customers...</p>
+                        </div>
+                    </div>
                     
                     <!-- Pagination -->
                     <div id="customerPagination" style="display: flex; justify-content: center; gap: 6px; margin-top: 15px;"></div>
@@ -1928,21 +1934,24 @@
             try {
                 const cached = localStorage.getItem('gc_customers');
                 if (cached) {
-                    stripeCustomersCache = JSON.parse(cached);
-                    // Ensure name field exists (older cache may not have it)
-                    stripeCustomersCache = stripeCustomersCache.map(c => ({
-                        ...c,
-                        name: c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim() || ''
-                    }));
-                    console.log(`[LeagueAdmin] Loaded ${stripeCustomersCache.length} customers from cache`);
-                    return stripeCustomersCache;
+                    const parsedCache = JSON.parse(cached);
+                    // Only use cache if it has customers - otherwise fetch fresh
+                    if (parsedCache && parsedCache.length > 0) {
+                        stripeCustomersCache = parsedCache.map(c => ({
+                            ...c,
+                            name: c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim() || ''
+                        }));
+                        console.log(`[LeagueAdmin] Loaded ${stripeCustomersCache.length} customers from cache`);
+                        return stripeCustomersCache;
+                    }
                 }
             } catch (e) {
                 console.warn('[LeagueAdmin] Error loading customer cache:', e);
             }
             
-            // If no cache, try to fetch from API with timeout
+            // If no cache or empty cache, fetch from API
             try {
+                console.log('[LeagueAdmin] Fetching customers from Stripe API...');
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
                 
@@ -1953,11 +1962,13 @@
                 
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.customers && data.customers.length > 0) {
+                    if (data.customers) {
                         stripeCustomersCache = data.customers.map(transformStripeCustomer);
                         localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
                         console.log(`[LeagueAdmin] Synced ${stripeCustomersCache.length} customers from Stripe`);
                     }
+                } else {
+                    console.error('[LeagueAdmin] Stripe API error:', response.status, response.statusText);
                 }
             } catch (e) {
                 if (e.name === 'AbortError') {
@@ -3321,6 +3332,10 @@
             messageSpan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing customers from Stripe...';
             
             try {
+                // Clear cache to force fresh fetch
+                localStorage.removeItem('gc_customers');
+                stripeCustomersCache = [];
+                
                 await loadStripeCustomers();
                 messageSpan.innerHTML = `<i class="fas fa-check-circle" style="color:#37b24a;"></i> Synced ${stripeCustomersCache.length} customers successfully!`;
                 renderCustomers();
@@ -4221,11 +4236,10 @@
                 else if (section === 'settings') loadStripeSettings();
                 else if (section === 'scoredocs') loadScoreDocuments();
                 else if (section === 'customers') {
-                    // Load customers from cache or sync from Stripe if empty
+                    // Always render first (shows empty state), then sync if needed
+                    renderCustomers();
                     if (stripeCustomersCache.length === 0) {
                         syncStripeCustomers();
-                    } else {
-                        renderCustomers();
                     }
                 }
             } catch (err) {
