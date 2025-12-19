@@ -1140,6 +1140,12 @@
                 </div>
                 <div class="nav-divider"></div>
                 <div style="padding:10px 20px;font-size:11px;color:#999;text-transform:uppercase;font-weight:700;">Business Admin</div>
+                <a href="customers.html" class="nav-item" style="text-decoration: none;">
+                    <i class="fas fa-address-book" style="color:#635bff;"></i> Customer Management
+                </a>
+                <a href="admin-pos.html" class="nav-item" style="text-decoration: none;">
+                    <i class="fas fa-cash-register"></i> POS Admin
+                </a>
                 <div class="nav-item" data-section="staff" onclick="showSection('staff')">
                     <i class="fas fa-id-badge"></i> Staff Management
                 </div>
@@ -1856,9 +1862,49 @@
         const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
         let stripeCustomersCache = []; // In-memory cache of Stripe customers
         
+        // Transform Stripe API customer to our format
+        function transformStripeCustomer(c) {
+            const nameParts = (c.name || '').split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
+            
+            // Check for active subscription
+            const activeSub = c.subscriptions?.find(s => s.status === 'active');
+            const memberType = c.metadata?.tier || c.metadata?.memberType || 
+                              (activeSub ? getMemberTypeFromPlan(activeSub.plan) : null);
+            
+            return {
+                id: c.id,
+                stripeId: c.id,
+                stripeCustomerId: c.id,
+                firstName,
+                lastName,
+                email: c.email || '',
+                phone: c.phone || '',
+                isMember: !!activeSub || !!memberType,
+                memberType: memberType,
+                memberExpires: activeSub?.currentPeriodEnd 
+                    ? new Date(activeSub.currentPeriodEnd * 1000).toISOString().split('T')[0] 
+                    : c.metadata?.memberExpires || null,
+                isLeague: c.metadata?.isLeague === 'true' || c.metadata?.isLeague === true,
+                subscriptions: c.subscriptions || [],
+                created: c.created
+            };
+        }
+        
+        function getMemberTypeFromPlan(planName) {
+            if (!planName) return null;
+            const lower = String(planName).toLowerCase();
+            if (lower.includes('eagle')) return 'eagle';
+            if (lower.includes('birdie')) return 'birdie';
+            if (lower.includes('par')) return 'par';
+            if (lower.includes('family')) return 'family_' + (lower.includes('eagle') ? 'eagle' : lower.includes('birdie') ? 'birdie' : 'par');
+            return null;
+        }
+        
         // Load customers from Stripe/cache
         async function loadStripeCustomers() {
-            // First try to load from localStorage (cached from admin-pos sync)
+            // First try to load from localStorage (cached from admin-pos or customers page)
             try {
                 const cached = localStorage.getItem('gc_customers');
                 if (cached) {
@@ -1870,32 +1916,30 @@
                 console.warn('[LeagueAdmin] Error loading customer cache:', e);
             }
             
-            // If no cache, try to fetch from API
+            // If no cache, try to fetch from API with timeout
             try {
-                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+                
+                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.customers) {
-                        stripeCustomersCache = data.customers.map(c => ({
-                            id: c.stripeId,
-                            stripeId: c.stripeId,
-                            stripeCustomerId: c.stripeId,
-                            firstName: c.firstName || '',
-                            lastName: c.lastName || '',
-                            email: c.email || '',
-                            phone: c.phone || '',
-                            isMember: c.isMember || false,
-                            isLeague: c.isLeague || false,
-                            memberType: c.memberType || null,
-                            memberExpires: c.memberExpires || null,
-                            ...c
-                        }));
+                    if (data.customers && data.customers.length > 0) {
+                        stripeCustomersCache = data.customers.map(transformStripeCustomer);
                         localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
                         console.log(`[LeagueAdmin] Synced ${stripeCustomersCache.length} customers from Stripe`);
                     }
                 }
             } catch (e) {
-                console.warn('[LeagueAdmin] Could not sync customers from API:', e);
+                if (e.name === 'AbortError') {
+                    console.warn('[LeagueAdmin] Customer sync request timed out');
+                } else {
+                    console.warn('[LeagueAdmin] Could not sync customers from API:', e);
+                }
             }
             
             return stripeCustomersCache;
@@ -3628,34 +3672,60 @@
             const msgSpan = document.getElementById('playerSyncMessage');
             
             statusDiv.style.display = 'block';
-            msgSpan.textContent = 'Syncing member status from Stripe...';
+            statusDiv.style.background = '#e3f2fd';
+            statusDiv.style.borderColor = '#90caf9';
+            statusDiv.style.color = '#1565c0';
+            msgSpan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing member status from Stripe...';
+            
+            let fetchSuccess = false;
             
             try {
-                // Refresh Stripe customer cache
-                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`);
+                // Refresh Stripe customer cache with timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.customers) {
-                        stripeCustomersCache = data.customers.map(c => ({
-                            id: c.stripeId,
-                            stripeId: c.stripeId,
-                            stripeCustomerId: c.stripeId,
-                            firstName: c.firstName || '',
-                            lastName: c.lastName || '',
-                            email: c.email || '',
-                            phone: c.phone || '',
-                            memberType: c.memberType || null,
-                            memberExpiry: c.memberExpiry || null,
-                            isLeague: c.isLeague === 'true' || c.isLeague === true,
-                            created: c.created
-                        }));
+                    if (data.customers && data.customers.length > 0) {
+                        // Use the same transform function as loadStripeCustomers
+                        stripeCustomersCache = data.customers.map(transformStripeCustomer);
                         // Update localStorage cache
                         localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
                         console.log(`[LeagueAdmin] Refreshed ${stripeCustomersCache.length} customers from Stripe`);
+                        fetchSuccess = true;
+                    } else {
+                        console.warn('[LeagueAdmin] No customers returned from API');
                     }
+                } else {
+                    console.warn('[LeagueAdmin] API returned error:', response.status);
                 }
             } catch (e) {
-                console.warn('[LeagueAdmin] Error refreshing customers:', e);
+                if (e.name === 'AbortError') {
+                    console.warn('[LeagueAdmin] Request timed out');
+                    msgSpan.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Request timed out. Using cached data.';
+                } else {
+                    console.warn('[LeagueAdmin] Error refreshing customers:', e);
+                    msgSpan.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Could not reach server. Using cached data.';
+                }
+                statusDiv.style.background = '#fff3e0';
+                statusDiv.style.borderColor = '#ffcc02';
+                statusDiv.style.color = '#e65100';
+                
+                // Try to use localStorage cache
+                try {
+                    const cached = localStorage.getItem('gc_customers');
+                    if (cached) {
+                        stripeCustomersCache = JSON.parse(cached);
+                        console.log(`[LeagueAdmin] Using ${stripeCustomersCache.length} customers from cache`);
+                    }
+                } catch (cacheErr) {
+                    console.warn('[LeagueAdmin] Could not load cache:', cacheErr);
+                }
             }
             
             // Now sync each player's member status
