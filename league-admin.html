@@ -215,35 +215,6 @@
             display: block;
         }
         
-        /* Logout button */
-        #desktopLogoutBtn {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            background: #e74c3c;
-            color: #fff;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            display: none;
-            gap: 8px;
-            align-items: center;
-            transition: all 0.3s;
-            z-index: 1500;
-            box-shadow: 0 2px 10px rgba(231,76,60,0.3);
-        }
-        #desktopLogoutBtn:hover { background: #c0392b; }
-        @media (max-width: 767px) {
-            #desktopLogoutBtn {
-                top: 12px;
-                right: 12px;
-                padding: 9px 14px;
-                font-size: 13px;
-            }
-        }
-        
         /* Page Sections */
         .page-section {
             display: none;
@@ -1069,16 +1040,6 @@
     </style>
 </head>
 <body>
-    <!-- Top Bar -->
-    <div class="top-bar">
-        <div class="container">
-            <div class="top-bar-left">
-                <a href="tel:2033905994"><i class="fas fa-phone"></i> 203.390.5994</a>
-                <a href="https://maps.google.com/?q=336+State+Street,+North+Haven,+CT+06473" target="_blank"><i class="fas fa-map-marker-alt"></i> 336 STATE STREET, NORTH HAVEN, CT</a>
-            </div>
-        </div>
-    </div>
-
     <!-- Header -->
     <header>
         <div class="header-main">
@@ -1644,11 +1605,6 @@
     <button class="mobile-admin-toggle" id="mobileAdminToggle" onclick="toggleMobileSidebar()">
         <i class="fas fa-bars"></i>
     </button>
-    
-    <!-- Logout Button (Desktop) -->
-    <button id="desktopLogoutBtn" onclick="handleLogout()">
-        <i class="fas fa-sign-out-alt"></i> <span>Sign Out</span>
-    </button>
 
     <!-- Login Screen -->
     <div class="setup-container active" id="loginContainer">
@@ -2160,7 +2116,6 @@
             if (user) {
                 currentUser = user;
                 document.getElementById('loginContainer').classList.remove('active');
-                document.getElementById('desktopLogoutBtn').style.display = 'block';
                 initAdmin();
             } else {
                 currentUser = null;
@@ -2169,7 +2124,6 @@
                 document.getElementById('loginContainer').classList.add('active');
                 document.getElementById('setupContainer').classList.remove('active');
                 document.getElementById('adminWrapper').style.display = 'none';
-                document.getElementById('desktopLogoutBtn').style.display = 'none';
                 document.getElementById('mobileAdminToggle').style.display = 'none';
                 setTimeout(() => {
                     document.getElementById('adminEmail')?.focus();
