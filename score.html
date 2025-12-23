@@ -1279,12 +1279,23 @@
             const net = total - handicap;
             const isTeam = teamMembersForScore.length > 1;
             
-            // Score summary - Front 9: TOT | HCP | NET
+            // Format net score relative to par (36)
+            const formatNetToPar = (netScore) => {
+                if (!netScore && netScore !== 0) return '-';
+                const PAR = 36;
+                const diff = netScore - PAR;
+                if (diff === 0) return 'E';
+                return diff > 0 ? '+' + diff : String(diff);
+            };
+            const netDisplay = total ? formatNetToPar(net) : '-';
+            const netColor = net < 36 ? '#37b24a' : net > 36 ? '#f44336' : '#333';
+            
+            // Score summary - Front 9: TOT | HCP | +/-
             html += `
                 <div class="score-summary nine-holes">
                     <div class="item"><div class="label">TOT</div><div class="value" id="total">${total || '-'}</div></div>
                     <div class="item"><div class="label">${isTeam ? 'TEAM HCP' : 'HCP'}</div><div class="value" style="font-size: ${isTeam ? '14px' : '26px'};">${handicap}</div></div>
-                    <div class="item"><div class="label">NET</div><div class="value net" id="netVal">${total ? net : '-'}</div></div>
+                    <div class="item"><div class="label">+/-</div><div class="value net" id="netVal" style="color: ${netColor};">${netDisplay}</div></div>
                 </div>
             </div>
             <button class="submit-btn" onclick="submit()">${isTeam ? '<i class="fas fa-users"></i> Submit Team Score' : 'Submit Score'}</button>
@@ -1961,9 +1972,17 @@
             const handicap = teamMembers.reduce((sum, p) => sum + (p.handicap || 0), 0);
             const net = total - handicap;
             
+            // Format net score relative to par (36)
+            const PAR = 36;
+            const diff = net - PAR;
+            const netDisplay = total ? (diff === 0 ? 'E' : (diff > 0 ? '+' + diff : String(diff))) : '-';
+            const netColor = net < PAR ? '#37b24a' : net > PAR ? '#f44336' : '#333';
+            
             // Update displays
             document.getElementById('total').textContent = total || '-';
-            document.getElementById('netVal').textContent = total ? net : '-';
+            const netEl = document.getElementById('netVal');
+            netEl.textContent = netDisplay;
+            netEl.style.color = netColor;
         }
 
         function submit() {

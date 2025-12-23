@@ -3311,7 +3311,12 @@
                 return a.net - b.net;
             });
             
-            document.getElementById('scoresModalContent').innerHTML = scores.map(s => `
+            document.getElementById('scoresModalContent').innerHTML = scores.map(s => {
+                const PAR = 36;
+                const netToPar = s.net - PAR;
+                const netDisplay = s.net !== null ? (netToPar === 0 ? 'E' : (netToPar > 0 ? '+' + netToPar : String(netToPar))) : '-';
+                const netColor = s.net < PAR ? '#37b24a' : s.net > PAR ? '#f44336' : '#333';
+                return `
                 <div class="round-item">
                     <div>
                         <h4>${s.name}</h4>
@@ -3320,11 +3325,12 @@
                     ${s.gross !== null ? `
                         <div style="text-align: right;">
                             <div style="font-size: 18px; font-weight: 700; color: #37b24a;">${s.gross}${s.holesPlayed < holes ? ` <span style="font-size:12px;color:#888">(${s.holesPlayed}h)</span>` : ''}</div>
-                            <div style="font-size: 12px; color: #888;">Net: ${s.net}</div>
+                            <div style="font-size: 12px; color: ${netColor}; font-weight: 600;">+/-: ${netDisplay}</div>
                         </div>
                     ` : '<span style="color: #999;">No score</span>'}
                 </div>
-            `).join('');
+            `;
+            }).join('');
             
             openModal('scoresModal');
         }
@@ -3866,6 +3872,11 @@
                     avgGross += score.gross || 0;
                     avgNet += score.net || 0;
                     
+                    const PAR = 36;
+                    const netToPar = (score.net || 0) - PAR;
+                    const netDisplay = score.net ? (netToPar === 0 ? 'E' : (netToPar > 0 ? '+' + netToPar : String(netToPar))) : '-';
+                    const netColor = (score.net || 0) < PAR ? '#37b24a' : (score.net || 0) > PAR ? '#f44336' : '#333';
+                    
                     scoresHtml += `
                         <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:15px;padding:12px;background:#f8f9fa;border-radius:8px;align-items:center;">
                             <div>
@@ -3877,8 +3888,8 @@
                                 <div style="font-weight:700;font-size:18px;">${score.gross || '-'}</div>
                             </div>
                             <div style="text-align:center;">
-                                <div style="font-size:11px;color:#888;">NET</div>
-                                <div style="font-weight:700;font-size:18px;color:#37b24a;">${score.net || '-'}</div>
+                                <div style="font-size:11px;color:#888;">+/-</div>
+                                <div style="font-weight:700;font-size:18px;color:${netColor};">${netDisplay}</div>
                             </div>
                             <div style="text-align:center;">
                                 <div style="font-size:11px;color:#888;">HCP</div>
@@ -3893,6 +3904,12 @@
                 avgGross = Math.round(avgGross / totalRounds);
                 avgNet = Math.round(avgNet / totalRounds);
             }
+            
+            // Format average net relative to par
+            const PAR = 36;
+            const avgNetToPar = avgNet - PAR;
+            const avgNetDisplay = avgNet ? (avgNetToPar === 0 ? 'E' : (avgNetToPar > 0 ? '+' + avgNetToPar : String(avgNetToPar))) : '-';
+            const avgNetColor = avgNet < PAR ? '#37b24a' : avgNet > PAR ? '#f44336' : '#fff';
             
             const modalHtml = `
                 <div id="playerScoresModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;overflow-y:auto;">
@@ -3915,8 +3932,8 @@
                                     <div style="font-size:22px;font-weight:700;">${avgGross || '-'}</div>
                                 </div>
                                 <div style="text-align:center;background:rgba(55,178,74,0.3);padding:10px;border-radius:8px;">
-                                    <div style="font-size:11px;color:#aaa;">AVG NET</div>
-                                    <div style="font-size:22px;font-weight:700;">${avgNet || '-'}</div>
+                                    <div style="font-size:11px;color:#aaa;">AVG +/-</div>
+                                    <div style="font-size:22px;font-weight:700;color:${avgNetColor};">${avgNetDisplay}</div>
                                 </div>
                             </div>
                         </div>
@@ -4358,8 +4375,15 @@
                         <div class="label">vs Par (${totalPar})</div>
                     </div>
                     <div class="total-item">
-                        <div class="value">${Math.max(0, totalScore - (player?.handicap || 0))}</div>
-                        <div class="label">Net Score</div>
+                        ${(() => {
+                            const PAR = 36;
+                            const netScore = Math.max(0, totalScore - (player?.handicap || 0));
+                            const netToPar = netScore - PAR;
+                            const netDisplay = netToPar === 0 ? 'E' : (netToPar > 0 ? '+' + netToPar : String(netToPar));
+                            const netColor = netScore < PAR ? '#37b24a' : netScore > PAR ? '#f44336' : '#333';
+                            return `<div class="value" style="color: ${netColor};">${netDisplay}</div>`;
+                        })()}
+                        <div class="label">+/- Par</div>
                     </div>
                 </div>
                 

@@ -450,13 +450,19 @@
                                     <strong>Round History:</strong>
                                     ${s.roundDetails.length === 0 ? '<p>No rounds completed.</p>' : `
                                         <table style="margin-top: 10px; font-size: 14px;">
-                                            ${s.roundDetails.map(r => `
+                                            ${s.roundDetails.map(r => {
+                                                const PAR = 36;
+                                                const netToPar = r.net - PAR;
+                                                const netDisplay = netToPar === 0 ? 'E' : (netToPar > 0 ? '+' + netToPar : String(netToPar));
+                                                const netColor = r.net < PAR ? '#37b24a' : r.net > PAR ? '#f44336' : '#333';
+                                                return `
                                                 <tr>
                                                     <td style="padding: 5px 15px 5px 0;">${r.round}</td>
                                                     <td style="padding: 5px 15px;">Gross: ${r.gross}</td>
-                                                    <td style="padding: 5px 15px; font-weight: 600; color: #37b24a;">Net: ${r.net}</td>
+                                                    <td style="padding: 5px 15px; font-weight: 600; color: ${netColor};">+/-: ${netDisplay}</td>
                                                 </tr>
-                                            `).join('')}
+                                            `;
+                                            }).join('')}
                                         </table>
                                     `}
                                 </td>

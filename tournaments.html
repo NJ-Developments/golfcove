@@ -1534,6 +1534,19 @@
             const sorted = sortStandings(standings, view);
             
             const getTeamName = (teamId) => (league.teams || []).find(t => t.id === teamId)?.name || '';
+            
+            // Helper to format net score relative to par (36)
+            const PAR = 36;
+            const formatNetToPar = (netScore) => {
+                if (netScore === null || netScore === undefined) return '-';
+                const diff = netScore - PAR;
+                if (diff === 0) return 'E';
+                return diff > 0 ? '+' + diff : String(diff);
+            };
+            const getNetColor = (netScore) => {
+                if (netScore === null || netScore === undefined) return '#333';
+                return netScore < PAR ? '#37b24a' : netScore > PAR ? '#f44336' : '#333';
+            };
 
             let headers, renderRow;
             
@@ -1557,22 +1570,26 @@
                 `;
             } else if (view === 'by-round') {
                 const roundHeaders = (league.rounds || []).map(r => `<th>${r.name.replace('Week ', 'W')}</th>`).join('');
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th>${roundHeaders}<th class="highlight">Net Total</th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th>${roundHeaders}<th class="highlight">+/- Total</th>`;
                 renderRow = (s, posDisplay, posNum) => {
                     const cells = (league.rounds || []).map(r => {
                         const rd = s.roundDetails.find(d => d.name === r.name);
-                        return `<td style="${rd ? '' : 'color:#ccc;opacity:0.5'}">${rd ? rd.net : '-'}</td>`;
+                        if (!rd) return `<td style="color:#ccc;opacity:0.5">-</td>`;
+                        return `<td style="color:${getNetColor(rd.net)};font-weight:600;">${formatNetToPar(rd.net)}</td>`;
                     }).join('');
+                    const totalNetToPar = s.roundsPlayed > 0 ? s.totalNet - (PAR * s.roundsPlayed) : null;
+                    const totalNetDisplay = totalNetToPar !== null ? (totalNetToPar === 0 ? 'E' : (totalNetToPar > 0 ? '+' + totalNetToPar : String(totalNetToPar))) : '-';
+                    const totalNetColor = totalNetToPar !== null ? (totalNetToPar < 0 ? '#37b24a' : totalNetToPar > 0 ? '#f44336' : '#333') : '#333';
                     return `
                         <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                         <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                         ${cells}
-                        <td><span class="score-cell net">${s.roundsPlayed > 0 ? s.totalNet : '-'}</span></td>
+                        <td><span class="score-cell net" style="color:${totalNetColor};">${totalNetDisplay}</span></td>
                     `;
                 };
             } else if (view === 'recent-form') {
                 // Show last 3 rounds with detailed analysis
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>Last 3 Scores</th><th>Recent Avg</th><th>Overall Avg</th><th>Momentum</th><th class="highlight">3-Round Total</th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>Last 3 +/-</th><th>Recent Avg</th><th>Overall Avg</th><th>Momentum</th><th class="highlight">3-Round +/-</th>`;
                 renderRow = (s, posDisplay, posNum) => {
                     const recentRounds = s.roundDetails.slice(-3);
                     const recentCount = recentRounds.length;
@@ -1587,12 +1604,16 @@
                     
                     const recentTotal = recentRounds.reduce((sum, r) => sum + r.net, 0);
                     const recentAvg = Math.round((recentTotal / recentCount) * 10) / 10;
+                    const recentAvgToPar = Math.round((recentAvg - PAR) * 10) / 10;
+                    const recentAvgDisplay = recentAvgToPar === 0 ? 'E' : (recentAvgToPar > 0 ? '+' + recentAvgToPar : String(recentAvgToPar));
                     
-                    // Show individual scores for last 3 rounds
-                    const scoresList = recentRounds.map(r => r.net).join(', ');
+                    // Show individual scores for last 3 rounds as +/- par
+                    const scoresList = recentRounds.map(r => formatNetToPar(r.net)).join(', ');
                     
                     // Calculate momentum: recent avg vs overall avg
                     const overallAvg = s.avgNet;
+                    const overallAvgToPar = overallAvg !== null ? Math.round((overallAvg - PAR) * 10) / 10 : null;
+                    const overallAvgDisplay = overallAvgToPar !== null ? (overallAvgToPar === 0 ? 'E' : (overallAvgToPar > 0 ? '+' + overallAvgToPar : String(overallAvgToPar))) : '-';
                     let momentum = '';
                     let momentumClass = '';
                     if (overallAvg !== null && recentCount >= 2) {
@@ -1611,23 +1632,35 @@
                         momentum = '-';
                     }
                     
+                    // 3-round total relative to par
+                    const recentTotalToPar = recentTotal - (PAR * recentCount);
+                    const recentTotalDisplay = recentTotalToPar === 0 ? 'E' : (recentTotalToPar > 0 ? '+' + recentTotalToPar : String(recentTotalToPar));
+                    const recentTotalColor = recentTotalToPar < 0 ? '#37b24a' : recentTotalToPar > 0 ? '#f44336' : '#333';
+                    
                     return `
                         <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                         <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                         <td style="font-size:12px;color:#666;">${scoresList}</td>
-                        <td style="font-weight:600;">${recentAvg}</td>
-                        <td>${overallAvg !== null ? overallAvg : '-'}</td>
+                        <td style="font-weight:600;color:${getNetColor(recentAvg)};">${recentAvgDisplay}</td>
+                        <td style="color:${overallAvg !== null ? getNetColor(overallAvg) : '#333'};">${overallAvgDisplay}</td>
                         <td ${momentumClass}>${momentum}</td>
-                        <td><span class="score-cell net" style="font-size:16px;font-weight:700;">${recentTotal}</span></td>
+                        <td><span class="score-cell net" style="font-size:16px;font-weight:700;color:${recentTotalColor};">${recentTotalDisplay}</span></td>
                     `;
                 };
             } else if (view === 'average') {
                 // Sort by best average net score - most fair for players with different round counts
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>HCP</th><th>Rnds</th><th>Best/Worst</th><th class="highlight">Avg Net</th><th>Total</th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>HCP</th><th>Rnds</th><th>Best/Worst</th><th class="highlight">Avg +/-</th><th>Total +/-</th>`;
                 renderRow = (s, posDisplay, posNum) => {
                     const bestWorst = (s.bestNet !== null && s.roundDetails.length > 1) ? 
-                        `${s.bestNet} / ${Math.max(...s.roundDetails.map(r => r.net))}` : 
-                        (s.bestNet !== null ? `${s.bestNet}` : '-');
+                        `${formatNetToPar(s.bestNet)} / ${formatNetToPar(Math.max(...s.roundDetails.map(r => r.net)))}` : 
+                        (s.bestNet !== null ? `${formatNetToPar(s.bestNet)}` : '-');
+                    
+                    const avgNetToPar = s.avgNet !== null ? Math.round((s.avgNet - PAR) * 10) / 10 : null;
+                    const avgNetDisplay = avgNetToPar !== null ? (avgNetToPar === 0 ? 'E' : (avgNetToPar > 0 ? '+' + avgNetToPar : String(avgNetToPar))) : '-';
+                    const avgNetColor = s.avgNet !== null ? getNetColor(s.avgNet) : '#333';
+                    
+                    const totalNetToPar = s.roundsPlayed > 0 ? s.totalNet - (PAR * s.roundsPlayed) : null;
+                    const totalNetDisplay = totalNetToPar !== null ? (totalNetToPar === 0 ? 'E' : (totalNetToPar > 0 ? '+' + totalNetToPar : String(totalNetToPar))) : '-';
                     
                     return `
                         <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
@@ -1635,8 +1668,8 @@
                         <td>${s.handicap}</td>
                         <td>${s.roundsPlayed}</td>
                         <td style="font-size:12px;color:#666;">${bestWorst}</td>
-                        <td><span class="score-cell net" style="font-size:16px;font-weight:700;">${s.avgNet !== null ? s.avgNet : '-'}</span></td>
-                        <td style="color:#888;">${s.roundsPlayed > 0 ? s.totalNet : '-'}</td>
+                        <td><span class="score-cell net" style="font-size:16px;font-weight:700;color:${avgNetColor};">${avgNetDisplay}</span></td>
+                        <td style="color:#888;">${totalNetDisplay}</td>
                     `;
                 };
             } else if (view === 'team-standings') {
@@ -1703,7 +1736,7 @@
                     return a.totalNet - b.totalNet;
                 });
                 
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Team</th><th style="text-align:left">Players</th><th>Rnds</th><th>Avg/Rnd</th><th class="highlight">Team Total</th>`;
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Team</th><th style="text-align:left">Players</th><th>Rnds</th><th>Avg/Rnd</th><th class="highlight">Team +/-</th>`;
                 
                 let pos = 1;
                 return `
@@ -1716,14 +1749,24 @@
                                     `T${pos}` : (pos = idx + 1);
                                 const posNum = (team.roundsPlayed === 0 || !team.isComplete) ? null : pos;
                                 
+                                // Team total relative to par (2 players per round = 72 par per round)
+                                const teamPar = 72; // 36 per player * 2 players
+                                const teamTotalToPar = team.roundsPlayed > 0 ? team.totalNet - (teamPar * team.roundsPlayed) : null;
+                                const teamTotalDisplay = teamTotalToPar !== null ? (teamTotalToPar === 0 ? 'E' : (teamTotalToPar > 0 ? '+' + teamTotalToPar : String(teamTotalToPar))) : '-';
+                                const teamTotalColor = teamTotalToPar !== null ? (teamTotalToPar < 0 ? '#37b24a' : teamTotalToPar > 0 ? '#f44336' : '#333') : '#333';
+                                
+                                // Avg per round relative to par
+                                const avgToPar = team.avgPerRound !== null ? Math.round((team.avgPerRound - teamPar) * 10) / 10 : null;
+                                const avgDisplay = avgToPar !== null ? (avgToPar === 0 ? 'E' : (avgToPar > 0 ? '+' + avgToPar : String(avgToPar))) : '-';
+                                
                                 return `
                                     <tr style="${!team.isComplete ? 'opacity:0.6;' : ''}">
                                         <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay}</span></td>
                                         <td style="text-align:left"><div class="player-info"><span class="player-name" style="font-weight:700;color:#37b24a;">${team.teamName}</span></div></td>
                                         <td style="text-align:left;font-size:13px;color:#666;">${team.players}</td>
                                         <td>${team.roundsPlayed}</td>
-                                        <td style="font-weight:600;">${team.avgPerRound !== null ? team.avgPerRound : '-'}</td>
-                                        <td><span class="score-cell net" style="font-size:18px;font-weight:700;">${team.roundsPlayed > 0 ? team.totalNet : '-'}</span></td>
+                                        <td style="font-weight:600;">${avgDisplay}</td>
+                                        <td><span class="score-cell net" style="font-size:18px;font-weight:700;color:${teamTotalColor};">${teamTotalDisplay}</span></td>
                                     </tr>
                                 `;
                             }).join('')}
@@ -1732,16 +1775,25 @@
                 `;
             } else {
                 // Default Net view with key league metrics: gross/net, rounds, average
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th title="Rounds completed">Rnds</th><th title="Total gross strokes">Gross</th><th class="highlight" title="Total net strokes (after handicap)">Net</th><th title="Average net per round">Avg Net</th><th style="width:40px"></th>`;
-                renderRow = (s, posDisplay, posNum) => `
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th title="Rounds completed">Rnds</th><th title="Total gross strokes">Gross</th><th class="highlight" title="Score relative to par (+/-)">+/-</th><th title="Average +/- per round">Avg +/-</th><th style="width:40px"></th>`;
+                renderRow = (s, posDisplay, posNum) => {
+                    const totalNetToPar = s.roundsPlayed > 0 ? s.totalNet - (PAR * s.roundsPlayed) : null;
+                    const totalNetDisplay = totalNetToPar !== null ? (totalNetToPar === 0 ? 'E' : (totalNetToPar > 0 ? '+' + totalNetToPar : String(totalNetToPar))) : '-';
+                    const totalNetColor = totalNetToPar !== null ? (totalNetToPar < 0 ? '#37b24a' : totalNetToPar > 0 ? '#f44336' : '#333') : '#333';
+                    
+                    const avgNetToPar = s.avgNet !== null ? Math.round((s.avgNet - PAR) * 10) / 10 : null;
+                    const avgNetDisplay = avgNetToPar !== null ? (avgNetToPar === 0 ? 'E' : (avgNetToPar > 0 ? '+' + avgNetToPar : String(avgNetToPar))) : '-';
+                    
+                    return `
                     <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                     <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
                     <td>${s.roundsPlayed}</td>
                     <td>${s.roundsPlayed > 0 ? s.totalGross : '-'}</td>
-                    <td><span class="score-cell net">${s.roundsPlayed > 0 ? s.totalNet : '-'}</span></td>
-                    <td>${s.avgNet !== null ? s.avgNet : '-'}</td>
+                    <td><span class="score-cell net" style="color:${totalNetColor};">${totalNetDisplay}</span></td>
+                    <td>${avgNetDisplay}</td>
                     <td style="text-align:center">${getTrendIcon(s.trend)}</td>
                 `;
+                };
             }
 
             // Calculate positions with tie handling
