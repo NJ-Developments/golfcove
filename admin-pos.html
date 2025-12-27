@@ -1370,7 +1370,15 @@
                 localStorage.setItem('gc_employees', JSON.stringify(defaultEmployees));
                 return defaultEmployees;
             }
-            return stored.filter(e => e.isActive !== false);
+            // Ensure default employees are always available
+            let allEmployees = [...defaultEmployees];
+            stored.forEach(emp => {
+                if (!allEmployees.find(e => e.id === emp.id)) {
+                    allEmployees.push(emp);
+                }
+            });
+            localStorage.setItem('gc_employees', JSON.stringify(allEmployees));
+            return allEmployees.filter(e => e.isActive !== false);
         }
         
         let employees = loadEmployees();
