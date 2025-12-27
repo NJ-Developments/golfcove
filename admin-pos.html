@@ -1455,7 +1455,7 @@
         
         // Handle keyboard input for PIN
         document.addEventListener('keydown', function(e) {
-            if (!isLocked) return;
+            if (document.getElementById('lockScreen').style.display === 'none') return;
             
             if (e.key >= '0' && e.key <= '9') {
                 enterPin(parseInt(e.key));
