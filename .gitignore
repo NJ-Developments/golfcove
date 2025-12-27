@@ -17,3 +17,12 @@ Thumbs.db
 
 # Large video files (optional - uncomment if using CDN)
 # *.mp4
+
+# Build output
+dist/
+
+# Dependencies
+node_modules/
+
+# Firebase cache
+.firebase/
