@@ -31,6 +31,113 @@
     <script src="js/payment-processor.js"></script>
     <script src="js/cash-drawer.js"></script>
     <script>
+        // ============ PIN LOCK SYSTEM (must load early for onclick handlers) ============
+        let currentPin = '';
+        let currentEmployee = null;
+        let isLocked = true;
+        
+        // Default employees (will be synced from Firebase)
+        const defaultEmployees = [
+            { id: 'EMP-DEFAULT-1', name: 'Manager', pin: '9999', role: 'manager', isActive: true },
+            { id: 'EMP-DEFAULT-2', name: 'Staff', pin: '8888', role: 'staff', isActive: true }
+        ];
+        
+        // Load employees from centralized storage
+        function loadEmployees() {
+            try {
+                let stored = JSON.parse(localStorage.getItem('gc_employees') || 'null');
+                if (!stored || stored.length === 0) {
+                    localStorage.setItem('gc_employees', JSON.stringify(defaultEmployees));
+                    return defaultEmployees;
+                }
+                // Ensure default employees are always available
+                let allEmployees = [...defaultEmployees];
+                stored.forEach(emp => {
+                    if (!allEmployees.find(e => e.id === emp.id)) {
+                        allEmployees.push(emp);
+                    }
+                });
+                localStorage.setItem('gc_employees', JSON.stringify(allEmployees));
+                return allEmployees.filter(e => e.isActive !== false);
+            } catch (e) {
+                console.error('Error loading employees:', e);
+                return defaultEmployees;
+            }
+        }
+        
+        let employees = loadEmployees();
+        
+        function enterPin(num) {
+            if (currentPin.length < 4) {
+                currentPin += num.toString();
+                updatePinDisplay();
+            }
+        }
+        
+        function clearPin() {
+            if (currentPin.length > 0) {
+                currentPin = currentPin.slice(0, -1);
+                updatePinDisplay();
+            }
+        }
+        
+        function updatePinDisplay() {
+            const dots = document.querySelectorAll('#pinDisplay .pin-dot');
+            dots.forEach((dot, i) => {
+                if (i < currentPin.length) {
+                    dot.style.background = '#4a90a4';
+                } else {
+                    dot.style.background = '#fff';
+                }
+            });
+            const errorEl = document.getElementById('pinError');
+            if (errorEl) errorEl.style.display = 'none';
+        }
+        
+        function submitPin() {
+            // Refresh employees list
+            employees = loadEmployees();
+            const employee = employees.find(e => e.pin === currentPin);
+            
+            if (employee) {
+                currentEmployee = employee;
+                isLocked = false;
+                document.getElementById('lockScreen').style.display = 'none';
+                const userNameEl = document.getElementById('currentUserName');
+                if (userNameEl) userNameEl.textContent = employee.name;
+                if (typeof showToast === 'function') {
+                    showToast('Welcome, ' + employee.name + '!', 'success');
+                }
+                console.log('PIN Login successful:', employee.name);
+            } else {
+                const errorEl = document.getElementById('pinError');
+                if (errorEl) errorEl.style.display = 'block';
+                currentPin = '';
+                updatePinDisplay();
+                
+                // Shake animation
+                const pinDisplay = document.getElementById('pinDisplay');
+                if (pinDisplay) {
+                    pinDisplay.style.animation = 'shake 0.3s';
+                    setTimeout(() => pinDisplay.style.animation = '', 300);
+                }
+            }
+        }
+        
+        function lockPOS() {
+            isLocked = true;
+            currentPin = '';
+            updatePinDisplay();
+            document.getElementById('lockScreen').style.display = 'flex';
+            const errorEl = document.getElementById('pinError');
+            if (errorEl) errorEl.style.display = 'none';
+        }
+        
+        // Get current logged-in employee name
+        function getCurrentUserName() {
+            return currentEmployee ? currentEmployee.name : 'Staff';
+        }
+        
         // ============ TAX HELPERS - Use Unified Config ============
         // These helpers ensure tax rate comes from a single source
         function getTaxRate() {
@@ -1352,107 +1459,7 @@
         const getMemberTierName = (memberType) => GolfCoveUtils.getMemberTierName(memberType);
         const getMemberTierColor = (memberType) => GolfCoveUtils.getMemberTierColor(memberType);
         
-        // ============ PIN LOCK SYSTEM ============
-        let currentPin = '';
-        let currentEmployee = null;
-        let isLocked = true;
-        
-        // Default employees (will be synced from Firebase)
-        const defaultEmployees = [
-            { id: 'EMP-DEFAULT-1', name: 'Manager', pin: '9999', role: 'manager', isActive: true },
-            { id: 'EMP-DEFAULT-2', name: 'Staff', pin: '8888', role: 'staff', isActive: true }
-        ];
-        
-        // Load employees from centralized storage (synced with Firebase)
-        function loadEmployees() {
-            let stored = JSON.parse(localStorage.getItem('gc_employees') || 'null');
-            if (!stored || stored.length === 0) {
-                localStorage.setItem('gc_employees', JSON.stringify(defaultEmployees));
-                return defaultEmployees;
-            }
-            // Ensure default employees are always available
-            let allEmployees = [...defaultEmployees];
-            stored.forEach(emp => {
-                if (!allEmployees.find(e => e.id === emp.id)) {
-                    allEmployees.push(emp);
-                }
-            });
-            localStorage.setItem('gc_employees', JSON.stringify(allEmployees));
-            return allEmployees.filter(e => e.isActive !== false);
-        }
-        
-        let employees = loadEmployees();
-        
-        function enterPin(num) {
-            if (currentPin.length < 4) {
-                currentPin += num.toString();
-                updatePinDisplay();
-            }
-        }
-        
-        function clearPin() {
-            if (currentPin.length > 0) {
-                currentPin = currentPin.slice(0, -1);
-                updatePinDisplay();
-            }
-        }
-        
-        function updatePinDisplay() {
-            const dots = document.querySelectorAll('#pinDisplay .pin-dot');
-            dots.forEach((dot, i) => {
-                if (i < currentPin.length) {
-                    dot.style.background = '#4a90a4';
-                } else {
-                    dot.style.background = '#fff';
-                }
-            });
-            document.getElementById('pinError').style.display = 'none';
-        }
-        
-        function submitPin() {
-            // Refresh employees list (may have been updated from Firebase)
-            employees = loadEmployees();
-            const employee = employees.find(e => e.pin === currentPin);
-            
-            if (employee) {
-                currentEmployee = employee;
-                isLocked = false;
-                document.getElementById('lockScreen').style.display = 'none';
-                document.getElementById('currentUserName').textContent = employee.name;
-                showToast(`Welcome, ${employee.name}!`, 'success');
-                
-                // Timeclock disabled - TODO: Re-enable when moved to Firebase
-                console.log('Timeclock disabled - clock in:', employee.name);
-            } else {
-                document.getElementById('pinError').style.display = 'block';
-                currentPin = '';
-                updatePinDisplay();
-                
-                // Shake animation
-                const pinDisplay = document.getElementById('pinDisplay');
-                pinDisplay.style.animation = 'shake 0.3s';
-                setTimeout(() => pinDisplay.style.animation = '', 300);
-            }
-        }
-        
-        function lockPOS() {
-            isLocked = true;
-            currentPin = '';
-            updatePinDisplay();
-            document.getElementById('lockScreen').style.display = 'flex';
-            document.getElementById('pinError').style.display = 'none';
-            
-            if (currentEmployee) {
-                // Timeclock disabled - TODO: Re-enable when moved to Firebase
-                console.log('Timeclock disabled - lock:', currentEmployee.name);
-            }
-        }
-        
-        // Get current logged-in employee name
-        function getCurrentUserName() {
-            return currentEmployee ? currentEmployee.name : 'Staff';
-        }
-        
+        // ============ PIN KEYBOARD HANDLER ============
         // Handle keyboard input for PIN
         document.addEventListener('keydown', function(e) {
             if (document.getElementById('lockScreen').style.display === 'none') return;
