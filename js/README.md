@@ -8,19 +8,62 @@ Golf Cove is a comprehensive Point of Sale (POS) and booking management system f
 ### Technology Stack
 - **Frontend**: Vanilla JavaScript with modular IIFE pattern
 - **Backend**: Firebase Cloud Functions
-- **Database**: Firebase Firestore (with localStorage fallback)
-- **Payments**: Stripe Terminal integration
+- **Database**: Firebase Realtime Database (https://golfcove-default-rtdb.firebaseio.com)
+- **Payments**: Stripe Checkout & Terminal integration
 - **Hosting**: Firebase Hosting (https://golfcove.web.app)
 - **Authentication**: PIN-based employee auth (synced to Firebase)
 
 ### Module Namespace
-All modules use the `GolfCove*` namespace pattern (e.g., `GolfCoveBooking`, `GolfCoveCustomers`).
+All modules use the `GolfCove*` namespace pattern (e.g., `BookingSystem`, `GolfCoveCheckout`).
 
 ---
 
 ## Core Modules
 
-### 1. `js/firebase-sync.js` - GolfCoveFirebase ⭐ NEW
+### 1. `js/booking-unified.js` - BookingSystem ⭐ PRIMARY BOOKING
+Unified booking system for all reservation operations. Firebase-first with localStorage fallback.
+
+**Features:**
+- 6-room configuration (3 Members Only, 2 Golf & Menu, 1 Golf + Music)
+- Firebase real-time sync
+- Member pricing integration
+- Availability checking
+- Waitlist management
+- Legacy compatibility shims
+
+**Key Methods:**
+```javascript
+BookingSystem.init()                    // Initialize and sync
+BookingSystem.createBooking(data)       // Create new booking
+BookingSystem.getBookingsForDate(date)  // Get bookings for a date
+BookingSystem.checkAvailability(room, date, time, duration)
+BookingSystem.updateBooking(id, data)   // Update booking
+BookingSystem.cancelBooking(id)         // Cancel booking
+BookingSystem.on('sync', callback)      // Listen for sync events
+```
+
+---
+
+### 2. `js/stripe-checkout.js` - GolfCoveCheckout
+Online payment processing via Stripe Checkout.
+
+**Features:**
+- Booking deposits
+- Gift card purchases
+- Membership subscriptions
+- Event deposits
+
+**Key Methods:**
+```javascript
+GolfCoveCheckout.init()                           // Initialize Stripe
+GolfCoveCheckout.checkout('booking', data)        // Start checkout
+GolfCoveCheckout.createBookingCheckout(data)      // Create booking session
+GolfCoveCheckout.createMembershipCheckout(data)   // Create membership session
+```
+
+---
+
+### 3. `js/firebase-sync.js` - GolfCoveFirebase
 Centralized Firebase communication for all data sync.
 
 **Features:**
@@ -43,7 +86,7 @@ GolfCoveFirebase.addSyncListener(cb)    // Listen for sync events
 
 ---
 
-### 2. `js/pin-system.js` - GolfCovePIN ⭐ UPDATED
+### 4. `js/pin-system.js` - GolfCovePIN
 Employee authentication via PIN codes with Firebase sync.
 
 **Features:**

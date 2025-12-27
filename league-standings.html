@@ -108,11 +108,6 @@
             font-weight: 600;
             color: #333;
         }
-        .player-hcp {
-            color: #888;
-            font-size: 13px;
-            margin-left: 8px;
-        }
         .score-cell {
             font-weight: 700;
             font-size: 18px;
@@ -386,16 +381,15 @@
                                 .filter(k => !isNaN(k))
                                 .reduce((sum, h) => sum + (ps[h] || 0), 0);
                             totalGross += gross;
-                            totalNet += gross - (player.handicap || 0);
+                            totalNet += gross; // No handicap - net equals gross
                             roundsPlayed++;
-                            roundDetails.push({ round: round.name, gross, net: gross - player.handicap });
+                            roundDetails.push({ round: round.name, gross, net: gross });
                         }
                     });
 
                     return {
                         id: player.id,
                         name: player.name,
-                        handicap: player.handicap,
                         totalGross,
                         totalNet,
                         roundsPlayed,
@@ -439,7 +433,6 @@
                                 <td class="position ${i < 3 ? 'pos-' + (i+1) : ''}">${s.roundsPlayed > 0 ? i + 1 : '-'}</td>
                                 <td>
                                     <span class="player-name">${s.name}</span>
-                                    <span class="player-hcp">HCP: ${s.handicap}</span>
                                 </td>
                                 <td>${s.roundsPlayed}</td>
                                 <td class="score-cell highlight">${s.totalNet || '-'}</td>
@@ -500,9 +493,8 @@
                     return {
                         id: player.id,
                         name: player.name,
-                        handicap: player.handicap,
                         gross,
-                        net: gross - (player.handicap || 0),
+                        net: gross, // No handicap - net equals gross
                         holesPlayed,
                         toPar: gross - totalPar,
                         submitted: ps.submitted,
@@ -532,7 +524,6 @@
                                 <td class="position ${i < 3 && s.holesPlayed > 0 ? 'pos-' + (i+1) : ''}">${s.holesPlayed > 0 ? i + 1 : '-'}</td>
                                 <td>
                                     <span class="player-name">${s.name}</span>
-                                    <span class="player-hcp">HCP: ${s.handicap}</span>
                                 </td>
                                 <td class="score-cell" style="color: ${s.toPar < 0 ? '#37b24a' : s.toPar > 0 ? '#f44336' : '#333'}">
                                     ${s.holesPlayed > 0 ? (s.toPar === 0 ? 'E' : (s.toPar > 0 ? '+' : '') + s.toPar) : '-'}

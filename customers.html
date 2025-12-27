@@ -64,8 +64,8 @@
         
         .card-header { padding: 20px; display: flex; align-items: center; gap: 15px; }
         .card-avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: #fff; background: #bdc3c7; flex-shrink: 0; }
-        .card-avatar.member { background: linear-gradient(135deg, #f1c40f 0%, #e67e22 100%); }
-        .card-avatar.eagle { background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); }
+        .card-avatar.member { background: linear-gradient(135deg, #d4a017 0%, #b8860b 100%); }
+        .card-avatar.eagle { background: linear-gradient(135deg, #d4a017 0%, #b8860b 100%); }
         .card-avatar.birdie { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); }
         .card-avatar.par { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
         .card-avatar.league { background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%); }
@@ -76,7 +76,7 @@
         
         /* Member Badge */
         .member-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-        .member-badge.eagle { background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #fff; }
+        .member-badge.eagle { background: linear-gradient(135deg, #d4a017 0%, #b8860b 100%); color: #fff; }
         .member-badge.birdie { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); color: #fff; }
         .member-badge.par { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: #fff; }
         .member-badge.league { background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%); color: #fff; }
@@ -405,7 +405,7 @@
     <div class="modal-overlay" id="modal-addMembership">
         <div class="modal">
             <div class="modal-header">
-                <h3><i class="fas fa-crown" style="color:#f1c40f;"></i> Membership</h3>
+                <h3><i class="fas fa-crown" style="color:#d4a017;"></i> Membership</h3>
                 <button class="modal-close" onclick="hideModal('addMembership')">&times;</button>
             </div>
             <form onsubmit="addMembership(event)">
@@ -426,6 +426,9 @@
                             </optgroup>
                             <optgroup label="Business">
                                 <option value="corporate">Corporate - Custom</option>
+                            </optgroup>
+                            <optgroup label="League">
+                                <option value="league">League Member</option>
                             </optgroup>
                         </select>
                     </div>
@@ -548,9 +551,9 @@
                     const firstName = nameParts[0] || '';
                     const lastName = nameParts.slice(1).join(' ') || '';
                     
-                    // Check for active subscription
+                    // Check for active subscription - this is the ONLY source of membership
                     const activeSub = c.subscriptions?.find(s => s.status === 'active');
-                    const memberType = c.metadata?.tier || (activeSub ? getMemberTypeFromPlan(activeSub.plan) : null);
+                    const memberType = activeSub ? getMemberTypeFromPlan(activeSub.plan) : null;
                     
                     return {
                         id: c.id,
@@ -658,7 +661,7 @@
             const selected = selectedCustomerId === c.id ? 'selected' : '';
             
             return `
-                <div class="customer-card ${selected}" onclick="selectCustomer(${c.id})">
+                <div class="customer-card ${selected}" onclick="selectCustomer('${c.id}')">
                     <div class="card-header">
                         <div class="card-avatar ${avatarClass}">${initials.toUpperCase()}</div>
                         <div class="card-info">
@@ -671,9 +674,9 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button class="card-btn" onclick="event.stopPropagation(); quickAction('book', ${c.id})"><i class="fas fa-calendar-plus"></i> Book</button>
-                        <button class="card-btn" onclick="event.stopPropagation(); quickAction('email', ${c.id})"><i class="fas fa-envelope"></i> Email</button>
-                        <button class="card-btn primary" onclick="event.stopPropagation(); selectCustomer(${c.id})"><i class="fas fa-eye"></i> View</button>
+                        <button class="card-btn" onclick="event.stopPropagation(); quickAction('book', '${c.id}')"><i class="fas fa-calendar-plus"></i> Book</button>
+                        <button class="card-btn" onclick="event.stopPropagation(); quickAction('email', '${c.id}')"><i class="fas fa-envelope"></i> Email</button>
+                        <button class="card-btn primary" onclick="event.stopPropagation(); selectCustomer('${c.id}')"><i class="fas fa-eye"></i> View</button>
                     </div>
                 </div>
             `;
@@ -829,7 +832,7 @@
             }
         }
         
-        function addMembership(e) {
+        async function addMembership(e) {
             e.preventDefault();
             if (!selectedCustomerId) return;
             const c = customers.find(x => x.id === selectedCustomerId);
@@ -841,17 +844,44 @@
             
             const expires = new Date(start);
             expires.setMonth(expires.getMonth() + duration);
+            const expiresStr = expires.toISOString().split('T')[0];
             
-            c.isMember = true;
-            c.memberType = tier;
-            c.memberSince = start;
-            c.memberExpires = expires.toISOString().split('T')[0];
-            
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
-            hideModal('addMembership');
-            selectCustomer(selectedCustomerId);
-            updateCounts();
-            showToast('Membership activated!', 'success');
+            try {
+                // Update in Stripe metadata
+                const response = await fetch(`${FUNCTIONS_URL}/updateStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customerId: c.stripeId || c.id,
+                        metadata: {
+                            tier: tier,
+                            memberType: tier,
+                            memberSince: start,
+                            memberExpires: expiresStr,
+                            isMember: 'true'
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                
+                // Update local
+                c.isMember = true;
+                c.memberType = tier;
+                c.memberSince = start;
+                c.memberExpires = expiresStr;
+                
+                localStorage.setItem('gc_customers', JSON.stringify(customers));
+                hideModal('addMembership');
+                selectCustomer(selectedCustomerId);
+                updateCounts();
+                showToast('Membership activated in Stripe!', 'success');
+                
+            } catch (error) {
+                console.error('Add membership error:', error);
+                showToast('Failed to activate membership: ' + error.message, 'error');
+            }
         }
         
         function editCustomer() {
@@ -1036,21 +1066,44 @@
         }
         
         // ============ MEMBERSHIP MANAGEMENT ============
-        function cancelMembership() {
+        async function cancelMembership() {
             if (!selectedCustomerId) return;
             const c = customers.find(x => x.id === selectedCustomerId);
             if (!c || !c.isMember) return;
             
             if (!confirm(`Cancel ${c.firstName}'s ${getTierName(c.memberType)} membership?`)) return;
             
-            c.isMember = false;
-            c.memberExpires = new Date().toISOString().split('T')[0];
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
-            
-            selectCustomer(selectedCustomerId);
-            updateCounts();
-            renderCustomers();
-            showToast('Membership cancelled', 'error');
+            try {
+                // Update in Stripe metadata
+                const response = await fetch(`${FUNCTIONS_URL}/updateStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customerId: c.stripeId || c.id,
+                        metadata: {
+                            isMember: 'false',
+                            memberExpires: new Date().toISOString().split('T')[0],
+                            cancelledAt: new Date().toISOString()
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                
+                c.isMember = false;
+                c.memberExpires = new Date().toISOString().split('T')[0];
+                localStorage.setItem('gc_customers', JSON.stringify(customers));
+                
+                selectCustomer(selectedCustomerId);
+                updateCounts();
+                renderCustomers();
+                showToast('Membership cancelled in Stripe', 'error');
+                
+            } catch (error) {
+                console.error('Cancel membership error:', error);
+                showToast('Failed to cancel: ' + error.message, 'error');
+            }
         }
         
         function showMembershipReport() {

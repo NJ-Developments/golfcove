@@ -192,6 +192,41 @@ const GolfCoveMembership = {
     },
 
     /**
+     * Calculate bay booking price for a member
+     * Returns the final price after member discount
+     * @param {Object} customer - Customer object
+     * @param {number} basePrice - Base hourly rate (default $65)
+     * @returns {number} Final price (0 for unlimited members)
+     */
+    calculateBayPrice: function(customer, basePrice = 65) {
+        if (!this.isActiveMember(customer)) return basePrice;
+        
+        const tier = this.getMemberTier(customer);
+        if (!tier || !tier.benefits) return basePrice;
+        
+        // Unlimited play = FREE
+        if (tier.benefits.unlimitedPlay) {
+            return 0;
+        }
+        
+        // Par members get 10% off bay rates
+        // Note: hourlyDiscount in tiers is confusing - we use 10% for par
+        const discountPercent = 0.10; // 10% for non-unlimited members
+        return basePrice * (1 - discountPercent);
+    },
+
+    /**
+     * Check if member has unlimited play
+     * @param {Object} customer 
+     * @returns {boolean}
+     */
+    hasUnlimitedPlay: function(customer) {
+        if (!this.isActiveMember(customer)) return false;
+        const tier = this.getMemberTier(customer);
+        return tier?.benefits?.unlimitedPlay === true;
+    },
+
+    /**
      * Get all benefits as human-readable list
      */
     getBenefitsList: function(customer) {

@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserve a Bay - Golf Cove</title>
+    <meta name="description" content="Book a simulator bay at Golf Cove. Easy online reservations for individuals and groups.">
+    <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            --primary: #4a9eb4;
+            --primary-dark: #3a8ea4;
+            --secondary: #27ae60;
+            --accent: #37b24a;
+            --text: #333;
+            --text-light: #666;
+            --bg: #f5f7f9;
+            --card: #fff;
+            --border: #e0e0e0;
+            --shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d4a3e 100%);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fff;
+            text-decoration: none;
+        }
+        
+        .header-logo img {
+            height: 40px;
+        }
+        
+        .header-logo span {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .header-back {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .header-back:hover { color: #fff; }
+        
+        /* Main Layout */
+        .booking-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .booking-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .booking-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        
+        .booking-header p {
+            color: var(--text-light);
+            font-size: 16px;
+        }
+        
+        /* Steps */
+        .booking-steps {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: #fff;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-light);
+            border: 2px solid var(--border);
+            transition: all 0.3s;
+        }
+        
+        .step.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        
+        .step.completed {
+            background: var(--secondary);
+            color: #fff;
+            border-color: var(--secondary);
+        }
+        
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+        
+        .step.active .step-number,
+        .step.completed .step-number {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        /* Cards */
+        .booking-card {
+            background: var(--card);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .booking-card h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .booking-card h2 i {
+            color: var(--primary);
+        }
+        
+        /* Date Picker */
+        .date-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        
+        .date-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .date-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .date-nav {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .date-nav button {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text);
+            transition: all 0.2s;
+        }
+        
+        .date-nav button:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        
+        .day-label {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-light);
+            padding: 8px 0;
+        }
+        
+        .date-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8f9fa;
+        }
+        
+        .date-cell:hover:not(.disabled) {
+            border-color: var(--primary);
+            background: #fff;
+        }
+        
+        .date-cell.selected {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        
+        .date-cell.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .date-cell.today {
+            border-color: var(--secondary);
+        }
+        
+        .date-cell .date-num {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .date-cell .date-avail {
+            font-size: 10px;
+            color: var(--secondary);
+            margin-top: 2px;
+        }
+        
+        .date-cell.selected .date-avail {
+            color: rgba(255,255,255,0.8);
+        }
+        
+        /* Bay Selection */
+        .bay-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+        }
+        
+        .bay-card {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        
+        .bay-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .bay-card.selected {
+            border-color: var(--primary);
+            background: rgba(74, 158, 180, 0.1);
+        }
+        
+        .bay-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin: 0 auto 12px;
+            color: #fff;
+        }
+        
+        .bay-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .bay-capacity {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+        
+        .bay-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .bay-price span {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-light);
+        }
+        
+        /* Time Slots */
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        
+        .time-slot {
+            padding: 12px;
+            text-align: center;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        
+        .time-slot:hover:not(.unavailable) {
+            border-color: var(--primary);
+        }
+        
+        .time-slot.selected {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        
+        .time-slot.unavailable {
+            opacity: 0.4;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+        
+        .time-slot.peak {
+            border-color: #f39c12;
+        }
+        
+        .time-slot.peak::after {
+            content: 'Peak';
+            display: block;
+            font-size: 10px;
+            color: #f39c12;
+            margin-top: 2px;
+        }
+        
+        .time-slot.selected.peak::after {
+            color: rgba(255,255,255,0.8);
+        }
+        
+        /* Duration */
+        .duration-options {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .duration-btn {
+            padding: 15px 25px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        
+        .duration-btn:hover {
+            border-color: var(--primary);
+        }
+        
+        .duration-btn.selected {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: #fff;
+        }
+        
+        .duration-btn .dur-time {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        .duration-btn .dur-price {
+            font-size: 13px;
+            margin-top: 4px;
+            opacity: 0.8;
+        }
+        
+        /* Customer Form */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        /* Summary */
+        .summary-card {
+            position: sticky;
+            top: 20px;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .summary-label {
+            color: var(--text-light);
+        }
+        
+        .summary-value {
+            font-weight: 600;
+        }
+        
+        .summary-total {
+            font-size: 20px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid var(--border);
+        }
+        
+        .summary-total .summary-value {
+            font-size: 24px;
+            color: var(--primary);
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #fff;
+            color: var(--text);
+            border: 2px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            border-color: var(--primary);
+        }
+        
+        .btn-success {
+            background: var(--secondary);
+            color: #fff;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+        }
+        
+        .btn-block {
+            width: 100%;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Layout Grid */
+        .booking-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+        }
+        
+        /* Step Sections */
+        .step-section {
+            display: none;
+        }
+        
+        .step-section.active {
+            display: block;
+        }
+        
+        /* Responsive */
+        @media (max-width: 900px) {
+            .booking-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-card {
+                position: static;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .booking-steps {
+                flex-wrap: wrap;
+            }
+            
+            .step {
+                flex: 1;
+                min-width: 120px;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .date-grid {
+                gap: 4px;
+            }
+            
+            .date-cell .date-num {
+                font-size: 14px;
+            }
+            
+            .booking-header h1 {
+                font-size: 24px;
+            }
+        }
+        
+        /* Confirmation */
+        .confirmation {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .confirmation-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--secondary);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin: 0 auto 20px;
+        }
+        
+        .confirmation h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .confirmation p {
+            color: var(--text-light);
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        
+        .confirmation-details {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: left;
+            max-width: 400px;
+            margin: 0 auto 30px;
+        }
+        
+        .confirmation-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+        
+        .confirmation-row:not(:last-child) {
+            border-bottom: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <a href="index.html" class="header-logo">
+            <img src="images/golfCoveLogo6.png" alt="Golf Cove">
+            <span id="businessName">Golf Cove</span>
+        </a>
+        <a href="index.html" class="header-back">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+    </header>
+    
+    <div class="booking-container">
+        <div class="booking-header">
+            <h1>Reserve a Bay</h1>
+            <p>Book your simulator bay in just a few clicks</p>
+        </div>
+        
+        <!-- Progress Steps -->
+        <div class="booking-steps">
+            <div class="step active" data-step="1">
+                <span class="step-number">1</span>
+                <span>Date & Time</span>
+            </div>
+            <div class="step" data-step="2">
+                <span class="step-number">2</span>
+                <span>Select Bay</span>
+            </div>
+            <div class="step" data-step="3">
+                <span class="step-number">3</span>
+                <span>Your Details</span>
+            </div>
+            <div class="step" data-step="4">
+                <span class="step-number">4</span>
+                <span>Confirm</span>
+            </div>
+        </div>
+        
+        <div class="booking-grid">
+            <!-- Main Content -->
+            <div class="booking-main">
+                <!-- Step 1: Date & Time -->
+                <div class="step-section active" id="step1">
+                    <div class="booking-card">
+                        <h2><i class="fas fa-calendar-alt"></i> Select Date</h2>
+                        <div class="date-header">
+                            <button class="date-nav-btn" onclick="prevMonth()"><i class="fas fa-chevron-left"></i></button>
+                            <h3 id="currentMonth">January 2025</h3>
+                            <button class="date-nav-btn" onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="date-grid" id="dateGrid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="booking-card" id="durationCard" style="display:none;">
+                        <h2><i class="fas fa-clock"></i> Select Duration</h2>
+                        <div class="duration-options" id="durationOptions">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="booking-card" id="timeCard" style="display:none;">
+                        <h2><i class="fas fa-clock"></i> Select Time</h2>
+                        <div class="time-grid" id="timeGrid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <div style="text-align:right;margin-top:20px;">
+                        <button class="btn btn-primary" onclick="goToStep(2)" id="step1Next" disabled>
+                            Continue <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Select Bay -->
+                <div class="step-section" id="step2">
+                    <div class="booking-card">
+                        <h2><i class="fas fa-door-open"></i> Available Bays</h2>
+                        <p style="color:var(--text-light);margin-bottom:20px;">
+                            Select a bay for <strong id="selectedDateDisplay"></strong> at <strong id="selectedTimeDisplay"></strong>
+                        </p>
+                        <div class="bay-grid" id="bayGrid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex;gap:15px;margin-top:20px;">
+                        <button class="btn btn-secondary" onclick="goToStep(1)">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        <button class="btn btn-primary" onclick="goToStep(3)" id="step2Next" disabled style="flex:1;">
+                            Continue <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 3: Customer Details -->
+                <div class="step-section" id="step3">
+                    <div class="booking-card">
+                        <h2><i class="fas fa-user"></i> Your Details</h2>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>First Name *</label>
+                                <input type="text" id="firstName" placeholder="John" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name *</label>
+                                <input type="text" id="lastName" placeholder="Smith" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Email *</label>
+                                <input type="email" id="email" placeholder="john@example.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone *</label>
+                                <input type="tel" id="phone" placeholder="(555) 555-5555" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Party Size</label>
+                            <input type="number" id="partySize" value="2" min="1" max="12">
+                        </div>
+                        <div class="form-group">
+                            <label>Special Requests (optional)</label>
+                            <textarea id="notes" rows="3" placeholder="Any special requests or notes..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex;gap:15px;margin-top:20px;">
+                        <button class="btn btn-secondary" onclick="goToStep(2)">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        <button class="btn btn-primary" onclick="goToStep(4)" id="step3Next" style="flex:1;">
+                            Review Booking <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 4: Confirmation -->
+                <div class="step-section" id="step4">
+                    <div class="booking-card">
+                        <h2><i class="fas fa-check-circle"></i> Confirm Your Booking</h2>
+                        
+                        <div class="confirmation-details" style="max-width:100%;">
+                            <div class="confirmation-row">
+                                <span>Date</span>
+                                <strong id="confirmDate"></strong>
+                            </div>
+                            <div class="confirmation-row">
+                                <span>Time</span>
+                                <strong id="confirmTime"></strong>
+                            </div>
+                            <div class="confirmation-row">
+                                <span>Duration</span>
+                                <strong id="confirmDuration"></strong>
+                            </div>
+                            <div class="confirmation-row">
+                                <span>Bay</span>
+                                <strong id="confirmBay"></strong>
+                            </div>
+                            <div class="confirmation-row">
+                                <span>Name</span>
+                                <strong id="confirmName"></strong>
+                            </div>
+                            <div class="confirmation-row">
+                                <span>Email</span>
+                                <strong id="confirmEmail"></strong>
+                            </div>
+                            <div class="confirmation-row">
+                                <span>Phone</span>
+                                <strong id="confirmPhone"></strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex;gap:15px;margin-top:20px;">
+                        <button class="btn btn-secondary" onclick="goToStep(3)">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        <button class="btn btn-success" onclick="confirmBooking()" id="confirmBtn" style="flex:1;">
+                            <i class="fas fa-check"></i> Confirm Booking
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Success -->
+                <div class="step-section" id="stepSuccess">
+                    <div class="booking-card confirmation">
+                        <div class="confirmation-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <h2>Booking Confirmed!</h2>
+                        <p>Your reservation has been confirmed. You'll receive a confirmation email shortly.</p>
+                        
+                        <div class="confirmation-details">
+                            <div class="confirmation-row">
+                                <span>Confirmation #</span>
+                                <strong id="bookingId"></strong>
+                            </div>
+                            <div class="confirmation-row">
+                                <span>Date</span>
+                                <strong id="successDate"></strong>
+                            </div>
+                            <div class="confirmation-row">
+                                <span>Time</span>
+                                <strong id="successTime"></strong>
+                            </div>
+                            <div class="confirmation-row">
+                                <span>Bay</span>
+                                <strong id="successBay"></strong>
+                            </div>
+                        </div>
+                        
+                        <a href="index.html" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Return to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar Summary -->
+            <div class="booking-sidebar">
+                <div class="booking-card summary-card">
+                    <h2><i class="fas fa-receipt"></i> Booking Summary</h2>
+                    
+                    <div id="summaryContent">
+                        <div class="summary-item">
+                            <span class="summary-label">Date</span>
+                            <span class="summary-value" id="summaryDate">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Time</span>
+                            <span class="summary-value" id="summaryTime">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Duration</span>
+                            <span class="summary-value" id="summaryDuration">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Bay</span>
+                            <span class="summary-value" id="summaryBay">-</span>
+                        </div>
+                        <div class="summary-item" id="peakRow" style="display:none;">
+                            <span class="summary-label">Peak Hours</span>
+                            <span class="summary-value" style="color:#f39c12;">+25%</span>
+                        </div>
+                        <div class="summary-item summary-total">
+                            <span class="summary-label">Total</span>
+                            <span class="summary-value" id="summaryTotal">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="js/tenant-config.js"></script>
+    <!-- Unified Booking System - Firebase-first with real-time sync -->
+    <script src="js/booking-unified.js"></script>
+    <script>
+        // ============ STATE ============
+        let currentStep = 1;
+        let selectedDate = null;
+        let selectedTime = null;
+        let selectedDuration = 60; // minutes (simulators only)
+        let selectedPlayers = 2;   // players (courses only)
+        let isRiding = true;       // cart vs walking (courses only)
+        let selectedBay = null;
+        let currentMonth = new Date();
+        let venueType = 'simulator'; // 'simulator' or 'course'
+        
+        // ============ INITIALIZATION ============
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize tenant config
+            if (typeof TenantConfig !== 'undefined') {
+                await TenantConfig.init();
+                
+                // Update branding
+                const businessName = TenantConfig.get('business.name', 'Bay Booking');
+                document.getElementById('businessName').textContent = businessName;
+                
+                // Detect venue type and update UI
+                venueType = TenantConfig.getVenueType();
+                updateUIForVenueType();
+            }
+            
+            renderCalendar();
+            renderDurationOrPlayersOptions();
+        });
+        
+        // ============ VENUE TYPE ADAPTATION ============
+        function updateUIForVenueType() {
+            const isSimulator = venueType === 'simulator';
+            const isCourse = venueType === 'course';
+            
+            // Update titles and labels
+            const title = isCourse ? 'Book a Tee Time' : 'Reserve a Bay';
+            const subtitle = isCourse ? 'Reserve your tee time in just a few clicks' : 'Book your simulator bay in just a few clicks';
+            
+            document.querySelector('.booking-header h1').textContent = title;
+            document.querySelector('.booking-header p').textContent = subtitle;
+            document.title = `${title} - ${TenantConfig.get('business.name', 'Golf Booking')}`;
+            
+            // Update step labels
+            const step2Label = isCourse ? 'Golfers' : 'Select Bay';
+            document.querySelector('[data-step="2"] span:last-child').textContent = step2Label;
+            
+            // Update step 2 card title
+            const bayHeader = document.querySelector('#step2 .booking-card h2');
+            bayHeader.innerHTML = isCourse 
+                ? '<i class="fas fa-users"></i> Number of Golfers'
+                : '<i class="fas fa-door-open"></i> Available Bays';
+            
+            // Update duration card title
+            const durationHeader = document.querySelector('#durationCard h2');
+            durationHeader.innerHTML = isCourse
+                ? '<i class="fas fa-golf-ball"></i> Select Players & Cart'
+                : '<i class="fas fa-clock"></i> Select Duration';
+            
+            // Update summary labels
+            if (isCourse) {
+                document.querySelector('#summaryContent .summary-item:nth-child(3) .summary-label').textContent = 'Players';
+                document.querySelector('#summaryContent .summary-item:nth-child(4) .summary-label').textContent = 'Cart';
+            }
+        }
+        
+        // ============ CALENDAR ============
+        function renderCalendar() {
+            const grid = document.getElementById('dateGrid');
+            const monthLabel = document.getElementById('currentMonth');
+            
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            
+            monthLabel.textContent = new Date(year, month, 1).toLocaleDateString('en-US', { 
+                month: 'long', 
+                year: 'numeric' 
+            });
+            
+            // Day labels
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            let html = days.map(d => `<div class="day-label">${d}</div>`).join('');
+            
+            // First day of month
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Empty cells before first day
+            for (let i = 0; i < firstDay; i++) {
+                html += '<div class="date-cell disabled"></div>';
+            }
+            
+            // Days of month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = date.toISOString().split('T')[0];
+                const isPast = date < today;
+                const isToday = date.getTime() === today.getTime();
+                const isSelected = selectedDate === dateStr;
+                
+                let classes = 'date-cell';
+                if (isPast) classes += ' disabled';
+                if (isToday) classes += ' today';
+                if (isSelected) classes += ' selected';
+                
+                html += `
+                    <div class="${classes}" onclick="${isPast ? '' : `selectDate('${dateStr}')`}">
+                        <span class="date-num">${day}</span>
+                    </div>
+                `;
+            }
+            
+            grid.innerHTML = html;
+        }
+        
+        function prevMonth() {
+            currentMonth.setMonth(currentMonth.getMonth() - 1);
+            renderCalendar();
+        }
+        
+        function nextMonth() {
+            currentMonth.setMonth(currentMonth.getMonth() + 1);
+            renderCalendar();
+        }
+        
+        function selectDate(dateStr) {
+            selectedDate = dateStr;
+            selectedTime = null; // Reset time when date changes
+            renderCalendar();
+            
+            // Show duration/players and time selectors
+            document.getElementById('durationCard').style.display = 'block';
+            
+            updateSummary();
+            checkStep1Complete();
+        }
+        
+        // ============ DURATION / PLAYERS OPTIONS ============
+        function renderDurationOrPlayersOptions() {
+            const container = document.getElementById('durationOptions');
+            
+            if (venueType === 'course') {
+                // Golf course: Player count + cart option
+                container.innerHTML = `
+                    <div class="player-selection">
+                        <label style="font-weight:600;margin-bottom:10px;display:block;">Number of Players</label>
+                        <div class="duration-options" style="margin-bottom:20px;">
+                            ${[1,2,3,4].map(p => `
+                                <div class="duration-btn ${p === selectedPlayers ? 'selected' : ''}" 
+                                     onclick="selectPlayers(${p})">
+                                    <div class="dur-time">${p}</div>
+                                    <div class="dur-price">${p === 1 ? 'player' : 'players'}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <label style="font-weight:600;margin-bottom:10px;display:block;">Cart Option</label>
+                        <div class="duration-options">
+                            <div class="duration-btn ${isRiding ? 'selected' : ''}" onclick="selectCart(true)">
+                                <div class="dur-time"><i class="fas fa-car-side"></i></div>
+                                <div class="dur-price">Riding</div>
+                            </div>
+                            <div class="duration-btn ${!isRiding ? 'selected' : ''}" onclick="selectCart(false)">
+                                <div class="dur-time"><i class="fas fa-walking"></i></div>
+                                <div class="dur-price">Walking</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Simulator: Duration selection
+                const durations = [
+                    { mins: 30, label: '30 min' },
+                    { mins: 60, label: '1 hour' },
+                    { mins: 90, label: '1.5 hours' },
+                    { mins: 120, label: '2 hours' },
+                    { mins: 180, label: '3 hours' }
+                ];
+                
+                container.innerHTML = durations.map(d => `
+                    <div class="duration-btn ${d.mins === selectedDuration ? 'selected' : ''}" 
+                         onclick="selectDuration(${d.mins})">
+                        <div class="dur-time">${d.label}</div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function selectDuration(mins) {
+            selectedDuration = mins;
+            selectedTime = null;
+            renderDurationOrPlayersOptions();
+            
+            document.getElementById('timeCard').style.display = 'block';
+            renderTimeSlots();
+            
+            updateSummary();
+            checkStep1Complete();
+        }
+        
+        function selectPlayers(count) {
+            selectedPlayers = count;
+            renderDurationOrPlayersOptions();
+            
+            document.getElementById('timeCard').style.display = 'block';
+            renderTimeSlots();
+            
+            updateSummary();
+            checkStep1Complete();
+        }
+        
+        function selectCart(riding) {
+            isRiding = riding;
+            renderDurationOrPlayersOptions();
+            updateSummary();
+        }
+        
+        // ============ TIME SLOTS ============
+        function renderTimeSlots() {
+            const container = document.getElementById('timeGrid');
+            
+            if (!selectedDate) {
+                container.innerHTML = '<p>Please select a date first</p>';
+                return;
+            }
+            
+            let slots;
+            
+            if (venueType === 'course' && typeof TenantConfig !== 'undefined') {
+                // Golf course: Use tee time intervals
+                slots = TenantConfig.getTeeTimes(new Date(selectedDate));
+            } else if (typeof BookingSystem !== 'undefined') {
+                slots = BookingSystem.getTimeSlots(selectedDate);
+            } else if (typeof BayBooking !== 'undefined') {
+                slots = BayBooking.getTimeSlots(selectedDate);
+            } else {
+                slots = getDefaultTimeSlots();
+            }
+            
+            container.innerHTML = slots.map(slot => {
+                const isSelected = selectedTime === slot.time24;
+                let classes = 'time-slot';
+                if (isSelected) classes += ' selected';
+                if (slot.isPeak || slot.isTwilight) classes += ' peak';
+                
+                return `
+                    <div class="${classes}" onclick="selectTime('${slot.time24}')">
+                        ${slot.time}
+                        ${slot.isTwilight ? '<small style="display:block;font-size:10px;">Twilight</small>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function getDefaultTimeSlots() {
+            const slots = [];
+            for (let h = 9; h < 22; h++) {
+                slots.push({
+                    time: `${h > 12 ? h - 12 : h}:00${h >= 12 ? 'pm' : 'am'}`,
+                    time24: `${h.toString().padStart(2, '0')}:00`,
+                    isPeak: h >= 17 && h < 21
+                });
+                slots.push({
+                    time: `${h > 12 ? h - 12 : h}:30${h >= 12 ? 'pm' : 'am'}`,
+                    time24: `${h.toString().padStart(2, '0')}:30`,
+                    isPeak: h >= 17 && h < 21
+                });
+            }
+            return slots;
+        }
+        
+        function selectTime(time24) {
+            selectedTime = time24;
+            renderTimeSlots();
+            updateSummary();
+            checkStep1Complete();
+        }
+        
+        function checkStep1Complete() {
+            const complete = selectedDate && selectedTime && (venueType === 'course' || selectedDuration);
+            document.getElementById('step1Next').disabled = !complete;
+        }
+        
+        // ============ BAY SELECTION (Simulator) / SKIP (Course) ============
+        function renderBayGrid() {
+            const container = document.getElementById('bayGrid');
+            
+            if (venueType === 'course') {
+                // Golf courses skip bay selection - auto-assign tee time
+                selectedBay = { id: 'tee-1', name: 'Tee Time', capacity: 4 };
+                container.innerHTML = `
+                    <div class="bay-card selected" style="grid-column:1/-1;max-width:400px;margin:0 auto;">
+                        <div class="bay-icon" style="background:#27ae60;">
+                            <i class="fas fa-flag"></i>
+                        </div>
+                        <div class="bay-name">Tee Time Reserved</div>
+                        <div class="bay-capacity"><i class="fas fa-users"></i> ${selectedPlayers} ${selectedPlayers === 1 ? 'player' : 'players'}</div>
+                        <div class="bay-price">
+                            ${TenantConfig ? TenantConfig.formatCurrency(getCurrentPrice()) : '$' + getCurrentPrice().toFixed(2)}
+                            <span>total</span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('step2Next').disabled = false;
+                return;
+            }
+            
+            // Simulator: Show available bays
+            const bays = typeof BookingSystem !== 'undefined'
+                ? BookingSystem.getRooms()
+                : (typeof TenantConfig !== 'undefined' ? TenantConfig.getBays() : getDefaultBays());
+            
+            container.innerHTML = bays.map(bay => {
+                const bayId = bay.id;
+                const durationHours = Math.ceil(selectedDuration / 60);
+                
+                const available = typeof BookingSystem !== 'undefined'
+                    ? BookingSystem.isSlotAvailable(bayId, selectedDate, selectedTime, durationHours)
+                    : (typeof BayBooking !== 'undefined' 
+                        ? BayBooking.isSlotAvailable(bayId, selectedDate, selectedTime, selectedDuration)
+                        : true);
+                
+                const price = typeof BookingSystem !== 'undefined'
+                    ? BookingSystem.calculatePrice(durationHours, selectedDate, selectedTime).finalPrice
+                    : (typeof TenantConfig !== 'undefined'
+                        ? TenantConfig.calculatePrice(bayId, selectedDuration, new Date(selectedDate))
+                        : (selectedDuration / 60) * 45);
+                
+                const isSelected = selectedBay?.id === bay.id;
+                
+                if (!available) return '';
+                
+                return `
+                    <div class="bay-card ${isSelected ? 'selected' : ''}" 
+                         onclick="selectBay('${bay.id}')">
+                        <div class="bay-icon" style="background:${bay.color || '#3b82f6'}">
+                            <i class="fas fa-door-open"></i>
+                        </div>
+                        <div class="bay-name">${bay.name}</div>
+                        <div class="bay-capacity"><i class="fas fa-users"></i> Up to ${bay.capacity} guests</div>
+                        <div class="bay-price">$${price.toFixed(2)} <span>/ ${selectedDuration} min</span></div>
+                    </div>
+                `;
+            }).join('');
+            
+            if (container.innerHTML.trim() === '') {
+                container.innerHTML = '<p style="text-align:center;color:var(--text-light);grid-column:1/-1;">No bays available for this time slot. Please try a different time.</p>';
+            }
+        }
+        
+        function getDefaultBays() {
+            // Use BookingSystem rooms if available
+            if (typeof BookingSystem !== 'undefined') {
+                return BookingSystem.getRooms().map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    capacity: r.capacity,
+                    color: r.color
+                }));
+            }
+            return [
+                { id: 1, name: 'Room 1', capacity: 4, color: '#3b82f6' },
+                { id: 2, name: 'Room 2', capacity: 4, color: '#10b981' },
+                { id: 3, name: 'Room 3', capacity: 4, color: '#f59e0b' },
+                { id: 4, name: 'Room 4', capacity: 4, color: '#8b5cf6' },
+                { id: 5, name: 'Room 5', capacity: 4, color: '#ec4899' },
+                { id: 6, name: 'Room 6', capacity: 4, color: '#06b6d4' }
+            ];
+        }
+        
+        function selectBay(bayId) {
+            const bays = typeof TenantConfig !== 'undefined'
+                ? TenantConfig.getBays()
+                : getDefaultBays();
+            
+            selectedBay = bays.find(b => b.id === bayId);
+            renderBayGrid();
+            updateSummary();
+            
+            document.getElementById('step2Next').disabled = !selectedBay;
+        }
+        
+        // ============ PRICING ============
+        function getCurrentPrice() {
+            if (venueType === 'course') {
+                return typeof TenantConfig !== 'undefined'
+                    ? TenantConfig.calculateCoursePrice(selectedPlayers, isRiding, new Date(selectedDate + 'T' + selectedTime))
+                    : selectedPlayers * (isRiding ? 65 : 45);
+            } else {
+                if (!selectedBay) return 0;
+                return typeof TenantConfig !== 'undefined'
+                    ? TenantConfig.calculatePrice(selectedBay.id, selectedDuration, new Date(selectedDate))
+                    : (selectedDuration / 60) * 45;
+            }
+        }
+        
+        // ============ NAVIGATION ============
+        function goToStep(step) {
+            // Update step indicators
+            document.querySelectorAll('.step').forEach((el, i) => {
+                el.classList.remove('active', 'completed');
+                if (i + 1 < step) el.classList.add('completed');
+                if (i + 1 === step) el.classList.add('active');
+            });
+            
+            // Hide all sections
+            document.querySelectorAll('.step-section').forEach(el => el.classList.remove('active'));
+            
+            // Show current section
+            document.getElementById(`step${step}`).classList.add('active');
+            
+            currentStep = step;
+            
+            // Special handling per step
+            if (step === 2) {
+                document.getElementById('selectedDateDisplay').textContent = formatDateDisplay(selectedDate);
+                document.getElementById('selectedTimeDisplay').textContent = formatTimeDisplay(selectedTime);
+                renderBayGrid();
+            }
+            
+            if (step === 4) {
+                populateConfirmation();
+            }
+        }
+        
+        // ============ SUMMARY ============
+        function updateSummary() {
+            document.getElementById('summaryDate').textContent = selectedDate ? formatDateDisplay(selectedDate) : '-';
+            document.getElementById('summaryTime').textContent = selectedTime ? formatTimeDisplay(selectedTime) : '-';
+            
+            if (venueType === 'course') {
+                document.getElementById('summaryDuration').textContent = `${selectedPlayers} player${selectedPlayers > 1 ? 's' : ''}`;
+                document.getElementById('summaryBay').textContent = isRiding ? 'With Cart' : 'Walking';
+            } else {
+                document.getElementById('summaryDuration').textContent = selectedDuration ? `${selectedDuration} min` : '-';
+                document.getElementById('summaryBay').textContent = selectedBay ? selectedBay.name : '-';
+            }
+            
+            // Calculate price
+            const price = getCurrentPrice();
+            document.getElementById('summaryTotal').textContent = `$${price.toFixed(2)}`;
+        }
+        
+        function formatDateDisplay(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr + 'T12:00:00');
+            return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+        
+        function formatTimeDisplay(time24) {
+            if (!time24) return '-';
+            const [h, m] = time24.split(':').map(Number);
+            const hour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            return `${hour}:${m.toString().padStart(2, '0')} ${ampm}`;
+        }
+        
+        // ============ CONFIRMATION ============
+        function populateConfirmation() {
+            document.getElementById('confirmDate').textContent = formatDateDisplay(selectedDate);
+            document.getElementById('confirmTime').textContent = formatTimeDisplay(selectedTime);
+            
+            if (venueType === 'course') {
+                document.getElementById('confirmDuration').textContent = `${selectedPlayers} player${selectedPlayers > 1 ? 's' : ''} (${isRiding ? 'Riding' : 'Walking'})`;
+                document.getElementById('confirmBay').textContent = '18 Holes';
+            } else {
+                document.getElementById('confirmDuration').textContent = `${selectedDuration} minutes`;
+                document.getElementById('confirmBay').textContent = selectedBay?.name || '-';
+            }
+            
+            document.getElementById('confirmName').textContent = 
+                `${document.getElementById('firstName').value} ${document.getElementById('lastName').value}`;
+            document.getElementById('confirmEmail').textContent = document.getElementById('email').value;
+            document.getElementById('confirmPhone').textContent = document.getElementById('phone').value;
+        }
+        
+        async function confirmBooking() {
+            const btn = document.getElementById('confirmBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            
+            const bookingData = {
+                bayId: selectedBay?.id || 'tee-time',
+                date: selectedDate,
+                time: selectedTime,
+                durationMinutes: venueType === 'course' ? 240 : selectedDuration, // 4 hours for golf round
+                customerName: `${document.getElementById('firstName').value} ${document.getElementById('lastName').value}`,
+                customerEmail: document.getElementById('email').value,
+                customerPhone: document.getElementById('phone').value,
+                partySize: venueType === 'course' ? selectedPlayers : (parseInt(document.getElementById('partySize').value) || 2),
+                notes: document.getElementById('notes').value,
+                source: 'web',
+                venueType: venueType,
+                isRiding: venueType === 'course' ? isRiding : null,
+                price: getCurrentPrice()
+            };
+            
+            try {
+                let result;
+                
+                // Use unified BookingSystem (Firebase-first)
+                if (typeof BookingSystem !== 'undefined') {
+                    result = await BookingSystem.createBooking({
+                        roomId: selectedBay?.id || 1,
+                        date: selectedDate,
+                        time: selectedTime,
+                        duration: venueType === 'course' ? 4 : Math.ceil(selectedDuration / 60), // hours
+                        customer: bookingData.customerName,
+                        customerName: bookingData.customerName,
+                        email: bookingData.customerEmail,
+                        phone: bookingData.customerPhone,
+                        players: bookingData.partySize,
+                        notes: bookingData.notes,
+                        source: 'online'
+                    });
+                } else if (typeof BayBooking !== 'undefined') {
+                    result = BayBooking.createBooking(bookingData);
+                } else {
+                    // Fallback - simulate success
+                    result = { 
+                        success: true, 
+                        booking: { 
+                            id: 'BK-' + Date.now().toString(36).toUpperCase(),
+                            ...bookingData 
+                        } 
+                    };
+                }
+                
+                if (result.success) {
+                    // Show success
+                    document.querySelectorAll('.step-section').forEach(el => el.classList.remove('active'));
+                    document.getElementById('stepSuccess').classList.add('active');
+                    
+                    document.getElementById('bookingId').textContent = result.booking.id;
+                    document.getElementById('successDate').textContent = formatDateDisplay(selectedDate);
+                    document.getElementById('successTime').textContent = formatTimeDisplay(selectedTime);
+                    document.getElementById('successBay').textContent = venueType === 'course' 
+                        ? `${selectedPlayers} Player${selectedPlayers > 1 ? 's' : ''}` 
+                        : selectedBay.name;
+                    
+                    // Hide sidebar
+                    document.querySelector('.booking-sidebar').style.display = 'none';
+                    document.querySelector('.booking-main').style.gridColumn = '1 / -1';
+                    
+                    // Update steps
+                    document.querySelectorAll('.step').forEach(el => el.classList.add('completed'));
+                } else {
+                    alert('Booking failed: ' + (result.error || 'Unknown error'));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check"></i> Confirm Booking';
+                }
+            } catch (e) {
+                console.error('Booking error:', e);
+                alert('An error occurred. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> Confirm Booking';
+            }
+        }
+    </script>
+</body>
+</html>

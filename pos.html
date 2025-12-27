@@ -95,6 +95,11 @@
         </div>
         
         <div class="header-right">
+            <!-- Fullscreen Toggle -->
+            <button class="header-btn fullscreen-btn" id="fullscreenBtn" onclick="POS.toggleFullscreen()" title="Toggle Fullscreen">
+                <i class="fas fa-expand" id="fullscreenIcon"></i>
+            </button>
+            
             <span class="header-time" id="currentTime">12:00 PM</span>
             
             <!-- Profile Dropdown -->
@@ -566,6 +571,7 @@
     <!-- Firebase & PIN System -->
     <script src="js/firebase-sync.js"></script>
     <script src="js/pin-system.js"></script>
+    <script src="js/booking-unified.js"></script>
     
     <!-- POS Module Scripts -->
     <script src="js/pos-core.js"></script>

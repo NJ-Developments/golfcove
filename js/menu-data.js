@@ -17,7 +17,8 @@ const GolfCoveMenu = (function() {
         { id: 'cocktails', name: 'Cocktails', icon: 'fa-cocktail' },
         { id: 'beverage', name: 'Beverages', icon: 'fa-coffee' },
         { id: 'merch', name: 'Merch', icon: 'fa-tshirt' },
-        { id: 'giftcard', name: 'Gift Cards', icon: 'fa-gift' }
+        { id: 'giftcard', name: 'Gift Cards', icon: 'fa-gift' },
+        { id: 'membership', name: 'Memberships', icon: 'fa-crown' }
     ];
     
     // Complete product catalog with inventory tracking
@@ -167,7 +168,19 @@ const GolfCoveMenu = (function() {
         { id: 190, name: 'Gift Card $25', price: 25.00, category: 'giftcard', icon: 'fa-gift', trackInventory: false, isGiftCard: true },
         { id: 191, name: 'Gift Card $50', price: 50.00, category: 'giftcard', icon: 'fa-gift', trackInventory: false, isGiftCard: true },
         { id: 192, name: 'Gift Card $100', price: 100.00, category: 'giftcard', icon: 'fa-gift', trackInventory: false, isGiftCard: true },
-        { id: 193, name: 'Gift Card Custom', price: 0, category: 'giftcard', icon: 'fa-gift', trackInventory: false, isGiftCard: true, customPrice: true }
+        { id: 193, name: 'Gift Card Custom', price: 0, category: 'giftcard', icon: 'fa-gift', trackInventory: false, isGiftCard: true, customPrice: true },
+        
+        // === MEMBERSHIPS (Subscription products) ===
+        { id: 200, name: 'Par Membership (Monthly)', price: 99.00, category: 'membership', icon: 'fa-crown', trackInventory: false, isMembership: true, memberType: 'par', billingCycle: 'monthly', color: '#3498db' },
+        { id: 201, name: 'Birdie Membership (Monthly)', price: 199.00, category: 'membership', icon: 'fa-crown', trackInventory: false, isMembership: true, memberType: 'birdie', billingCycle: 'monthly', color: '#9b59b6' },
+        { id: 202, name: 'Eagle Membership (Monthly)', price: 299.00, category: 'membership', icon: 'fa-crown', trackInventory: false, isMembership: true, memberType: 'eagle', billingCycle: 'monthly', color: '#f1c40f' },
+        { id: 203, name: 'Par Membership (Annual)', price: 999.00, category: 'membership', icon: 'fa-crown', trackInventory: false, isMembership: true, memberType: 'par', billingCycle: 'annual', color: '#3498db' },
+        { id: 204, name: 'Birdie Membership (Annual)', price: 1999.00, category: 'membership', icon: 'fa-crown', trackInventory: false, isMembership: true, memberType: 'birdie', billingCycle: 'annual', color: '#9b59b6' },
+        { id: 205, name: 'Eagle Membership (Annual)', price: 2999.00, category: 'membership', icon: 'fa-crown', trackInventory: false, isMembership: true, memberType: 'eagle', billingCycle: 'annual', color: '#f1c40f' },
+        { id: 206, name: 'Family Par (Monthly)', price: 149.00, category: 'membership', icon: 'fa-users', trackInventory: false, isMembership: true, memberType: 'family_par', billingCycle: 'monthly', color: '#3498db' },
+        { id: 207, name: 'Family Birdie (Monthly)', price: 299.00, category: 'membership', icon: 'fa-users', trackInventory: false, isMembership: true, memberType: 'family_birdie', billingCycle: 'monthly', color: '#9b59b6' },
+        { id: 208, name: 'Family Eagle (Monthly)', price: 449.00, category: 'membership', icon: 'fa-users', trackInventory: false, isMembership: true, memberType: 'family_eagle', billingCycle: 'monthly', color: '#f1c40f' },
+        { id: 209, name: 'Corporate Membership', price: 499.00, category: 'membership', icon: 'fa-building', trackInventory: false, isMembership: true, memberType: 'corporate', billingCycle: 'monthly', color: '#2c3e50' }
     ];
     
     // Get all categories

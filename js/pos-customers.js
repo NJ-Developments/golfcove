@@ -340,12 +340,78 @@ const Tabs = {
             return;
         }
         
-        container.innerHTML = this.list.map(tab => `
-            <div class="tab-card" onclick="Cart.recall(${tab.id})">
+        // Member tier colors and names
+        const tierColors = {
+            'par': '#3498db',
+            'birdie': '#9b59b6', 
+            'eagle': '#f1c40f',
+            'family_par': '#3498db',
+            'family_birdie': '#9b59b6',
+            'family_eagle': '#f1c40f',
+            'corporate': '#2c3e50'
+        };
+        const tierNames = {
+            'par': 'PAR',
+            'birdie': 'BIRDIE',
+            'eagle': 'EAGLE',
+            'family_par': 'FAMILY PAR',
+            'family_birdie': 'FAMILY BIRDIE',
+            'family_eagle': 'FAMILY EAGLE',
+            'corporate': 'CORPORATE'
+        };
+        const tierDiscounts = {
+            'par': '10%',
+            'birdie': '10%',
+            'eagle': '15%',
+            'family_par': '10%',
+            'family_birdie': '10%',
+            'family_eagle': '15%',
+            'corporate': '20%'
+        };
+        
+        container.innerHTML = this.list.map(tab => {
+            const tabName = tab.name || tab.customer || 'Guest';
+            const isMember = tab.isMember || false;
+            const isLeague = tab.isLeague || false;
+            const memberType = tab.memberType;
+            const tierColor = tierColors[memberType] || '#27ae60';
+            const tierName = tierNames[memberType] || memberType?.toUpperCase() || 'MEMBER';
+            const discount = tierDiscounts[memberType] || '10%';
+            
+            // Build badges HTML
+            let badgesHtml = '';
+            if (isMember && memberType) {
+                badgesHtml += `
+                    <div style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, ${tierColor}, ${tierColor}cc);color:#fff;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;box-shadow:0 2px 6px rgba(0,0,0,0.25);margin-right:6px;">
+                        <i class="fas fa-crown" style="color:#f1c40f;font-size:10px;"></i>
+                        ${tierName} <span style="background:rgba(255,255,255,0.25);padding:1px 5px;border-radius:8px;font-size:9px;margin-left:3px;">${discount} OFF</span>
+                    </div>
+                `;
+            }
+            if (isLeague) {
+                badgesHtml += `
+                    <div style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, #27ae60, #1e8449);color:#fff;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;box-shadow:0 2px 6px rgba(0,0,0,0.25);">
+                        <i class="fas fa-golf-ball" style="font-size:10px;"></i>
+                        LEAGUE
+                    </div>
+                `;
+            }
+            
+            // Card styles - highlight for members/league
+            let cardStyle = '';
+            if (isMember) {
+                cardStyle = `border-left:4px solid ${tierColor};background:linear-gradient(135deg, #fffef0 0%, #fefcf0 100%);`;
+            } else if (isLeague) {
+                cardStyle = 'border-left:4px solid #27ae60;background:linear-gradient(135deg, #f0fff4 0%, #e8f5e9 100%);';
+            }
+            
+            return `
+            <div class="tab-card" onclick="Cart.recall(${tab.id})" style="${cardStyle}">
                 <div class="tab-header">
-                    <span class="tab-name">${tab.name}</span>
+                    <span class="tab-name">${tabName}</span>
                     <span class="tab-total">${POS.formatCurrency(tab.items.reduce((sum, i) => sum + i.price * i.qty, 0))}</span>
                 </div>
+                ${badgesHtml ? `<div style="margin:8px 0;">${badgesHtml}</div>` : ''}
                 <div class="tab-meta">
                     <span>${tab.items.length} item${tab.items.length !== 1 ? 's' : ''}</span>
                     <span>${this.formatAge(tab.createdAt)}</span>
@@ -355,7 +421,7 @@ const Tabs = {
                     ${tab.items.length > 3 ? `<span>+${tab.items.length - 3} more</span>` : ''}
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     },
     
     // Format tab age

@@ -282,6 +282,60 @@ const GolfCoveUtils = (function() {
         return Date.now();
     }
     
+    // ============ MEMBER TIER UTILITIES ============
+    // These are consolidated here to avoid duplication across files
+    
+    const MEMBER_TIER_NAMES = {
+        'eagle': 'Eagle', 'family_eagle': 'Eagle Family',
+        'birdie': 'Birdie', 'family_birdie': 'Birdie Family',
+        'par': 'Par', 'family_par': 'Par Family',
+        'corporate': 'Corporate', 'monthly': 'Monthly', 'annual': 'Annual'
+    };
+    
+    const MEMBER_TIER_COLORS = {
+        'eagle': '#d4a017', 'family_eagle': '#d4a017',
+        'birdie': '#9b59b6', 'family_birdie': '#9b59b6',
+        'par': '#3498db', 'family_par': '#3498db',
+        'corporate': '#2c3e50'
+    };
+    
+    const MEMBER_TIER_DISCOUNTS = {
+        'eagle': 15, 'family_eagle': 15,
+        'birdie': 10, 'family_birdie': 10,
+        'par': 10, 'family_par': 10,
+        'corporate': 20
+    };
+    
+    function getMemberTierName(memberType) {
+        return MEMBER_TIER_NAMES[memberType] || 'Member';
+    }
+    
+    function getMemberTierColor(memberType) {
+        return MEMBER_TIER_COLORS[memberType] || '#3498db';
+    }
+    
+    function getMemberDiscount(memberType) {
+        return MEMBER_TIER_DISCOUNTS[memberType] || 10;
+    }
+    
+    function isVIPTier(memberType) {
+        return memberType && (memberType.includes('eagle') || memberType.includes('birdie'));
+    }
+    
+    function getMemberBadgeHTML(memberType, showDiscount = true) {
+        if (!memberType) return '';
+        const color = getMemberTierColor(memberType);
+        const name = getMemberTierName(memberType);
+        const discount = getMemberDiscount(memberType);
+        const isVIP = isVIPTier(memberType);
+        
+        return `<span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+            <i class="fas fa-crown" style="font-size:8px;${isVIP ? 'color:#f1c40f;' : ''}"></i>
+            ${name}
+            ${showDiscount ? `<span style="background:rgba(255,255,255,0.3);padding:1px 4px;border-radius:6px;font-size:8px;">${discount}%</span>` : ''}
+        </span>`;
+    }
+
     // Public API
     return {
         // Date/Time
@@ -340,7 +394,17 @@ const GolfCoveUtils = (function() {
         
         // IDs
         generateId,
-        generateNumericId
+        generateNumericId,
+        
+        // Member Tiers
+        getMemberTierName,
+        getMemberTierColor,
+        getMemberDiscount,
+        isVIPTier,
+        getMemberBadgeHTML,
+        MEMBER_TIER_NAMES,
+        MEMBER_TIER_COLORS,
+        MEMBER_TIER_DISCOUNTS
     };
 })();
 

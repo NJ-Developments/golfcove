@@ -1837,7 +1837,7 @@ exports.getStripeCustomers = functions.https.onRequest((req, res) => {
       
       const params = {
         limit: Math.min(parseInt(limit) || 100, 100),
-        expand: ['data.subscriptions'] // Include subscription data
+        expand: ['data.subscriptions.data.items.data.price.product'] // Expand to get product names
       };
       
       if (starting_after) {
@@ -1869,6 +1869,18 @@ exports.getStripeCustomers = functions.https.onRequest((req, res) => {
         }
       });
       
+      // Helper to extract tier from any string
+      const extractTier = (str) => {
+        if (!str) return null;
+        const lower = str.toLowerCase();
+        if (lower.includes('eagle')) return lower.includes('family') ? 'family_eagle' : 'eagle';
+        if (lower.includes('birdie')) return lower.includes('family') ? 'family_birdie' : 'birdie';
+        if (lower.includes('par')) return lower.includes('family') ? 'family_par' : 'par';
+        if (lower.includes('corporate')) return 'corporate';
+        if (lower.includes('league')) return 'league';
+        return null;
+      };
+      
       // Format customers for the frontend
       const formattedCustomers = customers.data.map(c => {
         // Check Stripe subscriptions first
@@ -1879,12 +1891,50 @@ exports.getStripeCustomers = functions.https.onRequest((req, res) => {
                                      membershipsByEmail[c.email?.toLowerCase()];
         
         // Build subscription list from both sources
-        const subscriptions = stripeSubs.map(s => ({
-          id: s.id,
-          status: s.status,
-          plan: s.plan?.nickname || s.items?.data?.[0]?.price?.nickname || s.items?.data?.[0]?.price?.product,
-          currentPeriodEnd: s.current_period_end
-        }));
+        const subscriptions = stripeSubs.map(s => {
+          // Try to get plan name from various sources
+          let planName = null;
+          
+          // 1. Check price/plan nickname first (most reliable if set)
+          planName = extractTier(s.plan?.nickname) ||
+                    extractTier(s.items?.data?.[0]?.price?.nickname) ||
+                    extractTier(s.items?.data?.[0]?.plan?.nickname);
+          
+          // 2. Check product name (expanded object)
+          if (!planName) {
+            const product = s.items?.data?.[0]?.price?.product;
+            if (product && typeof product === 'object') {
+              planName = extractTier(product.name) || extractTier(product.description);
+            }
+          }
+          
+          // 3. Check plan product object if expanded
+          if (!planName && s.plan?.product && typeof s.plan.product === 'object') {
+            planName = extractTier(s.plan.product.name) || extractTier(s.plan.product.description);
+          }
+          
+          // 4. Check subscription metadata
+          if (!planName && s.metadata) {
+            planName = extractTier(s.metadata.tier) || extractTier(s.metadata.plan) || extractTier(s.metadata.memberType);
+          }
+          
+          // 5. Check customer metadata as fallback
+          if (!planName && c.metadata) {
+            planName = extractTier(c.metadata.tier) || extractTier(c.metadata.plan) || extractTier(c.metadata.memberType);
+          }
+          
+          // 6. Default to 'member' if we can't determine tier
+          if (!planName) {
+            planName = 'member';
+          }
+          
+          return {
+            id: s.id,
+            status: s.status,
+            plan: planName,
+            currentPeriodEnd: s.current_period_end
+          };
+        });
         
         // If no Stripe subscription but has Firestore membership, add it
         if (subscriptions.length === 0 && firestoreMembership) {
@@ -1895,9 +1945,9 @@ exports.getStripeCustomers = functions.https.onRequest((req, res) => {
           
           if (isActive) {
             subscriptions.push({
-              id: firestoreMembership.stripeSubscriptionId || `firestore_${doc?.id}`,
+              id: firestoreMembership.stripeSubscriptionId || 'firestore_membership',
               status: 'active',
-              plan: firestoreMembership.tier || firestoreMembership.memberType || 'member',
+              plan: extractTier(firestoreMembership.tier) || extractTier(firestoreMembership.memberType) || 'member',
               currentPeriodEnd: expiresAt ? Math.floor(new Date(expiresAt).getTime() / 1000) : null,
               source: 'firestore'
             });

@@ -10,6 +10,7 @@
     <script src="https://js.stripe.com/terminal/v1/"></script>
     <!-- Unified config and services - LOAD FIRST -->
     <script src="js/config-unified.js"></script>
+    <script src="js/utils.js"></script>
     <script src="js/core.js"></script>
     <script src="js/services-unified.js"></script>
     <script src="js/menu-data.js"></script>
@@ -23,10 +24,10 @@
     <script src="js/membership-system.js"></script>
     <script src="js/validation-schemas.js"></script>
     <script src="js/customer-manager.js"></script>
-    <script src="js/booking-system.js"></script>
+    <!-- Unified Booking System - replaces booking-system.js, teesheet-manager.js, booking-manager.js -->
+    <script src="js/booking-unified.js"></script>
     <script src="js/tabs-sync.js"></script>
     <script src="js/tabs-manager.js"></script>
-    <script src="js/teesheet-manager.js"></script>
     <script src="js/payment-processor.js"></script>
     <script src="js/cash-drawer.js"></script>
     <script>
@@ -44,9 +45,8 @@
         function calculateTax(amount) {
             return amount * getTaxRate();
         }
-        function formatCurrency(amount) {
-            return '$' + (amount || 0).toFixed(2);
-        }
+        // Use shared formatCurrency from GolfCoveUtils
+        const formatCurrency = (amount) => GolfCoveUtils.formatCurrency(amount);
         // Update tax labels on page load
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('[data-tax-label]').forEach(el => {
@@ -64,8 +64,9 @@
         .header-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
         .header-logo img { height: 35px; }
         .header-nav { display: flex; gap: 5px; }
-        .header-nav a { color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-size: 14px; transition: background 0.2s; }
+        .header-nav a { color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-size: 14px; transition: background 0.2s; background: transparent; }
         .header-nav a:hover, .header-nav a.active { background: rgba(255,255,255,0.2); }
+        .header-btn, .sub-header-right button, .options-dropdown button { background: transparent !important; }
         .header-stats { display: flex; gap: 25px; font-size: 13px; }
         .header-stat { text-align: center; }
         .header-stat .value { font-size: 18px; font-weight: 700; }
@@ -338,10 +339,9 @@
         }
         .slot-content.available:hover { animation: pulse 1s infinite; }
         
-        /* Drag-and-drop prep styles */
-        .slot-content.drag-over { background: #d4edda !important; border: 2px dashed #27ae60 !important; }
-        .slot-content.booked { cursor: grab; }
-        .slot-content.booked:active { cursor: grabbing; }
+        /* Booked slot styles - clickable for editing */
+        .slot-content.booked { cursor: pointer; }
+        .slot-content.booked:hover { filter: brightness(0.95); }
         
         /* Room status colors */
         .room-header .status-dot.available { background: #27ae60; }
@@ -1347,37 +1347,10 @@
         }
         
         // Get member discount percentage
-        function getMemberDiscount(memberType) {
-            const discounts = {
-                'eagle': 15, 'family_eagle': 15,
-                'birdie': 10, 'family_birdie': 10,
-                'par': 10, 'family_par': 10,
-                'corporate': 20, 'monthly': 10, 'annual': 10
-            };
-            return discounts[memberType] || 10;
-        }
-        
-        // Format member tier display name
-        function getMemberTierName(memberType) {
-            const names = {
-                'eagle': 'Eagle', 'family_eagle': 'Eagle Family',
-                'birdie': 'Birdie', 'family_birdie': 'Birdie Family',
-                'par': 'Par', 'family_par': 'Par Family',
-                'corporate': 'Corporate', 'monthly': 'Monthly', 'annual': 'Annual'
-            };
-            return names[memberType] || 'Member';
-        }
-        
-        // Get tier color
-        function getMemberTierColor(memberType) {
-            const colors = {
-                'eagle': '#9b59b6', 'family_eagle': '#9b59b6',
-                'birdie': '#f39c12', 'family_birdie': '#f39c12',
-                'par': '#27ae60', 'family_par': '#27ae60',
-                'corporate': '#2c3e50'
-            };
-            return colors[memberType] || '#27ae60';
-        }
+        // Use shared utilities from GolfCoveUtils
+        const getMemberDiscount = (memberType) => GolfCoveUtils.getMemberDiscount(memberType);
+        const getMemberTierName = (memberType) => GolfCoveUtils.getMemberTierName(memberType);
+        const getMemberTierColor = (memberType) => GolfCoveUtils.getMemberTierColor(memberType);
         
         // ============ PIN LOCK SYSTEM ============
         let currentPin = '';
@@ -1737,7 +1710,10 @@
         const rooms = [
             { id: 1, name: 'Room 1' },
             { id: 2, name: 'Room 2' },
-            { id: 3, name: 'Room 3' }
+            { id: 3, name: 'Room 3' },
+            { id: 4, name: 'Room 4' },
+            { id: 5, name: 'Room 5' },
+            { id: 6, name: 'Room 6' }
         ];
 
         const timeSlots = ['9:00am', '10:00am', '11:00am', '12:00pm', '1:00pm', '2:00pm', '3:00pm', '4:00pm', '5:00pm', '6:00pm', '7:00pm', '8:00pm'];
@@ -1763,22 +1739,9 @@
             { id: 15, type: 'circle', x: 600, y: 350 },
         ];
 
-        // Sample bookings - with proper date, status, and roomId fields
-        if (bookings.length === 0) {
-            const today = new Date().toISOString().split('T')[0];
-            bookings = [
-                { id: 1, room: 1, roomId: 1, time: '10:00am', date: today, customer: 'Mike Johnson', players: 2, duration: 1, status: 'confirmed' },
-                { id: 2, room: 1, roomId: 1, time: '11:00am', date: today, customer: 'Alex Qi', players: 4, duration: 2, status: 'confirmed' },
-                { id: 3, room: 2, roomId: 2, time: '12:00pm', date: today, customer: 'Sarah Wilson', players: 1, duration: 1, status: 'confirmed' },
-                { id: 4, room: 2, roomId: 2, time: '1:00pm', date: today, customer: 'Tom Brown', players: 2, duration: 1, status: 'confirmed' },
-                { id: 5, room: 3, roomId: 3, time: '1:00pm', date: today, customer: 'Chris Lee', players: 1, duration: 1, status: 'confirmed' },
-                { id: 6, room: 3, roomId: 3, time: '2:00pm', date: today, customer: 'Ryan Smith', players: 1, duration: 1, status: 'confirmed' },
-                { id: 7, room: 1, roomId: 1, time: '5:00pm', date: today, customer: 'Nick Piselli', players: 1, duration: 1, status: 'confirmed' },
-                { id: 8, room: 2, roomId: 2, time: '4:00pm', date: today, customer: 'Brett Huck', players: 1, duration: 1, status: 'confirmed' },
-                { id: 9, room: 3, roomId: 3, time: '4:00pm', date: today, customer: 'Dylan Vasp', players: 1, duration: 1, status: 'confirmed' },
-            ];
-            localStorage.setItem('gc_bookings', JSON.stringify(bookings));
-        }
+        // Sample bookings - REMOVED - Bookings now come from Firebase via booking-unified.js
+        // Don't initialize with localStorage bookings - let BookingSystem handle it
+        // The tee sheet will populate from Firebase when BookingSystem syncs
 
         // Sample tabs
         if (openTabs.length === 0) {
@@ -1986,33 +1949,60 @@
             } else {
                 if (noTabsMsg) noTabsMsg.style.display = 'none';
                 tbody.innerHTML = openTabs.map(tab => {
-                    // Check if customer is a member
+                    // Check if customer is a member or league player
                     let memberBadge = '';
+                    let leagueBadge = '';
                     let rowStyle = '';
                     
+                    // Eagle uses darker gold (#d4a017) for readability
+                    const tierColors = {
+                        'par': '#3498db',
+                        'birdie': '#9b59b6', 
+                        'eagle': '#d4a017',
+                        'family_par': '#3498db',
+                        'family_birdie': '#9b59b6',
+                        'family_eagle': '#d4a017',
+                        'corporate': '#2c3e50',
+                        'monthly': '#27ae60',
+                        'annual': '#27ae60'
+                    };
+                    const tierNames = {
+                        'par': 'PAR',
+                        'birdie': 'BIRDIE', 
+                        'eagle': 'EAGLE',
+                        'family_par': 'FAM PAR',
+                        'family_birdie': 'FAM BIRDIE',
+                        'family_eagle': 'FAM EAGLE',
+                        'corporate': 'CORP'
+                    };
+                    const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%', 'corporate': '20%' };
+                    
                     if (tab.isMember && tab.memberType) {
-                        const tierColors = {
-                            'par': '#3498db',
-                            'birdie': '#9b59b6', 
-                            'eagle': '#f1c40f',
-                            'family_par': '#3498db',
-                            'family_birdie': '#9b59b6',
-                            'family_eagle': '#f1c40f',
-                            'corporate': '#2c3e50',
-                            'monthly': '#27ae60',
-                            'annual': '#27ae60'
-                        };
                         const tierColor = tierColors[tab.memberType] || '#9b59b6';
-                        const discounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%', 'corporate': '20%' };
+                        const tierName = tierNames[tab.memberType] || tab.memberType.toUpperCase().replace('_', ' ');
                         const discount = discounts[tab.memberType] || '10%';
                         
                         memberBadge = `
-                            <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, ${tierColor} 0%, ${tierColor}dd 100%);color:#fff;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:600;text-transform:uppercase;margin-left:8px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
-                                <i class="fas fa-crown" style="font-size:9px;color:#f1c40f;"></i>
-                                ${tab.memberType.replace('_', ' ')} (${discount} OFF)
+                            <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, ${tierColor} 0%, ${tierColor}dd 100%);color:#fff;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;margin-left:8px;box-shadow:0 2px 6px rgba(0,0,0,0.25);">
+                                <i class="fas fa-crown" style="font-size:10px;"></i>
+                                ${tierName}
+                                <span style="background:rgba(255,255,255,0.3);padding:1px 5px;border-radius:8px;font-size:9px;">${discount}</span>
                             </span>
                         `;
-                        rowStyle = 'background:linear-gradient(135deg, #fef9e7 0%, #f8f4e8 100%);';
+                        rowStyle = `background:linear-gradient(135deg, #fef9e7 0%, #f8f4e8 100%);border-left:4px solid ${tierColor};`;
+                    }
+                    
+                    // Add league badge if applicable
+                    if (tab.isLeague) {
+                        leagueBadge = `
+                            <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, #27ae60 0%, #1e8449 100%);color:#fff;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;margin-left:8px;box-shadow:0 2px 6px rgba(0,0,0,0.25);">
+                                <i class="fas fa-golf-ball" style="font-size:10px;"></i>
+                                LEAGUE
+                            </span>
+                        `;
+                        if (!rowStyle) {
+                            rowStyle = 'background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);border-left:4px solid #27ae60;';
+                        }
                     }
                     
                     const itemCount = tab.items ? tab.items.length : 0;
@@ -2021,7 +2011,7 @@
                     return `
                     <tr class="tab-row" style="${rowStyle}border-bottom:1px solid #eee;">
                         <td style="padding:12px 15px;">${tab.table || 'Tab'}</td>
-                        <td style="padding:12px 15px;display:flex;align-items:center;flex-wrap:wrap;">${tab.customer || 'Guest'}${memberBadge}</td>
+                        <td style="padding:12px 15px;display:flex;align-items:center;flex-wrap:wrap;">${tab.customer || 'Guest'}${memberBadge}${leagueBadge}</td>
                         <td style="padding:12px 15px;color:#666;">${itemCount} item${itemCount !== 1 ? 's' : ''}</td>
                         <td style="padding:12px 15px;font-weight:600;color:#27ae60;text-align:right;">$${tabAmount.toFixed(2)}</td>
                         <td style="padding:12px 15px;text-align:center;">
@@ -2813,49 +2803,80 @@
                 if (!code) {
                     return showToast('Please enter a gift card code', 'error');
                 }
-                // Process gift card payment
-                const giftCards = JSON.parse(localStorage.getItem('gc_gift_cards') || '[]');
-                const cardIndex = giftCards.findIndex(gc => gc.code.toUpperCase() === code.toUpperCase());
-                if (cardIndex === -1) {
-                    return showToast('Gift card not found', 'error');
-                }
-                if (giftCards[cardIndex].balance <= 0) {
-                    return showToast('Gift card has no balance', 'error');
-                }
                 
-                // Check if gift card balance covers the full amount
-                const cardBalance = giftCards[cardIndex].balance;
-                if (cardBalance < currentPayTotal) {
-                    const remaining = currentPayTotal - cardBalance;
-                    const usePartial = confirm(`Gift card balance ($${cardBalance.toFixed(2)}) is less than the total ($${currentPayTotal.toFixed(2)}).\n\nRemaining amount needed: $${remaining.toFixed(2)}\n\nWould you like to:\n- OK: Use gift card for $${cardBalance.toFixed(2)} and pay remaining $${remaining.toFixed(2)} another way\n- Cancel: Cancel and choose a different payment method`);
-                    
-                    if (!usePartial) {
-                        return; // User cancelled - don't process partial payment
+                // Use GolfCoveGiftCards module if available
+                if (typeof GolfCoveGiftCards !== 'undefined') {
+                    const checkResult = await GolfCoveGiftCards.checkBalance(code);
+                    if (!checkResult.success) {
+                        return showToast(checkResult.error || 'Gift card not found', 'error');
                     }
                     
-                    // Deduct full gift card balance
-                    giftCards[cardIndex].balance = 0;
+                    const cardBalance = checkResult.balance;
+                    if (cardBalance <= 0) {
+                        return showToast('Gift card has no balance', 'error');
+                    }
+                    
+                    if (cardBalance < currentPayTotal) {
+                        const remaining = currentPayTotal - cardBalance;
+                        const usePartial = confirm(`Gift card balance ($${cardBalance.toFixed(2)}) is less than the total ($${currentPayTotal.toFixed(2)}).\n\nRemaining amount needed: $${remaining.toFixed(2)}\n\nWould you like to:\n- OK: Use gift card for $${cardBalance.toFixed(2)} and pay remaining $${remaining.toFixed(2)} another way\n- Cancel: Cancel and choose a different payment method`);
+                        
+                        if (!usePartial) return;
+                        
+                        // Redeem full balance
+                        await GolfCoveGiftCards.redeem(code, cardBalance, 'POS Partial Payment');
+                        
+                        showToast(`Gift card applied: $${cardBalance.toFixed(2)}. Collect remaining $${remaining.toFixed(2)} via another method.`, 'warning');
+                        currentPayTotal = remaining;
+                        document.getElementById('payTotal').textContent = formatCurrency(remaining);
+                        document.getElementById('giftCardNumber').value = '';
+                        selectPaymentMethod('card');
+                        return;
+                    }
+                    
+                    // Full payment
+                    const redeemResult = await GolfCoveGiftCards.redeem(code, currentPayTotal, 'POS Payment');
+                    if (!redeemResult.success) {
+                        return showToast(redeemResult.error || 'Redemption failed', 'error');
+                    }
+                    showToast(`Gift card payment successful. Remaining balance: $${redeemResult.remainingBalance.toFixed(2)}`, 'success');
+                    
+                } else {
+                    // Fallback to localStorage
+                    const giftCards = JSON.parse(localStorage.getItem('gc_gift_cards') || '[]');
+                    const cardIndex = giftCards.findIndex(gc => gc.code.toUpperCase() === code.toUpperCase());
+                    if (cardIndex === -1) {
+                        return showToast('Gift card not found', 'error');
+                    }
+                    if (giftCards[cardIndex].balance <= 0) {
+                        return showToast('Gift card has no balance', 'error');
+                    }
+                    
+                    const cardBalance = giftCards[cardIndex].balance;
+                    if (cardBalance < currentPayTotal) {
+                        const remaining = currentPayTotal - cardBalance;
+                        const usePartial = confirm(`Gift card balance ($${cardBalance.toFixed(2)}) is less than the total ($${currentPayTotal.toFixed(2)}).\n\nRemaining amount needed: $${remaining.toFixed(2)}\n\nWould you like to:\n- OK: Use gift card for $${cardBalance.toFixed(2)} and pay remaining $${remaining.toFixed(2)} another way\n- Cancel: Cancel and choose a different payment method`);
+                        
+                        if (!usePartial) return;
+                        
+                        giftCards[cardIndex].balance = 0;
+                        giftCards[cardIndex].lastUsed = new Date().toISOString();
+                        localStorage.setItem('gc_gift_cards', JSON.stringify(giftCards));
+                        syncGiftCardToFirebase(giftCards[cardIndex]);
+                        
+                        showToast(`Gift card applied: $${cardBalance.toFixed(2)}. Collect remaining $${remaining.toFixed(2)} via another method.`, 'warning');
+                        currentPayTotal = remaining;
+                        document.getElementById('payTotal').textContent = formatCurrency(remaining);
+                        document.getElementById('giftCardNumber').value = '';
+                        selectPaymentMethod('card');
+                        return;
+                    }
+                    
+                    giftCards[cardIndex].balance -= currentPayTotal;
                     giftCards[cardIndex].lastUsed = new Date().toISOString();
                     localStorage.setItem('gc_gift_cards', JSON.stringify(giftCards));
-                    
-                    // Record partial payment and prompt for remainder
-                    showToast(`Gift card applied: $${cardBalance.toFixed(2)}. Collect remaining $${remaining.toFixed(2)} via another method.`, 'warning');
-                    
-                    // Update the payment total to show remaining amount
-                    currentPayTotal = remaining;
-                    document.getElementById('payTotal').textContent = formatCurrency(remaining);
-                    
-                    // Switch to another payment method for the remainder
-                    document.getElementById('giftCardNumber').value = '';
-                    selectPaymentMethod('card'); // Default to card for remainder
-                    return; // Don't complete sale yet - need remaining payment
+                    syncGiftCardToFirebase(giftCards[cardIndex]);
+                    showToast(`Gift card payment successful. Remaining balance: $${giftCards[cardIndex].balance.toFixed(2)}`, 'success');
                 }
-                
-                // Full payment covered by gift card
-                giftCards[cardIndex].balance -= currentPayTotal;
-                giftCards[cardIndex].lastUsed = new Date().toISOString();
-                localStorage.setItem('gc_gift_cards', JSON.stringify(giftCards));
-                showToast(`Gift card payment successful. Remaining balance: $${giftCards[cardIndex].balance.toFixed(2)}`, 'success');
             }
             
             if (currentPayMethod === 'tab') {
@@ -3142,6 +3163,20 @@
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
+        }
+        
+        // Sync gift card to Firebase (fallback when module not available)
+        async function syncGiftCardToFirebase(card) {
+            if (!card?.code) return;
+            try {
+                await fetch('https://golfcove-default-rtdb.firebaseio.com/gift_cards/' + card.code + '.json', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(card)
+                });
+            } catch (e) {
+                console.warn('[Admin] Failed to sync gift card to Firebase:', e);
+            }
         }
 
         // ============ BOOKING FUNCTIONS (Using GolfCoveBooking System) ============
@@ -3778,7 +3813,7 @@
             const customerEl = document.getElementById('tabDetailCustomer');
             if (customerEl) {
                 if (tab.isMember && tab.memberType) {
-                    const tierColors = { 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#f1c40f', 'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#f1c40f', 'corporate': '#2c3e50', 'monthly': '#27ae60', 'annual': '#27ae60' };
+                    const tierColors = { 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#d4a017', 'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#d4a017', 'corporate': '#2c3e50', 'monthly': '#27ae60', 'annual': '#27ae60' };
                     const color = tierColors[tab.memberType] || '#9b59b6';
                     const discount = tab.memberDiscount || 10;
                     customerEl.innerHTML = `${tab.customer || 'Guest'} <span style="background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;margin-left:5px;"><i class="fas fa-crown" style="color:#f1c40f;margin-right:3px;"></i>${tab.memberType.replace('_', ' ').toUpperCase()} - ${discount}% OFF</span>`;
@@ -6792,6 +6827,19 @@
                 teeSheetDate.value = new Date().toISOString().split('T')[0];
             }
             renderTeeSheet();
+            
+            // Listen for booking system sync events to re-render tee sheet
+            if (typeof GolfCoveBooking !== 'undefined' && GolfCoveBooking.onSync) {
+                GolfCoveBooking.onSync(() => {
+                    console.log('[Admin] Booking sync detected, refreshing tee sheet...');
+                    renderTeeSheet();
+                });
+            } else if (typeof BookingSystem !== 'undefined' && BookingSystem.onSync) {
+                BookingSystem.onSync(() => {
+                    console.log('[Admin] Booking sync detected, refreshing tee sheet...');
+                    renderTeeSheet();
+                });
+            }
             
             // Sync customers from Stripe (source of truth)
             syncCustomersFromStripe();

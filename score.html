@@ -1107,7 +1107,6 @@
                     ? league.players.filter(p => p.teamId === currentPlayer.teamId) 
                     : [currentPlayer].filter(Boolean);
                 const teamMemberNames = teamMembers.map(p => p.name).join(' & ');
-                const combinedHandicap = teamMembers.reduce((sum, p) => sum + (p.handicap || 0), 0);
                 
                 let playerMeta = '';
                 if (currentPlayer) {
@@ -1118,13 +1117,13 @@
                                 <i class="fas fa-users" style="color:#37b24a;"></i> <strong>${team.name}</strong>
                             </div>
                             <div class="hero-meta" style="margin-top: 4px;">
-                                ${teamMemberNames} • Combined HCP: ${combinedHandicap}
+                                ${teamMemberNames}
                             </div>
                             <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;"><i class="fas fa-info-circle"></i> Team Scorecard - scores apply to both players</div>
                             <button class="switch-btn hero-switch" onclick="showExistingTeams()" style="margin-top: 8px;"><i class="fas fa-exchange-alt"></i> Switch Team</button>`;
                     } else {
                         // Individual player (no team) - redirect to team selection
-                        playerMeta = `<div class="hero-meta">Player: ${currentPlayer.name} • HCP ${currentPlayer.handicap || 0}</div>
+                        playerMeta = `<div class="hero-meta">Player: ${currentPlayer.name}</div>
                            <button class="switch-btn hero-switch" onclick="showExistingTeams()"><i class="fas fa-exchange-alt"></i> Switch Team</button>`;
                     }
                 }
@@ -1149,7 +1148,6 @@
                 if (savedTeam) {
                     const { team, players, profile } = savedTeam;
                     const playerNames = players.map(p => p.name).join(' & ');
-                    const combinedHcp = players.reduce((sum, p) => sum + (p.handicap || 0), 0);
                     // Check submission status for current round
                     const isSubmitted = players.some(p => league.scores?.[roundId]?.[p.id]?.submitted);
                     const hasScores = players.some(p => {
@@ -1162,7 +1160,7 @@
                             <div class="option-icon" style="background: linear-gradient(135deg, #37b24a 0%, #2d9440 100%);"><i class="fas fa-bolt"></i></div>
                             <div class="option-text">
                                 <div class="option-title" style="color: #37b24a;">Continue as ${team.name}</div>
-                                <div class="option-desc">${playerNames} • HCP ${combinedHcp}</div>
+                                <div class="option-desc">${playerNames}</div>
                                 ${isSubmitted ? '<span style="background:#37b24a;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-top:4px;display:inline-block;"><i class="fas fa-check"></i> Submitted</span>' : 
                                   hasScores ? '<span style="background:#f59e0b;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-top:4px;display:inline-block;">In Progress</span>' : ''}
                             </div>
@@ -1213,14 +1211,17 @@
                 }
                 
                 const player = league.players.find(p => p.id === playerId);
-                // For teams, use combined handicap
                 const teamMembersSubmit = player && player.teamId 
                     ? league.players.filter(p => p.teamId === player.teamId) 
                     : [player].filter(Boolean);
-                const handicap = teamMembersSubmit.reduce((sum, p) => sum + (p.handicap || 0), 0);
-                const net = total - handicap;
                 const isTeamSubmit = teamMembersSubmit.length > 1;
                 const teamName = isTeamSubmit ? (league.teams || []).find(t => t.id === player.teamId)?.name : null;
+                
+                // Format score relative to par (36)
+                const PAR = 36;
+                const toPar = total - PAR;
+                const toParDisplay = toPar === 0 ? 'E' : (toPar > 0 ? '+' + toPar : String(toPar));
+                const toParColor = total < PAR ? '#37b24a' : total > PAR ? '#f44336' : '#333';
                 
                 html += `
                     <div class="submitted">
@@ -1228,9 +1229,8 @@
                         <h2>${isTeamSubmit ? 'Team Score Submitted!' : 'Score Submitted!'}</h2>
                         <p>${isTeamSubmit ? `${teamName}'s round has been recorded for both players.` : 'Your round has been recorded.'}</p>
                         <div class="score-summary nine-holes" style="margin: 20px -20px; border-radius: 0;">
-                            <div class="item"><div class="label">TOT</div><div class="value">${total}</div></div>
-                            <div class="item"><div class="label">HCP</div><div class="value">${handicap}</div></div>
-                            <div class="item"><div class="label">NET</div><div class="value net">${net}</div></div>
+                            <div class="item"><div class="label">TOTAL</div><div class="value">${total}</div></div>
+                            <div class="item"><div class="label">+/-</div><div class="value net" style="color: ${toParColor};">${toParDisplay}</div></div>
                         </div>
                     </div>
                     <a href="tournaments.html" class="back-link"><i class="fas fa-trophy"></i> View Standings</a>
@@ -1271,31 +1271,27 @@
             }
             
             const player = league.players.find(p => p.id === playerId);
-            // For teams, use combined handicap
             const teamMembersForScore = player && player.teamId 
                 ? league.players.filter(p => p.teamId === player.teamId) 
                 : [player].filter(Boolean);
-            const handicap = teamMembersForScore.reduce((sum, p) => sum + (p.handicap || 0), 0);
-            const net = total - handicap;
             const isTeam = teamMembersForScore.length > 1;
             
-            // Format net score relative to par (36)
-            const formatNetToPar = (netScore) => {
-                if (!netScore && netScore !== 0) return '-';
+            // Format score relative to par (36)
+            const formatToPar = (score) => {
+                if (!score && score !== 0) return '-';
                 const PAR = 36;
-                const diff = netScore - PAR;
+                const diff = score - PAR;
                 if (diff === 0) return 'E';
                 return diff > 0 ? '+' + diff : String(diff);
             };
-            const netDisplay = total ? formatNetToPar(net) : '-';
-            const netColor = net < 36 ? '#37b24a' : net > 36 ? '#f44336' : '#333';
+            const toParDisplay = total ? formatToPar(total) : '-';
+            const toParColor = total < 36 ? '#37b24a' : total > 36 ? '#f44336' : '#333';
             
-            // Score summary - Front 9: TOT | HCP | +/-
+            // Score summary - Front 9: TOT | +/-
             html += `
                 <div class="score-summary nine-holes">
-                    <div class="item"><div class="label">TOT</div><div class="value" id="total">${total || '-'}</div></div>
-                    <div class="item"><div class="label">${isTeam ? 'TEAM HCP' : 'HCP'}</div><div class="value" style="font-size: ${isTeam ? '14px' : '26px'};">${handicap}</div></div>
-                    <div class="item"><div class="label">+/-</div><div class="value net" id="netVal" style="color: ${netColor};">${netDisplay}</div></div>
+                    <div class="item"><div class="label">TOTAL</div><div class="value" id="total">${total || '-'}</div></div>
+                    <div class="item"><div class="label">+/-</div><div class="value net" id="netVal" style="color: ${toParColor};">${toParDisplay}</div></div>
                 </div>
             </div>
             <button class="submit-btn" onclick="submit()">${isTeam ? '<i class="fas fa-users"></i> Submit Team Score' : 'Submit Score'}</button>
@@ -1375,7 +1371,6 @@
                         ${matches.map(p => `
                             <button onclick="selectPlayerFromPinModal('${p.id}')" style="display:flex;justify-content:space-between;align-items:center;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;background:#f9fafb;cursor:pointer;font-weight:600;color:#1f2937;">
                                 <span>${p.name}</span>
-                                <span style="font-size:12px;color:#666;">HCP ${p.handicap || 0}</span>
                             </button>
                         `).join('')}
                     </div>
@@ -1418,7 +1413,7 @@
                 if (teamPlayers.length > 0) {
                     playersHtml += `<div class="team-group"><div class="team-name"><i class="fas fa-users"></i> ${team.name}</div>`;
                     teamPlayers.forEach(p => {
-                        playersHtml += `<div class="player-item" onclick="promptPinForPlayer('${p.id}', '${p.name.replace(/'/g, "\\'")}')"><span>${p.name}</span><span class="hcp">HCP ${p.handicap || 0}</span></div>`;
+                        playersHtml += `<div class="player-item" onclick="promptPinForPlayer('${p.id}', '${p.name.replace(/'/g, "\\'")}')"><span>${p.name}</span></div>`;
                     });
                     playersHtml += `</div>`;
                 }
@@ -1427,7 +1422,7 @@
             if (noTeam.length > 0) {
                 playersHtml += `<div class="team-group"><div class="team-name"><i class="fas fa-user"></i> Individual Players</div>`;
                 noTeam.forEach(p => {
-                    playersHtml += `<div class="player-item" onclick="promptPinForPlayer('${p.id}', '${p.name.replace(/'/g, "\\'")}')"><span>${p.name}</span><span class="hcp">HCP ${p.handicap || 0}</span></div>`;
+                    playersHtml += `<div class="player-item" onclick="promptPinForPlayer('${p.id}', '${p.name.replace(/'/g, "\\'")}')"><span>${p.name}</span></div>`;
                 });
                 playersHtml += `</div>`;
             }
@@ -1655,7 +1650,6 @@
             } else {
                 teamsWithPlayers.forEach(team => {
                     const playerNames = team.players.map(p => p.name).join(' & ');
-                    const combinedHcp = team.players.reduce((sum, p) => sum + (p.handicap || 0), 0);
                     // Check if team has scores for current round
                     const hasScores = team.players.some(p => {
                         const scores = league.scores?.[roundId]?.[p.id];
@@ -1669,7 +1663,6 @@
                                 <div>
                                     <div style="font-weight:700; color:#1a1a2e; font-size:16px;"><i class="fas fa-users" style="color:#37b24a;"></i> ${team.name}</div>
                                     <div style="color:#666; font-size:14px; margin-top:4px;">${playerNames}</div>
-                                    <div style="color:#888; font-size:12px; margin-top:2px;">Combined HCP: ${combinedHcp}</div>
                                 </div>
                                 <div style="text-align:right;">
                                     ${isSubmitted ? '<span style="background:#37b24a; color:#fff; padding:4px 8px; border-radius:6px; font-size:11px;"><i class="fas fa-check"></i> Submitted</span>' : 
@@ -1724,7 +1717,6 @@
             let teamsHtml = '';
             filteredTeams.forEach(team => {
                 const playerNames = team.players.map(p => p.name).join(' & ');
-                const combinedHcp = team.players.reduce((sum, p) => sum + (p.handicap || 0), 0);
                 const hasScores = team.players.some(p => {
                     const scores = league.scores?.[roundId]?.[p.id];
                     return scores && Object.keys(scores).some(k => !isNaN(parseInt(k)));
@@ -1737,7 +1729,6 @@
                             <div>
                                 <div style="font-weight:700; color:#1a1a2e; font-size:16px;"><i class="fas fa-users" style="color:#37b24a;"></i> ${team.name}</div>
                                 <div style="color:#666; font-size:14px; margin-top:4px;">${playerNames}</div>
-                                <div style="color:#888; font-size:12px; margin-top:2px;">Combined HCP: ${combinedHcp}</div>
                             </div>
                             <div style="text-align:right;">
                                 ${isSubmitted ? '<span style="background:#37b24a; color:#fff; padding:4px 8px; border-radius:6px; font-size:11px;"><i class="fas fa-check"></i> Submitted</span>' : 
@@ -1964,25 +1955,17 @@
                 total += scores[h] || 0;
             }
             
-            // For teams, use combined handicap
-            const player = league.players.find(p => p.id === playerId);
-            const teamMembers = player && player.teamId 
-                ? league.players.filter(p => p.teamId === player.teamId) 
-                : [player].filter(Boolean);
-            const handicap = teamMembers.reduce((sum, p) => sum + (p.handicap || 0), 0);
-            const net = total - handicap;
-            
-            // Format net score relative to par (36)
+            // Format score relative to par (36)
             const PAR = 36;
-            const diff = net - PAR;
-            const netDisplay = total ? (diff === 0 ? 'E' : (diff > 0 ? '+' + diff : String(diff))) : '-';
-            const netColor = net < PAR ? '#37b24a' : net > PAR ? '#f44336' : '#333';
+            const diff = total - PAR;
+            const toParDisplay = total ? (diff === 0 ? 'E' : (diff > 0 ? '+' + diff : String(diff))) : '-';
+            const toParColor = total < PAR ? '#37b24a' : total > PAR ? '#f44336' : '#333';
             
             // Update displays
             document.getElementById('total').textContent = total || '-';
             const netEl = document.getElementById('netVal');
-            netEl.textContent = netDisplay;
-            netEl.style.color = netColor;
+            netEl.textContent = toParDisplay;
+            netEl.style.color = toParColor;
         }
 
         function submit() {
@@ -2009,14 +1992,26 @@
             }
             
             const scores = getScores();
-            const requiredHoles = league.course?.holes || 9;
+            const requiredHoles = 9; // Front 9 only - always 9 holes for league
+            
+            // Also check DOM inputs directly in case Firebase hasn't synced yet
+            const domScores = {};
+            for (let h = 1; h <= requiredHoles; h++) {
+                const input = document.getElementById('h' + h);
+                if (input && input.value) {
+                    domScores[h] = parseInt(input.value) || 0;
+                }
+            }
+            
+            // Use DOM scores if league scores are empty (sync delay)
+            const scoresToCheck = Object.keys(scores).some(k => !isNaN(parseInt(k))) ? scores : domScores;
             
             // Count valid scores for each hole 1 through requiredHoles
             let filled = 0;
             const missingHoles = [];
             
             for (let h = 1; h <= requiredHoles; h++) {
-                const score = scores[h] || scores[String(h)];
+                const score = scoresToCheck[h] || scoresToCheck[String(h)];
                 const scoreValue = typeof score === 'string' ? parseInt(score) : score;
                 
                 if (scoreValue && !isNaN(scoreValue) && scoreValue > 0) {
@@ -2027,7 +2022,9 @@
             }
 
             console.log('Score validation:', { 
-                scores, 
+                scores,
+                domScores,
+                scoresToCheck,
                 filled, 
                 requiredHoles,
                 missingHoles,
@@ -2069,7 +2066,8 @@
             });
             
             ensureAuth().then(() => leagueRef.update(updates)).then(() => {
-                window.location.href = 'tournaments.html';
+                // Show success screen instead of immediately redirecting
+                render();
             }).catch((error) => {
                 console.error('Error submitting score:', error);
                 alert('Failed to submit score. Please check your connection and try again.');

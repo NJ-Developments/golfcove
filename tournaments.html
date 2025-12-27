@@ -453,11 +453,6 @@
             content: '👥';
             font-size: 10px;
         }
-        .player-hcp {
-            color: #999;
-            font-size: 12px;
-            font-weight: 500;
-        }
 
         .score-cell {
             font-weight: 800;
@@ -1068,7 +1063,7 @@
                     <li><a href="gift-cards.html">Gift Cards</a></li>
                     <li><a href="menu.html">Menu</a></li>
                     <li><a href="contact.html">Contact</a></li>
-                    <li><a href="https://918booking.com/emb-bookings?course=7" class="btn-book" target="_blank">RESERVE A ROOM</a></li>
+                    <li><a href="booking.html" class="btn-book">RESERVE A ROOM</a></li>
                 </ul>
             </nav>
             <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle Menu">
@@ -1125,7 +1120,7 @@
             course: { name: 'Golf Cove', holes: 9 },
             teams: [{ id: 't1', name: 'Demo Team' }],
             players: [
-                { id: 'p1', name: 'Javi', teamId: 't1', handicap: 10 }
+                { id: 'p1', name: 'Javi', teamId: 't1' }
             ],
             rounds: [],
             scores: {}
@@ -1420,24 +1415,23 @@
                         
                         // Count any round with at least 1 hole played (changed from 50%)
                         if (holesPlayed >= 1) {
-                            const net = gross - (player.handicap || 0);
                             totalGross += gross; roundsPlayed++;
-                            roundDetails.push({ name: round.name, date: round.date, gross, net, holesPlayed });
+                            roundDetails.push({ name: round.name, date: round.date, gross, net: gross, holesPlayed });
                             
                             allGross.push(gross);
-                            allNet.push(net);
+                            allNet.push(gross);
                             if (bestGross === null || gross < bestGross) bestGross = gross;
                             if (worstGross === null || gross > worstGross) worstGross = gross;
-                            if (bestNet === null || net < bestNet) bestNet = net;
+                            if (bestNet === null || gross < bestNet) bestNet = gross;
                         } else {
                             console.log(`  ⚠️ Not counting - no valid scores found`);
                         }
                     }
                 });
 
-                const totalNet = totalGross - ((player.handicap || 0) * roundsPlayed);
+                const totalNet = totalGross; // No handicap - net equals gross
                 const avgGross = roundsPlayed > 0 ? Math.round((totalGross / roundsPlayed) * 10) / 10 : null;
-                const avgNet = roundsPlayed > 0 ? Math.round((totalNet / roundsPlayed) * 10) / 10 : null;
+                const avgNet = avgGross; // Same as gross since no handicap
                 
                 // Calculate trend (last 3 rounds vs previous 3)
                 let trend = null;
@@ -1455,7 +1449,7 @@
                 
                 return {
                     id: player.id, name: player.name, teamId: player.teamId || null,
-                    handicap: player.handicap || 0, totalGross, totalNet,
+                    totalGross, totalNet,
                     roundsPlayed, roundDetails, bestGross, worstGross, bestNet, avgGross, avgNet,
                     trend
                 };
@@ -1648,8 +1642,8 @@
                     `;
                 };
             } else if (view === 'average') {
-                // Sort by best average net score - most fair for players with different round counts
-                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>HCP</th><th>Rnds</th><th>Best/Worst</th><th class="highlight">Avg +/-</th><th>Total +/-</th>`;
+                // Sort by best average score - most fair for players with different round counts
+                headers = `<th style="width:50px">#</th><th style="text-align:left">Player</th><th>Rnds</th><th>Best/Worst</th><th class="highlight">Avg +/-</th><th>Total +/-</th>`;
                 renderRow = (s, posDisplay, posNum) => {
                     const bestWorst = (s.bestNet !== null && s.roundDetails.length > 1) ? 
                         `${formatNetToPar(s.bestNet)} / ${formatNetToPar(Math.max(...s.roundDetails.map(r => r.net)))}` : 
@@ -1665,7 +1659,6 @@
                     return `
                         <td><span class="pos-badge ${posNum && posNum <= 3 ? 'pos-' + posNum : 'pos-other'}">${posDisplay || '-'}</span></td>
                         <td><div class="player-info"><span class="player-name">${s.name}</span>${s.teamId ? `<span class="player-team">${getTeamName(s.teamId)}</span>` : ''}</div></td>
-                        <td>${s.handicap}</td>
                         <td>${s.roundsPlayed}</td>
                         <td style="font-size:12px;color:#666;">${bestWorst}</td>
                         <td><span class="score-cell net" style="font-size:16px;font-weight:700;color:${avgNetColor};">${avgNetDisplay}</span></td>
@@ -1909,11 +1902,13 @@
             };
             
             let csv = [`${league.name}`, `Exported: ${new Date().toLocaleDateString()}`, ''];
-            csv.push(['Pos', 'Player', 'Team', 'HCP', 'Rounds', 'Gross', 'Net'].join(','));
+            csv.push(['Pos', 'Player', 'Team', 'Rounds', 'Total', '+/-'].join(','));
             
             standings.forEach((s, i) => {
                 const teamName = (league.teams || []).find(t => t.id === s.teamId)?.name || '';
-                csv.push([getExportPos(i), `"${s.name}"`, `"${teamName}"`, s.handicap, s.roundsPlayed, s.totalGross || '-', s.totalNet || '-'].join(','));
+                const toPar = s.roundsPlayed > 0 ? s.totalGross - (36 * s.roundsPlayed) : '-';
+                const toParDisplay = toPar === '-' ? '-' : (toPar === 0 ? 'E' : (toPar > 0 ? '+' + toPar : toPar));
+                csv.push([getExportPos(i), `"${s.name}"`, `"${teamName}"`, s.roundsPlayed, s.totalGross || '-', toParDisplay].join(','));
             });
             
             const blob = new Blob([csv.join('\n')], { type: 'text/csv' });

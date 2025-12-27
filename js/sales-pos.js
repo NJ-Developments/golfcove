@@ -707,13 +707,16 @@ const SalesPOS = (function() {
         }, 2000);
     }
     
-    function debounce(fn, delay) {
-        let timeout;
-        return function(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => fn.apply(this, args), delay);
+    // Use GolfCoveUtils debounce if available
+    const debounce = (typeof GolfCoveUtils !== 'undefined' && GolfCoveUtils.debounce) 
+        ? GolfCoveUtils.debounce 
+        : function(fn, delay) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn.apply(this, args), delay);
+            };
         };
-    }
     
     // ============ ACTIONS ============
     function applyDiscount() {

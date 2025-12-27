@@ -952,7 +952,7 @@
             <h3><i class="fas fa-clipboard-list"></i> What's Next?</h3>
             <ul>
                 <li><i class="fas fa-envelope"></i> Check your email for a confirmation receipt and membership details</li>
-                <li><i class="fas fa-calendar-alt"></i> Book your first session at <a href="https://918booking.com/emb-bookings?course=7" target="_blank">918booking.com</a></li>
+                <li><i class="fas fa-calendar-alt"></i> Book your first session at <a href="booking.html">our booking page</a></li>
                 <li><i class="fas fa-id-card"></i> Visit us to pick up your member card and get a tour of the facility</li>
                 <li><i class="fas fa-utensils"></i> Enjoy your 10% food & beverage discount on every visit!</li>
             </ul>
@@ -970,7 +970,7 @@
         </div>
         
         <div id="actionButtons">
-            <a href="https://918booking.com/emb-bookings?course=7" class="btn btn-primary" target="_blank" id="bookBtn">
+            <a href="booking.html" class="btn btn-primary" id="bookBtn">
                 <i class="fas fa-golf-ball"></i> Book Your First Session
             </a>
             <button type="button" class="btn btn-primary" id="createTeamBtn" onclick="showTeamRegistration()" style="display: none;">
@@ -1078,12 +1078,76 @@
                 if (data.success && data.session) {
                     sessionData = data.session;
                     
+                    // SYNC NEW MEMBER TO LOCAL STORAGE for booking page lookup
+                    syncMemberToLocalStorage(sessionData);
+                    
                     // Update display based on membership type
                     updateDisplayForMembershipType(sessionData);
                 }
             } catch (error) {
                 console.error('Error fetching session:', error);
             }
+        }
+        
+        /**
+         * Sync new member to localStorage for booking page lookup
+         * This bridges the gap between Firebase member creation and local lookup
+         */
+        function syncMemberToLocalStorage(session) {
+            try {
+                // Get customer details from session
+                const customer = {
+                    id: session.customerId || 'member_' + Date.now().toString(36),
+                    firstName: session.customerName?.split(' ')[0] || '',
+                    lastName: session.customerName?.split(' ').slice(1).join(' ') || '',
+                    email: session.customerEmail || '',
+                    phone: session.customerPhone || '',
+                    // Membership info
+                    isMember: true,
+                    memberType: session.tier || 'par',
+                    memberSince: new Date().toISOString().split('T')[0],
+                    memberExpires: calculateExpiry(session.tier),
+                    priceClass: 'Member',
+                    // Session reference
+                    stripeSessionId: session.sessionId || sessionId,
+                    stripeCustomerId: session.stripeCustomerId || null
+                };
+                
+                // Get existing customers
+                const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+                
+                // Check if already exists (by email)
+                const existingIndex = customers.findIndex(c => 
+                    c.email && c.email.toLowerCase() === customer.email.toLowerCase()
+                );
+                
+                if (existingIndex >= 0) {
+                    // Update existing
+                    customers[existingIndex] = { ...customers[existingIndex], ...customer };
+                    console.log('[MemberSync] Updated existing member:', customer.email);
+                } else {
+                    // Add new
+                    customers.push(customer);
+                    console.log('[MemberSync] Added new member:', customer.email);
+                }
+                
+                localStorage.setItem('gc_customers', JSON.stringify(customers));
+                console.log('[MemberSync] Saved', customers.length, 'customers to localStorage');
+            } catch (e) {
+                console.warn('[MemberSync] Failed to sync member:', e);
+            }
+        }
+        
+        function calculateExpiry(tier) {
+            const now = new Date();
+            // Most memberships are monthly recurring
+            // League memberships are seasonal (3 months)
+            if (tier && tier.includes('league')) {
+                now.setMonth(now.getMonth() + 3);
+            } else {
+                now.setMonth(now.getMonth() + 1);
+            }
+            return now.toISOString().split('T')[0];
         }
         
         let isLeagueTeam = false;

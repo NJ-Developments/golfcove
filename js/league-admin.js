@@ -130,27 +130,20 @@
             return new Date(customer.memberExpires) > new Date();
         }
         
-        // Get member tier display name
-        function getMemberTierName(memberType) {
-            const names = {
-                'eagle': 'Eagle', 'family_eagle': 'Eagle Family',
-                'birdie': 'Birdie', 'family_birdie': 'Birdie Family',
-                'par': 'Par', 'family_par': 'Par Family',
-                'corporate': 'Corporate', 'monthly': 'Monthly', 'annual': 'Annual'
-            };
-            return names[memberType] || 'Member';
-        }
+        // Use shared utilities from GolfCoveUtils
+        const getMemberTierName = (memberType) => typeof GolfCoveUtils !== 'undefined' ? GolfCoveUtils.getMemberTierName(memberType) : ({
+            'eagle': 'Eagle', 'family_eagle': 'Eagle Family',
+            'birdie': 'Birdie', 'family_birdie': 'Birdie Family',
+            'par': 'Par', 'family_par': 'Par Family',
+            'corporate': 'Corporate'
+        })[memberType] || 'Member';
         
-        // Get member tier color
-        function getMemberTierColor(memberType) {
-            const colors = {
-                'eagle': '#9b59b6', 'family_eagle': '#9b59b6',
-                'birdie': '#f39c12', 'family_birdie': '#f39c12',
-                'par': '#27ae60', 'family_par': '#27ae60',
-                'corporate': '#2c3e50'
-            };
-            return colors[memberType] || '#27ae60';
-        }
+        const getMemberTierColor = (memberType) => typeof GolfCoveUtils !== 'undefined' ? GolfCoveUtils.getMemberTierColor(memberType) : ({
+            'eagle': '#d4a017', 'family_eagle': '#d4a017',
+            'birdie': '#9b59b6', 'family_birdie': '#9b59b6',
+            'par': '#3498db', 'family_par': '#3498db',
+            'corporate': '#2c3e50'
+        })[memberType] || '#3498db';
         
         // Find customer by name
         function findCustomerByName(name) {
@@ -794,11 +787,7 @@
                         background: #1a6b2e !important;
                         font-weight: bold;
                     }
-                    #scorecardPreviewContainer .hcp-col,
-                    #scorecardPreviewContainer .net-col {
-                        background: #1a6b2e !important;
-                        font-weight: bold;
-                    }
+
                     #scorecardPreviewContainer .row-label {
                         background: #333 !important;
                         color: #fff !important;
@@ -869,8 +858,6 @@
                         ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
                         ${has18?'<td class="total-cell">IN</td>':''}
                         <td class="total-cell">TOT</td>
-                        <td class="total-cell">HCP</td>
-                        <td class="total-cell">NET</td>
                     </tr>
                     ${Array.from({length:6},()=>`
                     <tr class="player-row">
@@ -970,12 +957,6 @@
                                         </div>
                                         <div style="display: flex; align-items: center; gap: 8px;">
                                             <button onclick="viewPlayerScores('${p.id}')" title="View Scores" style="background:#e3f2fd;border:none;color:#1976d2;font-size:12px;padding:4px 8px;border-radius:4px;cursor:pointer;"><i class="fas fa-chart-line"></i></button>
-                                            <div style="display: flex; align-items: center; gap: 4px;">
-                                                <span style="font-size: 11px; color: #888;">HCP</span>
-                                                <input type="number" value="${p.handicap || 0}" min="0" max="54"
-                                                    onchange="updatePlayerHandicap('${p.id}', this.value)"
-                                                    style="width: 45px; padding: 4px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 13px; text-align: center;">
-                                            </div>
                                             <button class="delete-btn" onclick="deletePlayer('${p.id}')" title="Remove player"><i class="fas fa-times"></i></button>
                                         </div>
                                     </div>
@@ -1314,10 +1295,9 @@
                 scoresHtml = `
                     <div style="margin-top: 20px; background: #f0fff4; border: 1px solid #37b24a40; border-radius: 10px; padding: 15px;">
                         <h4 style="color: #37b24a; margin-bottom: 10px;"><i class="fas fa-trophy"></i> League Stats</h4>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: center;">
                             <div><div style="font-size: 24px; font-weight: 700;">${totalRounds}</div><div style="font-size: 11px; color: #888;">Rounds</div></div>
-                            <div><div style="font-size: 24px; font-weight: 700;">${linkedPlayer.handicap || 0}</div><div style="font-size: 11px; color: #888;">Handicap</div></div>
-                            <div><div style="font-size: 24px; font-weight: 700;">${avgNet || '-'}</div><div style="font-size: 11px; color: #888;">Avg Net</div></div>
+                            <div><div style="font-size: 24px; font-weight: 700;">${avgNet || '-'}</div><div style="font-size: 11px; color: #888;">Avg Score</div></div>
                         </div>
                         ${team ? `<div style="margin-top: 10px; font-size: 13px; color: #666;"><i class="fas fa-users"></i> Team: <strong>${team.name}</strong></div>` : ''}
                         <button class="btn btn-sm btn-danger" style="margin-top: 12px;" onclick="document.getElementById('customerProfileModal').remove(); removeFromLeague('${linkedPlayer.id}')"><i class="fas fa-user-minus"></i> Remove from League</button>
@@ -1542,11 +1522,6 @@
                             </select>
                         </div>
                         
-                        <div style="margin-bottom:15px;">
-                            <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Handicap</label>
-                            <input type="number" id="addToLeagueHandicap" value="0" min="0" max="54" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
-                        </div>
-                        
                         <div id="addToLeagueError" style="display:none;color:#f44336;font-size:13px;margin-bottom:15px;padding:10px;background:#ffebee;border-radius:8px;"></div>
                         
                         <div style="display:flex;gap:10px;">
@@ -1602,7 +1577,6 @@
         async function confirmAddToLeague(customerId) {
             const customer = stripeCustomersCache.find(c => c.id === customerId);
             const teamId = document.getElementById('addToLeagueTeam').value;
-            const handicap = parseInt(document.getElementById('addToLeagueHandicap').value) || 0;
             const errorDiv = document.getElementById('addToLeagueError');
             
             if (!teamId) {
@@ -1626,7 +1600,6 @@
                     email: customer.email || '',
                     phone: customer.phone || '',
                     teamId: teamId,
-                    handicap: handicap,
                     pin: team.pin || generatePin(),
                     stripeCustomerId: customerId,
                     isMember: customer.isMember,
@@ -1684,7 +1657,6 @@
                                 <h4 style="margin-bottom:10px;color:#059669;"><i class="fas fa-golf-ball"></i> League Info</h4>
                                 <div style="display:grid;gap:8px;font-size:14px;">
                                     <div><strong>Team:</strong> ${team ? team.name : 'No team'}</div>
-                                    <div><strong>Handicap:</strong> ${linkedPlayer.handicap || 0}</div>
                                     <div><strong>PIN:</strong> <code style="background:#d1fae5;padding:2px 8px;border-radius:4px;font-family:monospace;letter-spacing:2px;">${linkedPlayer.pin || 'None'}</code></div>
                                 </div>
                             </div>
@@ -2171,16 +2143,6 @@
             }
         }
         
-        function updatePlayerHandicap(playerId, value) {
-            const handicap = parseInt(value) || 0;
-            const player = league.players.find(p => p.id === playerId);
-            if (player) {
-                player.handicap = handicap;
-                saveLeague();
-                renderTeams();
-            }
-        }
-        
         function updatePlayerPin(playerId, value) {
             const pin = value.replace(/\D/g, '').slice(0, 4);
             const player = league.players.find(p => p.id === playerId);
@@ -2418,7 +2380,6 @@
             const searchInput = document.getElementById(`teamPlayer${playerNum}Search`);
             const resultsDiv = document.getElementById(`teamPlayer${playerNum}Results`);
             const infoDiv = document.getElementById(`teamPlayer${playerNum}Info`);
-            const hcpSection = document.getElementById(`teamPlayer${playerNum}HcpSection`);
             const stripeIdInput = document.getElementById(`teamPlayer${playerNum}StripeId`);
             
             // Remove old listeners
@@ -2536,9 +2497,6 @@
             `;
             infoDiv.style.display = 'block';
             
-            // Show handicap section
-            document.getElementById(`teamPlayer${playerNum}HcpSection`).style.display = 'block';
-            
             // Check if both players are selected
             checkTeamFormComplete();
         }
@@ -2547,7 +2505,6 @@
         function clearTeamPlayer(playerNum) {
             document.getElementById(`teamPlayer${playerNum}StripeId`).value = '';
             document.getElementById(`teamPlayer${playerNum}Info`).style.display = 'none';
-            document.getElementById(`teamPlayer${playerNum}HcpSection`).style.display = 'none';
             document.getElementById(`teamPlayer${playerNum}Search`).value = '';
             document.getElementById(`teamPlayer${playerNum}Search`).focus();
             checkTeamFormComplete();
@@ -2575,13 +2532,9 @@
             document.getElementById('teamPlayer1Search').value = '';
             document.getElementById('teamPlayer1StripeId').value = '';
             document.getElementById('teamPlayer1Info').style.display = 'none';
-            document.getElementById('teamPlayer1HcpSection').style.display = 'none';
-            document.getElementById('newTeamPlayer1Hcp').value = '0';
             document.getElementById('teamPlayer2Search').value = '';
             document.getElementById('teamPlayer2StripeId').value = '';
             document.getElementById('teamPlayer2Info').style.display = 'none';
-            document.getElementById('teamPlayer2HcpSection').style.display = 'none';
-            document.getElementById('newTeamPlayer2Hcp').value = '0';
             document.getElementById('newTeamPin').value = '';
             document.getElementById('createTeamBtn').disabled = true;
             document.getElementById('createTeamBtn').style.opacity = '0.5';
@@ -2597,9 +2550,7 @@
             e.preventDefault();
             const name = document.getElementById('newTeamName').value.trim();
             const player1StripeId = document.getElementById('teamPlayer1StripeId').value.trim();
-            const player1Hcp = parseInt(document.getElementById('newTeamPlayer1Hcp').value) || 0;
             const player2StripeId = document.getElementById('teamPlayer2StripeId').value.trim();
-            const player2Hcp = parseInt(document.getElementById('newTeamPlayer2Hcp').value) || 0;
             const pin = document.getElementById('newTeamPin').value.trim();
             
             if (!name) {
@@ -2644,7 +2595,6 @@
                 id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
                 name: player1Name,
                 teamId,
-                handicap: player1Hcp,
                 pin: pin,
                 email: player1.email || null,
                 stripeCustomerId: player1StripeId,
@@ -2659,7 +2609,6 @@
                 id: 'p' + (Date.now() + 1) + Math.random().toString(36).substr(2, 5),
                 name: player2Name,
                 teamId,
-                handicap: player2Hcp,
                 pin: pin,
                 email: player2.email || null,
                 stripeCustomerId: player2StripeId,
@@ -2735,11 +2684,9 @@
             document.getElementById('addPlayerTeamId').value = teamId;
             document.getElementById('addPlayerStripeId').value = '';
             document.getElementById('modalTeamName').textContent = teamName;
-            document.getElementById('addPlayerHcp').value = '0';
             document.getElementById('playerCustomerSearch').value = '';
             document.getElementById('playerCustomerResults').style.display = 'none';
             document.getElementById('selectedPlayerInfo').style.display = 'none';
-            document.getElementById('handicapSection').style.display = 'none';
             document.getElementById('addPlayerBtn').disabled = true;
             document.getElementById('addPlayerBtn').style.opacity = '0.5';
             openModal('addPlayerModal');
@@ -2752,7 +2699,6 @@
         function clearSelectedPlayer() {
             document.getElementById('addPlayerStripeId').value = '';
             document.getElementById('selectedPlayerInfo').style.display = 'none';
-            document.getElementById('handicapSection').style.display = 'none';
             document.getElementById('addPlayerBtn').disabled = true;
             document.getElementById('addPlayerBtn').style.opacity = '0.5';
             document.getElementById('playerCustomerSearch').value = '';
@@ -2878,9 +2824,6 @@
             `;
             selectedDiv.style.display = 'block';
             
-            // Show handicap section
-            document.getElementById('handicapSection').style.display = 'block';
-            
             // Enable the submit button
             document.getElementById('addPlayerBtn').disabled = false;
             document.getElementById('addPlayerBtn').style.opacity = '1';
@@ -2890,7 +2833,6 @@
             e.preventDefault();
             const teamId = document.getElementById('addPlayerTeamId').value;
             const stripeId = document.getElementById('addPlayerStripeId').value.trim();
-            const handicap = parseInt(document.getElementById('addPlayerHcp').value) || 0;
             
             // Require Stripe customer selection
             if (!stripeId) {
@@ -2925,8 +2867,7 @@
             league.players.push({
                 id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
                 name, 
-                teamId, 
-                handicap,
+                teamId,
                 email: email || null,
                 stripeCustomerId: stripeId,
                 isMember: isMember,
@@ -3294,8 +3235,7 @@
             const holes = league.course?.holes || 9;
             const scores = league.players.map(p => {
                 const ps = (league.scores || {})[roundId]?.[p.id];
-                const handicap = p.handicap || 0;
-                if (!ps || !ps.submitted) return { name: p.name, handicap, gross: null };
+                if (!ps || !ps.submitted) return { name: p.name, gross: null };
                 let gross = 0;
                 let holesPlayed = 0;
                 for (let h = 1; h <= holes; h++) {
@@ -3304,7 +3244,7 @@
                         holesPlayed++;
                     }
                 }
-                return { name: p.name, handicap, gross, net: gross - handicap, holesPlayed };
+                return { name: p.name, gross, net: gross, holesPlayed };
             }).sort((a, b) => {
                 if (a.gross === null) return 1;
                 if (b.gross === null) return -1;
@@ -3313,19 +3253,18 @@
             
             document.getElementById('scoresModalContent').innerHTML = scores.map(s => {
                 const PAR = 36;
-                const netToPar = s.net - PAR;
-                const netDisplay = s.net !== null ? (netToPar === 0 ? 'E' : (netToPar > 0 ? '+' + netToPar : String(netToPar))) : '-';
-                const netColor = s.net < PAR ? '#37b24a' : s.net > PAR ? '#f44336' : '#333';
+                const toPar = s.gross - PAR;
+                const toParDisplay = s.gross !== null ? (toPar === 0 ? 'E' : (toPar > 0 ? '+' + toPar : String(toPar))) : '-';
+                const toParColor = s.gross < PAR ? '#37b24a' : s.gross > PAR ? '#f44336' : '#333';
                 return `
                 <div class="round-item">
                     <div>
                         <h4>${s.name}</h4>
-                        <p>HCP ${s.handicap}</p>
                     </div>
                     ${s.gross !== null ? `
                         <div style="text-align: right;">
                             <div style="font-size: 18px; font-weight: 700; color: #37b24a;">${s.gross}${s.holesPlayed < holes ? ` <span style="font-size:12px;color:#888">(${s.holesPlayed}h)</span>` : ''}</div>
-                            <div style="font-size: 12px; color: ${netColor}; font-weight: 600;">+/-: ${netDisplay}</div>
+                            <div style="font-size: 12px; color: ${toParColor}; font-weight: 600;">+/-: ${toParDisplay}</div>
                         </div>
                     ` : '<span style="color: #999;">No score</span>'}
                 </div>
@@ -3577,8 +3516,6 @@
                                 ${has18?Array.from({length:holes-9},(_,i)=>`<td>${i+10}</td>`).join(''):''}
                                 ${has18?'<td class="total-cell">IN</td>':''}
                                 <td class="total-cell">TOT</td>
-                                <td class="total-cell">HCP</td>
-                                <td class="total-cell">NET</td>
                             </tr>
                             ${Array.from({length:6},()=>`
                             <tr class="player-row">
@@ -3588,8 +3525,6 @@
                                 ${has18?Array.from({length:holes-9},()=>'<td></td>').join(''):''}
                                 ${has18?'<td class="total-cell"></td>':''}
                                 <td class="total-cell"></td>
-                                <td></td>
-                                <td></td>
                             </tr>`).join('')}
                         </table>
                         
@@ -3801,20 +3736,20 @@
         }
         
         function exportTeamsCSV() {
-            let csv = 'Team ID,Team Name,PIN,Player 1,Player 1 Handicap,Player 2,Player 2 Handicap\n';
+            let csv = 'Team ID,Team Name,PIN,Player 1,Player 2\n';
             league.teams.forEach(team => {
                 const players = league.players.filter(p => p.teamId === team.id);
-                csv += `"${team.id}","${team.name}","${team.pin || ''}","${players[0]?.name || ''}","${players[0]?.handicap || 0}","${players[1]?.name || ''}","${players[1]?.handicap || 0}"\n`;
+                csv += `"${team.id}","${team.name}","${team.pin || ''}","${players[0]?.name || ''}","${players[1]?.name || ''}"\n`;
             });
             downloadCSV(csv, 'teams_export.csv');
             document.getElementById('exportModal').remove();
         }
         
         function exportPlayersCSV() {
-            let csv = 'Player ID,Name,Email,Team,Handicap,PIN,Member,Stripe ID\n';
+            let csv = 'Player ID,Name,Email,Team,PIN,Member,Stripe ID\n';
             league.players.forEach(p => {
                 const team = league.teams.find(t => t.id === p.teamId);
-                csv += `"${p.id}","${p.name}","${p.email || ''}","${team?.name || 'No Team'}","${p.handicap || 0}","${p.pin || ''}","${p.isMember ? 'Yes' : 'No'}","${p.stripeCustomerId || ''}"\n`;
+                csv += `"${p.id}","${p.name}","${p.email || ''}","${team?.name || 'No Team'}","${p.pin || ''}","${p.isMember ? 'Yes' : 'No'}","${p.stripeCustomerId || ''}"\n`;
             });
             downloadCSV(csv, 'players_export.csv');
             document.getElementById('exportModal').remove();
@@ -3830,7 +3765,7 @@
         }
         
         function exportScoresCSV() {
-            let csv = 'Round,Player,Team,Gross,Net,Handicap,Submitted At\n';
+            let csv = 'Round,Player,Team,Score,Submitted At\n';
             Object.keys(league.scores || {}).forEach(roundId => {
                 const round = league.rounds?.find(r => r.id === roundId);
                 Object.keys(league.scores[roundId]).forEach(playerId => {
@@ -3838,7 +3773,7 @@
                     if (!score.submitted) return;
                     const player = league.players?.find(p => p.id === playerId);
                     const team = league.teams?.find(t => t.id === player?.teamId);
-                    csv += `"${round?.name || roundId}","${player?.name || playerId}","${team?.name || 'N/A'}","${score.gross || ''}","${score.net || ''}","${score.handicap || 0}","${score.submittedAt || ''}"\n`;
+                    csv += `"${round?.name || roundId}","${player?.name || playerId}","${team?.name || 'N/A'}","${score.gross || ''}","${score.submittedAt || ''}"\n`;
                 });
             });
             downloadCSV(csv, 'scores_export.csv');
@@ -3863,37 +3798,31 @@
             let scoresHtml = '';
             let totalRounds = 0;
             let avgGross = 0;
-            let avgNet = 0;
             
             league.rounds.forEach(round => {
                 const score = (league.scores || {})[round.id]?.[playerId];
                 if (score && score.submitted) {
                     totalRounds++;
                     avgGross += score.gross || 0;
-                    avgNet += score.net || 0;
                     
                     const PAR = 36;
-                    const netToPar = (score.net || 0) - PAR;
-                    const netDisplay = score.net ? (netToPar === 0 ? 'E' : (netToPar > 0 ? '+' + netToPar : String(netToPar))) : '-';
-                    const netColor = (score.net || 0) < PAR ? '#37b24a' : (score.net || 0) > PAR ? '#f44336' : '#333';
+                    const toPar = (score.gross || 0) - PAR;
+                    const toParDisplay = score.gross ? (toPar === 0 ? 'E' : (toPar > 0 ? '+' + toPar : String(toPar))) : '-';
+                    const toParColor = (score.gross || 0) < PAR ? '#37b24a' : (score.gross || 0) > PAR ? '#f44336' : '#333';
                     
                     scoresHtml += `
-                        <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:15px;padding:12px;background:#f8f9fa;border-radius:8px;align-items:center;">
+                        <div style="display:grid;grid-template-columns:1fr auto auto;gap:15px;padding:12px;background:#f8f9fa;border-radius:8px;align-items:center;">
                             <div>
                                 <div style="font-weight:600;">${round.name}</div>
                                 <div style="font-size:12px;color:#888;">${round.startDate ? new Date(round.startDate).toLocaleDateString() : ''}</div>
                             </div>
                             <div style="text-align:center;">
-                                <div style="font-size:11px;color:#888;">GROSS</div>
+                                <div style="font-size:11px;color:#888;">TOTAL</div>
                                 <div style="font-weight:700;font-size:18px;">${score.gross || '-'}</div>
                             </div>
                             <div style="text-align:center;">
                                 <div style="font-size:11px;color:#888;">+/-</div>
-                                <div style="font-weight:700;font-size:18px;color:${netColor};">${netDisplay}</div>
-                            </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:11px;color:#888;">HCP</div>
-                                <div style="font-weight:600;">${score.handicap || 0}</div>
+                                <div style="font-weight:700;font-size:18px;color:${toParColor};">${toParDisplay}</div>
                             </div>
                         </div>
                     `;
@@ -4329,10 +4258,6 @@
                         <span>${round ? new Date(round.date).toLocaleDateString() : 'Unknown'}</span>
                     </div>
                     <div class="info-item">
-                        <label>Handicap</label>
-                        <span>${player?.handicap || 0}</span>
-                    </div>
-                    <div class="info-item">
                         <label>Submitted</label>
                         <span>${submittedAt ? submittedAt.toLocaleString() : 'N/A'}</span>
                     </div>
@@ -4377,11 +4302,10 @@
                     <div class="total-item">
                         ${(() => {
                             const PAR = 36;
-                            const netScore = Math.max(0, totalScore - (player?.handicap || 0));
-                            const netToPar = netScore - PAR;
-                            const netDisplay = netToPar === 0 ? 'E' : (netToPar > 0 ? '+' + netToPar : String(netToPar));
-                            const netColor = netScore < PAR ? '#37b24a' : netScore > PAR ? '#f44336' : '#333';
-                            return `<div class="value" style="color: ${netColor};">${netDisplay}</div>`;
+                            const toPar = totalScore - PAR;
+                            const toParDisplay = toPar === 0 ? 'E' : (toPar > 0 ? '+' + toPar : String(toPar));
+                            const toParColor = totalScore < PAR ? '#37b24a' : totalScore > PAR ? '#f44336' : '#333';
+                            return `<div class="value" style="color: ${toParColor};">${toParDisplay}</div>`;
                         })()}
                         <div class="label">+/- Par</div>
                     </div>

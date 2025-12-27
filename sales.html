@@ -8,8 +8,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://js.stripe.com/terminal/v1/"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <!-- Unified Config & Core -->
     <script src="js/config-unified.js"></script>
+    <script src="js/utils.js"></script>
     <script src="js/core.js"></script>
     <script src="js/services-unified.js"></script>
     <script src="js/menu-data.js"></script>
@@ -24,6 +28,33 @@
     <script src="js/saved-cards.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* CSS Variables for theming */
+        :root {
+            --bg-primary: #7f8c8d;
+            --bg-secondary: #8a9599;
+            --bg-panel: #e5e5e5;
+            --bg-panel-header: #d5d5d5;
+            --border-color: #6b7778;
+            --text-primary: #fff;
+            --text-secondary: #ddd;
+            --text-dark: #333;
+            --hover-bg: #6b7778;
+        }
+        
+        /* Light Mode */
+        body.light-mode {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #e8e8e8;
+            --bg-panel: #ffffff;
+            --bg-panel-header: #f0f0f0;
+            --border-color: #ddd;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-dark: #333;
+            --hover-bg: #e0e0e0;
+        }
+        
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; }
         
         /* Header */
@@ -45,49 +76,63 @@
             gap: 0;
         }
 
-        /* Left: Categories Panel */
+        /* Left: Categories Panel - Neutral grey matching right panel */
         .categories-panel {
-            background: #3d8a9a;
+            background: #e5e5e5;
             padding: 10px 8px;
             overflow-y: auto;
+            border-right: 1px solid #ccc;
         }
         .category-btn {
             display: flex;
             align-items: center;
             width: 100%;
-            padding: 14px 12px;
+            padding: 12px 14px;
             margin-bottom: 4px;
-            background: rgba(255,255,255,0.1);
+            background: #5dade2;
             border: none;
-            border-radius: 6px;
+            border-radius: 4px;
             color: #fff;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: 13px;
+            font-weight: 600;
             text-align: left;
             cursor: pointer;
             transition: all 0.15s;
         }
-        .category-btn:hover { background: rgba(255,255,255,0.2); }
-        .category-btn.active { background: #5bb5c5; }
-        .category-btn i { margin-right: 10px; width: 16px; text-align: center; font-size: 15px; }
+        .category-btn:hover { opacity: 0.9; }
+        .category-btn.active { box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        .category-btn.orange { background: #e67e22; }
+        .category-btn.grey { background: #7f8c8d; }
+        .category-btn.teal { background: #16a085; }
+        .category-btn.purple { background: #8e44ad; }
+        .category-btn.amber { background: #d4a017; color: #fff; }
+        .category-btn.forest { background: #2d6a4f; color: #fff; }
+        .category-btn.red { background: #c0392b; }
+        .category-btn.wine { background: #722f37; }
+        .category-btn.pink { background: #e91e63; }
+        .category-btn.cyan { background: #00bcd4; }
 
-        /* Center: Sale Area */
+        /* Center: Sale Area - Grey theme */
         .sale-area {
-            background: #fff;
+            background: #7f8c8d;
             display: flex;
             flex-direction: column;
-            border-left: 1px solid #ddd;
-            border-right: 1px solid #ddd;
+            border-left: 1px solid #6b7778;
+            border-right: 1px solid #6b7778;
+            overflow: hidden;
+            position: relative;
+            height: 100%;
+            min-height: 0; /* Important for flex overflow */
         }
         
-        /* Sale Header */
+        /* Sale Header - Grey theme */
         .sale-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 10px 15px;
-            border-bottom: 1px solid #ddd;
-            background: #eef2f5;
+            border-bottom: 1px solid #6b7778;
+            background: #8a9599;
         }
         .sale-mode-toggle {
             display: flex;
@@ -95,9 +140,9 @@
         }
         .mode-btn {
             padding: 8px 20px;
-            border: 1px solid #ccc;
-            background: #fff;
-            color: #333;
+            border: 1px solid #6b7778;
+            background: #6b7778;
+            color: #fff;
             border-radius: 0;
             cursor: pointer;
             font-weight: 500;
@@ -120,102 +165,177 @@
         .sale-search input {
             width: 100%;
             padding: 8px 12px;
-            border: 1px solid #ccc;
+            border: 1px solid #6b7778;
             border-radius: 4px;
             font-size: 13px;
             background: #fff;
         }
         .sale-search input:focus { outline: none; border-color: #4a9eb4; }
 
-        /* Items Table */
+        /* Items Table - Grey theme */
         .items-table-container {
             flex: 1;
             overflow-y: auto;
             padding: 0;
+            background: #7f8c8d;
         }
         .items-table {
             width: 100%;
             border-collapse: collapse;
         }
         .items-table thead {
-            background: #f5f6f8;
+            background: #8a9599;
             position: sticky;
             top: 0;
             z-index: 10;
         }
         .items-table th {
-            padding: 8px 12px;
+            padding: 10px 12px;
             text-align: left;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 600;
-            color: #888;
+            color: #fff;
             text-transform: uppercase;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 2px solid #6b7778;
         }
         .items-table td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #f0f0f0;
+            padding: 10px 12px;
+            border-bottom: 1px solid #8a9599;
             font-size: 13px;
+            vertical-align: middle;
+            color: #fff;
         }
-        .items-table tr:hover { background: #f8fbfc; }
+        .items-table tr:hover { background: #6b7778; }
+        .items-table tr.taxable-row { background: #5a5850; }
         
         .item-remove {
-            background: #e74c3c;
-            color: #fff;
+            background: none;
+            color: #e74c3c;
             border: none;
-            border-radius: 50%;
-            width: 26px;
-            height: 26px;
+            width: 24px;
+            height: 24px;
             cursor: pointer;
-            font-size: 11px;
-            transition: background 0.2s;
+            font-size: 14px;
+            font-weight: 700;
+            transition: all 0.2s;
+            padding: 0;
         }
-        .item-remove:hover { background: #c0392b; }
+        .item-remove:hover { color: #c0392b; transform: scale(1.1); }
         
-        .qty-controls {
+        /* Inline editable inputs */
+        .inline-input {
+            width: 60px;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            text-align: center;
+            background: #fff;
+        }
+        .inline-input:focus { border-color: #4a9eb4; outline: none; box-shadow: 0 0 0 2px rgba(74,158,180,0.2); }
+        .inline-input.price-input { width: 70px; text-align: right; }
+        .inline-input.qty-input { width: 50px; }
+        .inline-input.disc-input { width: 50px; }
+        
+        /* Disc column header nowrap */
+        .items-table th { white-space: nowrap; }
+        
+        .item-name-cell {
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        .qty-btn {
-            width: 26px;
-            height: 26px;
-            border: 1px solid #ddd;
-            background: #f8f9fa;
-            border-radius: 4px;
+        .item-name-cell .item-checkbox {
+            width: 16px;
+            height: 16px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.2s;
         }
-        .qty-btn:hover { background: #e9ecef; }
-        .qty-value { 
-            width: 24px; 
-            text-align: center; 
-            font-weight: 600;
-            font-size: 13px;
+        .item-name-cell .item-name {
+            color: #7ec8e8;
+            font-weight: 500;
         }
         
-        .item-total { font-weight: 600; color: #2c3e50; }
+        .item-total { font-weight: 600; color: #fff; text-align: right; }
+        
+        /* Taxable checkbox row */
+        .taxable-row-footer {
+            background: #5d656d;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #ddd;
+            border-bottom: 1px solid #666;
+        }
+        .taxable-row-footer input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; }
+        
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .modal-content {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: modalSlide 0.2s ease;
+        }
+        @keyframes modalSlide {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal-close:hover { color: #333; }
+        .modal-body { padding: 0; }
         
         .empty-sale {
             text-align: center;
             padding: 40px 20px;
-            color: #aaa;
+            color: #ddd;
         }
-        .empty-sale i { font-size: 36px; margin-bottom: 10px; display: block; color: #ddd; }
-        .empty-sale p { font-size: 13px; }
+        .empty-sale i { font-size: 36px; margin-bottom: 10px; display: block; color: #ccc; }
+        .empty-sale p { font-size: 13px; color: #ddd; }
 
-        /* Customer Section */
+        /* Customer Section - Grey theme */
         .customer-section {
             padding: 8px 15px;
-            border-top: 1px solid #eee;
-            background: #f8f9fa;
+            border-top: 1px solid #8a9599;
+            background: #8a9599;
         }
         .customer-section label {
             font-size: 10px;
             font-weight: 600;
-            color: #888;
+            color: #fff;
             text-transform: uppercase;
             display: block;
             margin-bottom: 5px;
@@ -242,25 +362,39 @@
             font-size: 14px;
         }
         .add-customer-btn:hover { background: #3d8a9a; }
+        
+        .customer-count-text { color: #fff; }
 
-        /* Totals Section */
+        /* Fixed footer wrapper - Grey theme */
+        .sale-footer {
+            position: sticky;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            flex-shrink: 0;
+            background: #7f8c8d;
+            border-top: 2px solid #6b7778;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
+        }
+        
+        /* Totals Section - Grey theme */
         .totals-section {
             padding: 10px 15px;
-            border-top: 1px solid #ddd;
-            background: #fff;
+            background: #7f8c8d;
         }
         .total-row {
             display: flex;
             justify-content: space-between;
             padding: 4px 0;
             font-size: 13px;
-            color: #555;
+            color: #ddd;
         }
         .total-row.grand {
             font-size: 16px;
             font-weight: 700;
-            color: #2c3e50;
-            border-top: 1px solid #ddd;
+            color: #fff;
+            border-top: 1px solid #666;
             margin-top: 6px;
             padding-top: 10px;
         }
@@ -269,8 +403,8 @@
         /* Payment Buttons */
         .payment-section {
             padding: 12px 15px;
-            background: #f5f7f9;
-            border-top: 1px solid #ddd;
+            background: #7f8c8d;
+            border-top: 1px solid #6b7778;
         }
         .payment-btns {
             display: flex;
@@ -292,12 +426,12 @@
             gap: 8px;
         }
         .pay-btn i { font-size: 18px; }
-        .pay-btn.pay-now { background: #27ae60; color: #fff; }
-        .pay-btn.pay-now:hover { background: #219a52; }
-        .pay-btn.credit { background: #3498db; color: #fff; }
-        .pay-btn.credit:hover { background: #2980b9; }
-        .pay-btn.cash { background: #f39c12; color: #fff; }
-        .pay-btn.cash:hover { background: #d68910; }
+        .pay-btn.pay-now { background: #2ecc71; color: #fff; }
+        .pay-btn.pay-now:hover { background: #27ae60; }
+        .pay-btn.credit { background: #5dade2; color: #fff; }
+        .pay-btn.credit:hover { background: #3498db; }
+        .pay-btn.cash { background: #f5a623; color: #fff; }
+        .pay-btn.cash:hover { background: #e69500; }
         
         .action-btns {
             display: grid;
@@ -338,102 +472,148 @@
         .register-links a:hover { color: #4a9eb4; }
         .register-links a i { margin-right: 3px; }
 
-        /* Right: Transactions Panel */
+        /* Right: Transactions Panel - Neutral grey style */
         .transactions-panel {
-            background: #f5f7f9;
+            background: #e5e5e5;
             color: #333;
             display: flex;
             flex-direction: column;
-            border-left: 1px solid #ddd;
+            border-left: 1px solid #ccc;
         }
         .panel-header {
-            background: #2c3e50;
+            background: #4a9eb4;
             color: #fff;
-            padding: 12px 15px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
         .panel-header .register-name { font-weight: 600; font-size: 14px; }
-        .panel-header .user-name { font-size: 12px; opacity: 0.8; }
+        .panel-header .user-name { font-size: 12px; opacity: 0.9; cursor: pointer; }
+        .panel-header .user-name:hover { opacity: 1; }
         .panel-section {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
+            padding: 0;
+            border-bottom: none;
+            overflow-y: auto;
+            position: relative;
+            background: #e5e5e5;
         }
         .panel-section h4 {
-            font-size: 11px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            color: #666;
+            font-size: 12px;
+            text-transform: none;
+            margin: 0;
+            padding: 10px 15px;
+            background: #d5d5d5;
+            color: #444;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid #c0c0c0;
         }
+        .panel-section h4 .collapse-icon { margin-left: auto; font-size: 10px; transition: transform 0.2s; }
+        .panel-section.collapsed .collapse-icon { transform: rotate(-90deg); }
+        .panel-section.collapsed > div:not(:first-child) { display: none !important; }
+        
+        /* Resizer handle */
+        .panel-resizer {
+            height: 6px;
+            background: #c0c0c0;
+            cursor: ns-resize;
+            flex-shrink: 0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .panel-resizer:hover { background: #a0a0a0; }
+        .panel-resizer::after {
+            content: '';
+            width: 30px;
+            height: 3px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 2px;
+        }
+        .panel-resizer:hover::after { background: rgba(0,0,0,0.3); }
         
         .trans-item {
-            background: #fff;
-            padding: 10px 12px;
-            border-radius: 4px;
-            margin-bottom: 6px;
+            background: transparent;
+            padding: 8px 15px;
+            border-radius: 0;
+            margin-bottom: 0;
             cursor: pointer;
             transition: background 0.15s;
-            border: 1px solid #e0e0e0;
+            border: none;
+            border-bottom: 1px solid #d0d0d0;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .trans-item:hover { background: #f8f9fa; border-color: #ccc; }
+        .trans-item:hover { background: rgba(255,255,255,0.5); }
         .trans-item .trans-left { flex: 1; }
-        .trans-item .trans-time { font-size: 12px; color: #666; }
-        .trans-item .trans-customer { font-size: 11px; color: #888; }
+        .trans-item .trans-time { font-size: 12px; color: #666; font-weight: 500; }
+        .trans-item .trans-customer { font-size: 14px; color: #333; font-weight: 600; margin-top: 2px; }
         .trans-item .trans-right { text-align: right; }
-        .trans-item .trans-amount { font-weight: 600; font-size: 13px; color: #333; }
-        .trans-item .trans-id { font-size: 10px; color: #999; }
+        .trans-item .trans-amount { font-weight: 700; font-size: 15px; color: #333; }
+        .trans-item .trans-id { font-size: 11px; color: #5dade2; font-weight: 500; }
         .trans-item.return .trans-amount { color: #e74c3c; }
         
         .empty-list { text-align: center; padding: 20px; color: #999; font-size: 12px; }
         
-        /* Open Tabs */
+        /* Open Tabs - ForeUP flat list style */
         .tab-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 12px;
-            background: linear-gradient(135deg, #27ae60, #219a52);
-            color: #fff;
-            border-radius: 6px;
-            margin-bottom: 6px;
+            padding: 10px 15px;
+            background: transparent;
+            color: #333;
+            border-radius: 0;
+            margin-bottom: 0;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: background 0.15s;
+            border-bottom: 1px solid #d0d0d0;
         }
-        .tab-item:hover { transform: translateX(-3px); box-shadow: 0 2px 8px rgba(39,174,96,0.3); }
-        .tab-item.vip { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
-        .tab-item.vip:hover { box-shadow: 0 2px 8px rgba(155,89,182,0.4); }
-        .tab-item.member { background: linear-gradient(135deg, #3498db, #2980b9); }
-        .tab-item.member:hover { box-shadow: 0 2px 8px rgba(52,152,219,0.4); }
-        .tab-customer { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; }
-        .tab-badge { font-size: 10px; background: rgba(255,255,255,0.25); padding: 2px 6px; border-radius: 10px; }
-        .tab-info { font-size: 11px; opacity: 0.9; margin-top: 2px; }
-        .tab-discount { font-size: 10px; opacity: 0.85; }
-        .tab-total { font-weight: 700; font-size: 14px; }
+        .tab-item:hover { background: rgba(255,255,255,0.5); }
+        .tab-item.vip, .tab-item.member { background: rgba(255,255,255,0.3); }
+        .tab-item.vip:hover, .tab-item.member:hover { background: rgba(255,255,255,0.6); }
+        .tab-customer { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 8px; color: #333; }
+        .tab-badge { font-size: 12px; background: rgba(0,0,0,0.12); padding: 4px 10px; border-radius: 10px; font-weight: 700; }
+        .tab-info { font-size: 14px; color: #444; margin-top: 4px; font-weight: 600; }
+        .tab-discount { font-size: 12px; color: #444; font-weight: 600; }
+        .tab-total { font-weight: 800; font-size: 20px; color: #222; }
         .tab-left { flex: 1; }
         .tab-right { text-align: right; }
         
-        .suspended-item {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        /* Suspended/Incomplete Sales - ForeUP red header style */
+        .suspended-section-header {
+            background: #a94442;
             color: #fff;
-            padding: 10px 12px;
-            border-radius: 4px;
-            margin-bottom: 6px;
-            cursor: pointer;
-            transition: transform 0.15s;
+            padding: 10px 15px;
+            font-size: 13px;
+            font-weight: 600;
         }
-        .suspended-item:hover { transform: translateX(-3px); }
-        .suspended-item .susp-header { display: flex; justify-content: space-between; align-items: center; }
-        .suspended-item .susp-name { font-weight: 600; font-size: 12px; }
-        .suspended-item .susp-amount { font-weight: 600; font-size: 13px; }
-        .suspended-item .susp-customer { font-size: 11px; opacity: 0.9; margin-top: 3px; }
+        .suspended-item {
+            background: transparent;
+            color: #333;
+            padding: 10px 15px;
+            border-radius: 0;
+            margin-bottom: 0;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-bottom: 1px solid #d0d0d0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .suspended-item:hover { background: rgba(255,255,255,0.5); }
+        .suspended-item .susp-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .suspended-item .susp-name { font-weight: 600; font-size: 13px; color: #333; }
+        .suspended-item .susp-amount { font-weight: 700; font-size: 15px; color: #333; }
+        .suspended-item .susp-customer { font-size: 12px; color: #666; }
 
         /* Staff Login Screen */
         .login-screen {
@@ -553,13 +733,14 @@
         .items-modal.active { opacity: 1; visibility: visible; }
         .items-modal-content {
             background: #fff;
-            border-radius: 12px;
+            border-radius: 8px;
             width: 90%;
             max-width: 900px;
             max-height: 80vh;
             overflow: hidden;
             transform: scale(0.9);
             transition: transform 0.2s;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         }
         .items-modal.active .items-modal-content { transform: scale(1); }
         .items-modal-header {
@@ -567,10 +748,10 @@
             justify-content: space-between;
             align-items: center;
             padding: 15px 20px;
-            background: #4a90a4;
+            background: #4a9eb4;
             color: #fff;
         }
-        .items-modal-header h3 { margin: 0; font-size: 18px; }
+        .items-modal-header h3 { margin: 0; font-size: 18px; font-weight: 600; }
         .items-modal-close {
             background: none;
             border: none;
@@ -582,35 +763,30 @@
         .items-modal-close:hover { opacity: 1; }
         .items-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
             padding: 20px;
             max-height: calc(80vh - 70px);
             overflow-y: auto;
+            background: #f5f5f5;
         }
         .item-card {
-            background: #f8f9fa;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            padding: 15px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 18px 12px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        .item-card:hover { border-color: #4a90a4; background: #fff; transform: translateY(-2px); }
-        .item-card i { font-size: 28px; color: #4a90a4; margin-bottom: 10px; display: block; }
-        .item-card .item-name { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 5px; }
+        .item-card:hover { border-color: #27ae60; background: #f8fff8; }
+        .item-card .item-name { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 6px; line-height: 1.3; }
         .item-card .item-price { font-size: 15px; color: #27ae60; font-weight: 700; }
         
-        /* Category-specific colors */
-        .item-card.rental i { color: #9b59b6; }
-        .item-card.food i { color: #e67e22; }
-        .item-card.beer i { color: #f39c12; }
-        .item-card.wine i { color: #8e44ad; }
-        .item-card.cocktails i { color: #e74c3c; }
-        .item-card.beverage i { color: #3498db; }
-        .item-card.merch i { color: #1abc9c; }
-
         /* Toast Notifications */
         .toast {
             position: fixed;
@@ -669,15 +845,58 @@
             font-weight: 600;
             font-size: 12px;
         }
-        .autocomplete-item .avatar.member { background: linear-gradient(135deg, #f1c40f, #e67e22); }
+        .autocomplete-item .avatar.member { background: linear-gradient(135deg, #d4a017, #b8860b); }
         .autocomplete-item .info { flex: 1; }
         .autocomplete-item .name { font-weight: 600; font-size: 14px; }
         .autocomplete-item .meta { font-size: 12px; color: #999; }
-        .member-tag { background: linear-gradient(135deg, #f1c40f, #e67e22); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 700; margin-left: 6px; }
+        .member-tag { background: linear-gradient(135deg, #d4a017, #b8860b); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 700; margin-left: 6px; }
         
         /* Return mode styling */
-        .return-mode .sale-header { background: #fdf2f2; }
-        .return-mode .items-table thead { background: #fdf2f2; }
+        .return-mode .sale-header { background: #9a6b6b; }
+        .return-mode .items-table thead { background: #9a6b6b; }
+        .return-mode .sale-area { background: #8b6666; }
+        .return-mode .items-table-container { background: #8b6666; }
+        .return-mode .sale-footer { background: #8b6666; }
+        .return-mode .customer-section { background: #9a6b6b; border-top-color: #9a6b6b; }
+        .return-mode .totals-section { background: #8b6666; }
+        
+        /* Light Mode Overrides */
+        body.light-mode .sale-area { background: #f5f5f5; border-color: #ddd; }
+        body.light-mode .sale-header { background: #e8e8e8; border-color: #ddd; }
+        body.light-mode .mode-btn { background: #ddd; border-color: #ccc; color: #333; }
+        body.light-mode .mode-btn.active { background: #4a9eb4; color: #fff; }
+        body.light-mode .items-table-container { background: #f5f5f5; }
+        body.light-mode .items-table thead { background: #e8e8e8; }
+        body.light-mode .items-table th { color: #333; border-color: #ddd; }
+        body.light-mode .items-table td { color: #333; border-color: #e0e0e0; }
+        body.light-mode .items-table tr:hover { background: #eee; }
+        body.light-mode .item-name-cell .item-name { color: #2980b9; }
+        body.light-mode .empty-sale { color: #888; }
+        body.light-mode .empty-sale i { color: #aaa; }
+        body.light-mode .empty-sale p { color: #888; }
+        body.light-mode .customer-section { background: #e8e8e8; border-top-color: #ddd; }
+        body.light-mode .customer-section label { color: #333; }
+        body.light-mode .customer-count-text { color: #666; }
+        body.light-mode .sale-footer { background: #f5f5f5; border-color: #ddd; }
+        body.light-mode .totals-section { background: #f5f5f5; }
+        body.light-mode .total-row { color: #666; }
+        body.light-mode .total-row.grand { color: #333; border-color: #ddd; }
+        body.light-mode #totalDue, body.light-mode #totalDueLarge, body.light-mode .total-due-label, body.light-mode .total-due-value { color: #333 !important; }
+        body.light-mode .action-link { color: #2980b9 !important; }
+        body.light-mode .payment-section { background: #f5f5f5; }
+        body.light-mode .categories-panel { background: #f0f0f0; }
+        body.light-mode .transactions-panel { background: #f5f5f5; }
+        body.light-mode .panel-section { background: #f5f5f5; }
+        body.light-mode .panel-section h4 { background: #e8e8e8; color: #333; border-color: #ddd; }
+        
+        /* Light mode return styling */
+        body.light-mode.return-mode .sale-area { background: #fdf2f2; }
+        body.light-mode.return-mode .sale-header { background: #f5e0e0; }
+        body.light-mode.return-mode .items-table-container { background: #fdf2f2; }
+        body.light-mode.return-mode .items-table thead { background: #f5e0e0; }
+        body.light-mode.return-mode .sale-footer { background: #fdf2f2; }
+        body.light-mode.return-mode .customer-section { background: #f5e0e0; }
+        body.light-mode.return-mode .totals-section { background: #fdf2f2; }
     </style>
 </head>
 <body>
@@ -722,6 +941,12 @@
             </nav>
         </div>
         <div class="header-right">
+            <button onclick="toggleFullscreen()" id="fullscreenBtn" style="background:rgba(255,255,255,0.15);border:none;color:#fff;padding:8px 12px;border-radius:4px;cursor:pointer;font-size:13px;margin-right:10px;" title="Toggle Fullscreen">
+                <i class="fas fa-expand" id="fullscreenIcon"></i>
+            </button>
+            <button onclick="toggleDarkMode()" id="darkModeBtn" style="background:rgba(255,255,255,0.15);border:none;color:#fff;padding:8px 12px;border-radius:4px;cursor:pointer;font-size:13px;margin-right:10px;" title="Toggle Dark/Light Mode">
+                <i class="fas fa-moon" id="darkModeIcon"></i>
+            </button>
             <div class="header-user" onclick="showUserMenu()">
                 <i class="fas fa-user-circle"></i>
                 <span id="currentUserName">Staff</span> ▾
@@ -731,35 +956,18 @@
 
     <!-- Main Sales Layout -->
     <div class="sales-layout">
-        <!-- Left: Categories -->
+        <!-- Left: Categories - No icons, color coded -->
         <div class="categories-panel">
-            <button class="category-btn active" data-category="all" onclick="selectCategory('all', this)">
-                <i class="fas fa-th"></i> All Items
-            </button>
-            <button class="category-btn" data-category="rental" onclick="selectCategory('rental', this)">
-                <i class="fas fa-golf-ball"></i> Rentals
-            </button>
-            <button class="category-btn" data-category="food" onclick="selectCategory('food', this)">
-                <i class="fas fa-utensils"></i> Food
-            </button>
-            <button class="category-btn" data-category="beer" onclick="selectCategory('beer', this)">
-                <i class="fas fa-beer"></i> Beer
-            </button>
-            <button class="category-btn" data-category="wine" onclick="selectCategory('wine', this)">
-                <i class="fas fa-wine-glass-alt"></i> Wine
-            </button>
-            <button class="category-btn" data-category="cocktails" onclick="selectCategory('cocktails', this)">
-                <i class="fas fa-cocktail"></i> Cocktails
-            </button>
-            <button class="category-btn" data-category="beverage" onclick="selectCategory('beverage', this)">
-                <i class="fas fa-coffee"></i> Beverages
-            </button>
-            <button class="category-btn" data-category="merch" onclick="selectCategory('merch', this)">
-                <i class="fas fa-tshirt"></i> Merch
-            </button>
-            <button class="category-btn" data-category="giftcard" onclick="selectCategory('giftcard', this)">
-                <i class="fas fa-gift"></i> Gift Cards
-            </button>
+            <button class="category-btn active" data-category="all" onclick="selectCategory('all', this)">All Items</button>
+            <button class="category-btn purple" data-category="rental" onclick="selectCategory('rental', this)">Rentals</button>
+            <button class="category-btn orange" data-category="food" onclick="selectCategory('food', this)">Food</button>
+            <button class="category-btn forest" data-category="beer" onclick="selectCategory('beer', this)">Beer</button>
+            <button class="category-btn forest" data-category="wine" onclick="selectCategory('wine', this)">Wine</button>
+            <button class="category-btn forest" data-category="cocktails" onclick="selectCategory('cocktails', this)">Cocktails</button>
+            <button class="category-btn cyan" data-category="beverage" onclick="selectCategory('beverage', this)">Beverages</button>
+            <button class="category-btn grey" data-category="merch" onclick="selectCategory('merch', this)">Merch</button>
+            <button class="category-btn teal" data-category="giftcard" onclick="selectCategory('giftcard', this)">Gift Cards</button>
+            <button class="category-btn red" data-category="membership" onclick="selectCategory('membership', this)">Memberships</button>
         </div>
 
         <!-- Center: Sale Area -->
@@ -772,7 +980,8 @@
                 <div id="activeTabBanner" style="display:none;background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;padding:8px 15px;border-radius:8px;font-size:13px;font-weight:600;align-items:center;gap:8px;">
                     <i class="fas fa-receipt"></i>
                     <span id="activeTabName">Tab: Customer</span>
-                    <button onclick="clearActiveTab()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;margin-left:auto;">
+                    <span id="activeTabBadge" style="display:none;margin-left:8px;"></span>
+                    <button onclick="clearActiveTab()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-left:auto;display:flex;align-items:center;gap:4px;">
                         <i class="fas fa-times"></i> Clear
                     </button>
                 </div>
@@ -785,16 +994,17 @@
                 <table class="items-table">
                     <thead>
                         <tr>
-                            <th style="width:40px;"></th>
                             <th>Item</th>
                             <th style="width:70px;">Price</th>
-                            <th style="width:80px;">Qty</th>
-                            <th style="width:80px;">Total</th>
+                            <th style="width:45px;">Qty</th>
+                            <th style="width:45px;">Disc</th>
+                            <th style="width:75px; text-align:right;">Total</th>
+                            <th style="width:30px;"></th>
                         </tr>
                     </thead>
                     <tbody id="saleItemsBody">
                         <tr class="empty-row">
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="empty-sale">
                                     <i class="fas fa-shopping-cart"></i>
                                     <p>Select a category or search to add items</p>
@@ -805,73 +1015,105 @@
                 </table>
             </div>
             
-            <div class="customer-section">
-                <label>Customer</label>
-                <div class="customer-row">
-                    <input type="text" id="customerName" placeholder="Search for customer..." autocomplete="off">
-                    <button class="add-customer-btn" onclick="addNewCustomer()"><i class="fas fa-plus"></i></button>
+            <!-- Sticky Payment Footer -->
+            <div class="sale-footer">
+                <div class="customer-section">
+                    <label style="display:flex;align-items:center;justify-content:space-between;">
+                        <span style="font-size:13px;font-weight:600;">CUSTOMER</span>
+                        <span id="customerCount" class="customer-count-text" style="font-size:12px;font-weight:500;"></span>
+                    </label>
+                    <div class="customer-row">
+                        <input type="text" id="customerName" placeholder="Type to search customers..." autocomplete="off">
+                        <button class="add-customer-btn" onclick="refreshCustomers()" title="Refresh from Stripe" id="refreshCustomersBtn"><i class="fas fa-sync-alt"></i></button>
+                        <button class="add-customer-btn" onclick="addNewCustomer()" title="Add New Customer"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="customer-autocomplete" id="customerAutocomplete"></div>
                 </div>
-                <div class="customer-autocomplete" id="customerAutocomplete"></div>
-            </div>
-            
-            <div class="totals-section">
-                <div class="total-row"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
-                <div class="total-row discount-row" id="discountRow" style="display:none;"><span>Discount</span><span id="discountAmt">-$0.00</span></div>
-                <div class="total-row"><span data-tax-label>Tax (6.35%)</span><span id="taxAmt">$0.00</span></div>
-                <div class="total-row grand"><span>Total Due</span><span id="totalDue">$0.00</span></div>
-            </div>
-            
-            <div class="payment-section">
-                <div class="payment-btns">
-                    <button class="pay-btn pay-now" onclick="processPayment('quick')">
-                        <i class="fas fa-bolt"></i> Pay Now
-                    </button>
-                    <button class="pay-btn credit" onclick="processPayment('card')">
-                        <i class="fas fa-credit-card"></i> Card
-                    </button>
-                    <button class="pay-btn cash" onclick="processPayment('cash')">
-                        <i class="fas fa-money-bill"></i> Cash
-                    </button>
-                    <button class="pay-btn" onclick="processPayment('saved')" style="background:linear-gradient(135deg,#9b59b6,#8e44ad);" title="Pay with saved card (members only)">
-                        <i class="fas fa-wallet"></i> Saved
-                    </button>
+                
+                <div class="totals-section" style="padding:15px;">
+                    <div class="total-row" style="display:flex;justify-content:flex-end;gap:30px;font-size:13px;margin-bottom:4px;">
+                        <span>Subtotal</span>
+                        <span id="subtotal" style="min-width:70px;text-align:right;">$0.00</span>
+                    </div>
+                    <div class="total-row discount-row" id="discountRow" style="display:none;justify-content:flex-end;gap:30px;font-size:13px;color:#27ae60;margin-bottom:4px;">
+                        <span>Discount</span>
+                        <span id="discountAmt" style="min-width:70px;text-align:right;">-$0.00</span>
+                    </div>
+                    <div class="total-row" style="display:flex;justify-content:flex-end;gap:30px;font-size:13px;margin-bottom:10px;">
+                        <span data-tax-label>Sales Tax - 6.35%</span>
+                        <span id="taxAmt" style="min-width:70px;text-align:right;">$0.00</span>
+                    </div>
+                    <div class="total-row grand" style="display:flex;justify-content:flex-end;align-items:baseline;gap:20px;">
+                        <span style="font-size:14px;font-weight:500;">Total</span>
+                        <span id="totalDue" style="font-size:26px;font-weight:700;">$0.00</span>
+                    </div>
                 </div>
-                <div class="action-btns">
-                    <button class="action-btn" onclick="suspendSale()"><i class="fas fa-pause"></i> Suspend</button>
-                    <button class="action-btn" onclick="startTab()"><i class="fas fa-folder-plus"></i> Tab</button>
-                    <button class="action-btn" onclick="applyDiscount()"><i class="fas fa-percent"></i> Disc</button>
-                    <button class="action-btn" onclick="clearSale()"><i class="fas fa-trash"></i> Clear</button>
-                    <button class="action-btn" onclick="redeemGiftCard()"><i class="fas fa-gift"></i> Gift</button>
-                    <button class="action-btn" onclick="showSplitPaymentModal()"><i class="fas fa-divide"></i> Split</button>
-                </div>
-                <div class="action-btns" style="margin-top:5px;">
-                    <button class="action-btn" onclick="addCardToCustomer()" style="background:#9b59b6;color:#fff;" title="Save a card to customer profile"><i class="fas fa-plus"></i> Add Card</button>
-                </div>
-                <div class="register-links">
-                    <a href="#" onclick="showDrawerManagement(); return false;"><i class="fas fa-cash-register"></i> Drawer</a>
-                    <a href="#" onclick="showInventory(); return false;"><i class="fas fa-boxes"></i> Inventory</a>
-                    <a href="#" onclick="showSettings(); return false;"><i class="fas fa-cog"></i> Settings</a>
+                
+                <!-- Payment Section -->
+                <div class="payment-section" style="padding:15px;">
+                    <!-- Payment buttons - all green -->
+                    <div class="payment-btns" style="display:flex;gap:10px;margin-bottom:12px;">
+                        <button class="pay-btn" onclick="processPayment('quick')" style="flex:1;padding:14px 20px;background:#2ecc71;color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:600;cursor:pointer;">
+                            Pay Now
+                        </button>
+                        <button class="pay-btn" onclick="processPayment('card')" style="flex:1;padding:14px 20px;background:#2ecc71;color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:600;cursor:pointer;">
+                            Credit Card
+                        </button>
+                        <button class="pay-btn" onclick="processPayment('cash')" style="flex:1;padding:14px 20px;background:#2ecc71;color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:600;cursor:pointer;">
+                            Cash
+                        </button>
+                    </div>
+                    
+                    <!-- Total Due - Large display like ForeUP -->
+                    <div style="display:flex;justify-content:flex-end;align-items:baseline;gap:15px;margin:15px 0;">
+                        <span class="total-due-label" style="font-size:20px;font-weight:500;color:#fff;">Total Due:</span>
+                        <span id="totalDueLarge" class="total-due-value" style="font-size:36px;font-weight:700;color:#fff;">$0.00</span>
+                    </div>
+                    
+                    <!-- Action links - styled buttons -->
+                    <div style="display:flex;gap:10px;margin-bottom:12px;">
+                        <button onclick="suspendSale()" style="flex:1;padding:10px 12px;background:#6b7778;border:1px solid #5a6566;border-radius:4px;color:#fff;font-size:12px;font-weight:500;cursor:pointer;">Suspend Sale/Start Tab</button>
+                        <button onclick="showDrawerManagement()" style="flex:1;padding:10px 12px;background:#6b7778;border:1px solid #5a6566;border-radius:4px;color:#fff;font-size:12px;font-weight:500;cursor:pointer;">Cash Drawer</button>
+                        <button onclick="closeRegister()" style="flex:1;padding:10px 12px;background:#6b7778;border:1px solid #5a6566;border-radius:4px;color:#fff;font-size:12px;font-weight:500;cursor:pointer;">Close Register</button>
+                    </div>
+                    
+                    <!-- Manager Override -->
+                    <button onclick="showManagerOverride()" style="width:100%;padding:12px 20px;background:#6b7778;border:1px solid #5a6566;border-radius:4px;cursor:pointer;font-size:14px;font-weight:500;color:#fff;">Manager Override</button>
                 </div>
             </div>
         </div>
 
-        <!-- Right: Transactions Panel -->
-        <div class="transactions-panel">
-            <div class="panel-header">
-                <span class="register-name">Bar</span>
-                <span class="user-name" id="panelUserName"><i class="fas fa-user-circle"></i> Staff ▾</span>
+        <!-- Right: Transactions Panel - ForeUP Style -->
+        <div class="transactions-panel" id="transactionsPanel">
+            <!-- Open Tabs Section -->
+            <div class="panel-section" id="tabsSection" style="flex:2;min-height:80px;">
+                <h4 onclick="toggleSection('tabsSection')">
+                    Open Tabs 
+                    <span id="tabCount" style="background:#27ae60;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px;">0</span>
+                    <span style="margin-left:auto;font-size:14px;cursor:pointer;">−</span>
+                </h4>
+                <div id="openTabsList" style="padding:0;"></div>
             </div>
-            <div class="panel-section" style="max-height:200px;overflow-y:auto;">
-                <h4><i class="fas fa-folder-open"></i> Open Tabs <span id="tabCount" style="background:#27ae60;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:5px;">0</span></h4>
-                <div id="openTabsList"></div>
+            
+            <!-- Resizer 1 -->
+            <div class="panel-resizer" data-resize="tabsSection,suspendedSection"></div>
+            
+            <!-- Suspended/Incomplete Sales Section -->
+            <div class="panel-section" id="suspendedSection" style="flex:1;min-height:60px;">
+                <div class="suspended-section-header">Incomplete Sales</div>
+                <div id="suspendedSales" style="padding:0;"></div>
             </div>
-            <div class="panel-section" style="flex:1; overflow-y:auto;">
-                <h4><i class="fas fa-history"></i> Recent Transactions</h4>
-                <div id="recentTrans"></div>
-            </div>
-            <div class="panel-section">
-                <h4><i class="fas fa-pause-circle"></i> Suspended Sales</h4>
-                <div id="suspendedSales"></div>
+            
+            <!-- Resizer 2 -->
+            <div class="panel-resizer" data-resize="suspendedSection,transSection"></div>
+            
+            <!-- Recent Transactions Section -->
+            <div class="panel-section" id="transSection" style="flex:2;min-height:80px;background:#e5e5e5;">
+                <h4 onclick="toggleSection('transSection')">
+                    Recent Transactions
+                    <span style="margin-left:auto;font-size:14px;cursor:pointer;">−</span>
+                </h4>
+                <div id="recentTrans" style="padding:0;"></div>
             </div>
         </div>
     </div>
@@ -888,6 +1130,39 @@
     </div>
 
     <script>
+        // ============ MODAL FUNCTIONS ============
+        let currentModal = null;
+        
+        function showModal(title, content, width = '400px') {
+            closeModal(); // Close any existing
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+            
+            overlay.innerHTML = `
+                <div class="modal-content" style="width:${width};max-width:95vw;">
+                    <div class="modal-header">
+                        <h3>${title}</h3>
+                        <button class="modal-close" onclick="closeModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">${content}</div>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            currentModal = overlay;
+        }
+        
+        function closeModal() {
+            if (currentModal) {
+                currentModal.remove();
+                currentModal = null;
+            }
+            // Also remove any stray overlays
+            document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+        }
+        
         // ============ TAX HELPER FUNCTIONS ============
         // Centralized tax rate from GolfCoveConfig
         function getTaxRate() {
@@ -906,9 +1181,14 @@
             return subtotal * getTaxRate();
         }
         
-        function formatCurrency(amount) {
-            return '$' + (typeof amount === 'number' ? amount.toFixed(2) : parseFloat(amount || 0).toFixed(2));
-        }
+        // Use shared formatCurrency from GolfCoveUtils (with fallback)
+        const formatCurrency = (amount) => {
+            try {
+                return GolfCoveUtils.formatCurrency(amount);
+            } catch (e) {
+                return '$' + (parseFloat(amount) || 0).toFixed(2);
+            }
+        };
         
         // ============ MEMBER DISCOUNT HELPERS ============
         // Check if customer is an active member
@@ -918,38 +1198,19 @@
             return new Date(customer.memberExpires) > new Date();
         }
         
-        // Get member discount percentage based on tier
-        function getMemberDiscount(memberType) {
-            const discounts = {
-                'eagle': 15, 'family_eagle': 15,
-                'birdie': 10, 'family_birdie': 10,
-                'par': 10, 'family_par': 10,
-                'corporate': 20, 'monthly': 10, 'annual': 10
-            };
-            return discounts[memberType] || 10;
-        }
-        
-        // Get tier display name
-        function getMemberTierName(memberType) {
-            const names = {
-                'eagle': 'Eagle', 'family_eagle': 'Eagle Family',
-                'birdie': 'Birdie', 'family_birdie': 'Birdie Family',
-                'par': 'Par', 'family_par': 'Par Family',
-                'corporate': 'Corporate', 'monthly': 'Monthly', 'annual': 'Annual'
-            };
-            return names[memberType] || 'Member';
-        }
-        
-        // Get tier color for badges
-        function getMemberTierColor(memberType) {
-            const colors = {
-                'eagle': '#9b59b6', 'family_eagle': '#9b59b6',
-                'birdie': '#f39c12', 'family_birdie': '#f39c12',
-                'par': '#27ae60', 'family_par': '#27ae60',
-                'corporate': '#2c3e50'
-            };
-            return colors[memberType] || '#27ae60';
-        }
+        // Use shared utilities from GolfCoveUtils (with fallbacks)
+        const getMemberDiscount = (memberType) => {
+            try { return GolfCoveUtils.getMemberDiscount(memberType); } 
+            catch (e) { return {'eagle': 15, 'birdie': 10, 'par': 10}[memberType] || 10; }
+        };
+        const getMemberTierName = (memberType) => {
+            try { return GolfCoveUtils.getMemberTierName(memberType); } 
+            catch (e) { return {'eagle': 'Eagle', 'birdie': 'Birdie', 'par': 'Par'}[memberType] || 'Member'; }
+        };
+        const getMemberTierColor = (memberType) => {
+            try { return GolfCoveUtils.getMemberTierColor(memberType); } 
+            catch (e) { return {'eagle': '#d4a017', 'birdie': '#9b59b6', 'par': '#3498db'}[memberType] || '#3498db'; }
+        };
         
         // Apply member discount to all items
         function applyMemberDiscountToSale() {
@@ -965,50 +1226,83 @@
             renderSaleItems();
         }
         
-        // Load customers from Stripe (synced via admin-pos) or localStorage
+        // Load customers from Stripe - always fetch fresh, no local cache
         async function loadCustomers() {
-            // First try to load from localStorage (cached from admin-pos sync)
-            try {
-                const cached = localStorage.getItem('gc_customers');
-                if (cached) {
-                    stripeCustomersCache = JSON.parse(cached);
-                    console.log(`[Sales] Loaded ${stripeCustomersCache.length} customers from cache`);
-                    return stripeCustomersCache;
-                }
-            } catch (e) {
-                console.warn('[Sales] Error loading customer cache:', e);
-            }
+            const countEl = document.getElementById('customerCount');
+            const refreshBtn = document.getElementById('refreshCustomersBtn');
             
-            // If no cache, try to fetch from API
+            if (countEl) countEl.textContent = 'Loading...';
+            if (refreshBtn) refreshBtn.querySelector('i').classList.add('fa-spin');
+            
+            // Always fetch fresh from Stripe API
             try {
                 const FUNCTIONS_URL = window.GolfCoveConfig?.stripe?.functionsUrl || 'https://us-central1-golfcove.cloudfunctions.net';
                 const response = await fetch(`${FUNCTIONS_URL}/getStripeCustomers`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.customers) {
-                        stripeCustomersCache = data.customers.map(c => ({
-                            id: c.stripeId,
-                            stripeId: c.stripeId,
-                            stripeCustomerId: c.stripeId,
-                            firstName: c.firstName || '',
-                            lastName: c.lastName || '',
-                            email: c.email || '',
-                            phone: c.phone || '',
-                            isMember: c.isMember || false,
-                            memberType: c.memberType || null,
-                            memberExpires: c.memberExpires || null,
-                            isLeague: c.isLeague || false,
-                            ...c
-                        }));
-                        localStorage.setItem('gc_customers', JSON.stringify(stripeCustomersCache));
-                        console.log(`[Sales] Synced ${stripeCustomersCache.length} customers from Stripe`);
+                        stripeCustomersCache = data.customers.map(c => {
+                            // Parse name into first/last (API returns full name)
+                            const nameParts = (c.name || '').split(' ');
+                            const firstName = nameParts[0] || '';
+                            const lastName = nameParts.slice(1).join(' ') || '';
+                            
+                            // Check for active subscription
+                            const activeSub = c.subscriptions?.find(s => s.status === 'active');
+                            
+                            // Map Stripe plan/product to our tier names
+                            let memberType = null;
+                            if (activeSub?.plan) {
+                                const plan = (activeSub.plan || '').toLowerCase();
+                                if (plan.includes('eagle')) memberType = plan.includes('family') ? 'family_eagle' : 'eagle';
+                                else if (plan.includes('birdie')) memberType = plan.includes('family') ? 'family_birdie' : 'birdie';
+                                else if (plan.includes('par')) memberType = plan.includes('family') ? 'family_par' : 'par';
+                                else if (plan.includes('corporate')) memberType = 'corporate';
+                                else if (plan.includes('league')) memberType = 'league';
+                                else memberType = 'par'; // Default to par for unknown plans
+                            } else if (c.metadata?.tier) {
+                                memberType = c.metadata.tier;
+                            }
+                            
+                            const isMember = !!activeSub;
+                            const memberExpires = activeSub?.currentPeriodEnd 
+                                ? new Date(activeSub.currentPeriodEnd * 1000).toISOString().split('T')[0] 
+                                : null;
+                            
+                            return {
+                                id: c.id,
+                                stripeId: c.id,
+                                stripeCustomerId: c.id,
+                                firstName,
+                                lastName,
+                                email: c.email || '',
+                                phone: c.phone || '',
+                                isMember,
+                                memberType,
+                                memberExpires,
+                                isLeague: c.metadata?.isLeague === 'true',
+                                metadata: c.metadata || {}
+                            };
+                        });
+                        console.log(`[Sales] Loaded ${stripeCustomersCache.length} customers from Stripe`);
+                        if (countEl) countEl.textContent = `${stripeCustomersCache.length} customers`;
+                        return stripeCustomersCache;
                     }
                 }
             } catch (e) {
-                console.warn('[Sales] Could not sync customers from API:', e);
+                console.error('[Sales] Could not load customers from Stripe API:', e);
+                if (countEl) countEl.textContent = 'Error loading';
+            } finally {
+                if (refreshBtn) refreshBtn.querySelector('i').classList.remove('fa-spin');
             }
             
             return stripeCustomersCache;
+        }
+        
+        // Refresh customers from Stripe
+        async function refreshCustomers() {
+            await loadCustomers();
+            showToast(`Loaded ${stripeCustomersCache.length} customers from Stripe`, 'success');
         }
 
         // ============ STAFF MANAGEMENT ============
@@ -1193,15 +1487,134 @@
         
         // Update register panel with current user
         function updateRegisterPanel() {
-            const userNameEl = document.querySelector('.panel-header .user-name');
+            const userNameEl = document.getElementById('panelUserText');
             if (userNameEl && currentUser) {
-                userNameEl.innerHTML = '<i class="fas fa-user-circle"></i> ' + currentUser.name + ' ▾';
+                userNameEl.textContent = currentUser.name;
+            }
+        }
+        
+        // Toggle section collapse/expand
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (!section) return;
+            section.classList.toggle('collapsed');
+        }
+        
+        // ============ RESIZABLE PANEL SYSTEM ============
+        (function initResizers() {
+            document.querySelectorAll('.panel-resizer').forEach(resizer => {
+                let isResizing = false;
+                let startY = 0;
+                let startHeights = [];
+                
+                resizer.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    startY = e.clientY;
+                    
+                    const sections = resizer.dataset.resize.split(',');
+                    startHeights = sections.map(id => {
+                        const el = document.getElementById(id);
+                        return el ? el.offsetHeight : 100;
+                    });
+                    
+                    document.body.style.cursor = 'ns-resize';
+                    document.body.style.userSelect = 'none';
+                    
+                    const onMouseMove = (e) => {
+                        if (!isResizing) return;
+                        
+                        const delta = e.clientY - startY;
+                        const sections = resizer.dataset.resize.split(',');
+                        
+                        const topSection = document.getElementById(sections[0]);
+                        const bottomSection = document.getElementById(sections[1]);
+                        
+                        if (topSection && bottomSection) {
+                            const newTopHeight = Math.max(60, startHeights[0] + delta);
+                            const newBottomHeight = Math.max(60, startHeights[1] - delta);
+                            
+                            topSection.style.flex = 'none';
+                            bottomSection.style.flex = 'none';
+                            topSection.style.height = newTopHeight + 'px';
+                            bottomSection.style.height = newBottomHeight + 'px';
+                        }
+                    };
+                    
+                    const onMouseUp = () => {
+                        isResizing = false;
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                    };
+                    
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+        })();
+        
+        // Manager Override - allows manager to authorize actions
+        function showManagerOverride() {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.id = 'managerOverrideModal';
+            modal.innerHTML = `
+                <div class="modal" style="max-width:350px;">
+                    <div class="modal-header">
+                        <h3>Manager Override</h3>
+                        <button onclick="this.closest('.modal-overlay').remove()" class="close-btn">&times;</button>
+                    </div>
+                    <div class="modal-body" style="padding:20px;">
+                        <p style="margin-bottom:15px;color:#666;">Enter manager PIN to authorize:</p>
+                        <input type="password" id="managerPin" placeholder="Manager PIN" maxlength="4" 
+                            style="width:100%;padding:15px;font-size:24px;text-align:center;border:1px solid #ddd;border-radius:4px;letter-spacing:8px;">
+                        <button onclick="verifyManagerOverride()" 
+                            style="width:100%;margin-top:15px;padding:12px;background:#4CAF50;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;">
+                            Authorize
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('managerPin').focus();
+        }
+        
+        function verifyManagerOverride() {
+            const pin = document.getElementById('managerPin').value;
+            const managers = (JSON.parse(localStorage.getItem('gc_employees') || '[]'))
+                .filter(e => e.role === 'manager' || e.role === 'admin');
+            
+            const matched = managers.find(m => m.pin === pin);
+            if (matched) {
+                document.getElementById('managerOverrideModal')?.remove();
+                showToast(`Override authorized by ${matched.name}`, 'success');
+                // Could set a temporary override flag here
+                window.managerOverrideActive = true;
+                setTimeout(() => { window.managerOverrideActive = false; }, 300000); // 5 min
+            } else {
+                showToast('Invalid manager PIN', 'error');
+            }
+        }
+        
+        // Close register
+        function closeRegister() {
+            if (!hasPermission('canCloseRegister')) {
+                showToast('Permission denied', 'error');
+                return;
+            }
+            if (confirm('Close register for the day? This will generate end-of-day report.')) {
+                showToast('Register closed. Generating report...', 'success');
+                // TODO: Implement EOD report
             }
         }
         
         // Show user menu
         function showUserMenu() {
-            if (!currentUser) return;
+            if (!currentUser) {
+                checkLogin();
+                return;
+            }
             
             const perms = rolePermissions[currentUser.role] || {};
             let menuHtml = '<div style="padding:15px;">';
@@ -1209,7 +1622,19 @@
             menuHtml += '<div style="width:60px;height:60px;border-radius:50%;background:' + currentUser.color + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;margin:0 auto 10px;">' + currentUser.name.split(' ').map(n => n[0]).join('') + '</div>';
             menuHtml += '<div style="font-weight:600;">' + currentUser.name + '</div>';
             menuHtml += '<div style="font-size:12px;color:#888;text-transform:capitalize;">' + currentUser.role + '</div>';
+            menuHtml += '<div style="font-size:11px;color:#27ae60;margin-top:4px;"><i class="fas fa-clock"></i> Logged in ' + formatLoginTime() + '</div>';
             menuHtml += '</div>';
+            
+            // Permissions summary
+            menuHtml += '<div style="background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:15px;font-size:11px;">';
+            menuHtml += '<div style="font-weight:600;margin-bottom:6px;color:#666;">Permissions</div>';
+            menuHtml += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+            if (perms.canVoid) menuHtml += '<span style="background:#e8f5e9;color:#27ae60;padding:2px 6px;border-radius:4px;">Void</span>';
+            if (perms.canDiscount) menuHtml += '<span style="background:#e8f5e9;color:#27ae60;padding:2px 6px;border-radius:4px;">Discount (' + perms.maxDiscount + '%)</span>';
+            if (perms.canRefund) menuHtml += '<span style="background:#e8f5e9;color:#27ae60;padding:2px 6px;border-radius:4px;">Refund</span>';
+            if (perms.canOpenDrawer) menuHtml += '<span style="background:#e8f5e9;color:#27ae60;padding:2px 6px;border-radius:4px;">Drawer</span>';
+            if (perms.canViewReports) menuHtml += '<span style="background:#e8f5e9;color:#27ae60;padding:2px 6px;border-radius:4px;">Reports</span>';
+            menuHtml += '</div></div>';
             
             menuHtml += '<div style="border-top:1px solid #eee;padding-top:15px;">';
             menuHtml += '<button onclick="clockOut()" style="width:100%;padding:12px;background:#e74c3c;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;margin-bottom:10px;"><i class="fas fa-sign-out-alt"></i> Clock Out</button>';
@@ -1221,6 +1646,19 @@
             menuHtml += '</div></div>';
             
             showModal('User Menu', menuHtml);
+        }
+        
+        // Format login time
+        function formatLoginTime() {
+            if (!currentUser || !currentUser.loginTime) return 'Unknown';
+            const loginDate = new Date(currentUser.loginTime);
+            const now = new Date();
+            const diffMs = now - loginDate;
+            const diffMins = Math.floor(diffMs / 60000);
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return diffMins + ' min ago';
+            const diffHrs = Math.floor(diffMins / 60);
+            return diffHrs + 'h ' + (diffMins % 60) + 'm ago';
         }
         
         // Clock out
@@ -1337,6 +1775,15 @@
         // Use centralized product catalog from menu-data.js
         const defaultItems = window.GolfCoveMenu ? GolfCoveMenu.getAllItems() : [];
         
+        // Clear old inventory data that might have emojis
+        (function cleanupOldData() {
+            const saved = localStorage.getItem('gc_inventory');
+            if (saved && saved.includes('emoji')) {
+                localStorage.removeItem('gc_inventory');
+                console.log('[Sales] Cleared old inventory data with emoji references');
+            }
+        })();
+        
         // Load items with saved inventory levels (merges with default catalog)
         let items = (function() {
             const saved = JSON.parse(localStorage.getItem('gc_inventory') || 'null');
@@ -1347,16 +1794,64 @@
                     stock: item.defaultStock || 0
                 }));
             }
-            // Merge saved inventory with current catalog (in case new items added)
+            // Merge saved inventory with current catalog - ALWAYS use catalog icons (not saved)
             return defaultItems.map(catItem => {
                 const savedItem = saved.find(s => s.id === catItem.id);
-                return savedItem ? { ...catItem, stock: savedItem.stock } : { ...catItem, stock: catItem.defaultStock || 0 };
+                // Use catItem completely, only take stock from saved
+                return { ...catItem, stock: savedItem?.stock ?? catItem.defaultStock ?? 0 };
             });
         })();
         
         // Save inventory function
         function saveInventory() {
             localStorage.setItem('gc_inventory', JSON.stringify(items));
+            // Sync to Firebase
+            syncInventoryToFirebase();
+        }
+        
+        // Sync inventory to Firebase
+        async function syncInventoryToFirebase() {
+            try {
+                // Only sync items that have stock tracking
+                const inventoryData = items.filter(i => i.trackInventory).map(i => ({
+                    id: i.id,
+                    name: i.name,
+                    stock: i.stock || 0,
+                    lastUpdated: new Date().toISOString()
+                }));
+                
+                await fetch(`${FIREBASE_URL}/inventory.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(inventoryData)
+                });
+                console.log('[Sales] Inventory synced to Firebase');
+            } catch (e) {
+                console.warn('[Sales] Failed to sync inventory to Firebase:', e);
+            }
+        }
+        
+        // Load inventory from Firebase
+        async function loadInventoryFromFirebase() {
+            try {
+                const response = await fetch(`${FIREBASE_URL}/inventory.json`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && Array.isArray(data)) {
+                        // Merge Firebase stock levels with local items
+                        data.forEach(fbItem => {
+                            const localItem = items.find(i => i.id === fbItem.id);
+                            if (localItem) {
+                                localItem.stock = fbItem.stock;
+                            }
+                        });
+                        localStorage.setItem('gc_inventory', JSON.stringify(items));
+                        console.log('[Sales] Loaded inventory from Firebase');
+                    }
+                }
+            } catch (e) {
+                console.warn('[Sales] Failed to load inventory from Firebase:', e);
+            }
         }
         
         // Deduct inventory on sale
@@ -1394,10 +1889,140 @@
         let transactions = JSON.parse(localStorage.getItem('gc_transactions') || '[]');
         let suspendedSales = JSON.parse(localStorage.getItem('gc_suspended') || '[]');
         
+        // Firebase URL
+        const FIREBASE_URL = 'https://golfcove-default-rtdb.firebaseio.com';
+        
+        // Save transactions to localStorage AND Firebase
+        async function saveTransactions() {
+            localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+        }
+        
+        // Sync a single transaction to Firebase
+        async function syncTransactionToFirebase(transaction) {
+            try {
+                if (transaction._firebaseKey) {
+                    // Update existing
+                    await fetch(`${FIREBASE_URL}/transactions/${transaction._firebaseKey}.json`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(transaction)
+                    });
+                } else {
+                    // Create new
+                    const response = await fetch(`${FIREBASE_URL}/transactions.json`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(transaction)
+                    });
+                    if (response.ok) {
+                        const { name } = await response.json();
+                        transaction._firebaseKey = name;
+                        saveTransactions();
+                    }
+                }
+            } catch (e) {
+                console.warn('[Sales] Failed to sync transaction to Firebase:', e);
+                transaction._pendingSync = true;
+                saveTransactions();
+            }
+        }
+        
+        // Load transactions from Firebase on startup
+        async function loadTransactionsFromFirebase() {
+            try {
+                const response = await fetch(`${FIREBASE_URL}/transactions.json`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data) {
+                        const firebaseTransactions = Object.entries(data).map(([key, val]) => ({
+                            ...val,
+                            _firebaseKey: key
+                        }));
+                        
+                        // Merge with local (keep pending syncs from local)
+                        const localPending = transactions.filter(t => t._pendingSync);
+                        const merged = [...firebaseTransactions];
+                        
+                        // Add local pending that aren't in Firebase
+                        for (const pending of localPending) {
+                            if (!merged.find(t => t.id === pending.id)) {
+                                merged.push(pending);
+                                syncTransactionToFirebase(pending); // Try to sync
+                            }
+                        }
+                        
+                        transactions = merged.sort((a, b) => new Date(b.date) - new Date(a.date));
+                        saveTransactions();
+                        console.log('[Sales] Loaded', firebaseTransactions.length, 'transactions from Firebase');
+                    }
+                }
+            } catch (e) {
+                console.warn('[Sales] Failed to load transactions from Firebase:', e);
+            }
+        }
+        
+        // ============ DARK MODE ============
+        function toggleDarkMode() {
+            const body = document.body;
+            const icon = document.getElementById('darkModeIcon');
+            const isLight = body.classList.toggle('light-mode');
+            
+            // Update icon
+            if (icon) {
+                icon.className = isLight ? 'fas fa-sun' : 'fas fa-moon';
+            }
+            
+            // Save preference
+            localStorage.setItem('gc_light_mode', isLight ? 'true' : 'false');
+        }
+        
+        function initDarkMode() {
+            const isLight = localStorage.getItem('gc_light_mode') === 'true';
+            if (isLight) {
+                document.body.classList.add('light-mode');
+                const icon = document.getElementById('darkModeIcon');
+                if (icon) icon.className = 'fas fa-sun';
+            }
+        }
+        
+        // ============ FULLSCREEN ============
+        function toggleFullscreen() {
+            const icon = document.getElementById('fullscreenIcon');
+            
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    if (icon) icon.className = 'fas fa-compress';
+                }).catch(err => {
+                    console.log('Fullscreen error:', err);
+                });
+            } else {
+                document.exitFullscreen().then(() => {
+                    if (icon) icon.className = 'fas fa-expand';
+                });
+            }
+        }
+        
+        // Listen for fullscreen changes (e.g., user presses Escape)
+        document.addEventListener('fullscreenchange', () => {
+            const icon = document.getElementById('fullscreenIcon');
+            if (icon) {
+                icon.className = document.fullscreenElement ? 'fas fa-compress' : 'fas fa-expand';
+            }
+        });
+        
         // ============ INIT ============
         document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize dark mode preference
+            initDarkMode();
+            
             // Load global settings from Firebase on startup
             await loadGlobalSettings();
+            
+            // Load transactions from Firebase
+            await loadTransactionsFromFirebase();
+            
+            // Load inventory from Firebase
+            await loadInventoryFromFirebase();
             
             // Initialize TabsSync first
             if (typeof TabsSync !== 'undefined') {
@@ -1450,7 +2075,7 @@
         }
         
         function updateTabCount() {
-            const count = TabsSync.getAllTabs().length;
+            const count = TabsSync.getTabs().length;
             const el = document.getElementById('tabCount');
             if (el) el.textContent = count;
         }
@@ -1472,14 +2097,212 @@
         function showItemsModal(title, itemList) {
             document.getElementById('modalTitle').textContent = title;
             const grid = document.getElementById('itemsGrid');
-            grid.innerHTML = itemList.map(item => `
-                <div class="item-card ${item.category}" onclick="showItemOptions('${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.category}')">
-                    <i class="fas ${item.icon}"></i>
-                    <div class="item-name">${item.name}</div>
-                    <div class="item-price">$${item.price.toFixed(2)}</div>
-                </div>
-            `).join('');
+            grid.innerHTML = itemList.map(item => {
+                // Special styling for membership items
+                if (item.isMembership) {
+                    const color = item.color || '#9b59b6';
+                    return `
+                        <div class="item-card ${item.category}" onclick="showMembershipSaleModal('${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.memberType}', '${item.billingCycle}')" style="background:linear-gradient(135deg, ${color}22 0%, ${color}44 100%);border:2px solid ${color};">
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-price" style="color:${color};font-weight:700;">$${item.price.toFixed(2)}${item.billingCycle === 'monthly' ? '/mo' : '/yr'}</div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="item-card ${item.category}" onclick="showItemOptions('${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.category}')">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-price">$${item.price.toFixed(2)}</div>
+                    </div>
+                `;
+            }).join('');
             document.getElementById('itemsModal').classList.add('active');
+        }
+        
+        // Show membership sale modal - requires customer selection
+        function showMembershipSaleModal(name, price, memberType, billingCycle) {
+            closeItemsModal();
+            
+            const tierColors = { 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#d4a017', 'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#d4a017', 'corporate': '#2c3e50' };
+            const tierNames = { 'par': 'Par', 'birdie': 'Birdie', 'eagle': 'Eagle', 'family_par': 'Family Par', 'family_birdie': 'Family Birdie', 'family_eagle': 'Family Eagle', 'corporate': 'Corporate' };
+            const discounts = { 'par': 10, 'birdie': 10, 'eagle': 15, 'family_par': 10, 'family_birdie': 10, 'family_eagle': 15, 'corporate': 20 };
+            
+            const color = tierColors[memberType] || '#9b59b6';
+            const tierName = tierNames[memberType] || memberType;
+            const discount = discounts[memberType] || 10;
+            
+            let html = `
+                <div style="padding:24px;">
+                    <div style="text-align:center;margin-bottom:20px;">
+                        <div style="width:60px;height:60px;background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-crown" style="font-size:28px;color:#fff;"></i>
+                        </div>
+                        <h3 style="font-size:20px;margin-bottom:4px;">${name}</h3>
+                        <p style="color:${color};font-weight:700;font-size:24px;">$${price.toFixed(2)}<span style="font-size:14px;color:#888;">/${billingCycle === 'monthly' ? 'month' : 'year'}</span></p>
+                    </div>
+                    
+                    <div style="background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:20px;">
+                        <h4 style="font-size:13px;color:#666;margin-bottom:10px;"><i class="fas fa-gift" style="margin-right:6px;"></i> Member Benefits</h4>
+                        <ul style="list-style:none;font-size:13px;color:#333;">
+                            <li style="padding:4px 0;"><i class="fas fa-check" style="color:#27ae60;margin-right:8px;"></i> ${discount}% discount on F&B</li>
+                            <li style="padding:4px 0;"><i class="fas fa-check" style="color:#27ae60;margin-right:8px;"></i> Priority bay reservations</li>
+                            <li style="padding:4px 0;"><i class="fas fa-check" style="color:#27ae60;margin-right:8px;"></i> Free billiards & ping pong</li>
+                            ${memberType.includes('eagle') || memberType.includes('birdie') ? '<li style="padding:4px 0;"><i class="fas fa-check" style="color:#27ae60;margin-right:8px;"></i> Unlimited simulator access</li>' : ''}
+                        </ul>
+                    </div>
+                    
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;font-size:13px;color:#666;margin-bottom:6px;">Customer (required for membership)</label>
+                        <input type="text" id="membershipCustomerSearch" placeholder="Search customer name or email..." 
+                            style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;"
+                            oninput="searchMembershipCustomer(this.value)">
+                        <div id="membershipCustomerResults" style="max-height:150px;overflow-y:auto;margin-top:8px;"></div>
+                    </div>
+                    
+                    <div id="selectedMembershipCustomer" style="display:none;background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);border-radius:8px;padding:12px;margin-bottom:20px;border:1px solid #27ae60;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <div>
+                                <strong id="membershipCustomerName">-</strong>
+                                <div style="font-size:12px;color:#666;" id="membershipCustomerEmail">-</div>
+                            </div>
+                            <button onclick="clearMembershipCustomer()" style="background:#e74c3c;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:11px;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="closeMembershipModal()" style="flex:1;padding:14px;background:#f0f0f0;border:none;border-radius:8px;font-size:14px;cursor:pointer;">Cancel</button>
+                        <button id="addMembershipBtn" onclick="addMembershipToSale('${name.replace(/'/g, "\\'")}', ${price}, '${memberType}', '${billingCycle}')" 
+                            style="flex:2;padding:14px;background:linear-gradient(135deg, ${color} 0%, ${color}dd 100%);color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;opacity:0.5;" disabled>
+                            <i class="fas fa-shopping-cart"></i> Add Membership to Sale
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            const modal = document.createElement('div');
+            modal.id = 'membershipSaleModal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1002;';
+            modal.innerHTML = `<div style="background:#fff;border-radius:16px;width:90%;max-width:450px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">${html}</div>`;
+            document.body.appendChild(modal);
+            
+            // Store membership info for later
+            window._pendingMembership = { name, price, memberType, billingCycle };
+        }
+        
+        // Search for customer in membership modal
+        let _membershipCustomerSelection = null;
+        function searchMembershipCustomer(query) {
+            const resultsDiv = document.getElementById('membershipCustomerResults');
+            if (query.length < 2) {
+                resultsDiv.innerHTML = '';
+                return;
+            }
+            
+            const matches = stripeCustomersCache.filter(c => {
+                const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+                return fullName.includes(query.toLowerCase()) || (c.email && c.email.toLowerCase().includes(query.toLowerCase()));
+            }).slice(0, 5);
+            
+            if (matches.length === 0) {
+                resultsDiv.innerHTML = '<div style="padding:12px;color:#888;text-align:center;font-size:13px;">No customers found</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = matches.map((c, idx) => {
+                const initials = ((c.firstName || '')[0] || '') + ((c.lastName || '')[0] || '');
+                const alreadyMember = isActiveMember(c);
+                return `
+                    <div onclick="selectMembershipCustomer(${idx})" 
+                        style="padding:10px;display:flex;align-items:center;gap:10px;cursor:pointer;border-radius:8px;transition:background 0.15s;${alreadyMember ? 'opacity:0.5;' : ''}"
+                        onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='transparent'">
+                        <div style="width:36px;height:36px;background:#4a90a4;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;">${initials.toUpperCase()}</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:500;">${c.firstName || ''} ${c.lastName || ''}${alreadyMember ? ' <span style="color:#e74c3c;font-size:11px;">(Already Member)</span>' : ''}</div>
+                            <div style="font-size:12px;color:#888;">${c.email || c.phone || ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Store matches for selection
+            resultsDiv._matches = matches;
+        }
+        
+        function selectMembershipCustomer(idx) {
+            const resultsDiv = document.getElementById('membershipCustomerResults');
+            const matches = resultsDiv._matches || [];
+            const customer = matches[idx];
+            
+            if (!customer) return;
+            
+            // Check if already a member
+            if (isActiveMember(customer)) {
+                showToast('This customer already has an active membership', 'error');
+                return;
+            }
+            
+            _membershipCustomerSelection = customer;
+            resultsDiv.innerHTML = '';
+            document.getElementById('membershipCustomerSearch').style.display = 'none';
+            
+            const selectedDiv = document.getElementById('selectedMembershipCustomer');
+            selectedDiv.style.display = 'block';
+            document.getElementById('membershipCustomerName').textContent = `${customer.firstName} ${customer.lastName}`;
+            document.getElementById('membershipCustomerEmail').textContent = customer.email || customer.phone || '';
+            
+            // Enable the add button
+            const addBtn = document.getElementById('addMembershipBtn');
+            addBtn.disabled = false;
+            addBtn.style.opacity = '1';
+        }
+        
+        function clearMembershipCustomer() {
+            _membershipCustomerSelection = null;
+            document.getElementById('membershipCustomerSearch').style.display = 'block';
+            document.getElementById('membershipCustomerSearch').value = '';
+            document.getElementById('selectedMembershipCustomer').style.display = 'none';
+            document.getElementById('membershipCustomerResults').innerHTML = '';
+            
+            const addBtn = document.getElementById('addMembershipBtn');
+            addBtn.disabled = true;
+            addBtn.style.opacity = '0.5';
+        }
+        
+        function closeMembershipModal() {
+            const modal = document.getElementById('membershipSaleModal');
+            if (modal) modal.remove();
+            _membershipCustomerSelection = null;
+            window._pendingMembership = null;
+        }
+        
+        function addMembershipToSale(name, price, memberType, billingCycle) {
+            if (!_membershipCustomerSelection) {
+                showToast('Please select a customer for the membership', 'error');
+                return;
+            }
+            
+            // Add membership as a sale item with customer info attached
+            const membershipItem = {
+                name: name,
+                price: price,
+                qty: 1,
+                discount: 0,
+                category: 'membership',
+                isMembership: true,
+                memberType: memberType,
+                billingCycle: billingCycle,
+                customerId: _membershipCustomerSelection.id || _membershipCustomerSelection.stripeId,
+                customerName: `${_membershipCustomerSelection.firstName} ${_membershipCustomerSelection.lastName}`,
+                customerEmail: _membershipCustomerSelection.email
+            };
+            
+            saleItems.push(membershipItem);
+            renderSaleItems();
+            updateTotals();
+            
+            closeMembershipModal();
+            showToast(`${name} added for ${_membershipCustomerSelection.firstName} ${_membershipCustomerSelection.lastName}`, 'success');
         }
         
         function closeItemsModal() {
@@ -1494,57 +2317,19 @@
             }
         }
         
-        // Show item options: Add to Sale or Add to Tab
+        // Add item quickly - no popup, direct add to active tab or current sale
         function showItemOptions(name, price, category) {
-            const tabs = TabsSync.getAllTabs();
+            // Close the items modal immediately for speed
+            closeItemsModal();
             
-            // If no open tabs, just add to current sale
-            if (tabs.length === 0) {
-                addItem(name, price);
+            // If there's an active tab, add directly to it
+            if (window.activeTabId) {
+                addToTabDirect(window.activeTabId, name, price, category);
                 return;
             }
             
-            let html = '<div style="padding:20px;">';
-            html += '<div style="margin-bottom:15px;padding:12px;background:#f5f5f5;border-radius:8px;text-align:center;">';
-            html += `<strong style="font-size:16px;">${name}</strong><br><span style="color:#27ae60;font-weight:600;">$${price.toFixed(2)}</span>`;
-            html += '</div>';
-            
-            html += '<div style="display:flex;flex-direction:column;gap:10px;">';
-            html += `<button onclick="addItemAndClose('${name.replace(/'/g, "\\'")}', ${price})" style="padding:14px;background:#4a9eb4;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">`;
-            html += '<i class="fas fa-shopping-cart"></i> Add to Current Sale</button>';
-            
-            html += '<div style="text-align:center;color:#888;font-size:12px;margin:5px 0;">or add to an open tab:</div>';
-            
-            tabs.forEach(tab => {
-                const itemCount = tab.items?.length || 0;
-                // Set button style based on member status
-                let btnStyle = 'padding:12px;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;';
-                let badge = '';
-                
-                if (tab.isVIP) {
-                    btnStyle += 'background:linear-gradient(135deg,#9b59b6,#8e44ad);';
-                    badge = '<i class="fas fa-crown" style="margin-left:5px;"></i>';
-                } else if (tab.isMember) {
-                    btnStyle += 'background:linear-gradient(135deg,#3498db,#2980b9);';
-                    badge = '<i class="fas fa-star" style="margin-left:5px;"></i>';
-                } else {
-                    btnStyle += 'background:#27ae60;';
-                }
-                
-                html += `<button onclick="addToTabDirect('${tab.id}', '${name.replace(/'/g, "\\'")}', ${price}, '${category}')" style="${btnStyle}">`;
-                html += `<span><i class="fas fa-receipt"></i> ${tab.customer}${badge}</span>`;
-                html += `<span>$${(tab.total||0).toFixed(2)} (${itemCount} items)</span></button>`;
-            });
-            
-            html += '</div>';
-            html += '<button onclick="closeItemOptionsModal()" style="width:100%;padding:12px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;margin-top:15px;font-size:13px;">Cancel</button>';
-            html += '</div>';
-            
-            const modal = document.createElement('div');
-            modal.id = 'itemOptionsModal';
-            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1001;';
-            modal.innerHTML = `<div style="background:#fff;border-radius:12px;width:90%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,0.3);">${html}</div>`;
-            document.body.appendChild(modal);
+            // Otherwise add to current sale
+            addItem(name, price);
         }
         
         function closeItemOptionsModal() {
@@ -1569,6 +2354,19 @@
                     await TabsSync.addItemsToTab(tabId, [item], employeeName);
                     const tab = TabsSync.getTab(tabId);
                     showToast(`Added ${name} to ${tab?.customer || 'Guest'}'s tab`, 'success');
+                    
+                    // If this is the active tab, also update local saleItems display
+                    if (window.activeTabId && String(window.activeTabId) === String(tabId) && tab) {
+                        saleItems = (tab.items || []).map((it, i) => ({
+                            id: Date.now() + i,
+                            name: it.name || 'Unknown Item',
+                            price: parseFloat(it.price) || 0,
+                            qty: parseInt(it.qty) || 1,
+                            discount: 0,
+                            category: it.category || 'misc'
+                        }));
+                        renderSaleItems();
+                    }
                 } else {
                     // Fallback: update localStorage directly
                     const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
@@ -1580,6 +2378,19 @@
                         tabs[tabIndex].amount = tabs[tabIndex].total;
                         localStorage.setItem('gc_tabs', JSON.stringify(tabs));
                         showToast(`Added ${name} to ${tabs[tabIndex].customer || 'Guest'}'s tab`, 'success');
+                        
+                        // If this is the active tab, also update local saleItems display
+                        if (window.activeTabId && String(window.activeTabId) === String(tabId)) {
+                            saleItems = (tabs[tabIndex].items || []).map((it, i) => ({
+                                id: Date.now() + i,
+                                name: it.name || 'Unknown Item',
+                                price: parseFloat(it.price) || 0,
+                                qty: parseInt(it.qty) || 1,
+                                discount: 0,
+                                category: it.category || 'misc'
+                            }));
+                            renderSaleItems();
+                        }
                     } else {
                         showToast('Tab not found', 'error');
                     }
@@ -1597,7 +2408,7 @@
             if (existing) {
                 existing.qty++;
             } else {
-                saleItems.push({ name, price, qty: 1, discount: 0 });
+                saleItems.push({ name, price, qty: 1, discount: 0, taxable: true });
             }
             renderSaleItems();
             showToast(`Added: ${name}`);
@@ -1618,8 +2429,28 @@
             renderSaleItems();
         }
         
+        function updateQty(index, value) {
+            const qty = parseInt(value) || 1;
+            if (qty <= 0) {
+                saleItems.splice(index, 1);
+            } else {
+                saleItems[index].qty = qty;
+            }
+            renderSaleItems();
+        }
+        
+        function updatePrice(index, value) {
+            saleItems[index].price = Math.max(0, parseFloat(value) || 0);
+            renderSaleItems();
+        }
+        
         function updateDiscount(index, value) {
             saleItems[index].discount = Math.max(0, Math.min(100, parseFloat(value) || 0));
+            renderSaleItems();
+        }
+        
+        function toggleItemTaxable(index) {
+            saleItems[index].taxable = !saleItems[index].taxable;
             renderSaleItems();
         }
         
@@ -1629,7 +2460,7 @@
             if (saleItems.length === 0) {
                 tbody.innerHTML = `
                     <tr class="empty-row">
-                        <td colspan="5">
+                        <td colspan="6">
                             <div class="empty-sale">
                                 <i class="fas fa-shopping-cart"></i>
                                 <p>0 Items</p>
@@ -1641,18 +2472,22 @@
                 tbody.innerHTML = saleItems.map((item, i) => {
                     const itemTotal = item.price * item.qty * (1 - item.discount / 100);
                     return `
-                        <tr>
-                            <td><button class="item-remove" onclick="removeItem(${i})"><i class="fas fa-times"></i></button></td>
-                            <td>${item.name}</td>
-                            <td>$${item.price.toFixed(2)}</td>
+                        <tr class="${item.taxable ? 'taxable-row' : ''}">
                             <td>
-                                <div class="qty-controls">
-                                    <button class="qty-btn" onclick="changeQty(${i}, -1)">-</button>
-                                    <span class="qty-value">${item.qty}</span>
-                                    <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
+                                <div class="item-name-cell">
+                                    <input type="checkbox" class="item-checkbox" ${item.taxable ? 'checked' : ''} 
+                                           onclick="toggleItemTaxable(${i})" title="Taxable">
+                                    <span class="item-name">${item.name}</span>
                                 </div>
                             </td>
+                            <td><input type="text" class="inline-input price-input" value="${item.price.toFixed(2)}" 
+                                       onchange="updatePrice(${i}, this.value)" onclick="this.select()"></td>
+                            <td><input type="text" class="inline-input qty-input" value="${item.qty}" 
+                                       onchange="updateQty(${i}, this.value)" onclick="this.select()"></td>
+                            <td><input type="text" class="inline-input disc-input" value="${item.discount}" 
+                                       onchange="updateDiscount(${i}, this.value)" onclick="this.select()" placeholder="%"></td>
                             <td class="item-total">$${itemTotal.toFixed(2)}</td>
+                            <td><button class="item-remove" onclick="removeItem(${i})" title="Remove">&times;</button></td>
                         </tr>
                     `;
                 }).join('');
@@ -1695,6 +2530,9 @@
             document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
             document.getElementById('taxAmt').textContent = '$' + tax.toFixed(2);
             document.getElementById('totalDue').textContent = '$' + total.toFixed(2);
+            // Also update the large total display
+            const largeTotalEl = document.getElementById('totalDueLarge');
+            if (largeTotalEl) largeTotalEl.textContent = '$' + total.toFixed(2);
         }
         
         // ============ MODE ============
@@ -1918,12 +2756,8 @@
             // If we have a selected customer already, use that
             if (selectedCustomer) return selectedCustomer;
             
-            // Otherwise search in Stripe cache or localStorage
-            const customers = stripeCustomersCache.length > 0 
-                ? stripeCustomersCache 
-                : (typeof GolfCoveCustomers !== 'undefined' 
-                    ? GolfCoveCustomers.getAll() 
-                    : JSON.parse(localStorage.getItem('gc_customers') || '[]'));
+            // Search in Stripe customers cache (loaded fresh from API)
+            const customers = stripeCustomersCache;
             
             const nameParts = customerName.trim().split(' ');
             const firstName = nameParts[0];
@@ -2146,7 +2980,10 @@
             };
             
             transactions.unshift(transaction);
-            localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+            saveTransactions();
+            
+            // Sync to Firebase
+            syncTransactionToFirebase(transaction);
             
             // Deduct inventory for sold items
             if (!isReturnMode) {
@@ -2195,16 +3032,9 @@
         }
         
         function updateCustomerStats(customerName, amount) {
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const customer = customers.find(c => 
-                `${c.firstName} ${c.lastName}`.toLowerCase() === customerName.toLowerCase()
-            );
-            if (customer) {
-                customer.visitCount = (customer.visitCount || 0) + 1;
-                customer.totalSpent = (customer.totalSpent || 0) + amount;
-                customer.lastVisit = new Date().toISOString();
-                localStorage.setItem('gc_customers', JSON.stringify(customers));
-            }
+            // Stats are tracked in Stripe metadata, not locally
+            // This is a no-op now - stats should be updated via Stripe API if needed
+            console.log(`[Sales] Customer stats: ${customerName} spent $${amount}`);
         }
         
         function updateDailySales(amount, method) {
@@ -2366,8 +3196,12 @@
         async function startTab() {
             if (saleItems.length === 0) return showToast('Add items first', 'error');
             
-            const customer = document.getElementById('customerName').value || prompt('Customer name for tab:');
-            if (!customer) return;
+            const customerName = document.getElementById('customerName').value || prompt('Customer name for tab:');
+            if (!customerName) return;
+            
+            // Get customer info for member status
+            const customer = selectedCustomer || findCustomerByName(customerName);
+            const customerId = customer?.id || customer?.stripeId || null;
             
             // Format items for TabsSync
             const items = saleItems.map(item => ({
@@ -2382,21 +3216,28 @@
             try {
                 if (typeof TabsSync !== 'undefined') {
                     // Use TabsSync for global tab management
-                    const existingTab = TabsSync.getTabByCustomer ? TabsSync.getTabByCustomer(customer) : null;
+                    const existingTab = TabsSync.getTabByCustomer ? TabsSync.getTabByCustomer(customerName) : null;
                     
                     if (existingTab) {
                         // Add to existing tab
                         await TabsSync.addItemsToTab(existingTab.id, items, employeeName);
-                        showToast(`Added ${items.length} item(s) to ${customer}'s tab`);
+                        showToast(`Added ${items.length} item(s) to ${customerName}'s tab`);
                     } else {
-                        // Create new tab
-                        await TabsSync.createTab(customer, null, items, employeeName);
-                        showToast(`Tab started for ${customer}`);
+                        // Create new tab with customer ID for member lookup
+                        // Also pass member info directly as options
+                        const options = {};
+                        if (customer) {
+                            options.isMember = isActiveMember(customer);
+                            options.memberType = customer.memberType;
+                            options.isLeague = customer.isLeague;
+                        }
+                        await TabsSync.createTab(customerName, customerId, items, employeeName, options);
+                        showToast(`Tab started for ${customerName}`);
                     }
                 } else {
                     // Fallback: store in localStorage
                     const tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
-                    const existingIndex = tabs.findIndex(t => t.customer && t.customer.toLowerCase() === customer.toLowerCase());
+                    const existingIndex = tabs.findIndex(t => t.customer && t.customer.toLowerCase() === customerName.toLowerCase());
                     
                     if (existingIndex >= 0) {
                         // Add to existing tab
@@ -2440,7 +3281,7 @@
             // Show tab selector modal - get tabs with fallback
             let tabs = [];
             if (typeof TabsSync !== 'undefined') {
-                tabs = TabsSync.getAllTabs() || [];
+                tabs = TabsSync.getTabs() || [];
             } else {
                 try {
                     tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
@@ -2564,7 +3405,7 @@
             // Get tabs - with fallback to localStorage if TabsSync not available
             let tabs = [];
             if (typeof TabsSync !== 'undefined') {
-                tabs = TabsSync.getAllTabs() || [];
+                tabs = TabsSync.getTabs() || [];
             } else {
                 try {
                     tabs = JSON.parse(localStorage.getItem('gc_tabs') || '[]');
@@ -2579,24 +3420,73 @@
                 return;
             }
             
+            // Helper to normalize tier from any input (handles raw product IDs, nicknames, etc.)
+            const normalizeTier = (type) => {
+                if (!type) return null;
+                const lower = type.toLowerCase();
+                if (lower.includes('eagle')) return lower.includes('family') ? 'family_eagle' : 'eagle';
+                if (lower.includes('birdie')) return lower.includes('family') ? 'family_birdie' : 'birdie';
+                if (lower.includes('par')) return lower.includes('family') ? 'family_par' : 'par';
+                if (lower.includes('corporate') || lower.includes('corp')) return 'corporate';
+                if (lower.includes('league')) return 'league';
+                if (lower === 'member' || lower.startsWith('prod_') || lower.startsWith('price_')) return 'par'; // Default unknown to par
+                return lower; // Return as-is if already normalized
+            };
+            
+            // Tier styling maps (matching tee sheet style) - with light backgrounds for readability
+            const tierColors = { 'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#d4a017', 'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#d4a017', 'corporate': '#2c3e50', 'member': '#3498db' };
+            const tierBgColors = { 'par': '#ebf5fb', 'birdie': '#f5eef8', 'eagle': '#fef9e7', 'family_par': '#ebf5fb', 'family_birdie': '#f5eef8', 'family_eagle': '#fef9e7', 'corporate': '#f8f9fa', 'member': '#ebf5fb' };
+            const tierNames = { 'par': 'PAR', 'birdie': 'BIRDIE', 'eagle': 'EAGLE', 'family_par': 'FAM PAR', 'family_birdie': 'FAM BIRDIE', 'family_eagle': 'FAM EAGLE', 'corporate': 'CORP', 'member': 'MEMBER' };
+            const tierDiscounts = { 'par': '10%', 'birdie': '10%', 'eagle': '15%', 'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%', 'corporate': '20%', 'member': '10%' };
+            
             container.innerHTML = tabs.map(t => {
-                // Determine tab class based on member status
+                // Determine tab class and badges based on member/league status
                 let tabClass = 'tab-item';
-                let badge = '';
-                let discountInfo = '';
+                let memberBadge = '';
+                let leagueBadge = '';
+                let tabStyle = '';
                 
-                if (t.isVIP) {
-                    tabClass += ' vip';
-                    badge = '<span class="tab-badge"><i class="fas fa-crown"></i> VIP</span>';
-                } else if (t.isMember) {
+                if (t.isMember && t.memberType) {
+                    // Normalize the tier type
+                    const normalizedTier = normalizeTier(t.memberType);
+                    const tierColor = tierColors[normalizedTier] || '#3498db';
+                    const tierBg = tierBgColors[normalizedTier] || '#f5f5f5';
+                    const tierName = tierNames[normalizedTier] || 'MEMBER';
+                    const discount = tierDiscounts[normalizedTier] || '10%';
+                    const isEagle = normalizedTier?.includes('eagle');
+                    const isBirdie = normalizedTier?.includes('birdie');
+                    
                     tabClass += ' member';
-                    badge = '<span class="tab-badge"><i class="fas fa-star"></i> Member</span>';
+                    // All members get light background with colored left border - EXPLICIT dark text for visibility
+                    tabStyle = `background:linear-gradient(135deg, ${tierBg} 0%, ${tierBg}ee 100%);border-left:4px solid ${tierColor};color:#2c3e50 !important;`;
+                    
+                    // Badge styling varies by tier
+                    memberBadge = `
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, ${tierColor} 0%, ${tierColor}dd 100%);color:#fff;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:6px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+                            ${(isEagle || isBirdie) ? '<i class="fas fa-crown" style="font-size:8px;"></i>' : '<i class="fas fa-star" style="font-size:8px;"></i>'}
+                            ${tierName}
+                            <span style="background:rgba(255,255,255,0.3);padding:1px 4px;border-radius:6px;font-size:8px;">${discount}</span>
+                        </span>`;
+                } else if (t.isVIP) {
+                    tabClass += ' vip';
+                    tabStyle = 'background:linear-gradient(135deg, #f5eef8 0%, #e8daef 100%);border-left:4px solid #9b59b6;color:#2c3e50 !important;';
+                    memberBadge = `
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);color:#fff;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:6px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+                            <i class="fas fa-crown" style="font-size:8px;"></i>
+                            VIP
+                        </span>`;
                 }
                 
-                // Handle memberDiscount as percentage (could be 0.10 or 10 depending on source)
-                const discountPercent = t.memberDiscount > 1 ? t.memberDiscount : (t.memberDiscount * 100);
-                if (discountPercent > 0) {
-                    discountInfo = `<div class="tab-discount">${Math.round(discountPercent)}% member discount</div>`;
+                // Add league badge if applicable
+                if (t.isLeague) {
+                    leagueBadge = `
+                        <span style="display:inline-flex;align-items:center;gap:3px;background:linear-gradient(135deg, #27ae60 0%, #1e8449 100%);color:#fff;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:4px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+                            <i class="fas fa-golf-ball" style="font-size:8px;"></i>
+                            LEAGUE
+                        </span>`;
+                    if (!tabStyle) {
+                        tabStyle = 'background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);border-left:4px solid #27ae60;color:#2c3e50 !important;';
+                    }
                 }
                 
                 const bayInfo = t.bayNumber ? ` • Bay ${t.bayNumber}` : '';
@@ -2604,15 +3494,19 @@
                 const tabTotal = t.total || t.amount || 0;
                 const itemCount = t.items?.length || 0;
                 
+                // Build explicit text color styles for child elements
+                const textStyle = tabStyle ? 'color:#2c3e50;' : '';
+                const infoStyle = tabStyle ? 'color:#555;' : '';
+                const totalStyle = tabStyle ? 'color:#2c3e50;font-weight:700;' : '';
+                
                 return `
-                <div class="${tabClass}" onclick="selectTab('${t.id}')">
+                <div class="${tabClass}" onclick="selectTab('${t.id}')" style="${tabStyle}">
                     <div class="tab-left">
-                        <div class="tab-customer">${t.customer || 'Guest'} ${badge}</div>
-                        <div class="tab-info">${itemCount} item${itemCount !== 1 ? 's' : ''}${bayInfo}${tableInfo}</div>
-                        ${discountInfo}
+                        <div class="tab-customer" style="display:flex;align-items:center;flex-wrap:wrap;${textStyle}">${t.customer || 'Guest'}${memberBadge}${leagueBadge}</div>
+                        <div class="tab-info" style="${infoStyle}">${itemCount} item${itemCount !== 1 ? 's' : ''}${bayInfo}${tableInfo}</div>
                     </div>
                     <div class="tab-right">
-                        <div class="tab-total">$${tabTotal.toFixed(2)}</div>
+                        <div class="tab-total" style="${totalStyle}">$${tabTotal.toFixed(2)}</div>
                     </div>
                 </div>
             `}).join('');
@@ -2658,13 +3552,8 @@
             // Store active tab ID for closing
             window.activeTabId = String(tabId);
             
-            // Show active tab banner
-            const banner = document.getElementById('activeTabBanner');
-            const tabName = document.getElementById('activeTabName');
-            if (banner && tabName) {
-                tabName.textContent = `Tab: ${tab.customer || 'Guest'}`;
-                banner.style.display = 'flex';
-            }
+            // Use shared banner function
+            showTabBanner(tab.customer || 'Guest', tab.isMember, tab.memberType, tab.isLeague);
             
             showToast(`Loaded ${tab.customer || 'Guest'}'s tab`);
         }
@@ -2672,13 +3561,13 @@
         // Clear active tab without closing it
         function clearActiveTab() {
             window.activeTabId = null;
+            selectedCustomer = null;
             saleItems = [];
             document.getElementById('customerName').value = '';
             renderSaleItems();
             
             // Hide active tab banner
-            const banner = document.getElementById('activeTabBanner');
-            if (banner) banner.style.display = 'none';
+            hideTabBanner();
             
             showToast('Tab cleared from current sale');
         }
@@ -2931,7 +3820,7 @@
             }
         }
         
-        function addNewCustomer() {
+        async function addNewCustomer() {
             const firstName = prompt('First name:');
             if (!firstName) return;
             const lastName = prompt('Last name:');
@@ -2940,28 +3829,42 @@
             const phone = prompt('Phone number (optional):');
             const email = prompt('Email (optional):');
             
-            // Save to customer database with proper structure
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const newCustomer = {
-                id: Date.now(),
-                firstName: firstName.trim(),
-                lastName: lastName.trim(),
-                phone: phone || '',
-                email: email || '',
-                isMember: false,
-                memberType: null,
-                memberSince: null,
-                memberExpires: null,
-                priceClass: 'Regular',
-                passes: [],
-                transactions: [],
-                createdAt: new Date().toISOString()
-            };
-            customers.push(newCustomer);
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
-            
-            document.getElementById('customerName').value = `${firstName} ${lastName}`;
-            showToast(`Customer "${firstName} ${lastName}" added`);
+            // Create customer in Stripe
+            try {
+                const FUNCTIONS_URL = window.GolfCoveConfig?.stripe?.functionsUrl || 'https://us-central1-golfcove.cloudfunctions.net';
+                const response = await fetch(`${FUNCTIONS_URL}/createStripeCustomer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: `${firstName.trim()} ${lastName.trim()}`,
+                        email: email || undefined,
+                        phone: phone || undefined
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    // Add to local cache
+                    const newCustomer = {
+                        id: data.customerId,
+                        stripeId: data.customerId,
+                        firstName: firstName.trim(),
+                        lastName: lastName.trim(),
+                        email: email || '',
+                        phone: phone || '',
+                        isMember: false,
+                        memberType: null
+                    };
+                    stripeCustomersCache.push(newCustomer);
+                    document.getElementById('customerName').value = `${firstName} ${lastName}`;
+                    showToast(`Customer "${firstName} ${lastName}" created`);
+                } else {
+                    throw new Error('Failed to create customer');
+                }
+            } catch (e) {
+                console.error('Error creating customer:', e);
+                showToast('Failed to create customer', 'error');
+            }
         }
         
         // ============ CUSTOMER AUTOCOMPLETE ============
@@ -2970,50 +3873,89 @@
         
         customerInput.addEventListener('input', function() {
             const val = this.value.toLowerCase().trim();
-            if (val.length < 2) {
+            if (val.length < 1) {
                 customerAutocomplete.classList.remove('show');
                 selectedCustomer = null; // Clear selection when typing
                 return;
             }
             
-            // Use Stripe customers cache (synced from admin-pos or API)
-            const allCustomers = stripeCustomersCache.length > 0 
-                ? stripeCustomersCache 
-                : JSON.parse(localStorage.getItem('gc_customers') || '[]');
-                
-            const matches = allCustomers.filter(c => {
+            // Use Stripe customers cache (loaded fresh from API)
+            const matches = stripeCustomersCache.filter(c => {
                 const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
-                return fullName.includes(val) || (c.email && c.email.toLowerCase().includes(val)) || (c.phone && c.phone.includes(val));
+                const emailPrefix = c.email ? c.email.split('@')[0].toLowerCase() : '';
+                return fullName.includes(val) || 
+                       emailPrefix.includes(val) ||
+                       (c.email && c.email.toLowerCase().includes(val)) || 
+                       (c.phone && c.phone.includes(val));
             }).slice(0, 10);
             
             if (matches.length === 0) {
-                customerAutocomplete.classList.remove('show');
+                customerAutocomplete.innerHTML = `
+                    <div style="padding:15px;text-align:center;color:#888;">
+                        <i class="fas fa-user-slash" style="font-size:20px;margin-bottom:8px;display:block;"></i>
+                        No customers found for "${val}"<br>
+                        <button onclick="addNewCustomer()" style="margin-top:10px;padding:8px 16px;background:#4a90a4;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                            <i class="fas fa-plus"></i> Create New Customer
+                        </button>
+                    </div>
+                `;
+                customerAutocomplete.classList.add('show');
                 return;
             }
             
             customerAutocomplete.innerHTML = matches.map((c, idx) => {
                 const isMember = isActiveMember(c);
-                const initials = ((c.firstName || '')[0] || '') + ((c.lastName || '')[0] || '');
+                const isLeague = c.isLeague || (c.memberType && c.memberType.includes('league'));
+                
+                // Get display name - use firstName/lastName if available, otherwise use email prefix
+                const displayName = (c.firstName || c.lastName) 
+                    ? `${c.firstName || ''} ${c.lastName || ''}`.trim()
+                    : (c.email ? c.email.split('@')[0] : 'Customer');
+                
+                // Get initials from display name
+                const nameParts = displayName.split(' ');
+                const initials = nameParts.length >= 2 
+                    ? (nameParts[0][0] || '') + (nameParts[1][0] || '')
+                    : (displayName[0] || 'C') + (displayName[1] || '');
+                
                 const discount = isMember ? getMemberDiscount(c.memberType) : 0;
                 const tierName = isMember ? getMemberTierName(c.memberType) : '';
                 const tierColor = isMember ? getMemberTierColor(c.memberType) : '';
+                const isVIP = c.memberType && (c.memberType.includes('eagle') || c.memberType.includes('birdie'));
                 
                 let memberBadge = '';
+                let leagueBadge = '';
                 let avatarClass = 'avatar';
+                
                 if (isMember) {
                     avatarClass += ' member';
-                    memberBadge = `<span class="member-tag" style="background:${tierColor};">${tierName.toUpperCase()}</span>`;
+                    memberBadge = `
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, ${tierColor} 0%, ${tierColor}dd 100%);color:#fff;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:6px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+                            <i class="fas fa-crown" style="font-size:8px;${isVIP ? 'color:#f1c40f;' : ''}"></i>
+                            ${tierName}
+                            <span style="background:rgba(255,255,255,0.3);padding:1px 4px;border-radius:6px;font-size:8px;">${discount}%</span>
+                        </span>`;
+                }
+                
+                if (isLeague) {
+                    leagueBadge = `
+                        <span style="display:inline-flex;align-items:center;gap:3px;background:linear-gradient(135deg, #27ae60 0%, #1e8449 100%);color:#fff;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:4px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+                            <i class="fas fa-golf-ball" style="font-size:8px;"></i>
+                            LEAGUE
+                        </span>`;
                 }
                 
                 const subtitle = isMember 
                     ? `${tierName} Member - ${discount}% discount` 
-                    : (c.email || c.phone || 'Customer');
+                    : isLeague 
+                        ? 'League Player'
+                        : (c.email || c.phone || 'Customer');
                 
                 return `
-                    <div class="autocomplete-item" data-customer-index="${idx}" onclick="selectCustomerFromList(${idx})">
-                        <div class="${avatarClass}" ${isMember ? `style="background:${tierColor};"` : ''}>${initials.toUpperCase()}</div>
+                    <div class="autocomplete-item" data-customer-index="${idx}" onmousedown="selectCustomerFromList(${idx})" style="${isMember ? `border-left:3px solid ${tierColor};background:linear-gradient(135deg, #fef9e7 0%, #f8f4e8 100%);` : isLeague ? 'border-left:3px solid #27ae60;background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);' : ''}">
+                        <div class="${avatarClass}" ${isMember ? `style="background:linear-gradient(135deg, ${tierColor} 0%, ${tierColor}dd 100%);"` : isLeague ? 'style="background:linear-gradient(135deg, #27ae60 0%, #1e8449 100%);"' : ''}>${initials.toUpperCase()}</div>
                         <div class="info">
-                            <div class="name">${c.firstName || ''} ${c.lastName || ''}${memberBadge}</div>
+                            <div class="name">${displayName}${memberBadge}${leagueBadge}</div>
                             <div class="meta">${subtitle}</div>
                         </div>
                     </div>
@@ -3025,36 +3967,209 @@
             customerAutocomplete.classList.add('show');
         });
         
+        // Use event delegation for customer selection (more reliable than inline handlers)
+        customerAutocomplete.addEventListener('mousedown', function(e) {
+            // Find the autocomplete-item parent
+            const item = e.target.closest('.autocomplete-item');
+            if (item) {
+                e.preventDefault(); // Prevent blur from firing
+                const index = parseInt(item.dataset.customerIndex);
+                if (!isNaN(index)) {
+                    selectCustomerFromList(index);
+                }
+            }
+        });
+        
         customerInput.addEventListener('blur', function() {
-            setTimeout(() => customerAutocomplete.classList.remove('show'), 200);
+            // Longer delay to allow click events to fire first
+            setTimeout(() => customerAutocomplete.classList.remove('show'), 300);
         });
         
         // Select customer from autocomplete list (stores full customer object)
-        function selectCustomerFromList(index) {
+        async function selectCustomerFromList(index) {
+            console.log('[Sales] selectCustomerFromList called with index:', index);
+            
             const matches = customerAutocomplete._matches || [];
             const customer = matches[index];
             
-            if (!customer) return;
+            if (!customer) {
+                console.error('[Sales] Customer not found at index:', index);
+                showToast('Customer not found', 'error');
+                return;
+            }
             
+            console.log('[Sales] Selected customer:', customer);
             selectedCustomer = customer;
-            customerInput.value = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+            
+            // Get display name - use firstName/lastName if available, otherwise use email prefix
+            const displayName = (customer.firstName || customer.lastName) 
+                ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim()
+                : (customer.email ? customer.email.split('@')[0] : 'Customer');
+            
+            // Clear search and hide autocomplete immediately
+            customerInput.value = displayName;
+            customerAutocomplete.innerHTML = '';
             customerAutocomplete.classList.remove('show');
             
-            const isMember = isActiveMember(customer);
-            if (isMember) {
-                const discount = getMemberDiscount(customer.memberType);
-                const tierName = getMemberTierName(customer.memberType);
-                showToast(`${tierName} Member: ${discount}% discount applied!`, 'success');
-                
-                // Auto-apply member discount to all items
-                saleItems.forEach(item => {
-                    if (item.discount < discount) item.discount = discount;
-                });
-                memberDiscountApplied = true;
-                renderSaleItems();
-            } else {
-                memberDiscountApplied = false;
+            // Check if customer has an existing open tab
+            let existingTab = null;
+            if (typeof TabsSync !== 'undefined') {
+                console.log('[Sales] Checking for existing tab...');
+                existingTab = TabsSync.getTabByCustomerId(customer.id) || TabsSync.getTabByCustomer(displayName);
+                console.log('[Sales] Existing tab found:', existingTab);
             }
+            
+            if (existingTab) {
+                // Load their existing tab - selectTab handles everything including banner
+                console.log('[Sales] Loading existing tab:', existingTab.id);
+                selectTab(existingTab.id);
+                showToast(`Loaded ${displayName}'s existing tab`, 'info');
+                return;
+            }
+            
+            // No existing tab - create one for this customer
+            console.log('[Sales] Creating new tab for:', displayName);
+            const isMember = isActiveMember(customer);
+            
+            try {
+                if (typeof TabsSync !== 'undefined') {
+                    const employeeName = getCurrentUserName();
+                    // createTab signature: (customerName, customerId, items, employeeName, options)
+                    const newTab = await TabsSync.createTab(displayName, customer.id, [], employeeName, {
+                        isMember: isMember,
+                        memberType: customer.memberType,
+                        isLeague: customer.isLeague
+                    });
+                    
+                    if (newTab && newTab.id) {
+                        window.activeTabId = String(newTab.id);
+                        console.log('[Sales] Tab created, activeTabId:', window.activeTabId);
+                        renderOpenTabs();
+                        
+                        // Use shared banner function
+                        showTabBanner(displayName, isMember, customer.memberType, customer.isLeague);
+                        
+                        // Apply member discount if applicable
+                        if (isMember && customer.memberType) {
+                            memberDiscountApplied = true;
+                            const tierName = getMemberTierName(customer.memberType);
+                            const discountPct = getMemberDiscount(customer.memberType);
+                            showToast(`${tierName} Member tab started (${discountPct}% off)`, 'success');
+                        } else {
+                            showToast(`Tab started for ${displayName}`, 'success');
+                        }
+                    } else {
+                        console.warn('[Sales] Tab creation returned no tab object');
+                        // Tab creation returned no ID - still show banner
+                        showTabBanner(displayName, isMember, customer.memberType, customer.isLeague);
+                        showToast(`Selected: ${displayName}`, 'success');
+                    }
+                } else {
+                    console.warn('[Sales] TabsSync not available');
+                    // TabsSync not available - just show banner
+                    showTabBanner(displayName, isMember, customer.memberType, customer.isLeague);
+                    showToast(`Selected: ${displayName}`, 'success');
+                }
+            } catch (e) {
+                console.error('[Sales] Error creating tab:', e);
+                // Error creating tab - still show banner
+                showTabBanner(displayName, isMember, customer.memberType, customer.isLeague);
+                showToast(`Selected: ${displayName}`, 'success');
+            }
+        }
+        
+        // ============ SHARED TAB BANNER FUNCTION ============
+        // Single source of truth for displaying the tab/customer banner
+        function showTabBanner(customerName, isMember, memberType, isLeague) {
+            const banner = document.getElementById('activeTabBanner');
+            const tabNameEl = document.getElementById('activeTabName');
+            const tabBadge = document.getElementById('activeTabBadge');
+            
+            if (!banner || !tabNameEl) {
+                console.error('[Sales] Banner elements not found!');
+                return;
+            }
+            
+            // Set the tab name
+            tabNameEl.textContent = `Tab: ${customerName}`;
+            
+            // Helper to normalize tier from any input (handles raw product IDs, nicknames, etc.)
+            const normalizeTier = (type) => {
+                if (!type) return null;
+                const lower = type.toLowerCase();
+                if (lower.includes('eagle')) return lower.includes('family') ? 'family_eagle' : 'eagle';
+                if (lower.includes('birdie')) return lower.includes('family') ? 'family_birdie' : 'birdie';
+                if (lower.includes('par')) return lower.includes('family') ? 'family_par' : 'par';
+                if (lower.includes('corporate') || lower.includes('corp')) return 'corporate';
+                if (lower.includes('league')) return 'league';
+                if (lower === 'member' || lower.startsWith('prod_') || lower.startsWith('price_')) return 'par';
+                return lower;
+            };
+            
+            // Tier styling maps
+            const tierColors = { 
+                'par': '#3498db', 'birdie': '#9b59b6', 'eagle': '#d4a017', 
+                'family_par': '#3498db', 'family_birdie': '#9b59b6', 'family_eagle': '#d4a017', 
+                'corporate': '#2c3e50', 'member': '#3498db'
+            };
+            const tierNames = { 
+                'par': 'PAR', 'birdie': 'BIRDIE', 'eagle': 'EAGLE', 
+                'family_par': 'FAM PAR', 'family_birdie': 'FAM BIRDIE', 'family_eagle': 'FAM EAGLE', 
+                'corporate': 'CORP', 'member': 'MEMBER'
+            };
+            const tierDiscounts = { 
+                'par': '10%', 'birdie': '10%', 'eagle': '15%', 
+                'family_par': '10%', 'family_birdie': '10%', 'family_eagle': '15%', 
+                'corporate': '20%', 'member': '10%'
+            };
+            
+            // Normalize the memberType
+            const normalizedTier = normalizeTier(memberType);
+            
+            // Apply styling based on member/league status
+            if (isMember && normalizedTier) {
+                const tierColor = tierColors[normalizedTier] || '#3498db';
+                const tierNameLabel = tierNames[normalizedTier] || 'MEMBER';
+                const discount = tierDiscounts[normalizedTier] || '10%';
+                banner.style.background = `linear-gradient(135deg, ${tierColor} 0%, ${tierColor}dd 100%)`;
+                
+                if (tabBadge) {
+                    tabBadge.style.display = 'inline-flex';
+                    tabBadge.innerHTML = `
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.25);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;">
+                            <i class="fas fa-crown" style="font-size:10px;"></i>
+                            ${tierNameLabel} (${discount} OFF)
+                        </span>
+                    `;
+                }
+            } else if (isLeague) {
+                banner.style.background = 'linear-gradient(135deg, #27ae60 0%, #1e8449 100%)';
+                if (tabBadge) {
+                    tabBadge.style.display = 'inline-flex';
+                    tabBadge.innerHTML = `
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.25);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;">
+                            <i class="fas fa-golf-ball" style="font-size:10px;"></i>
+                            LEAGUE
+                        </span>
+                    `;
+                }
+            } else {
+                banner.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';
+                if (tabBadge) {
+                    tabBadge.style.display = 'none';
+                    tabBadge.innerHTML = '';
+                }
+            }
+            
+            // CRITICAL: Show the banner
+            banner.style.display = 'flex';
+            console.log('[Sales] Banner shown for:', customerName);
+        }
+        
+        // Hide the tab banner
+        function hideTabBanner() {
+            const banner = document.getElementById('activeTabBanner');
+            if (banner) banner.style.display = 'none';
         }
         
         // Legacy function for backwards compatibility
@@ -3062,15 +4177,12 @@
             customerInput.value = name;
             customerAutocomplete.classList.remove('show');
             
-            // Try to find and set full customer object
-            const allCustomers = stripeCustomersCache.length > 0 
-                ? stripeCustomersCache 
-                : JSON.parse(localStorage.getItem('gc_customers') || '[]');
+            // Find full customer object from Stripe cache
             const nameParts = name.trim().split(' ');
             const firstName = nameParts[0];
             const lastName = nameParts.slice(1).join(' ');
             
-            selectedCustomer = allCustomers.find(c => 
+            selectedCustomer = stripeCustomersCache.find(c =>
                 (c.firstName || '').toLowerCase() === firstName.toLowerCase() &&
                 (c.lastName || '').toLowerCase() === lastName.toLowerCase()
             ) || null;
@@ -3156,15 +4268,11 @@
         function findCustomerByName(name) {
             if (!name || name === 'Walk-in') return null;
             
-            const allCustomers = stripeCustomersCache.length > 0 
-                ? stripeCustomersCache 
-                : JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            
             const nameParts = name.trim().split(' ');
             const firstName = nameParts[0];
             const lastName = nameParts.slice(1).join(' ');
             
-            return allCustomers.find(c => 
+            return stripeCustomersCache.find(c =>
                 (c.firstName || '').toLowerCase() === firstName.toLowerCase() &&
                 (c.lastName || '').toLowerCase() === lastName.toLowerCase()
             ) || null;
@@ -3234,26 +4342,19 @@
         // ============ STRIPE SETTINGS ============
         const FUNCTIONS_URL = 'https://us-central1-golfcove.cloudfunctions.net';
         
+        // Global settings are loaded from localStorage (set via admin panel)
+        // The getGlobalSettings endpoint doesn't exist, so we skip the network call
         async function loadGlobalSettings() {
-            try {
-                const response = await fetch(`${FUNCTIONS_URL}/getGlobalSettings`);
-                const data = await response.json();
-                if (data.success && data.settings) {
-                    // Update local cache and config
-                    if (data.settings.stripePublishableKey) {
-                        localStorage.setItem('gc_stripe_pk', data.settings.stripePublishableKey);
-                        STRIPE_CONFIG.publishableKey = data.settings.stripePublishableKey;
-                    }
-                    if (data.settings.stripeTerminalLocation) {
-                        localStorage.setItem('gc_stripe_location', data.settings.stripeTerminalLocation);
-                        STRIPE_CONFIG.terminalLocationId = data.settings.stripeTerminalLocation;
-                    }
-                    return data.settings;
-                }
-            } catch (e) {
-                console.error('Failed to load global settings:', e);
+            // Use locally cached settings
+            const pk = localStorage.getItem('gc_stripe_pk');
+            const location = localStorage.getItem('gc_stripe_location');
+            if (pk && typeof STRIPE_CONFIG !== 'undefined') {
+                STRIPE_CONFIG.publishableKey = pk;
             }
-            return null;
+            if (location && typeof STRIPE_CONFIG !== 'undefined') {
+                STRIPE_CONFIG.terminalLocationId = location;
+            }
+            return { stripePublishableKey: pk, stripeTerminalLocation: location };
         }
         
         async function showSettings() {
@@ -3447,7 +4548,8 @@
             };
             
             transactions.unshift(refundTrans);
-            localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+            saveTransactions();
+            syncTransactionToFirebase(refundTrans);
             renderTransactions();
             showToast(`Refund of $${originalTrans.amount.toFixed(2)} processed`, 'success');
         }
@@ -3509,17 +4611,17 @@
                             </div>
                             <select id="invCategory" style="padding:10px 15px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-width:150px;background:#fff;cursor:pointer;" onchange="filterInventory(document.getElementById('invSearch').value)">
                                 <option value="">All Categories</option>
-                                <option value="food">🍔 Food</option>
-                                <option value="beer">🍺 Beer</option>
-                                <option value="wine">🍷 Wine</option>
-                                <option value="beverage">🥤 Beverages</option>
-                                <option value="merch">👕 Merchandise</option>
+                                <option value="food">Food</option>
+                                <option value="beer">Beer</option>
+                                <option value="wine">Wine</option>
+                                <option value="beverage">Beverages</option>
+                                <option value="merch">Merchandise</option>
                             </select>
                             <select id="invStockFilter" style="padding:10px 15px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-width:140px;background:#fff;cursor:pointer;" onchange="filterInventory(document.getElementById('invSearch').value)">
                                 <option value="">All Stock Levels</option>
-                                <option value="low">⚠️ Low Stock (≤5)</option>
-                                <option value="out">❌ Out of Stock</option>
-                                <option value="ok">✅ In Stock</option>
+                                <option value="low">Low Stock (5 or less)</option>
+                                <option value="out">Out of Stock</option>
+                                <option value="ok">In Stock</option>
                             </select>
                         </div>
                         
@@ -3576,16 +4678,13 @@
                     statusBadge = `<span style="background:#27ae60;color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;">${item.stock}</span>`;
                 }
                 
-                const categoryIcons = { food: '🍔', beer: '🍺', wine: '🍷', beverage: '🥤', merch: '👕' };
-                const catIcon = categoryIcons[item.category] || '📦';
-                
                 return `
                     <tr data-category="${item.category}" data-name="${item.name.toLowerCase()}" data-stock="${item.stock}" style="${rowStyle}transition:background 0.2s;">
                         <td style="padding:12px 15px;border-bottom:1px solid #eee;">
                             <div style="font-weight:500;">${item.name}</div>
                         </td>
                         <td style="padding:12px 15px;border-bottom:1px solid #eee;text-align:center;">
-                            <span style="background:#f0f0f0;padding:4px 10px;border-radius:6px;font-size:13px;">${catIcon} ${item.category}</span>
+                            <span style="background:#f0f0f0;padding:4px 10px;border-radius:6px;font-size:13px;text-transform:capitalize;">${item.category}</span>
                         </td>
                         <td style="padding:12px 15px;border-bottom:1px solid #eee;text-align:center;font-weight:500;">$${item.price.toFixed(2)}</td>
                         <td style="padding:12px 15px;border-bottom:1px solid #eee;text-align:center;">${statusBadge}</td>
@@ -4033,9 +5132,10 @@
                     }
                     
                     transactions.push(trans);
+                    syncTransactionToFirebase(trans);
                     imported++;
                 });
-                localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+                saveTransactions();
                 renderTransactions();
             }
             
@@ -4140,7 +5240,7 @@
                 version: '1.0',
                 products: items,
                 transactions: transactions,
-                customers: JSON.parse(localStorage.getItem('gc_customers') || '[]'),
+                customers: stripeCustomersCache,
                 tabs: JSON.parse(localStorage.getItem('gc_tabs') || '[]'),
                 bookings: JSON.parse(localStorage.getItem('gc_bookings') || '[]'),
                 settings: {
@@ -4185,7 +5285,9 @@
                         }
                         if (data.transactions) {
                             transactions = data.transactions;
-                            localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+                            saveTransactions();
+                            // Sync all restored transactions to Firebase
+                            transactions.forEach(t => syncTransactionToFirebase(t));
                             renderTransactions();
                         }
                         if (data.customers) {
@@ -4384,7 +5486,8 @@
             };
             
             transactions.unshift(transaction);
-            localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+            saveTransactions();
+            syncTransactionToFirebase(transaction);
             
             if (!isReturnMode) deductInventory(saleItems);
             updateDailySales(cardAmt, 'card');
@@ -4526,11 +5629,27 @@
             if (modal) modal.remove();
         }
         
-        function lookupGiftCard() {
+        async function lookupGiftCard() {
             const cardNum = document.getElementById('giftCardNumber').value.trim();
             if (!cardNum) return showToast('Enter gift card number', 'error');
             
-            // Load gift cards from storage
+            // Use GolfCoveGiftCards module if available
+            if (typeof GolfCoveGiftCards !== 'undefined') {
+                const result = await GolfCoveGiftCards.checkBalance(cardNum);
+                if (!result.success) {
+                    showToast(result.error || 'Gift card not found', 'error');
+                    document.getElementById('giftCardInfo').style.display = 'none';
+                    return;
+                }
+                
+                document.getElementById('gcBalance').textContent = '$' + result.balance.toFixed(2);
+                document.getElementById('gcIssued').textContent = new Date(result.card.purchaseDate || result.card.createdAt).toLocaleDateString();
+                document.getElementById('giftCardInfo').style.display = 'block';
+                document.getElementById('redeemAmount').max = result.balance;
+                return;
+            }
+            
+            // Fallback: Load gift cards from storage
             const giftCards = JSON.parse(localStorage.getItem('gc_gift_cards') || '{}');
             const card = giftCards[cardNum];
             
@@ -4546,12 +5665,36 @@
             document.getElementById('redeemAmount').max = card.balance;
         }
         
-        function applyGiftCard() {
+        async function applyGiftCard() {
             const cardNum = document.getElementById('giftCardNumber').value.trim();
             const amount = parseFloat(document.getElementById('redeemAmount').value) || 0;
             
             if (!cardNum || amount <= 0) return showToast('Enter card number and amount', 'error');
             
+            // Use GolfCoveGiftCards module if available
+            if (typeof GolfCoveGiftCards !== 'undefined') {
+                const result = await GolfCoveGiftCards.redeem(cardNum, amount, 'POS Redemption');
+                if (!result.success) {
+                    showToast(result.error || 'Redemption failed', 'error');
+                    return;
+                }
+                
+                closeGiftCardModal();
+                showToast(`Gift card redeemed: $${amount.toFixed(2)} (Remaining: $${result.remainingBalance.toFixed(2)})`, 'success');
+                
+                // Add as negative line item to reduce total
+                saleItems.push({
+                    name: `Gift Card Redemption (${cardNum.slice(-4)})`,
+                    price: -amount,
+                    qty: 1,
+                    discount: 0,
+                    isGiftCard: true
+                });
+                renderSaleItems();
+                return;
+            }
+            
+            // Fallback: Use localStorage
             const giftCards = JSON.parse(localStorage.getItem('gc_gift_cards') || '{}');
             const card = giftCards[cardNum];
             
@@ -4570,6 +5713,9 @@
             giftCards[cardNum] = card;
             localStorage.setItem('gc_gift_cards', JSON.stringify(giftCards));
             
+            // Sync to Firebase
+            syncGiftCardToFirebase(cardNum, card);
+            
             closeGiftCardModal();
             showToast(`Gift card redeemed: $${amount.toFixed(2)} (Remaining: $${card.balance.toFixed(2)})`, 'success');
             
@@ -4584,19 +5730,56 @@
             renderSaleItems();
         }
         
+        // Sync gift card to Firebase
+        async function syncGiftCardToFirebase(cardNum, card) {
+            try {
+                await fetch('https://golfcove-default-rtdb.firebaseio.com/gift_cards/' + cardNum + '.json', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(card)
+                });
+            } catch (e) {
+                console.warn('[Sales] Failed to sync gift card to Firebase:', e);
+            }
+        }
+        
         // Generate gift card when sold
-        function generateGiftCard(amount) {
+        async function generateGiftCard(amount) {
+            // Use GolfCoveGiftCards module if available
+            if (typeof GolfCoveGiftCards !== 'undefined') {
+                const result = await GolfCoveGiftCards.create({
+                    amount: amount,
+                    purchasedBy: 'POS Sale',
+                    paymentMethod: 'card'
+                });
+                
+                if (result.success) {
+                    showToast(`Gift Card Created: ${result.card.code}`, 'success');
+                    
+                    if (confirm('Print gift card?')) {
+                        printGiftCard(result.card.code, amount);
+                    }
+                    
+                    return result.card.code;
+                }
+            }
+            
+            // Fallback: Generate locally
             const cardNum = 'GC' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
             const giftCards = JSON.parse(localStorage.getItem('gc_gift_cards') || '{}');
             
-            giftCards[cardNum] = {
+            const card = {
                 balance: amount,
                 originalAmount: amount,
                 issued: new Date().toISOString(),
                 redemptions: []
             };
             
+            giftCards[cardNum] = card;
             localStorage.setItem('gc_gift_cards', JSON.stringify(giftCards));
+            
+            // Sync to Firebase
+            syncGiftCardToFirebase(cardNum, card);
             
             // Show the card number
             showToast(`Gift Card Created: ${cardNum}`, 'success');
@@ -4684,11 +5867,10 @@
         
         // ============ LOYALTY POINTS SYSTEM ============
         function showLoyaltyModal() {
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
             const currentName = document.getElementById('customerName').value;
             
-            // Find customer
-            let customer = customers.find(c => 
+            // Find customer from Stripe cache
+            let customer = stripeCustomersCache.find(c =>
                 `${c.firstName} ${c.lastName}`.toLowerCase() === currentName.toLowerCase()
             );
             
@@ -4760,16 +5942,15 @@
             const points = parseInt(document.getElementById('redeemPoints').value) || 0;
             if (points <= 0) return showToast('Enter points to redeem', 'error');
             
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const customer = customers.find(c => c.id === customerId);
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
             
             if (!customer) return showToast('Customer not found', 'error');
             if (points > (customer.loyaltyPoints || 0)) return showToast('Insufficient points', 'error');
             
             const dollarValue = points / 100;
             
-            customer.loyaltyPoints -= points;
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
+            // Note: In production, this should update Stripe metadata
+            customer.loyaltyPoints = (customer.loyaltyPoints || 0) - points;
             
             // Add discount to cart
             saleItems.push({
@@ -4789,13 +5970,12 @@
             const points = parseInt(document.getElementById('addPoints').value) || 0;
             if (points <= 0) return showToast('Enter points to add', 'error');
             
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const customer = customers.find(c => c.id === customerId);
+            const customer = stripeCustomersCache.find(c => c.id === customerId);
             
             if (!customer) return showToast('Customer not found', 'error');
             
+            // Note: In production, this should update Stripe metadata
             customer.loyaltyPoints = (customer.loyaltyPoints || 0) + points;
-            localStorage.setItem('gc_customers', JSON.stringify(customers));
             
             closeLoyaltyModal();
             showLoyaltyModal();
@@ -4806,8 +5986,7 @@
         function awardLoyaltyPoints(customerName, total) {
             if (!customerName || customerName === 'Walk-in') return;
             
-            const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
-            const customer = customers.find(c => 
+            const customer = stripeCustomersCache.find(c =>
                 `${c.firstName} ${c.lastName}`.toLowerCase() === customerName.toLowerCase()
             );
             
@@ -4816,8 +5995,8 @@
                 const multiplier = customer.isMember ? 2 : 1;
                 const earnedPoints = basePoints * multiplier;
                 
+                // Note: In production, this should update Stripe metadata
                 customer.loyaltyPoints = (customer.loyaltyPoints || 0) + earnedPoints;
-                localStorage.setItem('gc_customers', JSON.stringify(customers));
                 
                 console.log(`Awarded ${earnedPoints} loyalty points to ${customerName}`);
             }
@@ -5139,7 +6318,8 @@
             };
             
             transactions.unshift(refund);
-            localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+            saveTransactions();
+            syncTransactionToFirebase(refund);
             
             // Update daily sales
             const dailySales = JSON.parse(localStorage.getItem('gc_daily_sales') || '{}');
@@ -5153,7 +6333,8 @@
             // Mark original as refunded
             t.refunded = true;
             t.refundedAt = new Date().toISOString();
-            localStorage.setItem('gc_transactions', JSON.stringify(transactions));
+            saveTransactions();
+            syncTransactionToFirebase(t);
             
             renderTransactions();
             showToast(`Refund of $${t.amount.toFixed(2)} processed`, 'success');

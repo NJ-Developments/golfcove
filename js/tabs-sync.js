@@ -1,85 +1,90 @@
 // ============================================================
 // GOLF COVE - TABS SYNC MODULE
 // Real-time tab synchronization across all POS terminals
-// Uses Firebase backend with localStorage fallback
-// Integrates with Stripe for customer payment processing
+// Uses Firebase Realtime Database with localStorage fallback
 // ============================================================
 
 const TabsSync = (function() {
     'use strict';
     
-    // Use config for API URL, fallback to hardcoded
-    const getApiBase = () => window.GolfCoveConfig?.stripe?.functionsUrl || 
-                             'https://us-central1-golfcove.cloudfunctions.net';
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyB8SH5Eh7OhIFLUkL2hjZS23uXkCsDJXGc",
+        authDomain: "golfcove.firebaseapp.com",
+        databaseURL: "https://golfcove-default-rtdb.firebaseio.com",
+        projectId: "golfcove",
+        storageBucket: "golfcove.firebasestorage.app",
+        messagingSenderId: "284762891644",
+        appId: "1:284762891644:web:424223b102f08a230f70f9"
+    };
+    
     const LOCAL_KEY = 'gc_tabs';
-    const SYNC_INTERVAL = 30000; // Sync every 30 seconds
     
     let localTabs = [];
-    let syncTimer = null;
     let listeners = [];
-    let isOnline = navigator.onLine;
-    let lastSync = null;
+    let db = null;
+    let tabsRef = null;
+    let isFirebaseReady = false;
     
     // ============ INITIALIZATION ============
     function init() {
         // Load from localStorage first (immediate)
+        loadLocal();
+        
+        // Initialize Firebase if not already done
         try {
-            const stored = localStorage.getItem(LOCAL_KEY);
-            localTabs = stored ? JSON.parse(stored) : [];
-            // Normalize tabs for compatibility with admin-pos.html
-            localTabs = localTabs.map(normalizeTab).filter(t => t !== null);
+            if (typeof firebase !== 'undefined') {
+                // Check if Firebase already initialized
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                db = firebase.database();
+                tabsRef = db.ref('tabs/golfcove');
+                isFirebaseReady = true;
+                
+                // Listen for real-time updates
+                tabsRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        const serverTabs = Object.entries(data)
+                            .map(([id, tab]) => ({ ...tab, id }))
+                            .filter(t => t.status === 'open');
+                        
+                        // Merge with local tabs
+                        localTabs = serverTabs;
+                        saveLocal();
+                        notifyListeners('sync', localTabs);
+                        console.log('[TabsSync] Synced', localTabs.length, 'tabs from Firebase');
+                    } else {
+                        // No tabs in Firebase, keep local tabs
+                        console.log('[TabsSync] No tabs in Firebase, using local');
+                    }
+                }, (error) => {
+                    console.warn('[TabsSync] Firebase listener error:', error.message);
+                });
+                
+                console.log('[TabsSync] Firebase connected');
+            } else {
+                console.warn('[TabsSync] Firebase not available, using localStorage only');
+            }
         } catch (e) {
-            console.error('[TabsSync] Error loading tabs:', e);
-            localTabs = [];
+            console.warn('[TabsSync] Firebase init failed:', e.message);
         }
-        
-        // Set up online/offline detection
-        window.addEventListener('online', () => {
-            isOnline = true;
-            syncWithServer();
-        });
-        window.addEventListener('offline', () => {
-            isOnline = false;
-        });
-        
-        // Initial sync with server
-        if (isOnline) {
-            syncWithServer();
-        }
-        
-        // Start periodic sync
-        syncTimer = setInterval(() => {
-            if (isOnline) syncWithServer();
-        }, SYNC_INTERVAL);
         
         console.log('[TabsSync] Initialized with', localTabs.length, 'tabs');
         return localTabs;
     }
     
-    // Normalize tab data for cross-module compatibility
-    function normalizeTab(tab) {
-        if (!tab || typeof tab !== 'object') return null;
-        return {
-            ...tab,
-            id: tab.id,
-            customer: tab.customer || tab.customerName || 'Guest',
-            // Normalize totals
-            total: tab.total ?? tab.amount ?? 0,
-            amount: tab.amount ?? tab.total ?? 0,
-            subtotal: tab.subtotal ?? 0,
-            // Normalize timestamps
-            openedAt: tab.openedAt || tab.createdAt,
-            createdAt: tab.createdAt || tab.openedAt,
-            // Ensure items array
-            items: Array.isArray(tab.items) ? tab.items : [],
-            // Member info
-            isMember: tab.isMember || false,
-            isVIP: tab.isVIP || false,
-            memberType: tab.memberType || null,
-            memberDiscount: tab.memberDiscount || 0,
-            // Table/location
-            table: tab.table || 'Tab'
-        };
+    // ============ LOCAL STORAGE ============
+    function loadLocal() {
+        try {
+            const stored = localStorage.getItem(LOCAL_KEY);
+            localTabs = stored ? JSON.parse(stored) : [];
+            localTabs = localTabs.map(normalizeTab).filter(t => t !== null && t.status === 'open');
+        } catch (e) {
+            console.error('[TabsSync] Error loading tabs:', e);
+            localTabs = [];
+        }
     }
     
     function saveLocal() {
@@ -90,212 +95,76 @@ const TabsSync = (function() {
         }
     }
     
-    // ============ SERVER SYNC ============
-    async function syncWithServer() {
-        try {
-            const response = await fetch(`${getApiBase()}/tabs?status=open`);
-            if (!response.ok) throw new Error('Sync failed');
-            
-            const data = await response.json();
-            const serverTabs = (data.tabs || []).map(normalizeTab).filter(t => t !== null);
-            
-            // Merge server tabs with any local-only tabs
-            const localOnlyTabs = localTabs.filter(lt => 
-                lt.isLocalOnly && !serverTabs.find(st => st.id === lt.id)
-            );
-            
-            // Push local-only tabs to server
-            for (const tab of localOnlyTabs) {
-                await pushTabToServer(tab);
-            }
-            
-            // Update local state with server data
-            localTabs = serverTabs;
-            saveLocal();
-            lastSync = new Date();
-            
-            // Notify listeners
-            notifyListeners('sync', localTabs);
-            
-            console.log('[TabsSync] Synced', localTabs.length, 'tabs from server');
-        } catch (error) {
-            console.warn('[TabsSync] Sync failed, using local data:', error.message);
+    // ============ NORMALIZE TAB ============
+    function normalizeTab(tab) {
+        if (!tab || !tab.id) return null;
+        
+        return {
+            id: tab.id,
+            customer: tab.customer || tab.name || 'Guest',
+            customerId: tab.customerId || null,
+            stripeCustomerId: tab.stripeCustomerId || null,
+            items: Array.isArray(tab.items) ? tab.items : [],
+            subtotal: parseFloat(tab.subtotal) || 0,
+            tax: parseFloat(tab.tax) || 0,
+            total: parseFloat(tab.total) || parseFloat(tab.amount) || 0,
+            status: tab.status || 'open',
+            isMember: !!tab.isMember,
+            isLeague: !!tab.isLeague,
+            memberType: tab.memberType || null,
+            memberDiscount: parseFloat(tab.memberDiscount) || 0,
+            openedAt: tab.openedAt || tab.createdAt || new Date().toISOString(),
+            openedBy: tab.openedBy || tab.employee || 'Staff',
+            updatedAt: tab.updatedAt || new Date().toISOString(),
+            notes: tab.notes || null
+        };
+    }
+    
+    // ============ LISTENERS ============
+    function addListener(callback) {
+        if (typeof callback === 'function') {
+            listeners.push(callback);
         }
     }
     
-    async function pushTabToServer(tab) {
-        try {
-            const response = await fetch(`${getApiBase()}/tabs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    customerId: tab.customerId,
-                    customerName: tab.customer,
-                    stripeCustomerId: tab.stripeCustomerId, // For Stripe payments
-                    items: tab.items,
-                    employeeName: tab.openedBy,
-                    notes: tab.notes,
-                    bayNumber: tab.bayNumber,
-                    isMember: tab.isMember,
-                    memberType: tab.memberType,
-                    memberDiscount: tab.memberDiscount
-                })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                // Update local tab with server ID
-                const idx = localTabs.findIndex(t => t.id === tab.id);
-                if (idx !== -1) {
-                    localTabs[idx] = { ...data.tab, isLocalOnly: false };
-                    saveLocal();
-                }
-                return data.tab;
-            }
-        } catch (error) {
-            console.error('[TabsSync] Failed to push tab:', error);
-        }
-        return null;
+    function removeListener(callback) {
+        listeners = listeners.filter(l => l !== callback);
+    }
+    
+    function notifyListeners(action, data) {
+        listeners.forEach(l => {
+            try { l(action, data); } catch (e) { console.error('Listener error:', e); }
+        });
     }
     
     // ============ TAB OPERATIONS ============
-    
-    // Ensure initialized
-    function ensureInit() {
-        if (localTabs.length === 0) {
-            // Check localStorage directly
-            try {
-                const stored = localStorage.getItem(LOCAL_KEY);
-                if (stored) {
-                    localTabs = JSON.parse(stored).map(normalizeTab).filter(t => t !== null);
-                }
-            } catch (e) {
-                console.error('[TabsSync] Error in ensureInit:', e);
-            }
-        }
-    }
-    
-    // Get all open tabs
-    function getAllTabs() {
-        ensureInit();
-        // Filter open tabs (no status means open, or status === 'open') and normalize each tab
-        return localTabs
-            .filter(t => !t.status || t.status === 'open')
-            .map(normalizeTab)
-            .filter(t => t !== null);
-    }
-    
-    // Get tab by ID (flexible matching for number vs string IDs)
-    function getTab(tabId) {
-        ensureInit();
-        const tab = localTabs.find(t => t.id == tabId || String(t.id) === String(tabId));
-        return tab ? normalizeTab(tab) : null;
-    }
-    
-    // Internal: Get direct reference to tab (for modifications)
-    function getTabRef(tabId) {
-        ensureInit();
-        return localTabs.find(t => t.id == tabId || String(t.id) === String(tabId));
-    }
-    
-    // Get tab by customer name
-    function getTabByCustomer(customerName) {
-        if (!customerName) return null;
-        return localTabs.find(t => 
-            (t.status === 'open' || !t.status) && 
-            t.customer && 
-            t.customer.toLowerCase() === customerName.toLowerCase()
-        );
-    }
-    
-    // Get tab by customer ID
-    function getTabByCustomerId(customerId) {
-        if (!customerId) return null;
-        return localTabs.find(t => 
-            (t.status === 'open' || !t.status) && 
-            t.customerId === customerId
-        );
-    }
-    
-    // Look up customer info for member status
-    function getCustomerInfo(customerName, customerId) {
-        if (typeof GolfCoveCustomers === 'undefined') return null;
-        
-        let customer = null;
-        if (customerId) {
-            customer = GolfCoveCustomers.get(customerId);
-        }
-        if (!customer && customerName) {
-            // Try to find by name
-            const parts = customerName.trim().split(' ');
-            if (parts.length >= 2) {
-                customer = GolfCoveCustomers.getByName(parts[0], parts.slice(1).join(' '));
-            }
-        }
-        return customer;
-    }
-    
-    // Create new tab
     async function createTab(customerName, customerId = null, items = [], employeeName = 'Staff', options = {}) {
         const tabId = 'TAB-' + Date.now();
         const itemsTotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 1)), 0);
-        
-        // Look up customer for member info
-        const customer = getCustomerInfo(customerName, customerId);
-        let isMember = false;
-        let isVIP = false;
-        let memberType = null;
-        let memberDiscount = 0;
-        let stripeCustomerId = null;
-        
-        if (customer && typeof GolfCoveCustomers !== 'undefined') {
-            isMember = GolfCoveCustomers.isActiveMember(customer);
-            isVIP = GolfCoveCustomers.isVIP(customer);
-            memberType = customer.memberType;
-            memberDiscount = GolfCoveCustomers.getMemberDiscount(customer);
-            stripeCustomerId = customer.stripeCustomerId || null;
-        }
-        
-        // Also check if customer has a Stripe ID via CustomerManager
-        if (!stripeCustomerId && customerId && typeof GolfCoveCustomerManager !== 'undefined') {
-            const localCustomer = GolfCoveCustomerManager.get(customerId);
-            if (localCustomer?.stripeCustomerId) {
-                stripeCustomerId = localCustomer.stripeCustomerId;
-            }
-        }
+        const taxRate = window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635;
         
         const newTab = {
             id: tabId,
-            version: 1, // Version for optimistic locking
-            customerId: customerId || (customer ? customer.id : null),
+            customerId: customerId,
             customer: customerName || 'Guest',
-            stripeCustomerId: stripeCustomerId, // For Stripe payment processing
-            // Member info
-            isMember: isMember,
-            isVIP: isVIP,
-            memberType: memberType,
-            memberDiscount: memberDiscount,
-            // Items & totals
+            stripeCustomerId: options.stripeCustomerId || null,
+            isMember: options.isMember || false,
+            isLeague: options.isLeague || false,
+            memberType: options.memberType || null,
+            memberDiscount: options.memberDiscount || 0,
             items: items.map(item => ({
                 ...item,
                 addedAt: new Date().toISOString(),
                 addedBy: employeeName
             })),
             subtotal: itemsTotal,
-            tax: itemsTotal * (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635),
-            total: itemsTotal * (1 + (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635)),
-            amount: itemsTotal * (1 + (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635)), // Alias for compatibility
+            tax: itemsTotal * taxRate,
+            total: itemsTotal * (1 + taxRate),
             status: 'open',
             openedAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(), // Alias for compatibility
             openedBy: employeeName,
-            employee: employeeName, // Alias for compatibility
-            table: options.table || 'Tab', // Compatibility with admin-pos
             updatedAt: new Date().toISOString(),
-            notes: options.notes || null,
-            bayNumber: options.bayNumber || null,
-            payments: [],
-            isLocalOnly: true
+            notes: options.notes || null
         };
         
         // Add to local immediately
@@ -303,304 +172,187 @@ const TabsSync = (function() {
         saveLocal();
         notifyListeners('create', newTab);
         
-        // Sync to server
-        if (isOnline) {
-            const serverTab = await pushTabToServer(newTab);
-            if (serverTab) {
-                const idx = localTabs.findIndex(t => t.id === tabId);
-                if (idx !== -1) {
-                    localTabs[idx] = { ...serverTab, isLocalOnly: false };
-                    saveLocal();
-                }
+        // Push to Firebase
+        if (isFirebaseReady && tabsRef) {
+            try {
+                await tabsRef.child(tabId).set(newTab);
+                console.log('[TabsSync] Tab saved to Firebase:', tabId);
+            } catch (e) {
+                console.warn('[TabsSync] Failed to save to Firebase:', e.message);
             }
         }
         
         return newTab;
     }
     
-    // Add items to tab
     async function addItemsToTab(tabId, items, employeeName = 'Staff') {
-        // Get direct reference to tab in localTabs array (not a copy)
-        const tab = getTabRef(tabId);
-        if (!tab) {
+        const tabIndex = localTabs.findIndex(t => String(t.id) === String(tabId));
+        if (tabIndex === -1) {
             console.error('[TabsSync] Tab not found:', tabId);
             return null;
         }
         
-        // Ensure items array exists
-        if (!Array.isArray(tab.items)) {
-            tab.items = [];
-        }
+        const tab = localTabs[tabIndex];
+        const taxRate = window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635;
         
-        // Add items locally
+        // Add items
         const newItems = items.map(item => ({
             ...item,
             addedAt: new Date().toISOString(),
             addedBy: employeeName
         }));
         
-        tab.items = [...tab.items, ...newItems];
+        tab.items = [...(tab.items || []), ...newItems];
         tab.subtotal = tab.items.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 1)), 0);
-        tab.tax = tab.subtotal * (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635);
+        tab.tax = tab.subtotal * taxRate;
         tab.total = tab.subtotal + tab.tax;
-        tab.amount = tab.total; // Alias for compatibility
         tab.updatedAt = new Date().toISOString();
-        tab.lastUpdatedBy = employeeName;
-        tab.version = (tab.version || 0) + 1; // Increment version for optimistic locking
         
         saveLocal();
         notifyListeners('update', tab);
         
-        // Sync to server
-        if (isOnline && !tab.isLocalOnly) {
+        // Update Firebase
+        if (isFirebaseReady && tabsRef) {
             try {
-                await fetch(`${getApiBase()}/tabs`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'addItems',
-                        tabId: tabId,
-                        items: items,
-                        employeeName: employeeName
-                    })
+                await tabsRef.child(tabId).update({
+                    items: tab.items,
+                    subtotal: tab.subtotal,
+                    tax: tab.tax,
+                    total: tab.total,
+                    updatedAt: tab.updatedAt
                 });
-            } catch (error) {
-                console.error('[TabsSync] Failed to sync items:', error);
+            } catch (e) {
+                console.warn('[TabsSync] Failed to update Firebase:', e.message);
             }
         }
         
         return tab;
     }
     
-    // Add item to customer's tab (creates tab if doesn't exist)
-    async function addToCustomerTab(customerName, customerId, item, employeeName = 'Staff') {
-        let tab = getTabByCustomer(customerName);
-        
-        if (tab) {
-            return await addItemsToTab(tab.id, [item], employeeName);
-        } else {
-            return await createTab(customerName, customerId, [item], employeeName);
-        }
-    }
-    
-    // Remove item from tab
-    async function removeItemFromTab(tabId, itemIndex, employeeName = 'Staff') {
-        const tab = getTab(tabId);
-        if (!tab || !tab.items || itemIndex >= tab.items.length) return null;
-        
-        tab.items.splice(itemIndex, 1);
-        tab.subtotal = tab.items.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 1)), 0);
-        tab.tax = tab.subtotal * (window.GolfCoveConfig?.pricing?.taxRate ?? 0.0635);
-        tab.total = tab.subtotal + tab.tax;
-        tab.amount = tab.total; // Alias for compatibility
-        tab.updatedAt = new Date().toISOString();
-        
-        saveLocal();
-        notifyListeners('update', tab);
-        
-        // Sync to server
-        if (isOnline && !tab.isLocalOnly) {
-            try {
-                await fetch(`${getApiBase()}/tabs?tabId=${tabId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'removeItem',
-                        itemIndex: itemIndex
-                    })
-                });
-            } catch (error) {
-                console.error('[TabsSync] Failed to sync item removal:', error);
-            }
-        }
-        
-        return tab;
-    }
-    
-    // Close tab
     async function closeTab(tabId, paymentMethod = 'card', tip = 0, employeeName = 'Staff') {
-        const tab = getTab(tabId);
-        if (!tab) return null;
+        const tabIndex = localTabs.findIndex(t => String(t.id) === String(tabId));
+        if (tabIndex === -1) {
+            console.error('[TabsSync] Tab not found for close:', tabId);
+            return null;
+        }
         
+        const tab = localTabs[tabIndex];
         tab.status = 'closed';
         tab.closedAt = new Date().toISOString();
         tab.closedBy = employeeName;
-        tab.finalTotal = (tab.total || 0) + tip;
+        tab.paymentMethod = paymentMethod;
         tab.tip = tip;
+        tab.finalTotal = tab.total + tip;
         
+        // Remove from local open tabs
+        localTabs.splice(tabIndex, 1);
         saveLocal();
         notifyListeners('close', tab);
         
-        // Update customer stats
-        if (tab.customerId && typeof GolfCoveCustomers !== 'undefined') {
-            GolfCoveCustomers.recordVisit(tab.customerId, tab.finalTotal);
-        } else if (tab.customer && typeof GolfCoveCustomers !== 'undefined') {
-            // Try to find customer by name
-            const parts = tab.customer.trim().split(' ');
-            if (parts.length >= 2) {
-                const customer = GolfCoveCustomers.getByName(parts[0], parts.slice(1).join(' '));
-                if (customer) {
-                    GolfCoveCustomers.recordVisit(customer.id, tab.finalTotal);
-                }
-            }
-        }
-        
-        // Sync to server
-        if (isOnline) {
+        // Update Firebase
+        if (isFirebaseReady && tabsRef) {
             try {
-                await fetch(`${getApiBase()}/tabs?tabId=${tabId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'close',
-                        paymentMethod: paymentMethod,
-                        tip: tip,
-                        employeeName: employeeName
-                    })
+                await tabsRef.child(tabId).update({
+                    status: 'closed',
+                    closedAt: tab.closedAt,
+                    closedBy: tab.closedBy,
+                    paymentMethod: paymentMethod,
+                    tip: tip,
+                    finalTotal: tab.finalTotal
                 });
-            } catch (error) {
-                console.error('[TabsSync] Failed to sync tab close:', error);
+            } catch (e) {
+                console.warn('[TabsSync] Failed to close tab in Firebase:', e.message);
             }
-        }
-        
-        // Remove from local open tabs
-        localTabs = localTabs.filter(t => t.id !== tabId);
-        saveLocal();
-        
-        // Also record this as a completed transaction for reporting
-        try {
-            const completedTabs = JSON.parse(localStorage.getItem('gc_completed_tabs') || '[]');
-            completedTabs.push({
-                ...tab,
-                completedAt: new Date().toISOString()
-            });
-            // Keep only last 100 completed tabs
-            if (completedTabs.length > 100) {
-                completedTabs.splice(0, completedTabs.length - 100);
-            }
-            localStorage.setItem('gc_completed_tabs', JSON.stringify(completedTabs));
-        } catch (e) {
-            console.error('[TabsSync] Failed to save completed tab:', e);
         }
         
         return tab;
     }
     
-    // Void tab
-    async function voidTab(tabId, reason = '', employeeName = 'Staff') {
-        const tab = getTab(tabId);
-        if (!tab) return null;
+    async function deleteTab(tabId) {
+        const tabIndex = localTabs.findIndex(t => String(t.id) === String(tabId));
+        if (tabIndex !== -1) {
+            localTabs.splice(tabIndex, 1);
+            saveLocal();
+            notifyListeners('delete', { id: tabId });
+        }
         
-        tab.status = 'voided';
-        tab.voidedAt = new Date().toISOString();
-        tab.voidedBy = employeeName;
-        tab.voidReason = reason;
-        
-        saveLocal();
-        notifyListeners('void', tab);
-        
-        // Sync to server
-        if (isOnline) {
+        // Remove from Firebase
+        if (isFirebaseReady && tabsRef) {
             try {
-                await fetch(`${getApiBase()}/tabs?tabId=${tabId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'void',
-                        notes: reason,
-                        employeeName: employeeName
-                    })
-                });
-            } catch (error) {
-                console.error('[TabsSync] Failed to sync tab void:', error);
+                await tabsRef.child(tabId).remove();
+            } catch (e) {
+                console.warn('[TabsSync] Failed to delete from Firebase:', e.message);
             }
         }
         
-        // Remove from local open tabs
-        localTabs = localTabs.filter(t => t.id !== tabId);
-        saveLocal();
+        return true;
+    }
+    
+    // ============ GETTERS ============
+    function getTabs() {
+        return localTabs.filter(t => t.status === 'open');
+    }
+    
+    function getTab(tabId) {
+        return localTabs.find(t => String(t.id) === String(tabId)) || null;
+    }
+    
+    function getTabByCustomer(customerName) {
+        if (!customerName) return null;
+        const name = customerName.toLowerCase().trim();
+        return localTabs.find(t => 
+            t.status === 'open' && 
+            (t.customer || '').toLowerCase().trim() === name
+        ) || null;
+    }
+    
+    function getTabByCustomerId(customerId) {
+        if (!customerId) return null;
+        return localTabs.find(t => 
+            t.status === 'open' && 
+            t.customerId === customerId
+        ) || null;
+    }
+    
+    // ============ QUICK ADD ============
+    async function quickAddItem(item, employeeName = 'Staff') {
+        // Find first open tab or create walk-in tab
+        let tab = localTabs.find(t => t.status === 'open');
         
-        return tab;
-    }
-    
-    // ============ LISTENERS ============
-    function addListener(callback) {
-        listeners.push(callback);
-        return () => {
-            listeners = listeners.filter(l => l !== callback);
-        };
-    }
-    
-    function notifyListeners(event, data) {
-        listeners.forEach(callback => {
-            try {
-                callback(event, data, localTabs);
-            } catch (error) {
-                console.error('[TabsSync] Listener error:', error);
-            }
-        });
-    }
-    
-    // ============ UTILITIES ============
-    function getStats() {
-        const openTabs = getAllTabs();
-        return {
-            count: openTabs.length,
-            totalValue: openTabs.reduce((sum, t) => sum + (t.total || 0), 0),
-            itemCount: openTabs.reduce((sum, t) => sum + (t.items?.length || 0), 0),
-            lastSync: lastSync,
-            isOnline: isOnline
-        };
-    }
-    
-    function forceSync() {
-        if (isOnline) {
-            syncWithServer();
+        if (!tab) {
+            return await createTab('Walk-in', null, [item], employeeName);
         }
+        
+        return await addItemsToTab(tab.id, [item], employeeName);
     }
     
-    // Alias for saveTabs in admin-pos.html
-    function syncToServer() {
-        forceSync();
-    }
+    // Initialize on load
+    init();
     
-    // Alias for onUpdate callback registration
-    function onUpdate(callback) {
-        if (typeof callback === 'function') {
-            addListener(callback);
-        }
-    }
-    
-    // ============ PUBLIC API ============
+    // Public API
     return {
         init,
-        getAllTabs,
+        getTabs,
         getTab,
         getTabByCustomer,
+        getTabByCustomerId,
         createTab,
         addItemsToTab,
-        addToCustomerTab,
-        removeItemFromTab,
         closeTab,
-        voidTab,
+        deleteTab,
+        quickAddItem,
         addListener,
-        onUpdate, // Alias for addListener
-        getStats,
-        forceSync,
-        syncToServer, // Alias for forceSync
+        removeListener,
         
         // Aliases for compatibility
-        get tabs() { return getAllTabs(); },
-        get count() { return getAllTabs().length; }
+        getOpenTabs: getTabs,
+        getAllTabs: getTabs,
+        onUpdate: addListener,
+        get tabs() { return getTabs(); }
     };
 })();
 
-// Auto-initialize if DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => TabsSync.init());
-} else {
-    TabsSync.init();
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = TabsSync;
 }
-
-// Make globally available
-window.TabsSync = TabsSync;

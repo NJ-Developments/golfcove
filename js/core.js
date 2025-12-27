@@ -463,15 +463,20 @@ const GolfCoveCore = (function() {
     };
     
     // ============ DEBOUNCE/THROTTLE ============
-    function debounce(fn, wait = 300) {
-        let timeout;
-        return function(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => fn.apply(this, args), wait);
+    // Use GolfCoveUtils if available, otherwise define locally
+    const debounce = (typeof GolfCoveUtils !== 'undefined' && GolfCoveUtils.debounce) 
+        ? GolfCoveUtils.debounce 
+        : function(fn, wait = 300) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn.apply(this, args), wait);
+            };
         };
-    }
     
-    function throttle(fn, limit = 300) {
+    const throttle = (typeof GolfCoveUtils !== 'undefined' && GolfCoveUtils.throttle)
+        ? GolfCoveUtils.throttle
+        : function(fn, limit = 300) {
         let lastCall = 0;
         return function(...args) {
             const now = Date.now();

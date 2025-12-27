@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    
+    // Type checking
+    "strict": false,
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": true,
+    "skipLibCheck": true,
+    
+    // Paths
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["js/*"],
+      "@css/*": ["css/*"]
+    },
+    
+    // JSDoc support
+    "declaration": false,
+    "declarationMap": false,
+    
+    // Interop
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  },
+  "include": [
+    "js/**/*.js",
+    "js/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "functions"
+  ]
+}

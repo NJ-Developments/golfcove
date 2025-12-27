@@ -1,17 +1,32 @@
 // ============================================================
 // GOLF COVE POS - TEE SHEET MODULE
 // Tee time scheduling and management
+// Now uses unified BookingSystem for Firebase sync
 // ============================================================
 
 const TeeSheet = {
     // Default tee times (every 10 minutes from 6am to 6pm)
     timeSlots: [],
-    bookings: [],
+    
+    // Get bookings from unified system
+    get bookings() {
+        if (typeof BookingSystem !== 'undefined') {
+            return BookingSystem.getAll();
+        }
+        return JSON.parse(localStorage.getItem('gc_bookings') || '[]');
+    },
     
     // Generate time slots
     init() {
         this.generateTimeSlots();
-        this.loadBookings();
+        
+        // Subscribe to booking changes from unified system
+        if (typeof BookingSystem !== 'undefined') {
+            BookingSystem.on('booking:created', () => this.render());
+            BookingSystem.on('booking:updated', () => this.render());
+            BookingSystem.on('booking:checkedIn', () => this.render());
+            BookingSystem.on('sync', () => this.render());
+        }
     },
     
     // Generate time slots for the day

@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Your Slot - Golf Cove</title>
+    <meta name="description" content="Book a simulator bay at Golf Cove. Easy online reservations.">
+    <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            --primary: #1a365d;
+            --primary-light: #2c5282;
+            --accent: #4a90a4;
+            --available: #27ae60;
+            --available-bg: #e8f5e9;
+            --reserved: #e74c3c;
+            --selected: #2196f3;
+            --text: #333;
+            --text-light: #666;
+            --bg: #f5f7f9;
+            --border: #e0e0e0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+        
+        /* Header */
+        .top-bar {
+            background: #fff;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .logo img {
+            height: 32px;
+        }
+        
+        .sign-in-btn {
+            background: var(--primary);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        /* Title Bar */
+        .title-bar {
+            background: var(--primary);
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .title-bar h1 {
+            color: #fff;
+            font-size: 28px;
+            font-weight: 500;
+        }
+        
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Booking Card */
+        .booking-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: #f8f9fa;
+            padding: 12px 20px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        /* Date Navigation */
+        .date-nav {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            background: #fff;
+        }
+        
+        .date-nav-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: var(--text);
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        
+        .date-nav-btn:hover {
+            color: var(--primary);
+        }
+        
+        .date-dropdown {
+            position: relative;
+            margin-left: 10px;
+        }
+        
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            background: #fff;
+            font-weight: 500;
+        }
+        
+        .date-display:hover {
+            border-color: var(--primary);
+        }
+        
+        .today-btn {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 16px;
+        }
+        
+        .today-btn:hover {
+            text-decoration: underline;
+        }
+        
+        /* Calendar Dropdown */
+        .calendar-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 100;
+            padding: 15px;
+            display: none;
+            min-width: 280px;
+        }
+        
+        .calendar-dropdown.active {
+            display: block;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .calendar-header button {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+        
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            border: none;
+            background: none;
+        }
+        
+        .calendar-day:hover:not(.empty):not(.past) {
+            background: var(--primary-light);
+            color: #fff;
+        }
+        
+        .calendar-day.today {
+            border: 2px solid var(--primary);
+            font-weight: 600;
+        }
+        
+        .calendar-day.selected {
+            background: var(--primary);
+            color: #fff;
+        }
+        
+        .calendar-day.past {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .calendar-today-btn {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        /* Tee Sheet Grid */
+        .teesheet-container {
+            overflow-x: auto;
+        }
+        
+        .teesheet-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(6, 1fr);
+            min-width: 800px;
+        }
+        
+        .grid-header {
+            background: #f8f9fa;
+            padding: 12px 8px;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+        }
+        
+        .grid-header:first-child {
+            background: #fff;
+        }
+        
+        .grid-header .room-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .grid-header .room-type {
+            font-weight: 400;
+            font-size: 10px;
+            color: var(--text-light);
+        }
+        
+        .time-label {
+            padding: 0 10px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            min-height: 60px;
+        }
+        
+        .slot-cell {
+            padding: 8px;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            min-height: 60px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .slot-cell.available {
+            background: var(--available-bg);
+        }
+        
+        .slot-cell.available:hover {
+            background: #c8e6c9;
+        }
+        
+        .slot-cell.selected {
+            background: var(--selected);
+            color: #fff;
+        }
+        
+        .slot-cell.reserved {
+            background: #ffebee;
+            cursor: not-allowed;
+        }
+        
+        .slot-status {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .slot-cell.available .slot-status {
+            color: var(--available);
+        }
+        
+        .slot-cell.selected .slot-status {
+            color: #fff;
+        }
+        
+        .slot-cell.reserved .slot-status {
+            color: var(--reserved);
+        }
+        
+        .slot-price {
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        
+        .slot-time {
+            font-size: 10px;
+            color: inherit;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+        
+        /* Bottom Section */
+        .bottom-section {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            padding: 20px;
+            border-top: 1px solid var(--border);
+        }
+        
+        @media (max-width: 900px) {
+            .bottom-section {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        /* Booking Summary Sidebar */
+        .summary-sidebar {
+            background: var(--primary);
+            border-radius: 8px;
+            padding: 20px;
+            color: #fff;
+        }
+        
+        .summary-header {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .summary-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+        
+        .summary-row i {
+            width: 20px;
+            text-align: center;
+            opacity: 0.8;
+        }
+        
+        .summary-price {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .original-price {
+            text-decoration: line-through;
+            opacity: 0.6;
+            margin-right: 8px;
+        }
+        
+        .free-badge {
+            background: #27ae60;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .confirm-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 14px;
+            background: #fff;
+            color: var(--primary);
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .confirm-btn:hover {
+            background: #f0f0f0;
+        }
+        
+        .confirm-btn:disabled {
+            background: #ccc;
+            color: #666;
+            cursor: not-allowed;
+        }
+        
+        /* Member Lookup */
+        .member-section {
+            background: #f0f7ff;
+            border: 1px solid #b3d4fc;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .member-section h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .member-lookup-row {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .member-lookup-row input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+        
+        .member-lookup-row button {
+            padding: 10px 16px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .member-result {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+        }
+        
+        .member-result.found {
+            display: block;
+            background: #e8f5e9;
+            border: 1px solid var(--available);
+        }
+        
+        .member-result.not-found {
+            display: block;
+            background: #fff3e0;
+            border: 1px solid #ff9800;
+        }
+        
+        .member-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .member-badge.eagle { background: #ffd700; color: #333; }
+        .member-badge.birdie { background: #27ae60; color: #fff; }
+        .member-badge.par { background: #3498db; color: #fff; }
+        
+        /* Help Link */
+        .help-link {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+        
+        .help-link a {
+            color: var(--primary);
+        }
+        
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-overlay.active {
+            display: flex;
+        }
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <a href="index.html" class="logo">
+            <img src="images/golfCoveLogo6.png" alt="Golf Cove">
+            GOLF COVE
+        </a>
+        <a href="membership-signup.html" class="sign-in-btn">Sign In</a>
+    </div>
+    
+    <!-- Title Bar -->
+    <div class="title-bar">
+        <h1>Golf Cove</h1>
+    </div>
+    
+    <div class="main-container">
+        <div class="booking-card">
+            <div class="card-header">Book Your Slot</div>
+            
+            <!-- Date Navigation -->
+            <div class="date-nav">
+                <button class="date-nav-btn" onclick="prevDay()"><i class="fas fa-chevron-left"></i></button>
+                <button class="date-nav-btn" onclick="nextDay()"><i class="fas fa-chevron-right"></i></button>
+                
+                <div class="date-dropdown">
+                    <div class="date-display" onclick="toggleCalendar()">
+                        <span id="dateDisplayText">December 26, 2025</span>
+                        <i class="fas fa-caret-down"></i>
+                    </div>
+                    <div class="calendar-dropdown" id="calendarDropdown">
+                        <div class="calendar-header">
+                            <button onclick="prevMonth(event)"><i class="fas fa-chevron-left"></i></button>
+                            <span id="calendarMonthYear">December 2025</span>
+                            <button onclick="nextMonth(event)"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="calendar-weekdays">
+                            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                        </div>
+                        <div class="calendar-days" id="calendarDays"></div>
+                        <button class="calendar-today-btn" onclick="goToToday()">TODAY</button>
+                    </div>
+                </div>
+                
+                <button class="today-btn" onclick="goToToday()">TODAY</button>
+            </div>
+            
+            <!-- Tee Sheet Grid -->
+            <div class="teesheet-container">
+                <div class="teesheet-grid" id="teesheetGrid">
+                    <!-- Grid will be rendered by JS -->
+                </div>
+            </div>
+            
+            <!-- Bottom Section -->
+            <div class="bottom-section">
+                <div class="form-section">
+                    <!-- Member Lookup -->
+                    <div class="member-section">
+                        <h3><i class="fas fa-star" style="color:#f1c40f"></i> Are you a member?</h3>
+                        <div class="member-lookup-row">
+                            <input type="text" id="memberSearch" placeholder="Enter email or phone">
+                            <button onclick="lookupMember()"><i class="fas fa-search"></i> Look Up</button>
+                        </div>
+                        <div class="member-result" id="memberResult"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Guests (the booker is not included in this number)</label>
+                        <select id="guestCount">
+                            <option value="0">0 guests</option>
+                            <option value="1">1 guest</option>
+                            <option value="2" selected>2 guests</option>
+                            <option value="3">3 guests</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Any Special Request?</label>
+                        <textarea id="specialRequest" placeholder="Let us know if you have any special requests..."></textarea>
+                    </div>
+                </div>
+                
+                <!-- Booking Summary -->
+                <div class="summary-sidebar">
+                    <div class="summary-header">Your Booking</div>
+                    <div class="summary-row">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Golf Cove</span>
+                    </div>
+                    <div class="summary-row">
+                        <i class="fas fa-calendar"></i>
+                        <span id="summaryDate">Friday, December 26, 2025</span>
+                    </div>
+                    <div class="summary-row" id="summaryTimeRow" style="display:none;">
+                        <i class="fas fa-clock"></i>
+                        <span id="summaryTime">-</span>
+                    </div>
+                    <div class="summary-row" id="summaryRoomRow" style="display:none;">
+                        <i class="fas fa-door-open"></i>
+                        <span id="summaryRoom">-</span>
+                    </div>
+                    <div class="summary-row" id="summaryMemberRow" style="display:none;">
+                        <i class="fas fa-star"></i>
+                        <span id="summaryMember">-</span>
+                    </div>
+                    <div class="summary-price" id="summaryPriceRow" style="display:none;">
+                        <span>Total</span>
+                        <span id="summaryPrice">$65.00</span>
+                    </div>
+                    <button class="confirm-btn" id="confirmBtn" onclick="confirmBooking()" disabled>
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="help-link">
+            Need Help? <a href="contact.html">Contact Us</a>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h3>Processing your booking...</h3>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="js/membership-system.js"></script>
+    <script src="js/booking-unified.js"></script>
+    <script src="js/stripe-checkout.js"></script>
+    <script>
+        // ============ CONFIGURATION ============
+        // All config comes from BookingSystem - SINGLE SOURCE OF TRUTH
+        const FIREBASE_URL = 'https://golfcove-default-rtdb.firebaseio.com';
+        
+        // Get config from BookingSystem (loaded above)
+        const HOURLY_RATE = typeof BookingSystem !== 'undefined' ? BookingSystem.PRICING.baseHourly : 65;
+        const ROOMS = typeof BookingSystem !== 'undefined' ? BookingSystem.getRooms() : [
+            { id: 1, name: 'Room 1', type: 'Members Only' },
+            { id: 2, name: 'Room 2', type: 'Members Only' },
+            { id: 3, name: 'Room 3', type: 'Golf & Menu' },
+            { id: 4, name: 'Room 4', type: 'Golf + Menu' },
+            { id: 5, name: 'Room 5', type: 'Golf + Music' },
+            { id: 6, name: 'Room 6', type: 'Members Only' }
+        ];
+        
+        // Member tiers from BookingSystem
+        const MEMBER_TIERS = typeof BookingSystem !== 'undefined' ? 
+            Object.fromEntries(
+                Object.entries(BookingSystem.PRICING.memberDiscounts).map(([key, discount]) => [
+                    key, {
+                        name: key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Member',
+                        discount: discount,
+                        unlimited: discount >= 1.0,
+                        color: discount >= 1.0 ? '#3b82f6' : '#22c55e'
+                    }
+                ])
+            ) : {};
+        
+        // Generate time slots from BookingSystem
+        const TIME_SLOTS = [];
+        for (let h = 9; h <= 22; h++) {
+            TIME_SLOTS.push(h);
+        }
+        
+        // ============ STATE ============
+        let currentDate = new Date();
+        let calendarDate = new Date();
+        let selectedSlot = null; // { roomId, hour }
+        let currentMember = null;
+        let bookings = [];
+        
+        // ============ HELPER: SYNC MEMBER TO LOCALSTORAGE ============
+        function syncMemberToLocalStorage(member) {
+            try {
+                const customers = JSON.parse(localStorage.getItem('gc_customers') || '[]');
+                const existingIndex = customers.findIndex(c => c.id === member.id || 
+                    (c.email && member.email && c.email.toLowerCase() === member.email.toLowerCase()));
+                
+                if (existingIndex >= 0) {
+                    customers[existingIndex] = { ...customers[existingIndex], ...member };
+                } else {
+                    customers.push(member);
+                }
+                
+                localStorage.setItem('gc_customers', JSON.stringify(customers));
+                console.log('[Booking] Synced member to localStorage:', member.email || member.id);
+            } catch (e) {
+                console.warn('[Booking] Failed to sync member:', e);
+            }
+        }
+        
+        // ============ INITIALIZATION ============
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize BookingSystem first (handles Firebase sync)
+            if (typeof BookingSystem !== 'undefined') {
+                try {
+                    await BookingSystem.init();
+                    console.log('[Booking Page] BookingSystem initialized');
+                } catch (e) {
+                    console.warn('[Booking Page] BookingSystem init failed:', e);
+                }
+            }
+            
+            updateDateDisplay();
+            renderCalendar();
+            await loadBookings();
+            renderGrid();
+            
+            // Close calendar on outside click
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.date-dropdown')) {
+                    document.getElementById('calendarDropdown').classList.remove('active');
+                }
+            });
+        });
+        
+        // ============ DATE NAVIGATION ============
+        function updateDateDisplay() {
+            const options = { month: 'long', day: 'numeric', year: 'numeric' };
+            document.getElementById('dateDisplayText').textContent = 
+                currentDate.toLocaleDateString('en-US', options);
+            
+            const dayOptions = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+            document.getElementById('summaryDate').textContent = 
+                currentDate.toLocaleDateString('en-US', dayOptions);
+        }
+        
+        function prevDay() {
+            currentDate.setDate(currentDate.getDate() - 1);
+            calendarDate = new Date(currentDate);
+            updateDateDisplay();
+            renderCalendar();
+            loadBookings();
+        }
+        
+        function nextDay() {
+            currentDate.setDate(currentDate.getDate() + 1);
+            calendarDate = new Date(currentDate);
+            updateDateDisplay();
+            renderCalendar();
+            loadBookings();
+        }
+        
+        function goToToday() {
+            currentDate = new Date();
+            calendarDate = new Date();
+            updateDateDisplay();
+            renderCalendar();
+            loadBookings();
+            document.getElementById('calendarDropdown').classList.remove('active');
+        }
+        
+        function toggleCalendar() {
+            document.getElementById('calendarDropdown').classList.toggle('active');
+        }
+        
+        function prevMonth(e) {
+            e.stopPropagation();
+            calendarDate.setMonth(calendarDate.getMonth() - 1);
+            renderCalendar();
+        }
+        
+        function nextMonth(e) {
+            e.stopPropagation();
+            calendarDate.setMonth(calendarDate.getMonth() + 1);
+            renderCalendar();
+        }
+        
+        function renderCalendar() {
+            const year = calendarDate.getFullYear();
+            const month = calendarDate.getMonth();
+            
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let html = '';
+            
+            // Empty cells before first day
+            for (let i = 0; i < firstDay; i++) {
+                html += '<button class="calendar-day empty"></button>';
+            }
+            
+            // Days of month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const isToday = date.toDateString() === today.toDateString();
+                const isSelected = date.toDateString() === currentDate.toDateString();
+                const isPast = date < today;
+                
+                let classes = 'calendar-day';
+                if (isToday) classes += ' today';
+                if (isSelected) classes += ' selected';
+                if (isPast) classes += ' past';
+                
+                html += `<button class="${classes}" onclick="selectDate(${year}, ${month}, ${day})" ${isPast ? 'disabled' : ''}>${day}</button>`;
+            }
+            
+            document.getElementById('calendarDays').innerHTML = html;
+        }
+        
+        function selectDate(year, month, day) {
+            currentDate = new Date(year, month, day);
+            calendarDate = new Date(currentDate);
+            updateDateDisplay();
+            renderCalendar();
+            loadBookings();
+            document.getElementById('calendarDropdown').classList.remove('active');
+        }
+        
+        // ============ LOAD BOOKINGS ============
+        async function loadBookings() {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            
+            try {
+                // Use BookingSystem if available (already synced with Firebase)
+                if (typeof BookingSystem !== 'undefined' && BookingSystem.getBookingsForDate) {
+                    bookings = BookingSystem.getBookingsForDate(dateStr);
+                    console.log('[Booking Page] Loaded', bookings.length, 'bookings from BookingSystem');
+                } else {
+                    // Fallback: direct Firebase fetch
+                    const response = await fetch(`${FIREBASE_URL}/bookings.json`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data) {
+                            bookings = Object.entries(data)
+                                .map(([key, val]) => ({ ...val, _key: key }))
+                                .filter(b => b.date === dateStr && b.status !== 'cancelled');
+                        } else {
+                            bookings = [];
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load bookings:', e);
+                bookings = [];
+            }
+            
+            selectedSlot = null;
+            renderGrid();
+            updateSummary();
+        }
+        
+        // ============ RENDER GRID ============
+        function renderGrid() {
+            const grid = document.getElementById('teesheetGrid');
+            let html = '';
+            
+            // Header row
+            html += '<div class="grid-header"></div>';
+            ROOMS.forEach(room => {
+                html += `
+                    <div class="grid-header">
+                        <div class="room-name">PICK: ${room.name}</div>
+                        <div class="room-type">(${room.type})</div>
+                    </div>
+                `;
+            });
+            
+            // Time slot rows
+            TIME_SLOTS.forEach(hour => {
+                const timeLabel = formatHour(hour);
+                html += `<div class="time-label">${timeLabel}</div>`;
+                
+                ROOMS.forEach(room => {
+                    const booking = getBookingAt(room.id, hour);
+                    const isSelected = selectedSlot && 
+                                      selectedSlot.roomId === room.id && 
+                                      selectedSlot.hour === hour;
+                    
+                    if (booking) {
+                        html += `
+                            <div class="slot-cell reserved">
+                                <div class="slot-status">Reserved</div>
+                                <div class="slot-time">${formatHour(hour)} - ${formatHour(hour + (booking.duration || 1))}</div>
+                            </div>
+                        `;
+                    } else {
+                        const price = calculatePrice();
+                        const priceDisplay = price === 0 ? 'FREE' : `$${price.toFixed(2)}`;
+                        html += `
+                            <div class="slot-cell available ${isSelected ? 'selected' : ''}" 
+                                 onclick="selectSlot(${room.id}, ${hour})">
+                                <div class="slot-status">Available</div>
+                                <div class="slot-price">(${priceDisplay})</div>
+                                <div class="slot-time">${formatHour(hour)} - ${formatHour(hour + 1)}</div>
+                            </div>
+                        `;
+                    }
+                });
+            });
+            
+            grid.innerHTML = html;
+        }
+        
+        function getBookingAt(roomId, hour) {
+            return bookings.find(b => {
+                if (b.roomId !== roomId) return false;
+                // Parse time - handles both "10:00" and "10:00 AM" formats
+                let bookingHour = 0;
+                if (b.time) {
+                    const match = b.time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/i);
+                    if (match) {
+                        bookingHour = parseInt(match[1]);
+                        const ampm = match[3]?.toLowerCase();
+                        if (ampm === 'pm' && bookingHour !== 12) bookingHour += 12;
+                        if (ampm === 'am' && bookingHour === 12) bookingHour = 0;
+                    } else {
+                        bookingHour = parseInt(b.time.split(':')[0]) || 0;
+                    }
+                }
+                const duration = b.duration || 1;
+                return hour >= bookingHour && hour < bookingHour + duration;
+            });
+        }
+        
+        function formatHour(h) {
+            if (h === 12) return '12:00 PM';
+            if (h > 12) return `${h - 12}:00 PM`;
+            return `${h}:00 AM`;
+        }
+        
+        function calculatePrice() {
+            // Use BookingSystem for proper pricing (includes peak time)
+            if (typeof BookingSystem !== 'undefined' && selectedSlot) {
+                const pricing = BookingSystem.calculatePricing({
+                    date: selectedDate,
+                    time: formatHour(selectedSlot.hour),
+                    duration: 1,
+                    memberType: currentMember?.memberType
+                });
+                return pricing.finalPrice;
+            }
+            
+            // Fallback to local calculation
+            let price = HOURLY_RATE;
+            
+            // Apply member discount
+            if (currentMember && currentMember.memberType) {
+                const tier = MEMBER_TIERS[currentMember.memberType];
+                if (tier?.unlimited) {
+                    return 0;
+                } else if (tier?.discount) {
+                    price = price * (1 - tier.discount);
+                }
+            }
+            
+            return price;
+        }
+        
+        // Check if slot is peak time
+        function isPeakSlot(hour) {
+            if (typeof BookingSystem !== 'undefined') {
+                return BookingSystem.isPeakTime(selectedDate, hour);
+            }
+            return false;
+        }
+        
+        // ============ SLOT SELECTION ============
+        function selectSlot(roomId, hour) {
+            // Check if slot is available
+            if (getBookingAt(roomId, hour)) return;
+            
+            selectedSlot = { roomId, hour };
+            renderGrid();
+            updateSummary();
+        }
+        
+        function updateSummary() {
+            const timeRow = document.getElementById('summaryTimeRow');
+            const roomRow = document.getElementById('summaryRoomRow');
+            const memberRow = document.getElementById('summaryMemberRow');
+            const priceRow = document.getElementById('summaryPriceRow');
+            const confirmBtn = document.getElementById('confirmBtn');
+            
+            if (selectedSlot) {
+                const room = ROOMS.find(r => r.id === selectedSlot.roomId);
+                const price = calculatePrice();
+                const isPeak = isPeakSlot(selectedSlot.hour);
+                
+                document.getElementById('summaryTime').textContent = 
+                    `${formatHour(selectedSlot.hour)} - ${formatHour(selectedSlot.hour + 1)}${isPeak ? ' ⚡ Peak' : ''}`;
+                document.getElementById('summaryRoom').textContent = room.name;
+                
+                timeRow.style.display = 'flex';
+                roomRow.style.display = 'flex';
+                priceRow.style.display = 'flex';
+                
+                // Show member info
+                if (currentMember) {
+                    const tier = MEMBER_TIERS[currentMember.memberType];
+                    document.getElementById('summaryMember').textContent = tier?.name || 'Member';
+                    memberRow.style.display = 'flex';
+                    
+                    if (tier?.unlimited) {
+                        document.getElementById('summaryPrice').innerHTML = 
+                            `<span class="original-price">$${HOURLY_RATE}.00</span> <span class="free-badge">FREE</span>`;
+                    } else {
+                        document.getElementById('summaryPrice').textContent = `$${price.toFixed(2)}${isPeak ? ' (peak)' : ''}`;
+                    }
+                } else {
+                    memberRow.style.display = 'none';
+                    document.getElementById('summaryPrice').textContent = `$${price.toFixed(2)}${isPeak ? ' (peak)' : ''}`;
+                }
+                
+                confirmBtn.disabled = false;
+            } else {
+                timeRow.style.display = 'none';
+                roomRow.style.display = 'none';
+                memberRow.style.display = 'none';
+                priceRow.style.display = 'none';
+                confirmBtn.disabled = true;
+            }
+        }
+        
+        // ============ MEMBER LOOKUP ============
+        // Uses GolfCoveMembership for centralized member data
+        async function lookupMember() {
+            const searchValue = document.getElementById('memberSearch').value.trim();
+            const resultDiv = document.getElementById('memberResult');
+            
+            if (!searchValue) {
+                alert('Please enter an email or phone number');
+                return;
+            }
+            
+            resultDiv.className = 'member-result';
+            resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Looking up...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                // First try the centralized GolfCoveMembership system (localStorage)
+                let foundMember = null;
+                
+                if (typeof GolfCoveMembership !== 'undefined') {
+                    const customers = GolfCoveMembership.getCustomers();
+                    foundMember = customers.find(c => 
+                        c.isMember && (
+                            c.email?.toLowerCase() === searchValue.toLowerCase() ||
+                            c.phone?.replace(/\D/g, '') === searchValue.replace(/\D/g, '') ||
+                            `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().trim() === searchValue.toLowerCase()
+                        )
+                    );
+                    
+                    // Validate membership is still active
+                    if (foundMember && !GolfCoveMembership.isActiveMember(foundMember)) {
+                        foundMember = null; // Expired membership
+                    }
+                }
+                
+                // Fallback: Check Firebase directly if not found locally
+                if (!foundMember) {
+                    const response = await fetch(`${FIREBASE_URL}/customers.json`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data) {
+                            const customers = Object.entries(data).map(([key, val]) => ({ ...val, id: key }));
+                            foundMember = customers.find(c => 
+                                c.isMember && (
+                                    c.email?.toLowerCase() === searchValue.toLowerCase() ||
+                                    c.phone?.replace(/\D/g, '') === searchValue.replace(/\D/g, '')
+                                )
+                            );
+                            
+                            // Validate expiration
+                            if (foundMember?.memberExpires && new Date(foundMember.memberExpires) < new Date()) {
+                                foundMember = null;
+                            }
+                            
+                            // If found in Firebase, sync to localStorage for future lookups
+                            if (foundMember) {
+                                syncMemberToLocalStorage(foundMember);
+                            }
+                        }
+                    }
+                }
+                
+                // Also check members collection as last resort
+                if (!foundMember) {
+                    const membersResponse = await fetch(`${FIREBASE_URL}/members.json`);
+                    if (membersResponse.ok) {
+                        const membersData = await membersResponse.json();
+                        if (membersData) {
+                            const members = Object.entries(membersData).map(([key, val]) => ({ ...val, id: key, isMember: true }));
+                            foundMember = members.find(m =>
+                                m.email?.toLowerCase() === searchValue.toLowerCase() ||
+                                m.phone?.replace(/\D/g, '') === searchValue.replace(/\D/g, '')
+                            );
+                            
+                            // If found in Firebase, sync to localStorage for future lookups
+                            if (foundMember) {
+                                syncMemberToLocalStorage(foundMember);
+                            }
+                        }
+                    }
+                }
+                
+                if (foundMember) {
+                    currentMember = foundMember;
+                    const tier = MEMBER_TIERS[currentMember.memberType] || MEMBER_TIERS['par'];
+                    const tierClass = currentMember.memberType?.includes('eagle') ? 'eagle' :
+                                     currentMember.memberType?.includes('birdie') ? 'birdie' : 'par';
+                    
+                    // Calculate discount info
+                    const discountText = tier.unlimited 
+                        ? '<strong style="color:#27ae60">✨ UNLIMITED PLAY - Bay time is FREE!</strong>'
+                        : `<strong>${Math.round(tier.discount * 100)}% discount applied</strong>`;
+                    
+                    resultDiv.className = 'member-result found';
+                    resultDiv.innerHTML = `
+                        <i class="fas fa-check-circle" style="color:#27ae60"></i>
+                        <strong>${currentMember.firstName || ''} ${currentMember.lastName || ''}</strong>
+                        <span class="member-badge ${tierClass}" style="background:${tier.color || '#27ae60'}">${tier.name}</span>
+                        <div style="margin-top:8px;font-size:13px;">${discountText}</div>
+                    `;
+                    
+                    renderGrid();
+                    updateSummary();
+                } else {
+                    currentMember = null;
+                    resultDiv.className = 'member-result not-found';
+                    resultDiv.innerHTML = `
+                        <i class="fas fa-info-circle" style="color:#ff9800"></i>
+                        No active member found. <a href="membership-signup.html" style="color:#1a365d">Become a member</a>
+                    `;
+                    renderGrid();
+                    updateSummary();
+                }
+            } catch (e) {
+                console.error('Member lookup error:', e);
+                resultDiv.className = 'member-result not-found';
+                resultDiv.innerHTML = 'Error looking up member. Please try again.';
+            }
+        }
+        
+        // ============ CONFIRM BOOKING ============
+        async function confirmBooking() {
+            if (!selectedSlot) {
+                alert('Please select a time slot');
+                return;
+            }
+            
+            // Prompt for customer name if not a member
+            let customerName = 'Guest';
+            let customerPhone = '';
+            let customerEmail = '';
+            
+            if (currentMember) {
+                customerName = `${currentMember.firstName || ''} ${currentMember.lastName || ''}`.trim() || 'Member';
+                customerPhone = currentMember.phone || '';
+                customerEmail = currentMember.email || '';
+            } else {
+                customerName = prompt('Please enter your name:');
+                if (!customerName || !customerName.trim()) {
+                    alert('Name is required to book');
+                    return;
+                }
+                customerName = customerName.trim();
+                customerPhone = prompt('Phone number (optional):') || '';
+            }
+            
+            document.getElementById('loadingOverlay').classList.add('active');
+            
+            const room = ROOMS.find(r => r.id === selectedSlot.roomId);
+            const price = calculatePrice();
+            const dateStr = currentDate.toISOString().split('T')[0];
+            // Use 12-hour format with AM/PM for consistency
+            const timeStr = formatHour(selectedSlot.hour);
+            
+            const bookingData = {
+                roomId: selectedSlot.roomId,
+                date: dateStr,
+                time: timeStr,
+                duration: 1,
+                customer: customerName,
+                customerName: customerName,
+                customerEmail: customerEmail,
+                customerPhone: customerPhone,
+                phone: customerPhone,
+                email: customerEmail,
+                players: parseInt(document.getElementById('guestCount').value) + 1,
+                guests: parseInt(document.getElementById('guestCount').value),
+                notes: document.getElementById('specialRequest').value,
+                specialRequests: document.getElementById('specialRequest').value,
+                
+                // Member info
+                isMember: !!currentMember,
+                memberId: currentMember?.id || null,
+                memberType: currentMember?.memberType || null,
+                
+                // Pricing - ensure numbers are valid
+                basePrice: HOURLY_RATE,
+                originalPrice: HOURLY_RATE,
+                price: price,
+                totalPrice: price,
+                memberDiscount: currentMember ? (HOURLY_RATE - price) : 0,
+                
+                source: 'online',
+                status: 'confirmed',
+                createdAt: new Date().toISOString()
+            };
+            
+            try {
+                // Use BookingSystem.createBooking if available (preferred)
+                let booking;
+                if (typeof BookingSystem !== 'undefined' && BookingSystem.createBooking) {
+                    const result = await BookingSystem.createBooking(bookingData);
+                    if (!result.success) {
+                        throw new Error(result.error || 'Failed to create booking');
+                    }
+                    booking = result.booking;
+                } else {
+                    // Fallback to direct Firebase save
+                    booking = await saveBookingToFirebase(bookingData);
+                }
+                
+                if (price === 0) {
+                    // Free booking for unlimited members
+                    window.location.href = `booking-confirmed.html?free=true&room=${encodeURIComponent(room.name)}&id=${booking.id}`;
+                } else {
+                    // Paid booking - redirect to Stripe
+                    if (typeof GolfCoveCheckout !== 'undefined') {
+                        bookingData.bookingId = booking.id;
+                        bookingData.successUrl = `${window.location.origin}/booking-confirmed.html?room=${encodeURIComponent(room.name)}&id=${booking.id}`;
+                        bookingData.cancelUrl = window.location.href;
+                        await GolfCoveCheckout.checkout('booking', bookingData);
+                    } else {
+                        // No payment needed or fallback
+                        window.location.href = `booking-confirmed.html?room=${encodeURIComponent(room.name)}&id=${booking.id}`;
+                    }
+                }
+            } catch (error) {
+                console.error('Booking error:', error);
+                document.getElementById('loadingOverlay').classList.remove('active');
+                alert('Booking failed: ' + (error.message || 'Please try again'));
+            }
+        }
+        
+        // Fallback save function (used if BookingSystem not available)
+        async function saveBookingToFirebase(bookingData) {
+            const booking = {
+                id: 'bk_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
+                ...bookingData
+            };
+            
+            const response = await fetch(`${FIREBASE_URL}/bookings.json`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(booking)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to save booking');
+            }
+            
+            // Track member usage
+            if (currentMember?.id) {
+                await trackMemberUsage(currentMember.id, booking);
+            }
+            
+            return booking;
+        }
+        
+        async function trackMemberUsage(memberId, booking) {
+            try {
+                const response = await fetch(`${FIREBASE_URL}/member_usage/${memberId}.json`);
+                let usage = response.ok ? await response.json() || {} : {};
+                
+                if (!usage.bookings) usage.bookings = [];
+                usage.bookings.push({
+                    bookingId: booking.id,
+                    date: booking.date,
+                    duration: booking.duration,
+                    savings: booking.memberDiscount || 0,
+                    timestamp: new Date().toISOString()
+                });
+                
+                usage.totalHours = (usage.totalHours || 0) + booking.duration;
+                usage.totalSavings = (usage.totalSavings || 0) + (booking.memberDiscount || 0);
+                
+                await fetch(`${FIREBASE_URL}/member_usage/${memberId}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(usage)
+                });
+            } catch (e) {
+                console.warn('Failed to track member usage:', e);
+            }
+        }
+    </script>
+</body>
+</html>

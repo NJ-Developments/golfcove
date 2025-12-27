@@ -98,6 +98,9 @@ const POS = {
         // Initialize date
         this.updateDateDisplay();
         
+        // Setup fullscreen functionality
+        this.setupFullscreenListeners();
+        
         console.log('POS Core initialized');
     },
     
@@ -111,6 +114,69 @@ const POS = {
         });
         const el = document.getElementById('currentTime');
         if (el) el.textContent = timeStr;
+    },
+    
+    // Fullscreen Toggle
+    toggleFullscreen() {
+        const doc = document;
+        const docEl = document.documentElement;
+        
+        if (!this.isFullscreen()) {
+            // Enter fullscreen
+            if (docEl.requestFullscreen) {
+                docEl.requestFullscreen();
+            } else if (docEl.webkitRequestFullscreen) { // Safari
+                docEl.webkitRequestFullscreen();
+            } else if (docEl.msRequestFullscreen) { // IE11
+                docEl.msRequestFullscreen();
+            }
+        } else {
+            // Exit fullscreen
+            if (doc.exitFullscreen) {
+                doc.exitFullscreen();
+            } else if (doc.webkitExitFullscreen) { // Safari
+                doc.webkitExitFullscreen();
+            } else if (doc.msExitFullscreen) { // IE11
+                doc.msExitFullscreen();
+            }
+        }
+    },
+    
+    // Check if in fullscreen mode
+    isFullscreen() {
+        return !!(document.fullscreenElement || 
+                  document.webkitFullscreenElement || 
+                  document.msFullscreenElement);
+    },
+    
+    // Update fullscreen button icon
+    updateFullscreenIcon() {
+        const icon = document.getElementById('fullscreenIcon');
+        const body = document.body;
+        
+        if (this.isFullscreen()) {
+            if (icon) icon.className = 'fas fa-compress';
+            body.classList.add('is-fullscreen');
+        } else {
+            if (icon) icon.className = 'fas fa-expand';
+            body.classList.remove('is-fullscreen');
+        }
+    },
+    
+    // Setup fullscreen event listeners
+    setupFullscreenListeners() {
+        const events = ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'];
+        events.forEach(event => {
+            document.addEventListener(event, () => this.updateFullscreenIcon());
+        });
+        
+        // Keyboard shortcut: F11 for fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                this.toggleFullscreen();
+            }
+        });
     },
     
     // Date display

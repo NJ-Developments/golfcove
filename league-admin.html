@@ -696,14 +696,6 @@
                     </div>
                 </div>
                 
-                <!-- Handicap (only shows after customer selected) -->
-                <div id="handicapSection" style="display: none;">
-                    <div class="form-group">
-                        <label>Handicap</label>
-                        <input type="number" id="addPlayerHcp" value="0" min="0" max="54">
-                    </div>
-                </div>
-                
                 <button type="submit" class="btn btn-block" id="addPlayerBtn" disabled style="opacity: 0.5;">
                     <i class="fas fa-plus"></i> Add Player to Team
                 </button>
@@ -742,12 +734,6 @@
                         <div id="teamPlayer1Results" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-radius:8px; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
                     </div>
                     <div id="teamPlayer1Info" style="display: none; background: #fff; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-bottom: 10px;"></div>
-                    <div id="teamPlayer1HcpSection" style="display: none;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Handicap</label>
-                            <input type="number" id="newTeamPlayer1Hcp" value="0" min="0" max="54">
-                        </div>
-                    </div>
                 </div>
                 
                 <!-- Player 2 (Required) -->
@@ -762,12 +748,6 @@
                         <div id="teamPlayer2Results" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-radius:8px; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
                     </div>
                     <div id="teamPlayer2Info" style="display: none; background: #fff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; margin-bottom: 10px;"></div>
-                    <div id="teamPlayer2HcpSection" style="display: none;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Handicap</label>
-                            <input type="number" id="newTeamPlayer2Hcp" value="0" min="0" max="54">
-                        </div>
-                    </div>
                 </div>
                 
                 <div style="background: #fff3e0; border: 1px solid #ffcc02; border-radius: 10px; padding: 12px; margin-bottom: 16px;">
@@ -838,6 +818,7 @@
         </div>
     </div>
 
+    <script src="js/utils.js"></script>
     <script src="js/league-admin.js"></script>
     <script src="js/main.js"></script>
 </body>

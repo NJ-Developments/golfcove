@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmed - Golf Cove</title>
+    <link rel="icon" type="image/png" href="images/golfCoveLogo6.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .confirmation-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #27ae60;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            animation: scaleIn 0.5s ease;
+        }
+        
+        @keyframes scaleIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+        
+        .success-icon i {
+            font-size: 40px;
+            color: #fff;
+        }
+        
+        h1 {
+            color: #1a365d;
+            margin-bottom: 12px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .booking-details {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            color: #666;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .free-badge {
+            background: #27ae60;
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .btn {
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #1a365d;
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            background: #2c5282;
+        }
+        
+        .btn-secondary {
+            background: #fff;
+            color: #333;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .note {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="confirmation-card">
+        <div class="success-icon">
+            <i class="fas fa-check"></i>
+        </div>
+        <h1>Booking Confirmed!</h1>
+        <p class="subtitle">Your simulator bay has been reserved.</p>
+        
+        <div class="booking-details" id="bookingDetails">
+            <div class="detail-row">
+                <span class="detail-label">Confirmation</span>
+                <span class="detail-value" id="confirmationNumber">Loading...</span>
+            </div>
+            <div class="detail-row" id="roomRow" style="display:none;">
+                <span class="detail-label">Room</span>
+                <span class="detail-value" id="roomName">-</span>
+            </div>
+            <div class="detail-row" id="priceRow">
+                <span class="detail-label">Amount</span>
+                <span class="detail-value" id="priceValue">-</span>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <a href="index.html" class="btn btn-primary">
+                <i class="fas fa-home"></i> Back to Home
+            </a>
+            <a href="book.html" class="btn btn-secondary">
+                <i class="fas fa-plus"></i> Book Another
+            </a>
+        </div>
+        
+        <p class="note">
+            A confirmation email has been sent to your email address.
+            <br>Questions? Contact us at <a href="mailto:info@golfcove.com">info@golfcove.com</a>
+        </p>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            
+            // Generate confirmation number
+            const confirmNum = 'GC-' + Date.now().toString(36).toUpperCase();
+            document.getElementById('confirmationNumber').textContent = confirmNum;
+            
+            // Check if free booking
+            if (params.get('free') === 'true') {
+                document.getElementById('priceValue').innerHTML = '<span class="free-badge">FREE - Member Benefit</span>';
+            }
+            
+            // Show room if provided
+            const room = params.get('room');
+            if (room) {
+                document.getElementById('roomRow').style.display = 'flex';
+                document.getElementById('roomName').textContent = room;
+            }
+            
+            // Check for Stripe session
+            const sessionId = params.get('session_id');
+            if (sessionId) {
+                // Could verify payment here
+                document.getElementById('priceValue').textContent = 'Paid';
+            }
+        });
+    </script>
+</body>
+</html>

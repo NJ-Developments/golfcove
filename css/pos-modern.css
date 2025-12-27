@@ -157,6 +157,44 @@ body {
     color: var(--text-muted);
 }
 
+/* Header Action Buttons */
+.header-btn {
+    width: 44px;
+    height: 44px;
+    background: var(--bg-input);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: all 0.2s;
+}
+
+.header-btn:hover {
+    background: var(--primary);
+    transform: scale(1.05);
+}
+
+.header-btn:active {
+    transform: scale(0.95);
+}
+
+.fullscreen-btn i {
+    transition: transform 0.3s;
+}
+
+.fullscreen-btn:hover i {
+    transform: scale(1.1);
+}
+
+/* Fullscreen mode adjustments */
+body.is-fullscreen .fullscreen-btn {
+    background: var(--primary);
+}
+
 /* Profile Dropdown */
 .profile-wrapper {
     position: relative;

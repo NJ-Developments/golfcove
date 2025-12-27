@@ -110,9 +110,10 @@ const PaymentProcessor = (function() {
         };
     }
     
-    function formatCurrency(amount) {
-        return '$' + amount.toFixed(2);
-    }
+    // Use shared formatCurrency from GolfCoveUtils if available
+    const formatCurrency = (amount) => typeof GolfCoveUtils !== 'undefined' 
+        ? GolfCoveUtils.formatCurrency(amount) 
+        : '$' + amount.toFixed(2);
     
     // ============ MODAL ============
     function showPaymentModal(subtotal, options = {}) {
